@@ -1,0 +1,237 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.3.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 8eb93db9ecdfab3b61fcaa640bc8f0afe2a29761fcbb320d2f742215d9d3fd0d
+
+name:           Mlatu
+version:        0.1.0.0
+synopsis:       Mlatu programming language
+category:       Language
+author:         Caden Haustein
+maintainer:     cadenhaustein@gmail.com
+license:        MIT
+build-type:     Simple
+data-files:
+    common.mlt
+
+library
+  exposed-modules:
+      Mlatu
+      Mlatu.Base
+      Mlatu.Bits
+      Mlatu.Bracket
+      Mlatu.CollectInstantiations
+      Mlatu.DataConstructor
+      Mlatu.Declaration
+      Mlatu.Definition
+      Mlatu.Desugar.Data
+      Mlatu.Desugar.Infix
+      Mlatu.Desugar.Quotations
+      Mlatu.Dictionary
+      Mlatu.Element
+      Mlatu.Enter
+      Mlatu.Entry
+      Mlatu.Entry.Category
+      Mlatu.Entry.Merge
+      Mlatu.Entry.Parameter
+      Mlatu.Entry.Parent
+      Mlatu.Entry.Type
+      Mlatu.Entry.Word
+      Mlatu.Fragment
+      Mlatu.Free
+      Mlatu.Indent
+      Mlatu.Infer
+      Mlatu.Informer
+      Mlatu.InstanceCheck
+      Mlatu.Instantiate
+      Mlatu.Instantiated
+      Mlatu.Interpret
+      Mlatu.Kind
+      Mlatu.Layoutness
+      Mlatu.Linearize
+      Mlatu.Literal
+      Mlatu.Located
+      Mlatu.Mangle
+      Mlatu.Metadata
+      Mlatu.Monad
+      Mlatu.Name
+      Mlatu.Occurrences
+      Mlatu.Operator
+      Mlatu.Origin
+      Mlatu.Parse
+      Mlatu.Parser
+      Mlatu.Pretty
+      Mlatu.Quantify
+      Mlatu.Queue
+      Mlatu.Regeneralize
+      Mlatu.Report
+      Mlatu.Resolve
+      Mlatu.Scope
+      Mlatu.Signature
+      Mlatu.Stack
+      Mlatu.Substitute
+      Mlatu.Synonym
+      Mlatu.Term
+      Mlatu.Token
+      Mlatu.Tokenize
+      Mlatu.Type
+      Mlatu.TypeDefinition
+      Mlatu.TypeEnv
+      Mlatu.Unify
+      Mlatu.Vocabulary
+      Mlatu.Zonk
+  other-modules:
+      Paths_Mlatu
+  hs-source-dirs:
+      src
+  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  build-depends:
+      JuicyPixels
+    , base >=4.8
+    , base64-bytestring
+    , bytestring
+    , containers
+    , hashable
+    , parsec
+    , pretty
+    , relude
+    , text
+    , transformers
+    , unordered-containers
+    , vector
+  default-language: Haskell2010
+
+executable mlatu
+  main-is: Main.hs
+  other-modules:
+      Arguments
+      Interact
+      Report
+      Paths_Mlatu
+  hs-source-dirs:
+      app
+  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  build-depends:
+      Mlatu
+    , base >=4.8
+    , bytestring
+    , cmdargs
+    , containers
+    , hashable
+    , haskeline
+    , parsec
+    , pretty
+    , relude
+    , text
+    , transformers
+    , unordered-containers
+    , vector
+  default-language: Haskell2010
+
+test-suite test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Test.Common
+      Test.Infer
+      Test.InstanceCheck
+      Test.Interpret
+      Test.Origin
+      Test.Parse
+      Test.Resolve
+      Test.Tokenize
+      Test.Zonk
+      Mlatu
+      Mlatu.Base
+      Mlatu.Bits
+      Mlatu.Bracket
+      Mlatu.CollectInstantiations
+      Mlatu.DataConstructor
+      Mlatu.Declaration
+      Mlatu.Definition
+      Mlatu.Desugar.Data
+      Mlatu.Desugar.Infix
+      Mlatu.Desugar.Quotations
+      Mlatu.Dictionary
+      Mlatu.Element
+      Mlatu.Enter
+      Mlatu.Entry
+      Mlatu.Entry.Category
+      Mlatu.Entry.Merge
+      Mlatu.Entry.Parameter
+      Mlatu.Entry.Parent
+      Mlatu.Entry.Type
+      Mlatu.Entry.Word
+      Mlatu.Fragment
+      Mlatu.Free
+      Mlatu.Indent
+      Mlatu.Infer
+      Mlatu.Informer
+      Mlatu.InstanceCheck
+      Mlatu.Instantiate
+      Mlatu.Instantiated
+      Mlatu.Interpret
+      Mlatu.Kind
+      Mlatu.Layoutness
+      Mlatu.Linearize
+      Mlatu.Literal
+      Mlatu.Located
+      Mlatu.Mangle
+      Mlatu.Metadata
+      Mlatu.Monad
+      Mlatu.Name
+      Mlatu.Occurrences
+      Mlatu.Operator
+      Mlatu.Origin
+      Mlatu.Parse
+      Mlatu.Parser
+      Mlatu.Pretty
+      Mlatu.Quantify
+      Mlatu.Queue
+      Mlatu.Regeneralize
+      Mlatu.Report
+      Mlatu.Resolve
+      Mlatu.Scope
+      Mlatu.Signature
+      Mlatu.Stack
+      Mlatu.Substitute
+      Mlatu.Synonym
+      Mlatu.Term
+      Mlatu.Token
+      Mlatu.Tokenize
+      Mlatu.Type
+      Mlatu.TypeDefinition
+      Mlatu.TypeEnv
+      Mlatu.Unify
+      Mlatu.Vocabulary
+      Mlatu.Zonk
+      Paths_Mlatu
+  hs-source-dirs:
+      test
+      src
+  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie
+  build-depends:
+      HUnit
+    , JuicyPixels
+    , Mlatu
+    , base >=4.8
+    , base64-bytestring
+    , bytestring
+    , containers
+    , hashable
+    , hspec
+    , knob
+    , parsec
+    , pretty
+    , relude
+    , text
+    , transformers
+    , unordered-containers
+    , vector
+  default-language: Haskell2010

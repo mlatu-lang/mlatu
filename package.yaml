@@ -1,0 +1,102 @@
+name: Mlatu
+version: 0.1.0.0
+synopsis: Mlatu programming language
+category: Language
+author: Caden Haustein
+maintainer: cadenhaustein@gmail.com
+license: MIT
+
+ghc-options:
+  - -Wall
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
+default-extensions:
+  - NoImplicitPrelude
+  - LambdaCase
+  - OverloadedStrings
+  #  - GHC2021
+  - EmptyCase
+  - PostfixOperators
+  - TupleSections
+  - ImportQualifiedPost
+  - NamedFieldPuns
+  - BangPatterns
+  - BinaryLiterals
+  - HexFloatLiterals
+  - NumericUnderscores
+  - GADTSyntax
+  - RankNTypes
+  - TypeApplications
+  - PolyKinds
+  - StandaloneKindSignatures
+  - ExistentialQuantification
+  - TypeOperators
+  - ConstraintKinds
+  - ExplicitForAll
+  - KindSignatures
+  - NamedWildCards
+  - ScopedTypeVariables
+  - FlexibleContexts
+  - FlexibleInstances
+  - MultiParamTypeClasses
+  - ConstrainedClassMethods
+  - InstanceSigs
+  - TypeSynonymInstances
+  - DeriveDataTypeable
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveTraversable
+  - StandaloneDeriving
+  - EmptyDataDeriving
+  - DeriveLift
+  - GeneralizedNewtypeDeriving
+  - DeriveGeneric
+
+dependencies:
+  - base >=4.8
+  - bytestring
+  - containers
+  - hashable
+  - parsec
+  - pretty
+  - text
+  - transformers
+  - unordered-containers
+  - vector
+  - relude
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -O2
+  dependencies:
+    - JuicyPixels
+    - base64-bytestring
+
+executables:
+  mlatu:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -O2
+    dependencies:
+      - Mlatu
+      - cmdargs
+      - haskeline
+
+tests:
+  test:
+    main: Main.hs
+    source-dirs:
+      - test
+      - src
+    dependencies:
+      - HUnit
+      - JuicyPixels
+      - Mlatu
+      - base64-bytestring
+      - hspec
+      - knob
+data-files:
+  - common.mlt

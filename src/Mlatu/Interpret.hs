@@ -1,0 +1,1024 @@
+-- |
+-- Module      : Mlatu.Interpret
+-- Description : Simple interpreter
+-- Copyright   : (c) Caden Haustin, 2021
+-- License     : MIT
+-- Maintainer  : mlatu@brightlysalty.33mail.com
+-- Stability   : experimental
+-- Portability : GHC
+module Mlatu.Interpret
+  ( Failure,
+    Rep (..),
+    interpret,
+  )
+where
+
+import Codec.Picture.Png qualified as Png
+import Codec.Picture.Types qualified as Picture
+import Control.Exception (ArithException (..), catch, throwIO)
+import Data.Bits
+  ( Bits (complement, rotate, shift, (.&.), (.|.)),
+  )
+import Data.ByteString qualified as ByteString
+import Data.ByteString.Base64 qualified as Base64
+import Data.Fixed (mod')
+import Data.Vector (Vector, (!))
+import Data.Vector qualified as Vector
+import Mlatu.Bits qualified as Bits
+import Mlatu.Definition (mainName)
+import Mlatu.Dictionary (Dictionary)
+import Mlatu.Dictionary qualified as Dictionary
+import Mlatu.Entry qualified as Entry
+import Mlatu.Instantiate qualified as Instantiate
+import Mlatu.Instantiated (Instantiated (Instantiated))
+import Mlatu.Literal qualified as Literal
+import Mlatu.Monad (runMlatu)
+import Mlatu.Name
+  ( ClosureIndex (ClosureIndex),
+    ConstructorIndex (..),
+    GeneralName (QualifiedName),
+    LocalIndex (LocalIndex),
+    Qualified (Qualified),
+    Unqualified,
+  )
+import Mlatu.Pretty qualified as Pretty
+import Mlatu.Report qualified as Report
+import Mlatu.Stack (Stack ((:::)))
+import Mlatu.Stack qualified as Stack
+import Mlatu.Term (Case (..), Else (..), Term (..), Value)
+import Mlatu.Term qualified as Term
+import Mlatu.Type (Type (..))
+import Mlatu.TypeEnv qualified as TypeEnv
+import Mlatu.Vocabulary qualified as Vocabulary
+import Numeric (log)
+import Relude hiding (Compose, Type, callStack)
+import Relude.Extra (safeToEnum)
+import Relude.Unsafe qualified as Unsafe
+import System.Exit (ExitCode (..))
+import System.IO (hFlush, hGetLine, hPutChar, hPutStrLn, readIO)
+import System.IO.Error (IOError, isAlreadyInUseError, isDoesNotExistError, isPermissionError)
+import Text.PrettyPrint qualified as Pretty
+import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Text.Printf (hPrintf)
+import Text.Show qualified
+
+-- | Representation of a runtime value.
+data Rep
+  = Algebraic !ConstructorIndex ![Rep]
+  | Array !(Vector Rep)
+  | Character !Char
+  | Closure !Qualified ![Rep]
+  | Float32 !Float
+  | Float64 !Double
+  | Int8 !Int8
+  | Int16 !Int16
+  | Int32 !Int32
+  | Int64 !Int64
+  | UInt8 !Word8
+  | UInt16 !Word16
+  | UInt32 !Word32
+  | UInt64 !Word64
+  | Name !Qualified
+  | Text !Text
+  deriving (Eq, Show)
+
+valueRep :: (Show a) => Value a -> Rep
+valueRep value = case value of
+  Term.Character c -> Character c
+  Term.Float literal -> case Literal.floatBits literal of
+    Bits.Float32 -> Float32 $ Literal.floatValue literal
+    Bits.Float64 -> Float64 $ Literal.floatValue literal
+  Term.Integer literal -> rep $ Literal.integerValue literal
+    where
+      rep = case Literal.integerBits literal of
+        Bits.Signed8 -> Int8 . fromInteger
+        Bits.Signed16 -> Int16 . fromInteger
+        Bits.Signed32 -> Int32 . fromInteger
+        Bits.Signed64 -> Int64 . fromInteger
+        Bits.Unsigned8 -> UInt8 . fromInteger
+        Bits.Unsigned16 -> UInt16 . fromInteger
+        Bits.Unsigned32 -> UInt32 . fromInteger
+        Bits.Unsigned64 -> UInt64 . fromInteger
+  Term.Name name -> Name name
+  Term.Text text -> Text text
+  _nonRepableTerm -> error $ toText $ "cannot convert value to rep: " ++ show value
+
+instance Pretty Rep where
+  pPrint rep = case rep of
+    Algebraic (ConstructorIndex index) values ->
+      Pretty.hsep $
+        map pPrint values ++ [Pretty.hcat ["#", Pretty.int index]]
+    Array values ->
+      Pretty.brackets $
+        Pretty.list $
+          Vector.toList $ fmap pPrint values
+    Character c -> Pretty.quotes $ Pretty.char c
+    Closure name closure ->
+      Pretty.hsep $
+        map pPrint closure ++ [Pretty.hcat ["#", pPrint name]]
+    Float32 f -> pPrint f
+    Float64 f -> pPrint f
+    Int8 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed8]
+    Int16 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed16]
+    Int32 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed32]
+    Int64 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed64]
+    UInt8 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned8]
+    UInt16 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned16]
+    UInt32 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned32]
+    UInt64 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned64]
+    Name n -> Pretty.hcat ["\\", pPrint n]
+    Text t -> Pretty.doubleQuotes $ Pretty.text $ toString t
+
+-- | Interprets a program dictionary.
+interpret ::
+  -- | The program.
+  Dictionary ->
+  -- | The name of the entry point, if overriding @main@.
+  Maybe Qualified ->
+  -- | Arguments passed to @main@.
+  [Type] ->
+  -- | Standard input handle.
+  Handle ->
+  -- | Standard output handle.
+  Handle ->
+  -- | Standard error handle.
+  Handle ->
+  -- | Initial stack state.
+  [Rep] ->
+  -- | Final stack state.
+  IO [Rep]
+interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
+  -- TODO: Types.
+  stackRef <- newIORef $ Stack.fromList initialStack
+  localsRef <- newIORef []
+  currentClosureRef <- newIORef []
+  let word :: [Qualified] -> Qualified -> [Type] -> IO ()
+      word callStack name args = do
+        let mangled = Instantiated name args
+        case Dictionary.lookup mangled dictionary of
+          -- An entry in the dictionary should already be instantiated, so we
+          -- shouldn't need to instantiate it again here.
+          Just (Entry.Word _ _ _ _ _ (Just body)) -> term (name : callStack) body
+          _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
+            -- A regular word.
+            Just (Entry.Word _ _ _ _ _ (Just body)) -> do
+              mBody' <- runMlatu $ Instantiate.term TypeEnv.empty body args
+              case mBody' of
+                Right body' -> term (name : callStack) body'
+                Left reports ->
+                  hPutStrLn stdout' $
+                    Pretty.render $
+                      Pretty.vcat $
+                        Pretty.hcat
+                          [ "Could not instantiate generic word ",
+                            Pretty.quote name,
+                            ":"
+                          ] :
+                        map Report.human reports
+            -- An intrinsic.
+            Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
+              Qualified v unqualified
+                | v == Vocabulary.intrinsic ->
+                  intrinsic (name : callStack) unqualified
+              _nonIntrinsic -> error "no such intrinsic"
+            _noInstantiation ->
+              throwIO $
+                Failure $
+                  Pretty.hcat
+                    [ "I can't find an instantiation of ",
+                      Pretty.quote name,
+                      ": ",
+                      Pretty.quote mangled
+                    ]
+
+      term :: [Qualified] -> Term Type -> IO ()
+      term callStack t = case t of
+        Coercion {} -> pass
+        Compose _ a b -> term callStack a >> term callStack b
+        -- TODO: Verify that this is correct.
+        Generic _name _ t' _ -> term callStack t'
+        Group t' -> term callStack t'
+        Lambda _ _name _ body _ -> do
+          a ::: r <- readIORef stackRef
+          ls <- readIORef localsRef
+          writeIORef stackRef r
+          writeIORef localsRef (a : ls)
+          term callStack body
+          modifyIORef' localsRef (Unsafe.fromJust . viaNonEmpty tail)
+        Match _ _ cases else_ _ -> do
+          -- We delay matching on the value here because it may not be an ADT at
+          -- all. For example, "1 match else { 2 }" is perfectly valid,
+          -- because we are matching on all (0) of Int32's constructors.
+          x ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          let go (Case (QualifiedName name) caseBody _ : _)
+                -- FIXME: Embed this information during name resolution, rather than
+                -- looking it up.
+                | Just (Entry.Word _ _ _ _ _ (Just ctorBody)) <-
+                    Dictionary.lookup (Instantiated name []) dictionary,
+                  [New _ (ConstructorIndex index') _ _] <- Term.decompose ctorBody,
+                  Algebraic (ConstructorIndex index) fields <- x,
+                  index == index' =
+                  do
+                    writeIORef stackRef $ Stack.pushes fields r
+                    term callStack caseBody
+              go (_ : rest) = go rest
+              go [] = case else_ of
+                Else body _ -> term callStack body
+          go cases
+        New _ index size _ -> do
+          r <- readIORef stackRef
+          let (fields, r') = Stack.pops size r
+          writeIORef stackRef $ Algebraic index fields ::: r'
+        NewClosure _ size _ -> do
+          r <- readIORef stackRef
+          let (Name name : closure, r') = Stack.pops (size + 1) r
+          writeIORef stackRef (Closure name (reverse closure) ::: r')
+        NewVector _ size _ _ -> do
+          r <- readIORef stackRef
+          let (values, r') = Stack.pops size r
+          writeIORef stackRef $
+            Array (Vector.reverse $ Vector.fromList values) ::: r'
+        Push _ value _ -> push value
+        Word _ _ (QualifiedName name) args _ ->
+          word callStack name args
+        -- FIXME: Use proper reporting. (Internal error?)
+        Word _ _ name _ _ ->
+          error $
+            toText $
+              Pretty.render $
+                Pretty.hsep
+                  ["unresolved word name", pPrint name]
+
+      call :: [Qualified] -> IO ()
+      call callStack = do
+        Closure name closure ::: r <- readIORef stackRef
+        writeIORef stackRef r
+        modifyIORef' currentClosureRef (closure :)
+        -- FIXME: Use right args.
+        word (name : callStack) name []
+        modifyIORef' currentClosureRef (Unsafe.fromJust . viaNonEmpty tail)
+
+      push :: Value Type -> IO ()
+      push value = case value of
+        Term.Closed (ClosureIndex index) -> do
+          (currentClosure : _) <- readIORef currentClosureRef
+          modifyIORef' stackRef (Unsafe.fromJust (currentClosure !!? index) :::)
+        Term.Local (LocalIndex index) -> do
+          locals <- readIORef localsRef
+          modifyIORef' stackRef (Unsafe.fromJust (locals !!? index) :::)
+        Term.Text text ->
+          modifyIORef'
+            stackRef
+            ((Array $ fmap Character $ Vector.fromList $ toString text) :::)
+        _otherTerm -> modifyIORef' stackRef (valueRep value :::)
+
+      intrinsic :: [Qualified] -> Unqualified -> IO ()
+      intrinsic callStack name = case name of
+        "abort" -> do
+          Array cs ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          let message = map (\(Character c) -> c) $ Vector.toList cs
+          throwIO $
+            Failure $
+              Pretty.vcat $
+                Pretty.hsep
+                  [ "Execution failure:",
+                    Pretty.text message
+                  ] :
+                "Call stack:" :
+                map (Pretty.nest 4 . pPrint) callStack
+        "exit" -> do
+          Int32 i ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          exitWith $
+            if i == 0
+              then ExitSuccess
+              else ExitFailure $ fromIntegral i
+        "call" -> call callStack
+        "drop" -> modifyIORef' stackRef Stack.popNote
+        "swap" -> do
+          a ::: b ::: r <- readIORef stackRef
+          writeIORef stackRef $ b ::: a ::: r
+        "neg_int8" -> unaryInt8 negate
+        "add_int8" -> binaryInt8 (+)
+        "sub_int8" -> binaryInt8 (-)
+        "mul_int8" -> binaryInt8 (*)
+        "div_int8" -> catchDivideByZero $ binaryInt8 div
+        "mod_int8" -> catchDivideByZero $ binaryInt8 mod
+        "neg_int16" -> unaryInt16 negate
+        "add_int16" -> binaryInt16 (+)
+        "sub_int16" -> binaryInt16 (-)
+        "mul_int16" -> binaryInt16 (*)
+        "div_int16" -> catchDivideByZero $ binaryInt16 div
+        "mod_int16" -> catchDivideByZero $ binaryInt16 mod
+        "neg_int32" -> unaryInt32 negate
+        "add_int32" -> binaryInt32 (+)
+        "sub_int32" -> binaryInt32 (-)
+        "mul_int32" -> binaryInt32 (*)
+        "div_int32" -> catchDivideByZero $ binaryInt32 div
+        "mod_int32" -> catchDivideByZero $ binaryInt32 mod
+        "neg_int64" -> unaryInt64 negate
+        "add_int64" -> binaryInt64 (+)
+        "sub_int64" -> binaryInt64 (-)
+        "mul_int64" -> binaryInt64 (*)
+        "div_int64" -> catchDivideByZero $ binaryInt64 div
+        "mod_int64" -> catchDivideByZero $ binaryInt64 mod
+        "not_int8" -> unaryInt8 complement
+        "or_int8" -> binaryInt8 (.|.)
+        "and_int8" -> binaryInt8 (.&.)
+        "xor_int8" -> binaryInt8 xor
+        "shl_int8" -> binaryInt8Int shift
+        "rol_int8" -> binaryInt8Int rotate
+        "not_int16" -> unaryInt16 complement
+        "or_int16" -> binaryInt16 (.|.)
+        "and_int16" -> binaryInt16 (.&.)
+        "xor_int16" -> binaryInt16 xor
+        "shl_int16" -> binaryInt16Int shift
+        "rol_int16" -> binaryInt16Int rotate
+        "not_int32" -> unaryInt32 complement
+        "or_int32" -> binaryInt32 (.|.)
+        "and_int32" -> binaryInt32 (.&.)
+        "xor_int32" -> binaryInt32 xor
+        "shl_int32" -> binaryInt32Int shift
+        "rol_int32" -> binaryInt32Int rotate
+        "not_int64" -> unaryInt64 complement
+        "or_int64" -> binaryInt64 (.|.)
+        "and_int64" -> binaryInt64 (.&.)
+        "xor_int64" -> binaryInt64 xor
+        "shl_int64" -> binaryInt64Int shift
+        "rol_int64" -> binaryInt64Int rotate
+        "lt_int8" -> boolInt8 (<)
+        "gt_int8" -> boolInt8 (>)
+        "le_int8" -> boolInt8 (<=)
+        "ge_int8" -> boolInt8 (>=)
+        "eq_int8" -> boolInt8 (==)
+        "ne_int8" -> boolInt8 (/=)
+        "lt_int16" -> boolInt16 (<)
+        "gt_int16" -> boolInt16 (>)
+        "le_int16" -> boolInt16 (<=)
+        "ge_int16" -> boolInt16 (>=)
+        "eq_int16" -> boolInt16 (==)
+        "ne_int16" -> boolInt16 (/=)
+        "lt_int32" -> boolInt32 (<)
+        "gt_int32" -> boolInt32 (>)
+        "le_int32" -> boolInt32 (<=)
+        "ge_int32" -> boolInt32 (>=)
+        "eq_int32" -> boolInt32 (==)
+        "ne_int32" -> boolInt32 (/=)
+        "lt_int64" -> boolInt64 (<)
+        "gt_int64" -> boolInt64 (>)
+        "le_int64" -> boolInt64 (<=)
+        "ge_int64" -> boolInt64 (>=)
+        "eq_int64" -> boolInt64 (==)
+        "ne_int64" -> boolInt64 (/=)
+        "neg_uint8" -> unaryUInt8 negate
+        "add_uint8" -> binaryUInt8 (+)
+        "sub_uint8" -> binaryUInt8 (-)
+        "mul_uint8" -> binaryUInt8 (*)
+        "div_uint8" -> catchDivideByZero $ binaryUInt8 div
+        "mod_uint8" -> catchDivideByZero $ binaryUInt8 mod
+        "neg_uint16" -> unaryUInt16 negate
+        "add_uint16" -> binaryUInt16 (+)
+        "sub_uint16" -> binaryUInt16 (-)
+        "mul_uint16" -> binaryUInt16 (*)
+        "div_uint16" -> catchDivideByZero $ binaryUInt16 div
+        "mod_uint16" -> catchDivideByZero $ binaryUInt16 mod
+        "neg_uint32" -> unaryUInt32 negate
+        "add_uint32" -> binaryUInt32 (+)
+        "sub_uint32" -> binaryUInt32 (-)
+        "mul_uint32" -> binaryUInt32 (*)
+        "div_uint32" -> catchDivideByZero $ binaryUInt32 div
+        "mod_uint32" -> catchDivideByZero $ binaryUInt32 mod
+        "neg_uint64" -> unaryUInt64 negate
+        "add_uint64" -> binaryUInt64 (+)
+        "sub_uint64" -> binaryUInt64 (-)
+        "mul_uint64" -> binaryUInt64 (*)
+        "div_uint64" -> catchDivideByZero $ binaryUInt64 div
+        "mod_uint64" -> catchDivideByZero $ binaryUInt64 mod
+        "not_uint8" -> unaryUInt8 complement
+        "or_uint8" -> binaryUInt8 (.|.)
+        "and_uint8" -> binaryUInt8 (.&.)
+        "xor_uint8" -> binaryUInt8 xor
+        "shl_uint8" -> binaryUInt8Int shift
+        "rol_uint8" -> binaryUInt8Int rotate
+        "not_uint16" -> unaryUInt16 complement
+        "or_uint16" -> binaryUInt16 (.|.)
+        "and_uint16" -> binaryUInt16 (.&.)
+        "xor_uint16" -> binaryUInt16 xor
+        "shl_uint16" -> binaryUInt16Int shift
+        "rol_uint16" -> binaryUInt16Int rotate
+        "not_uint32" -> unaryUInt32 complement
+        "or_uint32" -> binaryUInt32 (.|.)
+        "and_uint32" -> binaryUInt32 (.&.)
+        "xor_uint32" -> binaryUInt32 xor
+        "shl_uint32" -> binaryUInt32Int shift
+        "rol_uint32" -> binaryUInt32Int rotate
+        "not_uint64" -> unaryUInt64 complement
+        "or_uint64" -> binaryUInt64 (.|.)
+        "and_uint64" -> binaryUInt64 (.&.)
+        "xor_uint64" -> binaryUInt64 xor
+        "shl_uint64" -> binaryUInt64Int shift
+        "rol_uint64" -> binaryUInt64Int rotate
+        "lt_uint8" -> boolUInt8 (<)
+        "gt_uint8" -> boolUInt8 (>)
+        "le_uint8" -> boolUInt8 (<=)
+        "ge_uint8" -> boolUInt8 (>=)
+        "eq_uint8" -> boolUInt8 (==)
+        "ne_uint8" -> boolUInt8 (/=)
+        "lt_uint16" -> boolUInt16 (<)
+        "gt_uint16" -> boolUInt16 (>)
+        "le_uint16" -> boolUInt16 (<=)
+        "ge_uint16" -> boolUInt16 (>=)
+        "eq_uint16" -> boolUInt16 (==)
+        "ne_uint16" -> boolUInt16 (/=)
+        "lt_uint32" -> boolUInt32 (<)
+        "gt_uint32" -> boolUInt32 (>)
+        "le_uint32" -> boolUInt32 (<=)
+        "ge_uint32" -> boolUInt32 (>=)
+        "eq_uint32" -> boolUInt32 (==)
+        "ne_uint32" -> boolUInt32 (/=)
+        "lt_uint64" -> boolUInt64 (<)
+        "gt_uint64" -> boolUInt64 (>)
+        "le_uint64" -> boolUInt64 (<=)
+        "ge_uint64" -> boolUInt64 (>=)
+        "eq_uint64" -> boolUInt64 (==)
+        "ne_uint64" -> boolUInt64 (/=)
+        "lt_char" -> boolChar (<)
+        "gt_char" -> boolChar (>)
+        "le_char" -> boolChar (<=)
+        "ge_char" -> boolChar (>=)
+        "eq_char" -> boolChar (==)
+        "ne_char" -> boolChar (/=)
+        "neg_float32" -> unaryFloat32 negate
+        "add_float32" -> binaryFloat32 (+)
+        "sub_float32" -> binaryFloat32 (-)
+        "mul_float32" -> binaryFloat32 (*)
+        "div_float32" -> binaryFloat32 (/)
+        "mod_float32" -> catchFloatModByZero $ binaryFloat32 mod'
+        "neg_float64" -> unaryFloat64 negate
+        "add_float64" -> binaryFloat64 (+)
+        "sub_float64" -> binaryFloat64 (-)
+        "mul_float64" -> binaryFloat64 (*)
+        "div_float64" -> binaryFloat64 (/)
+        "mod_float64" -> catchFloatModByZero $ binaryFloat64 mod'
+        "exp_float32" -> unaryFloat32 exp
+        "log_float32" -> unaryFloat32 log
+        "sqrt_float32" -> unaryFloat32 sqrt
+        "sin_float32" -> unaryFloat32 sin
+        "cos_float32" -> unaryFloat32 cos
+        "tan_float32" -> unaryFloat32 tan
+        "asin_float32" -> unaryFloat32 asin
+        "acos_float32" -> unaryFloat32 acos
+        "atan_float32" -> unaryFloat32 atan
+        "atan2_float32" -> binaryFloat32 atan2
+        "sinh_float32" -> unaryFloat32 sinh
+        "cosh_float32" -> unaryFloat32 cosh
+        "tanh_float32" -> unaryFloat32 tanh
+        "asinh_float32" -> unaryFloat32 asinh
+        "acosh_float32" -> unaryFloat32 acosh
+        "atanh_float32" -> unaryFloat32 atanh
+        "trunc_float32" -> unaryFloat32 $ fromInteger . truncate
+        "round_float32" -> unaryFloat32 $ fromInteger . round
+        "ceil_float32" -> unaryFloat32 $ fromInteger . ceiling
+        "floor_float32" -> unaryFloat32 $ fromInteger . floor
+        "exp_float64" -> unaryFloat64 exp
+        "log_float64" -> unaryFloat64 log
+        "sqrt_float64" -> unaryFloat64 sqrt
+        "sin_float64" -> unaryFloat64 sin
+        "cos_float64" -> unaryFloat64 cos
+        "tan_float64" -> unaryFloat64 tan
+        "asin_float64" -> unaryFloat64 asin
+        "acos_float64" -> unaryFloat64 acos
+        "atan_float64" -> unaryFloat64 atan
+        "atan2_float64" -> binaryFloat64 atan2
+        "sinh_float64" -> unaryFloat64 sinh
+        "cosh_float64" -> unaryFloat64 cosh
+        "tanh_float64" -> unaryFloat64 tanh
+        "asinh_float64" -> unaryFloat64 asinh
+        "acosh_float64" -> unaryFloat64 acosh
+        "atanh_float64" -> unaryFloat64 atanh
+        "trunc_float64" -> unaryFloat64 $ fromInteger . truncate
+        "round_float64" -> unaryFloat64 $ fromInteger . round
+        "ceil_float64" -> unaryFloat64 $ fromInteger . ceiling
+        "floor_float64" -> unaryFloat64 $ fromInteger . floor
+        "lt_float32" -> boolFloat32 (<)
+        "gt_float32" -> boolFloat32 (>)
+        "le_float32" -> boolFloat32 (<=)
+        "ge_float32" -> boolFloat32 (>=)
+        "eq_float32" -> boolFloat32 (==)
+        "ne_float32" -> boolFloat32 (/=)
+        "lt_float64" -> boolFloat64 (<)
+        "gt_float64" -> boolFloat64 (>)
+        "le_float64" -> boolFloat64 (<=)
+        "ge_float64" -> boolFloat64 (>=)
+        "eq_float64" -> boolFloat64 (==)
+        "ne_float64" -> boolFloat64 (/=)
+        "show_int8" -> showInteger (show :: Int8 -> String)
+        "show_int16" -> showInteger (show :: Int16 -> String)
+        "show_int32" -> showInteger (show :: Int32 -> String)
+        "show_int64" -> showInteger (show :: Int64 -> String)
+        "show_uint8" -> showInteger (show :: Word8 -> String)
+        "show_uint16" -> showInteger (show :: Word16 -> String)
+        "show_uint32" -> showInteger (show :: Word32 -> String)
+        "show_uint64" -> showInteger (show :: Word64 -> String)
+        "show_float32" -> showFloat (show :: Float -> String)
+        "show_float64" -> showFloat (show :: Double -> String)
+        "read_int8" -> readInteger (readIO :: String -> IO Int8) Int8
+        "read_int16" -> readInteger (readIO :: String -> IO Int16) Int16
+        "read_int32" -> readInteger (readIO :: String -> IO Int32) Int32
+        "read_int64" -> readInteger (readIO :: String -> IO Int64) Int64
+        "read_uint8" -> readInteger (readIO :: String -> IO Word8) UInt8
+        "read_uint16" -> readInteger (readIO :: String -> IO Word16) UInt16
+        "read_uint32" -> readInteger (readIO :: String -> IO Word32) UInt32
+        "read_uint64" -> readInteger (readIO :: String -> IO Word64) UInt64
+        "read_float32" -> readFloat (readIO :: String -> IO Float) Float32
+        "read_float64" -> readFloat (readIO :: String -> IO Double) Float64
+        "empty" -> do
+          Array xs ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          if Vector.null xs
+            then word callStack (Qualified Vocabulary.global "true") []
+            else word callStack (Qualified Vocabulary.global "false") []
+        "head" -> do
+          Array xs ::: r <- readIORef stackRef
+          if Vector.null xs
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              let x = xs ! 0
+              writeIORef stackRef $ x ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "last" -> do
+          Array xs ::: r <- readIORef stackRef
+          if Vector.null xs
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              let x = xs ! (Vector.length xs - 1)
+              writeIORef stackRef $ x ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "append" -> do
+          x ::: Array xs ::: r <- readIORef stackRef
+          writeIORef stackRef $ Array (Vector.snoc xs x) ::: r
+        "prepend" -> do
+          Array xs ::: x ::: r <- readIORef stackRef
+          writeIORef stackRef $ Array (Vector.cons x xs) ::: r
+        "cat" -> do
+          Array ys ::: Array xs ::: r <- readIORef stackRef
+          writeIORef stackRef $ Array (xs <> ys) ::: r
+        "get" -> do
+          Int32 i ::: Array xs ::: r <- readIORef stackRef
+          if i < 0 || i >= fromIntegral (length xs)
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              writeIORef stackRef $ (xs ! fromIntegral i) ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "set" -> do
+          Int32 i ::: x ::: Array xs ::: r <- readIORef stackRef
+          if i < 0 || i >= fromIntegral (length xs)
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              let (before, after) = Vector.splitAt (fromIntegral i) xs
+              writeIORef stackRef $
+                Array
+                  (before <> Vector.singleton x <> Vector.tail after)
+                  ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "print" -> do
+          Array cs ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          mapM_ (\(Character c) -> hPutChar stdout' c) cs
+        "get_line" -> do
+          line <- hGetLine stdin'
+          modifyIORef' stackRef (Array (Vector.fromList (map Character line)) :::)
+        "flush_stdout" -> hFlush stdout'
+        "read_file" -> do
+          Array cs ::: r <- readIORef stackRef
+          contents <-
+            catchFileAccessErrors $
+              readFile $ map (\(Character c) -> c) $ Vector.toList cs
+          writeIORef stackRef $
+            Array
+              (Vector.fromList (map Character contents))
+              ::: r
+        "write_file" -> do
+          Array cs ::: Array bs ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          catchFileAccessErrors $
+            writeFile (map (\(Character c) -> c) $ Vector.toList cs) $
+              map (\(Character c) -> c) $ Vector.toList bs
+        "append_file" -> do
+          Array cs ::: Array bs ::: r <- readIORef stackRef
+          writeIORef stackRef r
+          catchFileAccessErrors $
+            appendFile (map (\(Character c) -> c) $ Vector.toList cs) $
+              map (\(Character c) -> c) $ Vector.toList bs
+        "tail" -> do
+          Array xs ::: r <- readIORef stackRef
+          if Vector.null xs
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              let xs' = Vector.tail xs
+              writeIORef stackRef $ Array xs' ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "init" -> do
+          Array xs ::: r <- readIORef stackRef
+          if Vector.null xs
+            then do
+              writeIORef stackRef r
+              word callStack (Qualified Vocabulary.global "none") []
+            else do
+              let xs' = Vector.init xs
+              writeIORef stackRef $ Array xs' ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+        "draw" -> do
+          Array ys ::: rest <- readIORef stackRef
+          writeIORef stackRef rest
+          let height = length ys
+              width =
+                if null ys
+                  then 0
+                  else case ys ! 0 of
+                    Array xs -> Vector.length xs
+                    _nonArray -> error "draw: the typechecker has failed us (rows)"
+          hPrintf
+            stdout'
+            "\ESC]1337;File=width=%dpx;height=%dpx;inline=1:%s\BEL\n"
+            width
+            height
+            $ mapMaybe ((safeToEnum :: Int -> Maybe Char) . fromIntegral) $
+              ByteString.unpack $
+                Base64.encode $
+                  toStrict $
+                    Png.encodePng $
+                      Picture.generateImage
+                        ( \x y -> case ys ! y of
+                            Array xs -> case xs ! x of
+                              Algebraic _ channels -> case channels of
+                                [UInt8 r, UInt8 g, UInt8 b, UInt8 a] ->
+                                  Picture.PixelRGBA8
+                                    (fromIntegral r)
+                                    (fromIntegral g)
+                                    (fromIntegral b)
+                                    (fromIntegral a)
+                                _nonChannel -> error "draw: the typechecker has failed us (channel)"
+                              _nonColumn -> error "draw: the typechecker has failed us (column)"
+                            _nonRow -> error "draw: the typechecker has failed us (row)"
+                        )
+                        width
+                        height
+        _nonIntrinsic -> error "no such intrinsic"
+        where
+          unaryInt8 :: (Int8 -> Int8) -> IO ()
+          unaryInt8 f = do
+            Int8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ Int8 result ::: r
+
+          binaryInt8 :: (Int8 -> Int8 -> Int8) -> IO ()
+          binaryInt8 f = do
+            Int8 y ::: Int8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int8 result ::: r
+
+          binaryInt8Int :: (Int8 -> Int -> Int8) -> IO ()
+          binaryInt8Int f = do
+            Int32 y ::: Int8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int8 result ::: r
+
+          unaryInt16 :: (Int16 -> Int16) -> IO ()
+          unaryInt16 f = do
+            Int16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ Int16 result ::: r
+
+          binaryInt16 :: (Int16 -> Int16 -> Int16) -> IO ()
+          binaryInt16 f = do
+            Int16 y ::: Int16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int16 result ::: r
+
+          binaryInt16Int :: (Int16 -> Int -> Int16) -> IO ()
+          binaryInt16Int f = do
+            Int32 y ::: Int16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int16 result ::: r
+
+          unaryInt32 :: (Int32 -> Int32) -> IO ()
+          unaryInt32 f = do
+            Int32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ Int32 result ::: r
+
+          binaryInt32 :: (Int32 -> Int32 -> Int32) -> IO ()
+          binaryInt32 f = do
+            Int32 y ::: Int32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int32 result ::: r
+
+          binaryInt32Int :: (Int32 -> Int -> Int32) -> IO ()
+          binaryInt32Int f = do
+            Int32 y ::: Int32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int32 result ::: r
+
+          unaryInt64 :: (Int64 -> Int64) -> IO ()
+          unaryInt64 f = do
+            Int64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ Int64 result ::: r
+
+          binaryInt64 :: (Int64 -> Int64 -> Int64) -> IO ()
+          binaryInt64 f = do
+            Int64 y ::: Int64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int64 result ::: r
+
+          binaryInt64Int :: (Int64 -> Int -> Int64) -> IO ()
+          binaryInt64Int f = do
+            Int32 y ::: Int64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Int64 result ::: r
+
+          unaryUInt8 :: (Word8 -> Word8) -> IO ()
+          unaryUInt8 f = do
+            UInt8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ UInt8 result ::: r
+
+          binaryUInt8 :: (Word8 -> Word8 -> Word8) -> IO ()
+          binaryUInt8 f = do
+            UInt8 y ::: UInt8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt8 result ::: r
+
+          binaryUInt8Int :: (Word8 -> Int -> Word8) -> IO ()
+          binaryUInt8Int f = do
+            Int32 y ::: UInt8 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt8 result ::: r
+
+          unaryUInt16 :: (Word16 -> Word16) -> IO ()
+          unaryUInt16 f = do
+            UInt16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ UInt16 result ::: r
+
+          binaryUInt16 :: (Word16 -> Word16 -> Word16) -> IO ()
+          binaryUInt16 f = do
+            UInt16 y ::: UInt16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt16 result ::: r
+
+          binaryUInt16Int :: (Word16 -> Int -> Word16) -> IO ()
+          binaryUInt16Int f = do
+            Int32 y ::: UInt16 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt16 result ::: r
+
+          unaryUInt32 :: (Word32 -> Word32) -> IO ()
+          unaryUInt32 f = do
+            UInt32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ UInt32 result ::: r
+
+          binaryUInt32 :: (Word32 -> Word32 -> Word32) -> IO ()
+          binaryUInt32 f = do
+            UInt32 y ::: UInt32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt32 result ::: r
+
+          binaryUInt32Int :: (Word32 -> Int -> Word32) -> IO ()
+          binaryUInt32Int f = do
+            Int32 y ::: UInt32 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt32 result ::: r
+
+          unaryUInt64 :: (Word64 -> Word64) -> IO ()
+          unaryUInt64 f = do
+            UInt64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f $ fromIntegral x
+            writeIORef stackRef $ UInt64 result ::: r
+
+          binaryUInt64 :: (Word64 -> Word64 -> Word64) -> IO ()
+          binaryUInt64 f = do
+            UInt64 y ::: UInt64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt64 result ::: r
+
+          binaryUInt64Int :: (Word64 -> Int -> Word64) -> IO ()
+          binaryUInt64Int f = do
+            Int32 y ::: UInt64 x ::: r <- readIORef stackRef
+            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ UInt64 result ::: r
+
+          boolInt8 :: (Int8 -> Int8 -> Bool) -> IO ()
+          boolInt8 f = do
+            Int8 y ::: Int8 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolInt16 :: (Int16 -> Int16 -> Bool) -> IO ()
+          boolInt16 f = do
+            Int16 y ::: Int16 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolInt32 :: (Int32 -> Int32 -> Bool) -> IO ()
+          boolInt32 f = do
+            Int32 y ::: Int32 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolInt64 :: (Int64 -> Int64 -> Bool) -> IO ()
+          boolInt64 f = do
+            Int64 y ::: Int64 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolUInt8 :: (Word8 -> Word8 -> Bool) -> IO ()
+          boolUInt8 f = do
+            UInt8 y ::: UInt8 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolUInt16 :: (Word16 -> Word16 -> Bool) -> IO ()
+          boolUInt16 f = do
+            UInt16 y ::: UInt16 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolUInt32 :: (Word32 -> Word32 -> Bool) -> IO ()
+          boolUInt32 f = do
+            UInt32 y ::: UInt32 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolUInt64 :: (Word64 -> Word64 -> Bool) -> IO ()
+          boolUInt64 f = do
+            UInt64 y ::: UInt64 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (fromIntegral x) (fromIntegral y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          boolChar :: (Char -> Char -> Bool) -> IO ()
+          boolChar f = do
+            Character y ::: Character x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f x y
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          unaryFloat32 :: (Float -> Float) -> IO ()
+          unaryFloat32 f = do
+            Float32 x ::: r <- readIORef stackRef
+            let !result = realToFrac $ f $ realToFrac x
+            writeIORef stackRef $ Float32 result ::: r
+
+          binaryFloat32 :: (Float -> Float -> Float) -> IO ()
+          binaryFloat32 f = do
+            Float32 y ::: Float32 x ::: r <- readIORef stackRef
+            let !result = realToFrac $ f (realToFrac x) (realToFrac y)
+            writeIORef stackRef $ Float32 result ::: r
+
+          boolFloat32 :: (Float -> Float -> Bool) -> IO ()
+          boolFloat32 f = do
+            Float32 y ::: Float32 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f (realToFrac x) (realToFrac y)
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          unaryFloat64 :: (Double -> Double) -> IO ()
+          unaryFloat64 f = do
+            Float64 x ::: r <- readIORef stackRef
+            let !result = realToFrac $ f $ realToFrac x
+            writeIORef stackRef $ Float64 result ::: r
+
+          binaryFloat64 :: (Double -> Double -> Double) -> IO ()
+          binaryFloat64 f = do
+            Float64 y ::: Float64 x ::: r <- readIORef stackRef
+            let !result = f x y
+            writeIORef stackRef $ Float64 result ::: r
+
+          boolFloat64 :: (Double -> Double -> Bool) -> IO ()
+          boolFloat64 f = do
+            Float64 y ::: Float64 x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f x y
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          showInteger :: Num a => (a -> String) -> IO ()
+          showInteger f = do
+            rep ::: r <- readIORef stackRef
+            let x = case rep of
+                  Int8 n -> toInteger n
+                  Int16 n -> toInteger n
+                  Int32 n -> toInteger n
+                  Int64 n -> toInteger n
+                  UInt8 n -> toInteger n
+                  UInt16 n -> toInteger n
+                  UInt32 n -> toInteger n
+                  UInt64 n -> toInteger n
+                  _nonInt -> error "the typechecker has failed us (show integer)"
+            writeIORef stackRef $
+              Array (Vector.fromList $ map Character $ f $ fromInteger x) ::: r
+
+          showFloat :: Fractional a => (a -> String) -> IO ()
+          showFloat f = do
+            rep ::: r <- readIORef stackRef
+            let x = case rep of
+                  Float32 n -> realToFrac n
+                  Float64 n -> realToFrac n
+                  _nonInt -> error "the typechecker has failed us (show float)"
+            writeIORef stackRef $
+              Array (Vector.fromList $ map Character $ f x) ::: r
+
+          readInteger :: Integral a => (String -> IO a) -> (a -> Rep) -> IO ()
+          readInteger f rep = do
+            Array cs ::: r <- readIORef stackRef
+            do
+              result <- f $ map (\(Character c) -> c) $ Vector.toList cs
+              writeIORef stackRef $ rep result ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+              `catch` \(_ :: IOError) -> do
+                writeIORef stackRef r
+                word callStack (Qualified Vocabulary.global "none") []
+
+          readFloat :: Real a => (String -> IO a) -> (a -> Rep) -> IO ()
+          readFloat f rep = do
+            Array cs ::: r <- readIORef stackRef
+            do
+              result <- f $ map (\(Character c) -> c) $ Vector.toList cs
+              writeIORef stackRef $ rep result ::: r
+              -- FIXME: Use right args.
+              word callStack (Qualified Vocabulary.global "some") []
+              `catch` \(_ :: IOError) -> do
+                writeIORef stackRef r
+                word callStack (Qualified Vocabulary.global "none") []
+
+          catchDivideByZero :: IO a -> IO a
+          catchDivideByZero action =
+            action `catch` \case
+              DivideByZero ->
+                throwIO $
+                  Failure $
+                    Pretty.vcat $
+                      "Execution failure: integer division by zero" :
+                      "Call stack:" :
+                      map (Pretty.nest 4 . pPrint) callStack
+              unexpectedError -> throwIO unexpectedError
+
+          catchFloatModByZero :: IO a -> IO a
+          catchFloatModByZero action =
+            action `catch` \case
+              RatioZeroDenominator ->
+                throwIO $
+                  Failure $
+                    Pretty.vcat $
+                      "Execution failure: float modulus by zero" :
+                      "Call stack:" :
+                      map (Pretty.nest 4 . pPrint) callStack
+              unexpectedError -> throwIO unexpectedError
+
+          catchFileAccessErrors :: IO a -> IO a
+          catchFileAccessErrors action =
+            action `catch` \e ->
+              throwIO $
+                Failure $
+                  Pretty.vcat $
+                    ( if isAlreadyInUseError e
+                        then "Execution failure: file already in use"
+                        else
+                          if isDoesNotExistError e
+                            then "Execution failure: file does not exist"
+                            else
+                              if isPermissionError e
+                                then "Execution failure: not permitted to open file"
+                                else "Execution failure: unknown file access error"
+                    ) :
+                    "Call stack:" :
+                    map (Pretty.nest 4 . pPrint) callStack
+
+  let entryPointName = fromMaybe mainName mName
+  word [entryPointName] entryPointName mainArgs
+  toList <$> readIORef stackRef
+
+newtype Failure = Failure Pretty.Doc
+  deriving (Typeable)
+
+instance Exception Failure
+
+instance Show Failure where
+  show (Failure message) = Pretty.render message

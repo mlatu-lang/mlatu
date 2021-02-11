@@ -1,0 +1,1756 @@
+vocab mlatu {
+
+  intrinsic call<R..., S...> (R..., (R... -> S...) -> S...)
+  intrinsic drop<A> (A ->)
+  intrinsic swap<A, B> (A, B -> B, A)
+
+}
+
+define call<R..., S...> (R..., (R... -> S...) -> S...):
+  _::mlatu::call
+
+about call:
+  docs: """
+    Applies a closure to the stack.
+
+    This denotes modus ponens: if we have a program state 'R...', a permission
+    '+P', and a closure '(R... -> S... +P)' as evidence that we can convert
+    'R...' to 'S...' given '+P', then we can invoke the closure to produce the
+    new state 'S...'.
+    """
+
+type Int8 {}
+
+about type Int8:
+  size: 1
+  alignment: 1
+
+type Int16 {}
+
+about type Int16:
+  size: 2
+  alignment: 2
+
+type Int32 {}
+
+about type Int32:
+  size: 4
+  alignment: 4
+
+type Int64 {}
+
+about type Int64:
+  size: 8
+  alignment: 8
+
+type UInt8 {}
+
+about type UInt8:
+  size: 1
+  alignment: 1
+
+type UInt16 {}
+
+about type UInt16:
+  size: 2
+  alignment: 2
+
+type UInt32 {}
+
+about type UInt32:
+  size: 4
+  alignment: 4
+
+type UInt64 {}
+
+about type UInt64:
+  size: 8
+  alignment: 8
+
+type Char {}
+
+about type Char:
+  size: 4
+  alignment: 4
+
+type Float32 {}
+
+about type Float32:
+  size: 4
+  alignment: 4
+
+type Float64 {}
+
+about type Float64:
+  size: 8
+  alignment: 8
+
+vocab mlatu {
+
+  // Signed integer arithmetic.
+
+  intrinsic neg_int8 (Int8 -> Int8)
+  intrinsic add_int8 (Int8, Int8 -> Int8)
+  intrinsic sub_int8 (Int8, Int8 -> Int8)
+  intrinsic mul_int8 (Int8, Int8 -> Int8)
+  intrinsic div_int8 (Int8, Int8 -> Int8)
+  intrinsic mod_int8 (Int8, Int8 -> Int8)
+
+  intrinsic neg_int16 (Int16 -> Int16)
+  intrinsic add_int16 (Int16, Int16 -> Int16)
+  intrinsic sub_int16 (Int16, Int16 -> Int16)
+  intrinsic mul_int16 (Int16, Int16 -> Int16)
+  intrinsic div_int16 (Int16, Int16 -> Int16)
+  intrinsic mod_int16 (Int16, Int16 -> Int16)
+
+  intrinsic neg_int32 (Int32 -> Int32)
+  intrinsic add_int32 (Int32, Int32 -> Int32)
+  intrinsic sub_int32 (Int32, Int32 -> Int32)
+  intrinsic mul_int32 (Int32, Int32 -> Int32)
+  intrinsic div_int32 (Int32, Int32 -> Int32)
+  intrinsic mod_int32 (Int32, Int32 -> Int32)
+
+  intrinsic neg_int64 (Int64 -> Int64)
+  intrinsic add_int64 (Int64, Int64 -> Int64)
+  intrinsic sub_int64 (Int64, Int64 -> Int64)
+  intrinsic mul_int64 (Int64, Int64 -> Int64)
+  intrinsic div_int64 (Int64, Int64 -> Int64)
+  intrinsic mod_int64 (Int64, Int64 -> Int64)
+
+  // Signed integer bitwise operations.
+
+  intrinsic not_int8 (Int8 -> Int8)
+  intrinsic or_int8  (Int8, Int8 -> Int8)
+  intrinsic and_int8 (Int8, Int8 -> Int8)
+  intrinsic xor_int8 (Int8, Int8 -> Int8)
+  intrinsic shl_int8 (Int8, Int32 -> Int8)
+  intrinsic rol_int8 (Int8, Int32 -> Int8)
+
+  intrinsic not_int16 (Int16 -> Int16)
+  intrinsic or_int16  (Int16, Int16 -> Int16)
+  intrinsic and_int16 (Int16, Int16 -> Int16)
+  intrinsic xor_int16 (Int16, Int16 -> Int16)
+  intrinsic shl_int16 (Int16, Int32 -> Int16)
+  intrinsic rol_int16 (Int16, Int32 -> Int16)
+
+  intrinsic not_int32 (Int32 -> Int32)
+  intrinsic or_int32  (Int32, Int32 -> Int32)
+  intrinsic and_int32 (Int32, Int32 -> Int32)
+  intrinsic xor_int32 (Int32, Int32 -> Int32)
+  intrinsic shl_int32 (Int32, Int32 -> Int32)
+  intrinsic rol_int32 (Int32, Int32 -> Int32)
+
+  intrinsic not_int64 (Int64 -> Int64)
+  intrinsic or_int64  (Int64, Int64 -> Int64)
+  intrinsic and_int64 (Int64, Int64 -> Int64)
+  intrinsic xor_int64 (Int64, Int64 -> Int64)
+  intrinsic shl_int64 (Int64, Int32 -> Int64)
+  intrinsic rol_int64 (Int64, Int32 -> Int64)
+
+  // Signed integer comparisons.
+
+  intrinsic lt_int8 (Int8, Int8 -> Bool)
+  intrinsic gt_int8 (Int8, Int8 -> Bool)
+  intrinsic le_int8 (Int8, Int8 -> Bool)
+  intrinsic ge_int8 (Int8, Int8 -> Bool)
+  intrinsic eq_int8 (Int8, Int8 -> Bool)
+  intrinsic ne_int8 (Int8, Int8 -> Bool)
+
+  intrinsic lt_int16 (Int16, Int16 -> Bool)
+  intrinsic gt_int16 (Int16, Int16 -> Bool)
+  intrinsic le_int16 (Int16, Int16 -> Bool)
+  intrinsic ge_int16 (Int16, Int16 -> Bool)
+  intrinsic eq_int16 (Int16, Int16 -> Bool)
+  intrinsic ne_int16 (Int16, Int16 -> Bool)
+
+  intrinsic lt_int32 (Int32, Int32 -> Bool)
+  intrinsic gt_int32 (Int32, Int32 -> Bool)
+  intrinsic le_int32 (Int32, Int32 -> Bool)
+  intrinsic ge_int32 (Int32, Int32 -> Bool)
+  intrinsic eq_int32 (Int32, Int32 -> Bool)
+  intrinsic ne_int32 (Int32, Int32 -> Bool)
+
+  intrinsic lt_int64 (Int64, Int64 -> Bool)
+  intrinsic gt_int64 (Int64, Int64 -> Bool)
+  intrinsic le_int64 (Int64, Int64 -> Bool)
+  intrinsic ge_int64 (Int64, Int64 -> Bool)
+  intrinsic eq_int64 (Int64, Int64 -> Bool)
+  intrinsic ne_int64 (Int64, Int64 -> Bool)
+
+  // Unsigned integer arithmetic.
+
+  intrinsic neg_uint8 (UInt8 -> UInt8)
+  intrinsic add_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic sub_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic mul_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic div_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic mod_uint8 (UInt8, UInt8 -> UInt8)
+
+  intrinsic neg_uint16 (UInt16 -> UInt16)
+  intrinsic add_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic sub_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic mul_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic div_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic mod_uint16 (UInt16, UInt16 -> UInt16)
+
+  intrinsic neg_uint32 (UInt32 -> UInt32)
+  intrinsic add_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic sub_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic mul_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic div_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic mod_uint32 (UInt32, UInt32 -> UInt32)
+
+  intrinsic neg_uint64 (UInt64 -> UInt64)
+  intrinsic add_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic sub_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic mul_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic div_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic mod_uint64 (UInt64, UInt64 -> UInt64)
+
+  // Unsigned integer bitwise operations.
+
+  intrinsic not_uint8 (UInt8 -> UInt8)
+  intrinsic or_uint8  (UInt8, UInt8 -> UInt8)
+  intrinsic and_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic xor_uint8 (UInt8, UInt8 -> UInt8)
+  intrinsic shl_uint8 (UInt8, Int32 -> UInt8)
+  intrinsic rol_uint8 (UInt8, Int32 -> UInt8)
+
+  intrinsic not_uint16 (UInt16 -> UInt16)
+  intrinsic or_uint16  (UInt16, UInt16 -> UInt16)
+  intrinsic and_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic xor_uint16 (UInt16, UInt16 -> UInt16)
+  intrinsic shl_uint16 (UInt16, Int32 -> UInt16)
+  intrinsic rol_uint16 (UInt16, Int32 -> UInt16)
+
+  intrinsic not_uint32 (UInt32 -> UInt32)
+  intrinsic or_uint32  (UInt32, UInt32 -> UInt32)
+  intrinsic and_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic xor_uint32 (UInt32, UInt32 -> UInt32)
+  intrinsic shl_uint32 (UInt32, Int32 -> UInt32)
+  intrinsic rol_uint32 (UInt32, Int32 -> UInt32)
+
+  intrinsic not_uint64 (UInt64 -> UInt64)
+  intrinsic or_uint64  (UInt64, UInt64 -> UInt64)
+  intrinsic and_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic xor_uint64 (UInt64, UInt64 -> UInt64)
+  intrinsic shl_uint64 (UInt64, Int32 -> UInt64)
+  intrinsic rol_uint64 (UInt64, Int32 -> UInt64)
+
+  // Unsigned integer comparisons.
+
+  intrinsic lt_uint8 (UInt8, UInt8 -> Bool)
+  intrinsic gt_uint8 (UInt8, UInt8 -> Bool)
+  intrinsic le_uint8 (UInt8, UInt8 -> Bool)
+  intrinsic ge_uint8 (UInt8, UInt8 -> Bool)
+  intrinsic eq_uint8 (UInt8, UInt8 -> Bool)
+  intrinsic ne_uint8 (UInt8, UInt8 -> Bool)
+
+  intrinsic lt_uint16 (UInt16, UInt16 -> Bool)
+  intrinsic gt_uint16 (UInt16, UInt16 -> Bool)
+  intrinsic le_uint16 (UInt16, UInt16 -> Bool)
+  intrinsic ge_uint16 (UInt16, UInt16 -> Bool)
+  intrinsic eq_uint16 (UInt16, UInt16 -> Bool)
+  intrinsic ne_uint16 (UInt16, UInt16 -> Bool)
+
+  intrinsic lt_uint32 (UInt32, UInt32 -> Bool)
+  intrinsic gt_uint32 (UInt32, UInt32 -> Bool)
+  intrinsic le_uint32 (UInt32, UInt32 -> Bool)
+  intrinsic ge_uint32 (UInt32, UInt32 -> Bool)
+  intrinsic eq_uint32 (UInt32, UInt32 -> Bool)
+  intrinsic ne_uint32 (UInt32, UInt32 -> Bool)
+
+  intrinsic lt_uint64 (UInt64, UInt64 -> Bool)
+  intrinsic gt_uint64 (UInt64, UInt64 -> Bool)
+  intrinsic le_uint64 (UInt64, UInt64 -> Bool)
+  intrinsic ge_uint64 (UInt64, UInt64 -> Bool)
+  intrinsic eq_uint64 (UInt64, UInt64 -> Bool)
+  intrinsic ne_uint64 (UInt64, UInt64 -> Bool)
+
+  intrinsic lt_char (Char, Char -> Bool)
+  intrinsic gt_char (Char, Char -> Bool)
+  intrinsic le_char (Char, Char -> Bool)
+  intrinsic ge_char (Char, Char -> Bool)
+  intrinsic eq_char (Char, Char -> Bool)
+  intrinsic ne_char (Char, Char -> Bool)
+
+  // Floating-point arithmetic.
+
+  intrinsic neg_float32 (Float32 -> Float32)
+  intrinsic add_float32 (Float32, Float32 -> Float32)
+  intrinsic sub_float32 (Float32, Float32 -> Float32)
+  intrinsic mul_float32 (Float32, Float32 -> Float32)
+  intrinsic div_float32 (Float32, Float32 -> Float32)
+  intrinsic mod_float32 (Float32, Float32 -> Float32)
+
+  intrinsic neg_float64 (Float64 -> Float64)
+  intrinsic add_float64 (Float64, Float64 -> Float64)
+  intrinsic sub_float64 (Float64, Float64 -> Float64)
+  intrinsic mul_float64 (Float64, Float64 -> Float64)
+  intrinsic div_float64 (Float64, Float64 -> Float64)
+  intrinsic mod_float64 (Float64, Float64 -> Float64)
+
+  // Floating-point functions.
+
+  intrinsic exp_float32 (Float32 -> Float32)
+  intrinsic log_float32 (Float32 -> Float32)
+  intrinsic sqrt_float32 (Float32 -> Float32)
+  intrinsic sin_float32 (Float32 -> Float32)
+  intrinsic cos_float32 (Float32 -> Float32)
+  intrinsic tan_float32 (Float32 -> Float32)
+  intrinsic asin_float32 (Float32 -> Float32)
+  intrinsic acos_float32 (Float32 -> Float32)
+  intrinsic atan_float32 (Float32 -> Float32)
+  intrinsic atan2_float32 (Float32, Float32 -> Float32)
+  intrinsic sinh_float32 (Float32 -> Float32)
+  intrinsic cosh_float32 (Float32 -> Float32)
+  intrinsic tanh_float32 (Float32 -> Float32)
+  intrinsic asinh_float32 (Float32 -> Float32)
+  intrinsic acosh_float32 (Float32 -> Float32)
+  intrinsic atanh_float32 (Float32 -> Float32)
+  intrinsic trunc_float32 (Float32 -> Float32)
+  intrinsic round_float32 (Float32 -> Float32)
+  intrinsic ceil_float32 (Float32 -> Float32)
+  intrinsic floor_float32 (Float32 -> Float32)
+
+  intrinsic exp_float64 (Float64 -> Float64)
+  intrinsic log_float64 (Float64 -> Float64)
+  intrinsic sqrt_float64 (Float64 -> Float64)
+  intrinsic sin_float64 (Float64 -> Float64)
+  intrinsic cos_float64 (Float64 -> Float64)
+  intrinsic tan_float64 (Float64 -> Float64)
+  intrinsic asin_float64 (Float64 -> Float64)
+  intrinsic acos_float64 (Float64 -> Float64)
+  intrinsic atan_float64 (Float64 -> Float64)
+  intrinsic atan2_float64 (Float64, Float64 -> Float64)
+  intrinsic sinh_float64 (Float64 -> Float64)
+  intrinsic cosh_float64 (Float64 -> Float64)
+  intrinsic tanh_float64 (Float64 -> Float64)
+  intrinsic asinh_float64 (Float64 -> Float64)
+  intrinsic acosh_float64 (Float64 -> Float64)
+  intrinsic atanh_float64 (Float64 -> Float64)
+  intrinsic trunc_float64 (Float64 -> Float64)
+  intrinsic round_float64 (Float64 -> Float64)
+  intrinsic ceil_float64 (Float64 -> Float64)
+  intrinsic floor_float64 (Float64 -> Float64)
+
+  // Floating-point comparisons.
+
+  intrinsic lt_float32 (Float32, Float32 -> Bool)
+  intrinsic gt_float32 (Float32, Float32 -> Bool)
+  intrinsic le_float32 (Float32, Float32 -> Bool)
+  intrinsic ge_float32 (Float32, Float32 -> Bool)
+  intrinsic eq_float32 (Float32, Float32 -> Bool)
+  intrinsic ne_float32 (Float32, Float32 -> Bool)
+
+  intrinsic lt_float64 (Float64, Float64 -> Bool)
+  intrinsic gt_float64 (Float64, Float64 -> Bool)
+  intrinsic le_float64 (Float64, Float64 -> Bool)
+  intrinsic ge_float64 (Float64, Float64 -> Bool)
+  intrinsic eq_float64 (Float64, Float64 -> Bool)
+  intrinsic ne_float64 (Float64, Float64 -> Bool)
+
+}
+
+trait neg<T> (T -> T)
+
+instance neg (Int8 -> Int8) { _::mlatu::neg_int8 }
+instance neg (Int16 -> Int16) { _::mlatu::neg_int16 }
+instance neg (Int32 -> Int32) { _::mlatu::neg_int32 }
+instance neg (Int64 -> Int64) { _::mlatu::neg_int64 }
+instance neg (UInt8 -> UInt8) { _::mlatu::neg_uint8 }
+instance neg (UInt16 -> UInt16) { _::mlatu::neg_uint16 }
+instance neg (UInt32 -> UInt32) { _::mlatu::neg_uint32 }
+instance neg (UInt64 -> UInt64) { _::mlatu::neg_uint64 }
+instance neg (Float32 -> Float32) { _::mlatu::neg_float32 }
+instance neg (Float64 -> Float64) { _::mlatu::neg_float64 }
+
+trait + <T> (T, T -> T)
+
+about +:
+  docs: """
+    Operation of an additive monoid with `zero` as the identity.
+    """
+  operator:
+    left 6
+
+instance + (Int8, Int8 -> Int8) { _::mlatu::add_int8 }
+instance + (Int16, Int16 -> Int16) { _::mlatu::add_int16 }
+instance + (Int32, Int32 -> Int32) { _::mlatu::add_int32 }
+instance + (Int64, Int64 -> Int64) { _::mlatu::add_int64 }
+instance + (UInt8, UInt8 -> UInt8) { _::mlatu::add_uint8 }
+instance + (UInt16, UInt16 -> UInt16) { _::mlatu::add_uint16 }
+instance + (UInt32, UInt32 -> UInt32) { _::mlatu::add_uint32 }
+instance + (UInt64, UInt64 -> UInt64) { _::mlatu::add_uint64 }
+instance + (Float32, Float32 -> Float32) { _::mlatu::add_float32 }
+instance + (Float64, Float64 -> Float64) { _::mlatu::add_float64 }
+
+trait zero<T> (-> T)
+
+instance zero (-> Int8) { 0i8 }
+instance zero (-> Int16) { 0i16 }
+instance zero (-> Int32) { 0i32 }
+instance zero (-> Int64) { 0i64 }
+instance zero (-> UInt8) { 0u8 }
+instance zero (-> UInt16) { 0u16 }
+instance zero (-> UInt32) { 0u32 }
+instance zero (-> UInt64) { 0u64 }
+instance zero (-> Float32) { 0.0f32 }
+instance zero (-> Float64) { 0.0f64 }
+
+trait - <T> (T, T -> T)
+
+about -:
+  operator:
+    left 6
+
+instance - (Int8, Int8 -> Int8) { _::mlatu::sub_int8 }
+instance - (Int16, Int16 -> Int16) { _::mlatu::sub_int16 }
+instance - (Int32, Int32 -> Int32) { _::mlatu::sub_int32 }
+instance - (Int64, Int64 -> Int64) { _::mlatu::sub_int64 }
+instance - (UInt8, UInt8 -> UInt8) { _::mlatu::sub_uint8 }
+instance - (UInt16, UInt16 -> UInt16) { _::mlatu::sub_uint16 }
+instance - (UInt32, UInt32 -> UInt32) { _::mlatu::sub_uint32 }
+instance - (UInt64, UInt64 -> UInt64) { _::mlatu::sub_uint64 }
+instance - (Float32, Float32 -> Float32) { _::mlatu::sub_float32 }
+instance - (Float64, Float64 -> Float64) { _::mlatu::sub_float64 }
+
+trait * <T> (T, T -> T)
+
+about *:
+  operator:
+    left 7
+
+instance * (Int8, Int8 -> Int8) { _::mlatu::mul_int8 }
+instance * (Int16, Int16 -> Int16) { _::mlatu::mul_int16 }
+instance * (Int32, Int32 -> Int32) { _::mlatu::mul_int32 }
+instance * (Int64, Int64 -> Int64) { _::mlatu::mul_int64 }
+instance * (UInt8, UInt8 -> UInt8) { _::mlatu::mul_uint8 }
+instance * (UInt16, UInt16 -> UInt16) { _::mlatu::mul_uint16 }
+instance * (UInt32, UInt32 -> UInt32) { _::mlatu::mul_uint32 }
+instance * (UInt64, UInt64 -> UInt64) { _::mlatu::mul_uint64 }
+instance * (Float32, Float32 -> Float32) { _::mlatu::mul_float32 }
+instance * (Float64, Float64 -> Float64) { _::mlatu::mul_float64 }
+
+trait / <T> (T, T -> T +Fail)
+
+about /:
+  operator:
+    left 7
+
+instance / (Int8, Int8 -> Int8 +Fail) { _::mlatu::div_int8 }
+instance / (Int16, Int16 -> Int16 +Fail) { _::mlatu::div_int16 }
+instance / (Int32, Int32 -> Int32 +Fail) { _::mlatu::div_int32 }
+instance / (Int64, Int64 -> Int64 +Fail) { _::mlatu::div_int64 }
+instance / (UInt8, UInt8 -> UInt8 +Fail) { _::mlatu::div_uint8 }
+instance / (UInt16, UInt16 -> UInt16 +Fail) { _::mlatu::div_uint16 }
+instance / (UInt32, UInt32 -> UInt32 +Fail) { _::mlatu::div_uint32 }
+instance / (UInt64, UInt64 -> UInt64 +Fail) { _::mlatu::div_uint64 }
+instance / (Float32, Float32 -> Float32 +Fail) { _::mlatu::div_float32 }
+instance / (Float64, Float64 -> Float64 +Fail) { _::mlatu::div_float64 }
+
+trait % <T> (T, T -> T +Fail)
+
+about %:
+  operator:
+    left 7
+
+instance % (Int8, Int8 -> Int8 +Fail) { _::mlatu::mod_int8 }
+instance % (Int16, Int16 -> Int16 +Fail) { _::mlatu::mod_int16 }
+instance % (Int32, Int32 -> Int32 +Fail) { _::mlatu::mod_int32 }
+instance % (Int64, Int64 -> Int64 +Fail) { _::mlatu::mod_int64 }
+instance % (UInt8, UInt8 -> UInt8 +Fail) { _::mlatu::mod_uint8 }
+instance % (UInt16, UInt16 -> UInt16 +Fail) { _::mlatu::mod_uint16 }
+instance % (UInt32, UInt32 -> UInt32 +Fail) { _::mlatu::mod_uint32 }
+instance % (UInt64, UInt64 -> UInt64 +Fail) { _::mlatu::mod_uint64 }
+instance % (Float32, Float32 -> Float32 +Fail) { _::mlatu::mod_float32 }
+instance % (Float64, Float64 -> Float64 +Fail) { _::mlatu::mod_float64 }
+
+define div_mod<T> (T, T -> T, T +Fail):
+  -> x, y;
+  (x / y) (x % y)
+
+trait << <T> (T, Int32 -> T)
+
+about <<:
+  operator:
+    left 5
+
+instance << (Int8, Int32 -> Int8) { _::mlatu::shl_int8 }
+instance << (Int16, Int32 -> Int16) { _::mlatu::shl_int16 }
+instance << (Int32, Int32 -> Int32) { _::mlatu::shl_int32 }
+instance << (Int64, Int32 -> Int64) { _::mlatu::shl_int64 }
+instance << (UInt8, Int32 -> UInt8) { _::mlatu::shl_uint8 }
+instance << (UInt16, Int32 -> UInt16) { _::mlatu::shl_uint16 }
+instance << (UInt32, Int32 -> UInt32) { _::mlatu::shl_uint32 }
+instance << (UInt64, Int32 -> UInt64) { _::mlatu::shl_uint64 }
+
+trait >> <T> (T, Int32 -> T)
+
+about >>:
+  operator:
+    left 5
+
+instance >> (Int8, Int32 -> Int8) { neg _::mlatu::shl_int8 }
+instance >> (Int16, Int32 -> Int16) { neg _::mlatu::shl_int16 }
+instance >> (Int32, Int32 -> Int32) { neg _::mlatu::shl_int32 }
+instance >> (Int64, Int32 -> Int64) { neg _::mlatu::shl_int64 }
+instance >> (UInt8, Int32 -> UInt8) { neg _::mlatu::shl_uint8 }
+instance >> (UInt16, Int32 -> UInt16) { neg _::mlatu::shl_uint16 }
+instance >> (UInt32, Int32 -> UInt32) { neg _::mlatu::shl_uint32 }
+instance >> (UInt64, Int32 -> UInt64) { neg _::mlatu::shl_uint64 }
+
+trait <<| <T> (T, Int32 -> T)
+
+about <<|:
+  operator:
+    left 5
+
+instance <<| (Int8, Int32 -> Int8) { _::mlatu::rol_int8 }
+instance <<| (Int16, Int32 -> Int16) { _::mlatu::rol_int16 }
+instance <<| (Int32, Int32 -> Int32) { _::mlatu::rol_int32 }
+instance <<| (Int64, Int32 -> Int64) { _::mlatu::rol_int64 }
+instance <<| (UInt8, Int32 -> UInt8) { _::mlatu::rol_uint8 }
+instance <<| (UInt16, Int32 -> UInt16) { _::mlatu::rol_uint16 }
+instance <<| (UInt32, Int32 -> UInt32) { _::mlatu::rol_uint32 }
+instance <<| (UInt64, Int32 -> UInt64) { _::mlatu::rol_uint64 }
+
+trait |>> <T> (T, Int32 -> T)
+
+about |>>:
+  operator:
+    left 5
+
+instance |>> (Int8, Int32 -> Int8) { neg _::mlatu::rol_int8 }
+instance |>> (Int16, Int32 -> Int16) { neg _::mlatu::rol_int16 }
+instance |>> (Int32, Int32 -> Int32) { neg _::mlatu::rol_int32 }
+instance |>> (Int64, Int32 -> Int64) { neg _::mlatu::rol_int64 }
+instance |>> (UInt8, Int32 -> UInt8) { neg _::mlatu::rol_uint8 }
+instance |>> (UInt16, Int32 -> UInt16) { neg _::mlatu::rol_uint16 }
+instance |>> (UInt32, Int32 -> UInt32) { neg _::mlatu::rol_uint32 }
+instance |>> (UInt64, Int32 -> UInt64) { neg _::mlatu::rol_uint64 }
+
+trait pi<T> (-> T)
+
+instance pi (-> Float32) { 3.1415927f32 }
+instance pi (-> Float64) { 3.141592653589793f64 }
+
+trait exp<T> (T -> T)
+
+instance exp (Float32 -> Float32) { _::mlatu::exp_float32 }
+instance exp (Float64 -> Float64) { _::mlatu::exp_float64 }
+
+trait log<T> (T -> T)
+
+instance log (Float32 -> Float32) { _::mlatu::log_float32 }
+instance log (Float64 -> Float64) { _::mlatu::log_float64 }
+
+trait sqrt<T> (T -> T)
+
+instance sqrt (Float32 -> Float32) { _::mlatu::sqrt_float32 }
+instance sqrt (Float64 -> Float64) { _::mlatu::sqrt_float64 }
+
+trait sin<T> (T -> T)
+
+instance sin (Float32 -> Float32) { _::mlatu::sin_float32 }
+instance sin (Float64 -> Float64) { _::mlatu::sin_float64 }
+
+trait cos<T> (T -> T)
+
+instance cos (Float32 -> Float32) { _::mlatu::cos_float32 }
+instance cos (Float64 -> Float64) { _::mlatu::cos_float64 }
+
+trait tan<T> (T -> T)
+
+instance tan (Float32 -> Float32) { _::mlatu::tan_float32 }
+instance tan (Float64 -> Float64) { _::mlatu::tan_float64 }
+
+trait asin<T> (T -> T)
+
+instance asin (Float32 -> Float32) { _::mlatu::asin_float32 }
+instance asin (Float64 -> Float64) { _::mlatu::asin_float64 }
+
+trait acos<T> (T -> T)
+
+instance acos (Float32 -> Float32) { _::mlatu::acos_float32 }
+instance acos (Float64 -> Float64) { _::mlatu::acos_float64 }
+
+trait atan<T> (T -> T)
+
+instance atan (Float32 -> Float32) { _::mlatu::atan_float32 }
+instance atan (Float64 -> Float64) { _::mlatu::atan_float64 }
+
+trait atan2<T> (T, T -> T)
+
+instance atan2 (Float32, Float32 -> Float32) { _::mlatu::atan2_float32 }
+instance atan2 (Float64, Float64 -> Float64) { _::mlatu::atan2_float64 }
+
+trait sinh<T> (T -> T)
+
+instance sinh (Float32 -> Float32) { _::mlatu::sinh_float32 }
+instance sinh (Float64 -> Float64) { _::mlatu::sinh_float64 }
+
+trait cosh<T> (T -> T)
+
+instance cosh (Float32 -> Float32) { _::mlatu::cosh_float32 }
+instance cosh (Float64 -> Float64) { _::mlatu::cosh_float64 }
+
+trait tanh<T> (T -> T)
+
+instance tanh (Float32 -> Float32) { _::mlatu::tanh_float32 }
+instance tanh (Float64 -> Float64) { _::mlatu::tanh_float64 }
+
+trait asinh<T> (T -> T)
+
+instance asinh (Float32 -> Float32) { _::mlatu::asinh_float32 }
+instance asinh (Float64 -> Float64) { _::mlatu::asinh_float64 }
+
+trait acosh<T> (T -> T)
+
+instance acosh (Float32 -> Float32) { _::mlatu::acosh_float32 }
+instance acosh (Float64 -> Float64) { _::mlatu::acosh_float64 }
+
+trait atanh<T> (T -> T)
+
+instance atanh (Float32 -> Float32) { _::mlatu::atanh_float32 }
+instance atanh (Float64 -> Float64) { _::mlatu::atanh_float64 }
+
+trait trunc<T> (T -> T)
+instance trunc (Float32 -> Float32) { _::mlatu::trunc_float32 }
+instance trunc (Float64 -> Float64) { _::mlatu::trunc_float64 }
+
+trait round<T> (T -> T)
+instance round (Float32 -> Float32) { _::mlatu::round_float32 }
+instance round (Float64 -> Float64) { _::mlatu::round_float64 }
+
+trait ceil<T> (T -> T)
+instance ceil (Float32 -> Float32) { _::mlatu::ceil_float32 }
+instance ceil (Float64 -> Float64) { _::mlatu::ceil_float64 }
+
+trait floor<T> (T -> T)
+instance floor (Float32 -> Float32) { _::mlatu::floor_float32 }
+instance floor (Float64 -> Float64) { _::mlatu::floor_float64 }
+
+trait < <T> (T, T -> Bool)
+
+about <:
+  operator:
+    4
+
+trait > <T> (T, T -> Bool)
+
+about >:
+  operator:
+    4
+
+trait <= <T> (T, T -> Bool)
+
+about <=:
+  operator:
+    4
+
+trait >= <T> (T, T -> Bool)
+
+about >=:
+  operator:
+    4
+
+trait = <T> (T, T -> Bool)
+
+about =:
+  operator:
+    4
+
+trait <> <T> (T, T -> Bool)
+
+about <>:
+  operator:
+    4
+
+instance < (Int8, Int8 -> Bool) { _::mlatu::lt_int8 }
+instance > (Int8, Int8 -> Bool) { _::mlatu::gt_int8 }
+instance <= (Int8, Int8 -> Bool) { _::mlatu::le_int8 }
+instance >= (Int8, Int8 -> Bool) { _::mlatu::ge_int8 }
+instance = (Int8, Int8 -> Bool) { _::mlatu::eq_int8 }
+instance <> (Int8, Int8 -> Bool) { _::mlatu::ne_int8 }
+
+instance < (Int16, Int16 -> Bool) { _::mlatu::lt_int16 }
+instance > (Int16, Int16 -> Bool) { _::mlatu::gt_int16 }
+instance <= (Int16, Int16 -> Bool) { _::mlatu::le_int16 }
+instance >= (Int16, Int16 -> Bool) { _::mlatu::ge_int16 }
+instance = (Int16, Int16 -> Bool) { _::mlatu::eq_int16 }
+instance <> (Int16, Int16 -> Bool) { _::mlatu::ne_int16 }
+
+instance < (Int32, Int32 -> Bool) { _::mlatu::lt_int32 }
+instance > (Int32, Int32 -> Bool) { _::mlatu::gt_int32 }
+instance <= (Int32, Int32 -> Bool) { _::mlatu::le_int32 }
+instance >= (Int32, Int32 -> Bool) { _::mlatu::ge_int32 }
+instance = (Int32, Int32 -> Bool) { _::mlatu::eq_int32 }
+instance <> (Int32, Int32 -> Bool) { _::mlatu::ne_int32 }
+
+instance < (Int64, Int64 -> Bool) { _::mlatu::lt_int64 }
+instance > (Int64, Int64 -> Bool) { _::mlatu::gt_int64 }
+instance <= (Int64, Int64 -> Bool) { _::mlatu::le_int64 }
+instance >= (Int64, Int64 -> Bool) { _::mlatu::ge_int64 }
+instance = (Int64, Int64 -> Bool) { _::mlatu::eq_int64 }
+instance <> (Int64, Int64 -> Bool) { _::mlatu::ne_int64 }
+
+instance < (UInt8, UInt8 -> Bool) { _::mlatu::lt_uint8 }
+instance > (UInt8, UInt8 -> Bool) { _::mlatu::gt_uint8 }
+instance <= (UInt8, UInt8 -> Bool) { _::mlatu::le_uint8 }
+instance >= (UInt8, UInt8 -> Bool) { _::mlatu::ge_uint8 }
+instance = (UInt8, UInt8 -> Bool) { _::mlatu::eq_uint8 }
+instance <> (UInt8, UInt8 -> Bool) { _::mlatu::ne_uint8 }
+
+instance < (UInt16, UInt16 -> Bool) { _::mlatu::lt_uint16 }
+instance > (UInt16, UInt16 -> Bool) { _::mlatu::gt_uint16 }
+instance <= (UInt16, UInt16 -> Bool) { _::mlatu::le_uint16 }
+instance >= (UInt16, UInt16 -> Bool) { _::mlatu::ge_uint16 }
+instance = (UInt16, UInt16 -> Bool) { _::mlatu::eq_uint16 }
+instance <> (UInt16, UInt16 -> Bool) { _::mlatu::ne_uint16 }
+
+instance < (UInt32, UInt32 -> Bool) { _::mlatu::lt_uint32 }
+instance > (UInt32, UInt32 -> Bool) { _::mlatu::gt_uint32 }
+instance <= (UInt32, UInt32 -> Bool) { _::mlatu::le_uint32 }
+instance >= (UInt32, UInt32 -> Bool) { _::mlatu::ge_uint32 }
+instance = (UInt32, UInt32 -> Bool) { _::mlatu::eq_uint32 }
+instance <> (UInt32, UInt32 -> Bool) { _::mlatu::ne_uint32 }
+
+instance < (UInt64, UInt64 -> Bool) { _::mlatu::lt_uint64 }
+instance > (UInt64, UInt64 -> Bool) { _::mlatu::gt_uint64 }
+instance <= (UInt64, UInt64 -> Bool) { _::mlatu::le_uint64 }
+instance >= (UInt64, UInt64 -> Bool) { _::mlatu::ge_uint64 }
+instance = (UInt64, UInt64 -> Bool) { _::mlatu::eq_uint64 }
+instance <> (UInt64, UInt64 -> Bool) { _::mlatu::ne_uint64 }
+
+instance < (Char, Char -> Bool) { _::mlatu::lt_char }
+instance > (Char, Char -> Bool) { _::mlatu::gt_char }
+instance <= (Char, Char -> Bool) { _::mlatu::le_char }
+instance >= (Char, Char -> Bool) { _::mlatu::ge_char }
+instance = (Char, Char -> Bool) { _::mlatu::eq_char }
+instance <> (Char, Char -> Bool) { _::mlatu::ne_char }
+
+instance < (Float32, Float32 -> Bool) { _::mlatu::lt_float32 }
+instance > (Float32, Float32 -> Bool) { _::mlatu::gt_float32 }
+instance <= (Float32, Float32 -> Bool) { _::mlatu::le_float32 }
+instance >= (Float32, Float32 -> Bool) { _::mlatu::ge_float32 }
+instance = (Float32, Float32 -> Bool) { _::mlatu::eq_float32 }
+instance <> (Float32, Float32 -> Bool) { _::mlatu::ne_float32 }
+
+instance < (Float64, Float64 -> Bool) { _::mlatu::lt_float64 }
+instance > (Float64, Float64 -> Bool) { _::mlatu::gt_float64 }
+instance <= (Float64, Float64 -> Bool) { _::mlatu::le_float64 }
+instance >= (Float64, Float64 -> Bool) { _::mlatu::ge_float64 }
+instance = (Float64, Float64 -> Bool) { _::mlatu::eq_float64 }
+instance <> (Float64, Float64 -> Bool) { _::mlatu::ne_float64 }
+
+instance < (Bool, Bool -> Bool) { -> a, b; a not & b }
+instance > (Bool, Bool -> Bool) { -> a, b; a & b not }
+instance <= (Bool, Bool -> Bool) { (>) not }
+instance >= (Bool, Bool -> Bool) { (<) not }
+instance = (Bool, Bool -> Bool) { if {} else {not} }
+instance <> (Bool, Bool -> Bool) { (=) not }
+
+
+define abs<T> (T -> T):
+  dup
+  if ((< zero)):
+    neg
+
+// FIXME: Requires casting.
+//
+// define even<T> (T -> Bool):
+//   (% 2) (= 0)
+//
+// define odd<T> (T -> Bool):
+//   (% 2) (<> 0)
+
+define max<T> (T, T -> T):
+  -> a, b;
+  if (a < b):
+    b
+  else:
+    a
+
+define min<T> (T, T -> T):
+  -> a, b;
+  if (a < b):
+    a
+  else:
+    b
+
+type Unit:
+  case unit ()
+
+about type Unit:
+  docs: """
+    The unit type, with a single value `unit`, useful as a placeholder type that
+    carries no information.
+    """
+
+type Bool:
+  case false
+  case true
+
+trait not<T> (T -> T)
+
+instance not (Bool -> Bool):
+  if:
+    false
+  else:
+    true
+
+instance not (Int8 -> Int8) { _::mlatu::not_int8 }
+instance not (Int16 -> Int16) { _::mlatu::not_int16 }
+instance not (Int32 -> Int32) { _::mlatu::not_int32 }
+instance not (Int64 -> Int64) { _::mlatu::not_int64 }
+instance not (UInt8 -> UInt8) { _::mlatu::not_uint8 }
+instance not (UInt16 -> UInt16) { _::mlatu::not_uint16 }
+instance not (UInt32 -> UInt32) { _::mlatu::not_uint32 }
+instance not (UInt64 -> UInt64) { _::mlatu::not_uint64 }
+
+// Strict intersection.
+trait & <T> (T, T -> T)
+
+about &:
+  operator:
+    right 3
+
+instance & (Bool, Bool -> Bool):
+  -> x, y;
+  if (x):
+    y
+  else:
+    false
+
+instance & (Int8, Int8 -> Int8) { _::mlatu::and_int8 }
+instance & (Int16, Int16 -> Int16) { _::mlatu::and_int16 }
+instance & (Int32, Int32 -> Int32) { _::mlatu::and_int32 }
+instance & (Int64, Int64 -> Int64) { _::mlatu::and_int64 }
+instance & (UInt8, UInt8 -> UInt8) { _::mlatu::and_uint8 }
+instance & (UInt16, UInt16 -> UInt16) { _::mlatu::and_uint16 }
+instance & (UInt32, UInt32 -> UInt32) { _::mlatu::and_uint32 }
+instance & (UInt64, UInt64 -> UInt64) { _::mlatu::and_uint64 }
+
+// Lazy intersection.
+trait && <T> (T, (-> T) -> T)
+
+about &&:
+  operator:
+    right 3
+
+instance && (Bool, (-> Bool) -> Bool):
+  -> x, y;
+  if (x):
+    y call
+  else:
+    false
+
+// Strict union.
+trait | <T> (T, T -> T)
+
+about |:
+  operator:
+    right 2
+
+instance | (Bool, Bool -> Bool):
+  -> x, y;
+  if (x):
+    true
+  else:
+    y
+
+instance | (Int8, Int8 -> Int8) { _::mlatu::or_int8 }
+instance | (Int16, Int16 -> Int16) { _::mlatu::or_int16 }
+instance | (Int32, Int32 -> Int32) { _::mlatu::or_int32 }
+instance | (Int64, Int64 -> Int64) { _::mlatu::or_int64 }
+instance | (UInt8, UInt8 -> UInt8) { _::mlatu::or_uint8 }
+instance | (UInt16, UInt16 -> UInt16) { _::mlatu::or_uint16 }
+instance | (UInt32, UInt32 -> UInt32) { _::mlatu::or_uint32 }
+instance | (UInt64, UInt64 -> UInt64) { _::mlatu::or_uint64 }
+
+// Lazy union.
+trait || <T> (T, (-> T) -> T)
+
+about ||:
+  operator:
+    right 2
+
+instance || (Bool, (-> Bool) -> Bool):
+  -> x, y;
+  if (x):
+    true
+  else:
+    y call
+
+// Strict difference.
+trait ~ <A> (A, A -> A)
+
+about ~:
+  operator:
+    5
+
+instance ~ (Bool, Bool -> Bool):
+  swap
+  if { not }
+
+instance ~ (Int8, Int8 -> Int8) { _::mlatu::xor_int8 }
+instance ~ (Int16, Int16 -> Int16) { _::mlatu::xor_int16 }
+instance ~ (Int32, Int32 -> Int32) { _::mlatu::xor_int32 }
+instance ~ (Int64, Int64 -> Int64) { _::mlatu::xor_int64 }
+instance ~ (UInt8, UInt8 -> UInt8) { _::mlatu::xor_uint8 }
+instance ~ (UInt16, UInt16 -> UInt16) { _::mlatu::xor_uint16 }
+instance ~ (UInt32, UInt32 -> UInt32) { _::mlatu::xor_uint32 }
+instance ~ (UInt64, UInt64 -> UInt64) { _::mlatu::xor_uint64 }
+
+// Strict implication.
+trait --> <T> (T, T -> T)
+
+about -->:
+  operator:
+    right 1
+
+instance --> (Bool, Bool -> Bool):
+  -> a, b;
+  if (a) { b } else { true }
+
+instance --> (Int8, Int8 -> Int8) { -> a, b; a not | b }
+instance --> (Int16, Int16 -> Int16) { -> a, b; a not | b }
+instance --> (Int32, Int32 -> Int32) { -> a, b; a not | b }
+instance --> (Int64, Int64 -> Int64) { -> a, b; a not | b }
+instance --> (UInt8, UInt8 -> UInt8) { -> a, b; a not | b }
+instance --> (UInt16, UInt16 -> UInt16) { -> a, b; a not | b }
+instance --> (UInt32, UInt32 -> UInt32) { -> a, b; a not | b }
+instance --> (UInt64, UInt64 -> UInt64) { -> a, b; a not | b }
+
+// Lazy implication.
+define ---> (Bool, (-> Bool) -> Bool):
+  -> a, b;
+  if (a) { b call } else { true }
+
+about --->:
+  operator:
+    right 1
+
+// These (all, and, any, or) would be cleaner with lazy folds or slices.
+
+define all<T> (List<T>, (T -> Bool) -> Bool):
+  -> xs, f;
+  match (xs head_tail)
+  case some:
+    unpair -> h, t;
+    if (h f call):
+      t f all
+    else:
+      false
+  case none:
+    true
+
+// define and (List<Bool> -> Bool)
+
+define any<T> (List<T>, (T -> Bool) -> Bool):
+  -> xs, f;
+  match (xs head_tail)
+  case some:
+    unpair -> h, t;
+    if (h f call):
+      true
+    else:
+      t f any
+  case none:
+    false
+
+// define or<T> (List<Bool> -> Bool)
+
+type Optional<T>:
+  case none
+  case some (T)
+
+define from_optional<T> (Optional<T>, T -> T):
+  -> default;
+  match
+  case some {}
+  else:
+    default
+
+define from_some<T> (Optional<T>, List<Char> -> T +Fail):
+  -> message;
+  match case some {}
+  else:
+    message fail
+
+define is_none<T> (Optional<T> -> Bool):
+  match
+  case none:
+    true
+  else:
+    false
+
+define is_some<T> (Optional<T> -> Bool):
+  match
+  case some:
+    drop true
+  else:
+    false
+
+define optional<R..., S..., A>
+(R..., Optional<A>, (R..., A -> S...), (R... -> S...) -> S...):
+  -> f, g;
+  match
+  case some:
+    f call
+  case none:
+    g call
+
+define lift_optional_2<A, B, C> (Optional<A>, Optional<B>, (A, B -> C) -> Optional<C>):
+  -> mx, my, f;
+  match (mx)
+  case some -> x:
+    match (my)
+    case some -> y:
+      x y f call some
+    else:
+      none
+  else:
+    none
+
+// TODO: map Optional
+
+type Pair<A, B>:
+  case pair (A, B)
+
+define => <K, V> (K, V -> Pair<K, V>) { pair }
+
+about =>:
+  docs: """
+    A mnemonic operator for creating key-value pairs.
+    """
+  operator:
+    right 1
+
+define unpair<A, B> (Pair<A, B> -> A, B):
+  match case pair {}
+
+define flip<A, B> (Pair<A, B> -> Pair<B, A>):
+  unpair swap pair
+
+define first<A, B> (Pair<A, B> -> A):
+  unpair drop
+
+define second<A, B> (Pair<A, B> -> B):
+  unpair swap drop
+
+// TODO: map Pair
+
+type Either<A, B>:
+  case left (A)
+  case right (B)
+
+define from_left<A, B> (Either<A, B>, List<Char> -> A +Fail):
+  -> message;
+  match case left {}
+  else:
+    message fail
+
+define from_right<A, B> (Either<A, B>, List<Char> -> B +Fail):
+  -> message;
+  match
+  case right {}
+  else:
+    message fail
+
+define get_left<A, B> (Either<A, B> -> Optional<A>):
+  match
+  case left:
+    some
+  else:
+    none
+
+define get_right<A, B> (Either<A, B> -> Optional<B>):
+  match
+  case right:
+    some
+  else:
+    none
+
+define is_left<A, B> (Either<A, B> -> Bool):
+  match
+  case left:
+    drop true
+  else:
+    false
+
+define is_right<A, B> (Either<A, B> -> Bool):
+  match
+  case right:
+    drop true
+  else:
+    false
+
+define either<R..., S..., A, B>
+(R..., Either<A, B>, (R..., A -> S...), (R..., B -> S...) -> S...):
+  -> f, g;
+  match
+  case left:
+    f call
+  case right:
+    g call
+
+define map_left<A, B, C> (Either<A, B>, (A -> C) -> Either<C, B>):
+  -> f;
+  match
+  case left:
+    f call left
+  case right:
+    right
+
+define map_right<A, B, C> (Either<A, B>, (B -> C) -> Either<A, C>):
+  -> f;
+  match
+  case right:
+    f call right
+  case left:
+    left
+
+type Pointer<T>:
+  case _pointer (UInt64)
+
+// do (until) { ... }
+define until<R...> (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call not):
+    f until
+
+// do (while) { ... }
+define while<R...> (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call):
+    f while
+
+type List<T>:
+  case _list (Pointer<T>, Pointer<T>, Pointer<T>)
+
+vocab mlatu {
+
+  intrinsic empty<T> (List<T> -> Bool)
+  intrinsic head<T> (List<T> -> Optional<T>)
+  intrinsic tail<T> (List<T> -> Optional<List<T>>)
+  intrinsic init<T> (List<T> -> Optional<List<T>>)
+  intrinsic last<T> (List<T> -> Optional<T>)
+  intrinsic append<T> (List<T>, T -> List<T>)
+  intrinsic prepend<T> (T, List<T> -> List<T>)
+  intrinsic cat<T> (List<T>, List<T> -> List<T>)
+  intrinsic get<T> (List<T>, Int32 -> Optional<T>)
+  intrinsic set<T> (List<T>, T, Int32 -> Optional<List<T>>)
+
+}
+
+define empty<T> (List<T> -> Bool):
+  _::mlatu::empty
+
+// TODO: Use Size, not Int32.
+define length<T> (List<T> -> Int32):
+  match (tail)
+  case none:
+    0
+  case some:
+    length (+ 1)
+
+define elem<T> (T, List<T> -> Bool):
+  -> x, xs;
+  match (xs head_tail)
+  case some:
+    unpair -> h, t;
+    if (x = h):
+      true
+    else:
+      x t elem
+  case none:
+    false
+
+// TODO: Partial instances.
+instance > (List<Int32>, List<Int32> -> Bool):
+  -> xs, ys;
+  match (xs head_tail)
+  case some:
+    unpair -> x, xs_;
+    match (ys head_tail)
+    case some:
+      unpair -> y, ys_;
+      if (x > y):
+        true
+      elif (x < y):
+        false
+      else:
+        xs_ > ys_
+    case none:
+      true
+  case none:
+    false
+
+instance < (List<Int32>, List<Int32> -> Bool) { swap (>) }
+instance <= (List<Int32>, List<Int32> -> Bool) { (>) not }
+instance >= (List<Int32>, List<Int32> -> Bool) { (<) not }
+
+instance = (List<Int32>, List<Int32> -> Bool):
+  -> xs, ys;
+  if (xs length <> ys length):
+    false
+  else:
+    match (xs head_tail)
+    case some:
+      unpair -> x, xs_;
+      match (ys head_tail)
+      case some:
+        unpair -> y, ys_;
+        if (x <> y):
+          false
+        else:
+          xs_ = ys_
+      case none:
+        true
+    case none:
+      true
+
+instance <> (List<Int32>, List<Int32> -> Bool) { (=) not }
+
+instance > (List<Char>, List<Char> -> Bool):
+  -> xs, ys;
+  match (xs head_tail)
+  case some:
+    unpair -> x, xs_;
+    match (ys head_tail)
+    case some:
+      unpair -> y, ys_;
+      if (x > y):
+        true
+      elif (x < y):
+        false
+      else:
+        xs_ > ys_
+    case none:
+      true
+  case none:
+    false
+
+instance < (List<Char>, List<Char> -> Bool) { swap (>) }
+instance <= (List<Char>, List<Char> -> Bool) { (>) not }
+instance >= (List<Char>, List<Char> -> Bool) { (<) not }
+
+instance = (List<Char>, List<Char> -> Bool):
+  -> xs, ys;
+  if (xs length <> ys length):
+    false
+  else:
+    match (xs head_tail)
+    case some:
+      unpair -> x, xs_;
+      match (ys head_tail)
+      case some:
+        unpair -> y, ys_;
+        if (x <> y):
+          false
+        else:
+          xs_ = ys_
+      case none:
+        true
+    case none:
+      true
+
+instance <> (List<Char>, List<Char> -> Bool) { (=) not }
+
+define head<T> (List<T> -> Optional<T>):
+  _::mlatu::head
+
+define tail<T> (List<T> -> Optional<List<T>>):
+  _::mlatu::tail
+
+define init<T> (List<T> -> Optional<List<T>>):
+  _::mlatu::init
+
+define last<T> (List<T> -> Optional<T>):
+  _::mlatu::last
+
+define append<T> (List<T>, T -> List<T>):
+  _::mlatu::append
+
+define prepend<T> (T, List<T> -> List<T>):
+  _::mlatu::prepend
+
+define cat<T> (List<T>, List<T> -> List<T>):
+  _::mlatu::cat
+
+// FIXME: Requires generic instances; should be:
+// instance + <T> (List<T>, List<T> -> List<T>)
+instance + (List<Char>, List<Char> -> List<Char>):
+  cat
+
+define get<T> (List<T>, Int32 -> Optional<T>):
+  _::mlatu::get
+
+define get_all<T> (List<T>, List<Int32> -> List<Optional<T>>):
+  -> list, indices;
+  indices { list swap get } map
+
+define set<T> (List<T>, T, Int32 -> Optional<List<T>>):
+  _::mlatu::set
+
+define modify<T> (List<T>, (T -> T), Int32 -> Optional<List<T>>):
+  -> xs, f, i;
+  match (xs i get)
+  case none:
+    none
+  case some -> x:
+    xs (x f call) i set
+
+define replicate<T> (T, Int32 -> List<T>):
+  -> value, count;
+  if (count <= 0):
+    []
+  else:
+    value (count - 1) replicate
+    value append
+
+define head_tail<T> (List<T> -> Optional<Pair<T, List<T>>>):
+  -> xs;
+  none
+  match (xs head) case some -> y:
+    match (xs tail) case some -> ys:
+      drop y ys pair some
+    else {}
+  else {}
+
+define init_last<T> (List<T> -> Optional<Pair<List<T>, T>>):
+  -> xs;
+  none
+  match (xs init) case some -> ys:
+    match (xs last) case some -> y:
+      drop ys y pair some
+    else {}
+  else {}
+
+define reverse<T> (List<T> -> List<T>):
+  -> xs;
+  match (xs head_tail)
+  case some:
+    unpair -> h, t;
+    t reverse h append
+  case none:
+    []
+
+define map<A, B, +P> (List<A>, (A -> B +P) -> List<B> +P):
+  -> xs, f;
+  match (xs head_tail)
+  case none:
+    []
+  case some:
+    unpair -> y, ys;
+    y f call -> z;
+    ys f map -> zs;
+    z zs prepend
+
+define map_index<A, B, +P> (List<A>, (A, Int32 -> B +P) -> List<B> +P):
+  0 map_index::helper
+
+vocab map_index {
+
+  define helper<A, B, +P> (List<A>, (A, Int32 -> B +P), Int32 -> List<B> +P):
+    -> xs, f, i;
+    match (xs head_tail)
+    case none:
+      []
+    case some:
+      unpair -> y, ys;
+      y i f call -> z;
+      ys f (i + 1) helper -> zs;
+      z zs prepend
+
+}
+
+define each<T, +P> (List<T>, (T -> +P) -> +P):
+  -> f;
+  match (head_tail)
+  case some:
+    unpair -> h, t;
+    h f call
+    t f each
+  case none {}
+
+define filter<T> (List<T>, (T -> Bool) -> List<T>):
+  -> f;
+  match (head_tail)
+  case some:
+    unpair -> h, t;
+    if (h f call):
+      h (t f filter) prepend
+    else:
+      t f filter
+  case none:
+    []
+
+define find<T> (List<T>, (T -> Bool) -> Optional<T>):
+  filter head
+
+define fold_left<A, B> (List<B>, A, (A, B -> A) -> A):
+  -> xs, z, k;
+  match (xs head)
+  case some -> x:
+    do (with (+Fail)):
+      xs tail
+      "fold_left: tail should not be none if head is some" from_some
+    (z x k call) k fold_left
+  case none:
+    z
+
+define fold_left_non_empty<T> (List<T>, (T, T -> T) -> Optional<T>):
+  -> xs, f;
+  match (xs head)
+  case some -> x:
+    do (with (+Fail)):
+      xs tail
+      "fold_left_non_empty: tail should not be none if head is some" from_some
+    x f fold_left some
+  else:
+    none
+
+define fold_right<A, B> (List<A>, B, (A, B -> B) -> B):
+  -> xs, z, k;
+  match (xs last)
+  case some -> x:
+    do (with (+Fail)):
+      xs init
+      "fold_right: init should not be none if last is some" from_some
+    (x z k call) k fold_right
+  else:
+    z
+
+define fold_right_non_empty<A> (List<A>, (A, A -> A) -> Optional<A>):
+  -> xs, f;
+  match (xs last)
+  case some -> x:
+    do (with (+Fail)):
+      xs init
+      "fold_right_non_empty: init should not be none if last is some" from_some
+    x f fold_right some
+  else:
+    none
+
+define map_concat<A, B> (List<A>, (A -> List<B>) -> List<B>):
+  map concat
+
+define concat<T> (List<List<T>> -> List<T>):
+  [] \cat fold_left
+
+define concat_optionals<T> (List<Optional<T>> -> List<T>):
+  []
+  { match case some { append } case none {} }
+  fold_left
+
+define maximum<T> (List<T> -> Optional<T>):
+  \max fold_left_non_empty
+
+define minimum<T> (List<T> -> Optional<T>):
+  \min fold_left_non_empty
+
+define cartesian<A, B> (List<A>, List<B> -> List<Pair<A, B>>):
+  \pair cartesian_with
+
+define cartesian_with<A, B, C> (List<A>, List<B>, (A, B -> C) -> List<C>):
+  -> xs, ys, f;
+  xs do (map_concat) -> x:
+    ys do (map) -> y:
+      x y f call
+
+vocab mlatu {
+
+  intrinsic print (List<Char> -> +IO)
+  intrinsic get_line (-> List<Char> +IO)
+
+  // FIXME: Figure out handles and generalize this.
+  intrinsic flush_stdout (-> +IO)
+
+  intrinsic read_file (List<Char> -> List<Char> +IO)
+  intrinsic write_file (List<Char>, List<Char> -> +IO)
+  intrinsic append_file (List<Char>, List<Char> -> +IO)
+}
+
+trait show<T> (T -> List<Char>)
+
+instance show (List<Char> -> List<Char>) {}
+
+instance show (Char -> List<Char>):
+  -> x;
+  [x]
+
+instance show (Bool -> List<Char>):
+  if { "true" } else { "false" }
+
+vocab mlatu {
+
+  intrinsic show_int8 (Int8 -> List<Char>)
+  intrinsic show_int16 (Int16 -> List<Char>)
+  intrinsic show_int32 (Int32 -> List<Char>)
+  intrinsic show_int64 (Int64 -> List<Char>)
+  intrinsic show_uint8 (UInt8 -> List<Char>)
+  intrinsic show_uint16 (UInt16 -> List<Char>)
+  intrinsic show_uint32 (UInt32 -> List<Char>)
+  intrinsic show_uint64 (UInt64 -> List<Char>)
+  intrinsic show_float32 (Float32 -> List<Char>)
+  intrinsic show_float64 (Float64 -> List<Char>)
+
+}
+
+instance show (Int8 -> List<Char>):
+  _::mlatu::show_int8
+
+instance show (Int16 -> List<Char>):
+  _::mlatu::show_int16
+
+instance show (Int32 -> List<Char>):
+  _::mlatu::show_int32
+
+instance show (Int64 -> List<Char>):
+  _::mlatu::show_int64
+
+instance show (UInt8 -> List<Char>):
+  _::mlatu::show_uint8
+
+instance show (UInt16 -> List<Char>):
+  _::mlatu::show_uint16
+
+instance show (UInt32 -> List<Char>):
+  _::mlatu::show_uint32
+
+instance show (UInt64 -> List<Char>):
+  _::mlatu::show_uint64
+
+instance show (Float32 -> List<Char>):
+  _::mlatu::show_float32
+
+instance show (Float64 -> List<Char>):
+  _::mlatu::show_float64
+
+trait read<T> (List<Char> -> Optional<T>)
+
+instance read (List<Char> -> Optional<List<Char>>) { some }
+
+instance read (List<Char> -> Optional<Char>):
+  -> cs;
+  if (cs length = 1):
+    cs head
+  else:
+    none
+
+instance read (List<Char> -> Optional<Bool>):
+  -> cs;
+  if (cs = "true"): true some
+  elif (cs = "false"): false some
+  else: none
+
+vocab mlatu {
+
+  intrinsic read_int8 (List<Char> -> Optional<Int8>)
+  intrinsic read_int16 (List<Char> -> Optional<Int16>)
+  intrinsic read_int32 (List<Char> -> Optional<Int32>)
+  intrinsic read_int64 (List<Char> -> Optional<Int64>)
+  intrinsic read_uint8 (List<Char> -> Optional<UInt8>)
+  intrinsic read_uint16 (List<Char> -> Optional<UInt16>)
+  intrinsic read_uint32 (List<Char> -> Optional<UInt32>)
+  intrinsic read_uint64 (List<Char> -> Optional<UInt64>)
+  intrinsic read_float32 (List<Char> -> Optional<Float32>)
+  intrinsic read_float64 (List<Char> -> Optional<Float64>)
+
+}
+
+instance read (List<Char> -> Optional<Int8>):
+  _::mlatu::read_int8
+
+instance read (List<Char> -> Optional<Int16>):
+  _::mlatu::read_int16
+
+instance read (List<Char> -> Optional<Int32>):
+  _::mlatu::read_int32
+
+instance read (List<Char> -> Optional<Int64>):
+  _::mlatu::read_int64
+
+instance read (List<Char> -> Optional<UInt8>):
+  _::mlatu::read_uint8
+
+instance read (List<Char> -> Optional<UInt16>):
+  _::mlatu::read_uint16
+
+instance read (List<Char> -> Optional<UInt32>):
+  _::mlatu::read_uint32
+
+instance read (List<Char> -> Optional<UInt64>):
+  _::mlatu::read_uint64
+
+instance read (List<Char> -> Optional<Float32>):
+  _::mlatu::read_float32
+
+instance read (List<Char> -> Optional<Float64>):
+  _::mlatu::read_float64
+
+define print<T> (T -> +IO) /* where (show<T>) */ :
+  show _::mlatu::print
+
+define println<T> (T -> +IO):
+  print newline
+
+define newline (-> +IO):
+  "\n" print
+
+define get_line (-> List<Char> +IO):
+  _::mlatu::get_line
+
+define ask (List<Char> -> List<Char> +IO):
+  print _::mlatu::flush_stdout get_line
+
+define read_file (List<Char> -> List<Char> +IO):
+  _::mlatu::read_file
+
+define write_file (List<Char>, List<Char> -> +IO):
+  _::mlatu::write_file
+
+define append_file (List<Char>, List<Char> -> +IO):
+  _::mlatu::append_file
+
+permission Fail<R..., S..., +P> (R..., (R... -> S... +Fail +P) -> S... +P):
+  with (+Fail)
+
+permission Exit<R..., S..., +P> (R..., (R... -> S... +Exit +P) -> S... +P):
+  with (+Exit)
+
+vocab mlatu {
+
+  intrinsic abort<R..., S...> (R..., List<Char> -> S... +Fail)
+  intrinsic exit<R..., S...> (R..., Int32 -> S... +Exit)
+
+}
+
+define abort<R..., S...> (R... -> S... +Fail):
+  "abort called" _::mlatu::abort
+
+define exit<R..., S...> (R..., Int32 -> S... +Exit):
+  _::mlatu::exit
+
+define fail<R..., S...> (R..., List<Char> -> S... +Fail):
+  _::mlatu::abort
+
+define assert<+P> (List<Char>, (-> Bool +P) -> +Fail +P):
+  -> message, test;
+  do (with (-Fail)):
+    test call
+  if (not):
+    message _::mlatu::abort
+
+permission IO<R..., S..., +P> (R..., (R... -> S... +IO +P) -> S... +P):
+  with (+IO)
+
+define drop<T> (T ->):
+  -> _;
+
+define drop2<A, B> (A, B ->):
+  -> _, _;
+
+define dup<T> (T -> T, T):
+  -> x;
+  x x
+
+define dup2<A, B> (A, B -> A, B, A, B):
+  -> x, y;
+  x y x y
+
+define swap<A, B> (A, B -> B, A):
+  -> x, y;
+  y x
+
+define swapped<R..., S..., A, B>
+((R..., A, B -> S...) -> (R..., B, A -> S...)):
+  \swap swap compose
+
+define dip<R..., S..., T> (R..., T, (R... -> S...) -> S..., T):
+  -> x, f;
+  f call x
+
+define compose<R..., S..., T...>
+((R... -> S...), (S... -> T...) -> (R... -> T...)):
+  -> f, g;
+  { f call g call }
+
+define function<T> (T -> (-> T)):
+  -> x;
+  { x }
+
+define apply<R..., S..., T, +P> (T, (R..., T -> S... +P) -> (R... -> S... +P)):
+  -> x, f;
+  { x f call }
+
+about apply:
+  docs: """
+    Partially applies the topmost argument of a function.
+    """
+
+define fix<R..., S...> (R..., (R..., (R... -> S...) -> S...) -> S...):
+  -> f;
+  { f fix } f call
+
+about fix:
+  docs: """
+    Computes the least fixed point of a function. Can be used to write recursive
+    definitions without explicit recursion, e.g.:
+
+        // Compute the factorial of 5.
+        5 {
+          -> n, rec;
+          if (n <= 0):
+            1
+          else:
+            (n - 1) rec call * n
+        } fix
+    """
+
+define both<A, B, C, D> (A, B, (A -> C), (B -> D) -> C, D):
+  -> x, y, f, g;
+  x f call -> a;
+  y g call -> b;
+  a b
+
+define both_to<A, B, C> (A, (A -> B), (A -> C) -> B, C):
+  -> x, f, g;
+  x f call -> a;
+  x g call -> b;
+  a b
+
+define to_both<A, B> (A, A, (A -> B) -> B, B):
+  -> x, y, f;
+  x f call -> a;
+  y f call -> b;
+  a b
+
+vocab mlatu {
+
+  intrinsic draw (List<List<RGBA>> -> +IO)
+
+}
+
+type RGBA:
+  case rgba (UInt8, UInt8, UInt8, UInt8)
+
+define draw (List<List<RGBA>> -> +IO):
+  _::mlatu::draw
+
+define circle (Int32 -> List<List<RGBA>>):
+  -> r;
+  0u8 0u8 0u8 0u8 rgba
+  (2 * r + 1) replicate
+  (2 * r + 1) replicate
+  do (map_index) -> row, y:
+    row do (map_index) -> pixel, x:
+      x - r -> dx;
+      y - r -> dy;
+      if (dx * dx + dy * dy - r * r <= 0):
+        255u8 0u8 0u8 255u8 rgba
+      else:
+        pixel
