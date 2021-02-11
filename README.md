@@ -10,10 +10,24 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 "Mlatu" is pronounced "melatoo".
 
+## Todo (unordered)
+
+- [ ] Generate Rust code from IR
+
+- [ ] Format IR back into Mlatu
+
+- [ ] Rework syntax into something a little bit nicer
+
+- [ ] Write a TextMate grammar for syntax highlighting
+
 ## Miscellany
 
 The source is based with gratitude off of [the source of Kitten][Kitten GitHub] by Jon Purdy.
 
+
+
 [Kitten GitHub]: https://github.com/evincarofautumn/kitten
+
 [Kitten Site]: https://kittenlang.org/
+
 [Cat GitHub]: https://github.com/cdiggins/cat-language
