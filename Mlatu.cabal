@@ -4,18 +4,25 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8eb93db9ecdfab3b61fcaa640bc8f0afe2a29761fcbb320d2f742215d9d3fd0d
+-- hash: 94324a56cdc1159e53cf98ca362bd8d82c0060a1ec4a9ec08afebc9de1f05c1f
 
 name:           Mlatu
 version:        0.1.0.0
 synopsis:       Mlatu programming language
 category:       Language
+homepage:       https://github.com/brightly-salty/mlatu#readme
+bug-reports:    https://github.com/brightly-salty/mlatu/issues
 author:         Caden Haustein
-maintainer:     cadenhaustein@gmail.com
-license:        MIT
+maintainer:     code@brightlysalty.33mail.com
+license:        BSD2
+license-file:   LICENSE
 build-type:     Simple
 data-files:
     common.mlt
+
+source-repository head
+  type: git
+  location: https://github.com/brightly-salty/mlatu
 
 library
   exposed-modules:

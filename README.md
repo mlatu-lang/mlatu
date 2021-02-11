@@ -6,10 +6,14 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 ## About the name
 
-"Mlatu" is the Lojban word for "cat", referencing Cat by Chris Diggins, Kitten by Jon Purdy, and the fact that Mlatu is a con*cat*enative programming language.
+"Mlatu" is the Lojban word for "cat", referencing [Cat][Cat GitHub] by Christopher Diggins, [Kitten][Kitten Site] by Jon Purdy, and the fact that Mlatu is a con*cat*enative programming language.
 
 "Mlatu" is pronounced "melatoo".
 
 ## Miscellany
 
-The source is based with gratitude off of the source of Kitten by Jon Purdy.
+The source is based with gratitude off of [the source of Kitten][Kitten GitHub] by Jon Purdy.
+
+[Kitten GitHub]: https://github.com/evincarofautumn/kitten
+[Kitten Site]: https://kittenlang.org/
+[Cat GitHub]: https://github.com/cdiggins/cat-language

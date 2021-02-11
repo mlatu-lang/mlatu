@@ -3,8 +3,9 @@ version: 0.1.0.0
 synopsis: Mlatu programming language
 category: Language
 author: Caden Haustein
-maintainer: cadenhaustein@gmail.com
-license: MIT
+maintainer: code@brightlysalty.33mail.com
+github: brightly-salty/mlatu
+license: BSD2
 
 ghc-options:
   - -Wall
