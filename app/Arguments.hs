@@ -38,6 +38,7 @@ data CompileMode
   = CheckMode
   | CompileMode !OutputFormat
   | InterpretMode
+  | FormatMode
 
 data OutputFormat = OutputIr
 
@@ -96,6 +97,10 @@ options =
         acc
           { compileMode = if flag then CheckMode else compileMode acc
           },
+    flagBool' ["fmt", "format"] "Formats code in a pretty manner" $ \flag acc ->
+      acc
+        { compileMode = if flag then FormatMode else compileMode acc
+        },
     flagReq'
       ["o", "output"]
       "PATH"

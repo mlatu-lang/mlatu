@@ -25,6 +25,9 @@ main = do
         hPutStrLn stderr "Cannot run interactively in compile mode."
         exitFailure
       Arguments.InterpretMode -> Interact.run
+      Arguments.FormatMode -> do
+        hPutStrLn stderr "Cannot run interactively in format mode."
+        exitFailure
     (_ : _) -> runBatch arguments
 
 runBatch :: Arguments -> IO ()
@@ -49,6 +52,7 @@ runBatch arguments = do
             stdout
             stderr
             []
+      Arguments.FormatMode -> pass
   where
     mainPermissions =
       [ QualifiedName $ Qualified Vocabulary.global "IO",
