@@ -49,16 +49,16 @@ spec = do
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
-        "type Pair<A, B> { case pair (A, B) }\n\
-        \define => <K, V> (K, V -> Pair<K, V>) { pair }\n\
+        "type Pair[A, B] { case pair (A, B) }\n\
+        \define => [K, V] (K, V -> Pair[K, V]) { pair }\n\
         \about => { operator { right 1 } }\n\
-        \define test (-> List<Pair<Int32, Int32>>) { [1 => 1, 2 => 2, 3 => 3] }"
+        \define test (-> List[Pair[Int32, Int32]]) { [1 => 1, 2 => 2, 3 => 3] }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
 
     it "typechecks intrinsics" $ do
       testTypecheck
         Positive
-        "define test <R..., S..., +P> (R... -> S... +P) { _::mlatu::magic }"
+        "define test [R..., S..., +P] (R... -> S... +P) { _::mlatu::magic }"
         $ Type.fun o r s e
 
       testTypecheck
@@ -186,11 +186,11 @@ spec = do
     it "rejects invalid signature" $ do
       testTypecheck
         Negative
-        "type Pair<A, B> { case pair (A, B) }\n\
-        \define flip<A, B> (Pair<A, B> -> Pair<A, B>) {\n\
+        "type Pair[A, B] { case pair (A, B) }\n\
+        \define flip[A, B] (Pair[A, B] -> Pair[A, B]) {\n\
         \  match case pair -> x, y { y x pair }\n\
         \}\n\
-        \define test (-> Pair<Char, Int32>) { 1 '1' pair flip }"
+        \define test (-> Pair[Char, Int32]) { 1 '1' pair flip }"
         $ Type.fun o r (Type.prod o r (ctor "Pair" :@ char :@ int)) e
 
     it "accepts valid permissions" $ do
@@ -253,8 +253,8 @@ spec = do
       testTypecheck
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
-        \intrinsic map<A, B, +P> (List<A>, (A -> B +P) -> List<B> +P)\n\
-        \define test (-> List<Int32> +IO) { [1, 2, 3] \\launch_missiles map }"
+        \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
+        \define test (-> List[Int32] +IO) { [1, 2, 3] \\launch_missiles map }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ int)) (Type.join o io e)
 
   describe "with coercions" $ do
@@ -332,22 +332,22 @@ commonSource :: Text
 commonSource =
   "\
   \vocab mlatu {\
-  \  intrinsic call<R..., S...> (R..., (R... -> S...) -> S...)\n\
-  \  intrinsic magic<R..., S...> (R... -> S...)\n\
+  \  intrinsic call[R..., S...] (R..., (R... -> S...) -> S...)\n\
+  \  intrinsic magic[R..., S...] (R... -> S...)\n\
   \  intrinsic add_int (_::Int32, _::Int32 -> _::Int32)\n\
   \}\n\
-  \define call<R..., S...> (R..., (R... -> S...) -> S...) {\n\
+  \define call[R..., S...] (R..., (R... -> S...) -> S...) {\n\
   \  _::mlatu::call\n\
   \}\n\
-  \intrinsic abort<R..., S...> (R... -> S... +Fail)\n\
+  \intrinsic abort[R..., S...] (R... -> S... +Fail)\n\
   \type Char {}\n\
   \type Float64 {}\n\
   \type Int32 {}\n\
-  \type List<T> {}\n\
-  \permission IO<R..., S..., +E> (R..., (R... -> S... +IO +E) -> S... +E) {\n\
+  \type List[T] {}\n\
+  \permission IO[R..., S..., +E] (R..., (R... -> S... +IO +E) -> S... +E) {\n\
   \  with (+IO)\n\
   \}\n\
-  \permission Fail<R..., S..., +E> (R..., (R... -> S... +Fail +E) -> S... +E) {\n\
+  \permission Fail[R..., S..., +E] (R..., (R... -> S... +Fail +E) -> S... +E) {\n\
   \  with (+Fail)\n\
   \}\n\
   \\&"

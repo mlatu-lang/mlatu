@@ -12,7 +12,6 @@ import Mlatu (fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import qualified Mlatu.Dictionary as Dictionary
 import qualified Mlatu.Enter as Enter
-import qualified Mlatu.IO as IO
 import Mlatu.Interpret (Rep (..), interpret)
 import Mlatu.Monad (runMlatu)
 import Mlatu.Name (ConstructorIndex (ConstructorIndex))
@@ -28,7 +27,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    commonSource <- IO.readFileUtf8 "common.mlt"
+    commonSource <- (fmap decodeUtf8 . readFileBS) "common.mlt"
     mDictionary <- runMlatu $ do
       common <-
         fragmentFromSource

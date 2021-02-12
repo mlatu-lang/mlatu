@@ -507,7 +507,7 @@ parameter = do
 
 typeListParser :: Parser a -> Parser [a]
 typeListParser element =
-  angledParser $
+  bracketedParser $
     element `Parsec.sepEndBy1` commaParser
 
 quantifiedParser :: Parser Signature -> Parser Signature

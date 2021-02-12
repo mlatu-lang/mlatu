@@ -1,12 +1,12 @@
 vocab mlatu {
 
-  intrinsic call<R..., S...> (R..., (R... -> S...) -> S...)
-  intrinsic drop<A> (A ->)
-  intrinsic swap<A, B> (A, B -> B, A)
+  intrinsic call[R..., S...] (R..., (R... -> S...) -> S...)
+  intrinsic drop[A] (A ->)
+  intrinsic swap[A, B] (A, B -> B, A)
 
 }
 
-define call<R..., S...> (R..., (R... -> S...) -> S...):
+define call[R..., S...] (R..., (R... -> S...) -> S...):
   _::mlatu::call
 
 about call:
@@ -352,7 +352,7 @@ vocab mlatu {
 
 }
 
-trait neg<T> (T -> T)
+trait neg[T] (T -> T)
 
 instance neg (Int8 -> Int8) { _::mlatu::neg_int8 }
 instance neg (Int16 -> Int16) { _::mlatu::neg_int16 }
@@ -365,7 +365,7 @@ instance neg (UInt64 -> UInt64) { _::mlatu::neg_uint64 }
 instance neg (Float32 -> Float32) { _::mlatu::neg_float32 }
 instance neg (Float64 -> Float64) { _::mlatu::neg_float64 }
 
-trait + <T> (T, T -> T)
+trait + [T] (T, T -> T)
 
 about +:
   docs: """
@@ -385,7 +385,7 @@ instance + (UInt64, UInt64 -> UInt64) { _::mlatu::add_uint64 }
 instance + (Float32, Float32 -> Float32) { _::mlatu::add_float32 }
 instance + (Float64, Float64 -> Float64) { _::mlatu::add_float64 }
 
-trait zero<T> (-> T)
+trait zero[T] (-> T)
 
 instance zero (-> Int8) { 0i8 }
 instance zero (-> Int16) { 0i16 }
@@ -398,7 +398,7 @@ instance zero (-> UInt64) { 0u64 }
 instance zero (-> Float32) { 0.0f32 }
 instance zero (-> Float64) { 0.0f64 }
 
-trait - <T> (T, T -> T)
+trait - [T] (T, T -> T)
 
 about -:
   operator:
@@ -415,7 +415,7 @@ instance - (UInt64, UInt64 -> UInt64) { _::mlatu::sub_uint64 }
 instance - (Float32, Float32 -> Float32) { _::mlatu::sub_float32 }
 instance - (Float64, Float64 -> Float64) { _::mlatu::sub_float64 }
 
-trait * <T> (T, T -> T)
+trait * [T] (T, T -> T)
 
 about *:
   operator:
@@ -432,7 +432,7 @@ instance * (UInt64, UInt64 -> UInt64) { _::mlatu::mul_uint64 }
 instance * (Float32, Float32 -> Float32) { _::mlatu::mul_float32 }
 instance * (Float64, Float64 -> Float64) { _::mlatu::mul_float64 }
 
-trait / <T> (T, T -> T +Fail)
+trait / [T] (T, T -> T +Fail)
 
 about /:
   operator:
@@ -449,7 +449,7 @@ instance / (UInt64, UInt64 -> UInt64 +Fail) { _::mlatu::div_uint64 }
 instance / (Float32, Float32 -> Float32 +Fail) { _::mlatu::div_float32 }
 instance / (Float64, Float64 -> Float64 +Fail) { _::mlatu::div_float64 }
 
-trait % <T> (T, T -> T +Fail)
+trait % [T] (T, T -> T +Fail)
 
 about %:
   operator:
@@ -466,11 +466,11 @@ instance % (UInt64, UInt64 -> UInt64 +Fail) { _::mlatu::mod_uint64 }
 instance % (Float32, Float32 -> Float32 +Fail) { _::mlatu::mod_float32 }
 instance % (Float64, Float64 -> Float64 +Fail) { _::mlatu::mod_float64 }
 
-define div_mod<T> (T, T -> T, T +Fail):
+define div_mod[T] (T, T -> T, T +Fail):
   -> x, y;
   (x / y) (x % y)
 
-trait << <T> (T, Int32 -> T)
+trait << [T] (T, Int32 -> T)
 
 about <<:
   operator:
@@ -485,7 +485,7 @@ instance << (UInt16, Int32 -> UInt16) { _::mlatu::shl_uint16 }
 instance << (UInt32, Int32 -> UInt32) { _::mlatu::shl_uint32 }
 instance << (UInt64, Int32 -> UInt64) { _::mlatu::shl_uint64 }
 
-trait >> <T> (T, Int32 -> T)
+trait >> [T] (T, Int32 -> T)
 
 about >>:
   operator:
@@ -500,7 +500,7 @@ instance >> (UInt16, Int32 -> UInt16) { neg _::mlatu::shl_uint16 }
 instance >> (UInt32, Int32 -> UInt32) { neg _::mlatu::shl_uint32 }
 instance >> (UInt64, Int32 -> UInt64) { neg _::mlatu::shl_uint64 }
 
-trait <<| <T> (T, Int32 -> T)
+trait <<| [T] (T, Int32 -> T)
 
 about <<|:
   operator:
@@ -515,7 +515,7 @@ instance <<| (UInt16, Int32 -> UInt16) { _::mlatu::rol_uint16 }
 instance <<| (UInt32, Int32 -> UInt32) { _::mlatu::rol_uint32 }
 instance <<| (UInt64, Int32 -> UInt64) { _::mlatu::rol_uint64 }
 
-trait |>> <T> (T, Int32 -> T)
+trait |>> [T] (T, Int32 -> T)
 
 about |>>:
   operator:
@@ -530,138 +530,138 @@ instance |>> (UInt16, Int32 -> UInt16) { neg _::mlatu::rol_uint16 }
 instance |>> (UInt32, Int32 -> UInt32) { neg _::mlatu::rol_uint32 }
 instance |>> (UInt64, Int32 -> UInt64) { neg _::mlatu::rol_uint64 }
 
-trait pi<T> (-> T)
+trait pi[T] (-> T)
 
 instance pi (-> Float32) { 3.1415927f32 }
 instance pi (-> Float64) { 3.141592653589793f64 }
 
-trait exp<T> (T -> T)
+trait exp[T] (T -> T)
 
 instance exp (Float32 -> Float32) { _::mlatu::exp_float32 }
 instance exp (Float64 -> Float64) { _::mlatu::exp_float64 }
 
-trait log<T> (T -> T)
+trait log[T] (T -> T)
 
 instance log (Float32 -> Float32) { _::mlatu::log_float32 }
 instance log (Float64 -> Float64) { _::mlatu::log_float64 }
 
-trait sqrt<T> (T -> T)
+trait sqrt[T] (T -> T)
 
 instance sqrt (Float32 -> Float32) { _::mlatu::sqrt_float32 }
 instance sqrt (Float64 -> Float64) { _::mlatu::sqrt_float64 }
 
-trait sin<T> (T -> T)
+trait sin[T] (T -> T)
 
 instance sin (Float32 -> Float32) { _::mlatu::sin_float32 }
 instance sin (Float64 -> Float64) { _::mlatu::sin_float64 }
 
-trait cos<T> (T -> T)
+trait cos[T] (T -> T)
 
 instance cos (Float32 -> Float32) { _::mlatu::cos_float32 }
 instance cos (Float64 -> Float64) { _::mlatu::cos_float64 }
 
-trait tan<T> (T -> T)
+trait tan[T] (T -> T)
 
 instance tan (Float32 -> Float32) { _::mlatu::tan_float32 }
 instance tan (Float64 -> Float64) { _::mlatu::tan_float64 }
 
-trait asin<T> (T -> T)
+trait asin[T] (T -> T)
 
 instance asin (Float32 -> Float32) { _::mlatu::asin_float32 }
 instance asin (Float64 -> Float64) { _::mlatu::asin_float64 }
 
-trait acos<T> (T -> T)
+trait acos[T] (T -> T)
 
 instance acos (Float32 -> Float32) { _::mlatu::acos_float32 }
 instance acos (Float64 -> Float64) { _::mlatu::acos_float64 }
 
-trait atan<T> (T -> T)
+trait atan[T] (T -> T)
 
 instance atan (Float32 -> Float32) { _::mlatu::atan_float32 }
 instance atan (Float64 -> Float64) { _::mlatu::atan_float64 }
 
-trait atan2<T> (T, T -> T)
+trait atan2[T] (T, T -> T)
 
 instance atan2 (Float32, Float32 -> Float32) { _::mlatu::atan2_float32 }
 instance atan2 (Float64, Float64 -> Float64) { _::mlatu::atan2_float64 }
 
-trait sinh<T> (T -> T)
+trait sinh[T] (T -> T)
 
 instance sinh (Float32 -> Float32) { _::mlatu::sinh_float32 }
 instance sinh (Float64 -> Float64) { _::mlatu::sinh_float64 }
 
-trait cosh<T> (T -> T)
+trait cosh[T] (T -> T)
 
 instance cosh (Float32 -> Float32) { _::mlatu::cosh_float32 }
 instance cosh (Float64 -> Float64) { _::mlatu::cosh_float64 }
 
-trait tanh<T> (T -> T)
+trait tanh[T] (T -> T)
 
 instance tanh (Float32 -> Float32) { _::mlatu::tanh_float32 }
 instance tanh (Float64 -> Float64) { _::mlatu::tanh_float64 }
 
-trait asinh<T> (T -> T)
+trait asinh[T] (T -> T)
 
 instance asinh (Float32 -> Float32) { _::mlatu::asinh_float32 }
 instance asinh (Float64 -> Float64) { _::mlatu::asinh_float64 }
 
-trait acosh<T> (T -> T)
+trait acosh[T] (T -> T)
 
 instance acosh (Float32 -> Float32) { _::mlatu::acosh_float32 }
 instance acosh (Float64 -> Float64) { _::mlatu::acosh_float64 }
 
-trait atanh<T> (T -> T)
+trait atanh[T] (T -> T)
 
 instance atanh (Float32 -> Float32) { _::mlatu::atanh_float32 }
 instance atanh (Float64 -> Float64) { _::mlatu::atanh_float64 }
 
-trait trunc<T> (T -> T)
+trait trunc[T] (T -> T)
 instance trunc (Float32 -> Float32) { _::mlatu::trunc_float32 }
 instance trunc (Float64 -> Float64) { _::mlatu::trunc_float64 }
 
-trait round<T> (T -> T)
+trait round[T] (T -> T)
 instance round (Float32 -> Float32) { _::mlatu::round_float32 }
 instance round (Float64 -> Float64) { _::mlatu::round_float64 }
 
-trait ceil<T> (T -> T)
+trait ceil[T] (T -> T)
 instance ceil (Float32 -> Float32) { _::mlatu::ceil_float32 }
 instance ceil (Float64 -> Float64) { _::mlatu::ceil_float64 }
 
-trait floor<T> (T -> T)
+trait floor[T] (T -> T)
 instance floor (Float32 -> Float32) { _::mlatu::floor_float32 }
 instance floor (Float64 -> Float64) { _::mlatu::floor_float64 }
 
-trait < <T> (T, T -> Bool)
+trait < [T] (T, T -> Bool)
 
 about <:
   operator:
     4
 
-trait > <T> (T, T -> Bool)
+trait > [T] (T, T -> Bool)
 
 about >:
   operator:
     4
 
-trait <= <T> (T, T -> Bool)
+trait <= [T] (T, T -> Bool)
 
 about <=:
   operator:
     4
 
-trait >= <T> (T, T -> Bool)
+trait >= [T] (T, T -> Bool)
 
 about >=:
   operator:
     4
 
-trait = <T> (T, T -> Bool)
+trait = [T] (T, T -> Bool)
 
 about =:
   operator:
     4
 
-trait <> <T> (T, T -> Bool)
+trait <> [T] (T, T -> Bool)
 
 about <>:
   operator:
@@ -752,27 +752,27 @@ instance = (Bool, Bool -> Bool) { if {} else {not} }
 instance <> (Bool, Bool -> Bool) { (=) not }
 
 
-define abs<T> (T -> T):
+define abs[T] (T -> T):
   dup
   if ((< zero)):
     neg
 
 // FIXME: Requires casting.
 //
-// define even<T> (T -> Bool):
+// define even[T] (T -> Bool):
 //   (% 2) (= 0)
 //
-// define odd<T> (T -> Bool):
+// define odd[T] (T -> Bool):
 //   (% 2) (<> 0)
 
-define max<T> (T, T -> T):
+define max[T] (T, T -> T):
   -> a, b;
   if (a < b):
     b
   else:
     a
 
-define min<T> (T, T -> T):
+define min[T] (T, T -> T):
   -> a, b;
   if (a < b):
     a
@@ -792,7 +792,7 @@ type Bool:
   case false
   case true
 
-trait not<T> (T -> T)
+trait not[T] (T -> T)
 
 instance not (Bool -> Bool):
   if:
@@ -810,7 +810,7 @@ instance not (UInt32 -> UInt32) { _::mlatu::not_uint32 }
 instance not (UInt64 -> UInt64) { _::mlatu::not_uint64 }
 
 // Strict intersection.
-trait & <T> (T, T -> T)
+trait & [T] (T, T -> T)
 
 about &:
   operator:
@@ -833,7 +833,7 @@ instance & (UInt32, UInt32 -> UInt32) { _::mlatu::and_uint32 }
 instance & (UInt64, UInt64 -> UInt64) { _::mlatu::and_uint64 }
 
 // Lazy intersection.
-trait && <T> (T, (-> T) -> T)
+trait && [T] (T, (-> T) -> T)
 
 about &&:
   operator:
@@ -847,7 +847,7 @@ instance && (Bool, (-> Bool) -> Bool):
     false
 
 // Strict union.
-trait | <T> (T, T -> T)
+trait | [T] (T, T -> T)
 
 about |:
   operator:
@@ -870,7 +870,7 @@ instance | (UInt32, UInt32 -> UInt32) { _::mlatu::or_uint32 }
 instance | (UInt64, UInt64 -> UInt64) { _::mlatu::or_uint64 }
 
 // Lazy union.
-trait || <T> (T, (-> T) -> T)
+trait || [T] (T, (-> T) -> T)
 
 about ||:
   operator:
@@ -884,7 +884,7 @@ instance || (Bool, (-> Bool) -> Bool):
     y call
 
 // Strict difference.
-trait ~ <A> (A, A -> A)
+trait ~ [A] (A, A -> A)
 
 about ~:
   operator:
@@ -904,7 +904,7 @@ instance ~ (UInt32, UInt32 -> UInt32) { _::mlatu::xor_uint32 }
 instance ~ (UInt64, UInt64 -> UInt64) { _::mlatu::xor_uint64 }
 
 // Strict implication.
-trait --> <T> (T, T -> T)
+trait --> [T] (T, T -> T)
 
 about -->:
   operator:
@@ -934,7 +934,7 @@ about --->:
 
 // These (all, and, any, or) would be cleaner with lazy folds or slices.
 
-define all<T> (List<T>, (T -> Bool) -> Bool):
+define all[T] (List[T], (T -> Bool) -> Bool):
   -> xs, f;
   match (xs head_tail)
   case some:
@@ -948,7 +948,7 @@ define all<T> (List<T>, (T -> Bool) -> Bool):
 
 // define and (List<Bool> -> Bool)
 
-define any<T> (List<T>, (T -> Bool) -> Bool):
+define any[T] (List[T], (T -> Bool) -> Bool):
   -> xs, f;
   match (xs head_tail)
   case some:
@@ -960,41 +960,41 @@ define any<T> (List<T>, (T -> Bool) -> Bool):
   case none:
     false
 
-// define or<T> (List<Bool> -> Bool)
+// define or[T] (List<Bool> -> Bool)
 
-type Optional<T>:
+type Optional[T]:
   case none
   case some (T)
 
-define from_optional<T> (Optional<T>, T -> T):
+define from_optional[T] (Optional[T], T -> T):
   -> default;
   match
   case some {}
   else:
     default
 
-define from_some<T> (Optional<T>, List<Char> -> T +Fail):
+define from_some[T] (Optional[T], List[Char] -> T +Fail):
   -> message;
   match case some {}
   else:
     message fail
 
-define is_none<T> (Optional<T> -> Bool):
+define is_none[T] (Optional[T] -> Bool):
   match
   case none:
     true
   else:
     false
 
-define is_some<T> (Optional<T> -> Bool):
+define is_some[T] (Optional[T] -> Bool):
   match
   case some:
     drop true
   else:
     false
 
-define optional<R..., S..., A>
-(R..., Optional<A>, (R..., A -> S...), (R... -> S...) -> S...):
+define optional[R..., S..., A]
+(R..., Optional[A], (R..., A -> S...), (R... -> S...) -> S...):
   -> f, g;
   match
   case some:
@@ -1002,7 +1002,7 @@ define optional<R..., S..., A>
   case none:
     g call
 
-define lift_optional_2<A, B, C> (Optional<A>, Optional<B>, (A, B -> C) -> Optional<C>):
+define lift_optional_2[A, B, C] (Optional[A], Optional[B], (A, B -> C) -> Optional[C]):
   -> mx, my, f;
   match (mx)
   case some -> x:
@@ -1016,10 +1016,10 @@ define lift_optional_2<A, B, C> (Optional<A>, Optional<B>, (A, B -> C) -> Option
 
 // TODO: map Optional
 
-type Pair<A, B>:
+type Pair[A, B]:
   case pair (A, B)
 
-define => <K, V> (K, V -> Pair<K, V>) { pair }
+define => [K, V] (K, V -> Pair[K, V]) { pair }
 
 about =>:
   docs: """
@@ -1028,67 +1028,67 @@ about =>:
   operator:
     right 1
 
-define unpair<A, B> (Pair<A, B> -> A, B):
+define unpair[A, B] (Pair[A, B] -> A, B):
   match case pair {}
 
-define flip<A, B> (Pair<A, B> -> Pair<B, A>):
+define flip[A, B] (Pair[A, B] -> Pair[B, A]):
   unpair swap pair
 
-define first<A, B> (Pair<A, B> -> A):
+define first[A, B] (Pair[A, B] -> A):
   unpair drop
 
-define second<A, B> (Pair<A, B> -> B):
+define second[A, B] (Pair[A, B] -> B):
   unpair swap drop
 
 // TODO: map Pair
 
-type Either<A, B>:
+type Either[A, B]:
   case left (A)
   case right (B)
 
-define from_left<A, B> (Either<A, B>, List<Char> -> A +Fail):
+define from_left[A, B] (Either[A, B], List[Char] -> A +Fail):
   -> message;
   match case left {}
   else:
     message fail
 
-define from_right<A, B> (Either<A, B>, List<Char> -> B +Fail):
+define from_right[A, B] (Either[A, B], List[Char] -> B +Fail):
   -> message;
   match
   case right {}
   else:
     message fail
 
-define get_left<A, B> (Either<A, B> -> Optional<A>):
+define get_left[A, B] (Either[A, B] -> Optional[A]):
   match
   case left:
     some
   else:
     none
 
-define get_right<A, B> (Either<A, B> -> Optional<B>):
+define get_right[A, B] (Either[A, B] -> Optional[B]):
   match
   case right:
     some
   else:
     none
 
-define is_left<A, B> (Either<A, B> -> Bool):
+define is_left[A, B] (Either[A, B] -> Bool):
   match
   case left:
     drop true
   else:
     false
 
-define is_right<A, B> (Either<A, B> -> Bool):
+define is_right[A, B] (Either[A, B] -> Bool):
   match
   case right:
     drop true
   else:
     false
 
-define either<R..., S..., A, B>
-(R..., Either<A, B>, (R..., A -> S...), (R..., B -> S...) -> S...):
+define either[R..., S..., A, B]
+(R..., Either[A, B], (R..., A -> S...), (R..., B -> S...) -> S...):
   -> f, g;
   match
   case left:
@@ -1096,7 +1096,7 @@ define either<R..., S..., A, B>
   case right:
     g call
 
-define map_left<A, B, C> (Either<A, B>, (A -> C) -> Either<C, B>):
+define map_left[A, B, C] (Either[A, B], (A -> C) -> Either[C, B]):
   -> f;
   match
   case left:
@@ -1104,7 +1104,7 @@ define map_left<A, B, C> (Either<A, B>, (A -> C) -> Either<C, B>):
   case right:
     right
 
-define map_right<A, B, C> (Either<A, B>, (B -> C) -> Either<A, C>):
+define map_right[A, B, C] (Either[A, B], (B -> C) -> Either[A, C]):
   -> f;
   match
   case right:
@@ -1112,51 +1112,51 @@ define map_right<A, B, C> (Either<A, B>, (B -> C) -> Either<A, C>):
   case left:
     left
 
-type Pointer<T>:
+type Pointer[T]:
   case _pointer (UInt64)
 
 // do (until) { ... }
-define until<R...> (R..., (R... -> R..., Bool) -> R...):
+define until[R...] (R..., (R... -> R..., Bool) -> R...):
   -> f;
   if (f call not):
     f until
 
 // do (while) { ... }
-define while<R...> (R..., (R... -> R..., Bool) -> R...):
+define while[R...] (R..., (R... -> R..., Bool) -> R...):
   -> f;
   if (f call):
     f while
 
-type List<T>:
-  case _list (Pointer<T>, Pointer<T>, Pointer<T>)
+type List[T]:
+  case _list (Pointer[T], Pointer[T], Pointer[T])
 
 vocab mlatu {
 
-  intrinsic empty<T> (List<T> -> Bool)
-  intrinsic head<T> (List<T> -> Optional<T>)
-  intrinsic tail<T> (List<T> -> Optional<List<T>>)
-  intrinsic init<T> (List<T> -> Optional<List<T>>)
-  intrinsic last<T> (List<T> -> Optional<T>)
-  intrinsic append<T> (List<T>, T -> List<T>)
-  intrinsic prepend<T> (T, List<T> -> List<T>)
-  intrinsic cat<T> (List<T>, List<T> -> List<T>)
-  intrinsic get<T> (List<T>, Int32 -> Optional<T>)
-  intrinsic set<T> (List<T>, T, Int32 -> Optional<List<T>>)
+  intrinsic empty[T] (List[T] -> Bool)
+  intrinsic head[T] (List[T] -> Optional[T])
+  intrinsic tail[T] (List[T] -> Optional[List[T]])
+  intrinsic init[T] (List[T] -> Optional[List[T]])
+  intrinsic last[T] (List[T] -> Optional[T])
+  intrinsic append[T] (List[T], T -> List[T])
+  intrinsic prepend[T] (T, List[T] -> List[T])
+  intrinsic cat[T] (List[T], List[T] -> List[T])
+  intrinsic get[T] (List[T], Int32 -> Optional[T])
+  intrinsic set[T] (List[T], T, Int32 -> Optional[List[T]])
 
 }
 
-define empty<T> (List<T> -> Bool):
+define empty[T] (List[T] -> Bool):
   _::mlatu::empty
 
 // TODO: Use Size, not Int32.
-define length<T> (List<T> -> Int32):
+define length[T] (List[T] -> Int32):
   match (tail)
   case none:
     0
   case some:
     length (+ 1)
 
-define elem<T> (T, List<T> -> Bool):
+define elem[T] (T, List[T] -> Bool):
   -> x, xs;
   match (xs head_tail)
   case some:
@@ -1169,7 +1169,7 @@ define elem<T> (T, List<T> -> Bool):
     false
 
 // TODO: Partial instances.
-instance > (List<Int32>, List<Int32> -> Bool):
+instance > (List[Int32], List[Int32] -> Bool):
   -> xs, ys;
   match (xs head_tail)
   case some:
@@ -1188,11 +1188,11 @@ instance > (List<Int32>, List<Int32> -> Bool):
   case none:
     false
 
-instance < (List<Int32>, List<Int32> -> Bool) { swap (>) }
-instance <= (List<Int32>, List<Int32> -> Bool) { (>) not }
-instance >= (List<Int32>, List<Int32> -> Bool) { (<) not }
+instance < (List[Int32], List[Int32] -> Bool) { swap (>) }
+instance <= (List[Int32], List[Int32] -> Bool) { (>) not }
+instance >= (List[Int32], List[Int32] -> Bool) { (<) not }
 
-instance = (List<Int32>, List<Int32> -> Bool):
+instance = (List[Int32], List[Int32] -> Bool):
   -> xs, ys;
   if (xs length <> ys length):
     false
@@ -1212,9 +1212,9 @@ instance = (List<Int32>, List<Int32> -> Bool):
     case none:
       true
 
-instance <> (List<Int32>, List<Int32> -> Bool) { (=) not }
+instance <> (List[Int32], List[Int32] -> Bool) { (=) not }
 
-instance > (List<Char>, List<Char> -> Bool):
+instance > (List[Char], List[Char] -> Bool):
   -> xs, ys;
   match (xs head_tail)
   case some:
@@ -1233,11 +1233,11 @@ instance > (List<Char>, List<Char> -> Bool):
   case none:
     false
 
-instance < (List<Char>, List<Char> -> Bool) { swap (>) }
-instance <= (List<Char>, List<Char> -> Bool) { (>) not }
-instance >= (List<Char>, List<Char> -> Bool) { (<) not }
+instance < (List[Char], List[Char] -> Bool) { swap (>) }
+instance <= (List[Char], List[Char] -> Bool) { (>) not }
+instance >= (List[Char], List[Char] -> Bool) { (<) not }
 
-instance = (List<Char>, List<Char> -> Bool):
+instance = (List[Char], List[Char] -> Bool):
   -> xs, ys;
   if (xs length <> ys length):
     false
@@ -1257,45 +1257,45 @@ instance = (List<Char>, List<Char> -> Bool):
     case none:
       true
 
-instance <> (List<Char>, List<Char> -> Bool) { (=) not }
+instance <> (List[Char], List[Char] -> Bool) { (=) not }
 
-define head<T> (List<T> -> Optional<T>):
+define head[T] (List[T] -> Optional[T]):
   _::mlatu::head
 
-define tail<T> (List<T> -> Optional<List<T>>):
+define tail[T] (List[T] -> Optional[List[T]]):
   _::mlatu::tail
 
-define init<T> (List<T> -> Optional<List<T>>):
+define init[T] (List[T] -> Optional[List[T]]):
   _::mlatu::init
 
-define last<T> (List<T> -> Optional<T>):
+define last[T] (List[T] -> Optional[T]):
   _::mlatu::last
 
-define append<T> (List<T>, T -> List<T>):
+define append[T] (List[T], T -> List[T]):
   _::mlatu::append
 
-define prepend<T> (T, List<T> -> List<T>):
+define prepend[T] (T, List[T] -> List[T]):
   _::mlatu::prepend
 
-define cat<T> (List<T>, List<T> -> List<T>):
+define cat[T] (List[T], List[T] -> List[T]):
   _::mlatu::cat
 
 // FIXME: Requires generic instances; should be:
-// instance + <T> (List<T>, List<T> -> List<T>)
-instance + (List<Char>, List<Char> -> List<Char>):
+// instance + [T] (List[T], List[T] -> List[T])
+instance + (List[Char], List[Char] -> List[Char]):
   cat
 
-define get<T> (List<T>, Int32 -> Optional<T>):
+define get[T] (List[T], Int32 -> Optional[T]):
   _::mlatu::get
 
-define get_all<T> (List<T>, List<Int32> -> List<Optional<T>>):
+define get_all[T] (List[T], List[Int32] -> List[Optional[T]]):
   -> list, indices;
   indices { list swap get } map
 
-define set<T> (List<T>, T, Int32 -> Optional<List<T>>):
+define set[T] (List[T], T, Int32 -> Optional[List[T]]):
   _::mlatu::set
 
-define modify<T> (List<T>, (T -> T), Int32 -> Optional<List<T>>):
+define modify[T] (List[T], (T -> T), Int32 -> Optional[List[T]]):
   -> xs, f, i;
   match (xs i get)
   case none:
@@ -1303,7 +1303,7 @@ define modify<T> (List<T>, (T -> T), Int32 -> Optional<List<T>>):
   case some -> x:
     xs (x f call) i set
 
-define replicate<T> (T, Int32 -> List<T>):
+define replicate[T] (T, Int32 -> List[T]):
   -> value, count;
   if (count <= 0):
     []
@@ -1311,7 +1311,7 @@ define replicate<T> (T, Int32 -> List<T>):
     value (count - 1) replicate
     value append
 
-define head_tail<T> (List<T> -> Optional<Pair<T, List<T>>>):
+define head_tail[T] (List[T] -> Optional[Pair[T, List[T]]]):
   -> xs;
   none
   match (xs head) case some -> y:
@@ -1320,7 +1320,7 @@ define head_tail<T> (List<T> -> Optional<Pair<T, List<T>>>):
     else {}
   else {}
 
-define init_last<T> (List<T> -> Optional<Pair<List<T>, T>>):
+define init_last[T] (List[T] -> Optional[Pair[List[T], T]]):
   -> xs;
   none
   match (xs init) case some -> ys:
@@ -1329,7 +1329,7 @@ define init_last<T> (List<T> -> Optional<Pair<List<T>, T>>):
     else {}
   else {}
 
-define reverse<T> (List<T> -> List<T>):
+define reverse[T] (List[T] -> List[T]):
   -> xs;
   match (xs head_tail)
   case some:
@@ -1338,7 +1338,7 @@ define reverse<T> (List<T> -> List<T>):
   case none:
     []
 
-define map<A, B, +P> (List<A>, (A -> B +P) -> List<B> +P):
+define map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P):
   -> xs, f;
   match (xs head_tail)
   case none:
@@ -1349,12 +1349,12 @@ define map<A, B, +P> (List<A>, (A -> B +P) -> List<B> +P):
     ys f map -> zs;
     z zs prepend
 
-define map_index<A, B, +P> (List<A>, (A, Int32 -> B +P) -> List<B> +P):
+define map_index[A, B, +P] (List[A], (A, Int32 -> B +P) -> List[B] +P):
   0 map_index::helper
 
 vocab map_index {
 
-  define helper<A, B, +P> (List<A>, (A, Int32 -> B +P), Int32 -> List<B> +P):
+  define helper[A, B, +P] (List[A], (A, Int32 -> B +P), Int32 -> List[B] +P):
     -> xs, f, i;
     match (xs head_tail)
     case none:
@@ -1367,7 +1367,7 @@ vocab map_index {
 
 }
 
-define each<T, +P> (List<T>, (T -> +P) -> +P):
+define each[T, +P] (List[T], (T -> +P) -> +P):
   -> f;
   match (head_tail)
   case some:
@@ -1376,7 +1376,7 @@ define each<T, +P> (List<T>, (T -> +P) -> +P):
     t f each
   case none {}
 
-define filter<T> (List<T>, (T -> Bool) -> List<T>):
+define filter[T] (List[T], (T -> Bool) -> List[T]):
   -> f;
   match (head_tail)
   case some:
@@ -1388,10 +1388,10 @@ define filter<T> (List<T>, (T -> Bool) -> List<T>):
   case none:
     []
 
-define find<T> (List<T>, (T -> Bool) -> Optional<T>):
+define find[T] (List[T], (T -> Bool) -> Optional[T]):
   filter head
 
-define fold_left<A, B> (List<B>, A, (A, B -> A) -> A):
+define fold_left[A, B] (List[B], A, (A, B -> A) -> A):
   -> xs, z, k;
   match (xs head)
   case some -> x:
@@ -1402,7 +1402,7 @@ define fold_left<A, B> (List<B>, A, (A, B -> A) -> A):
   case none:
     z
 
-define fold_left_non_empty<T> (List<T>, (T, T -> T) -> Optional<T>):
+define fold_left_non_empty[T] (List[T], (T, T -> T) -> Optional[T]):
   -> xs, f;
   match (xs head)
   case some -> x:
@@ -1413,7 +1413,7 @@ define fold_left_non_empty<T> (List<T>, (T, T -> T) -> Optional<T>):
   else:
     none
 
-define fold_right<A, B> (List<A>, B, (A, B -> B) -> B):
+define fold_right[A, B] (List[A], B, (A, B -> B) -> B):
   -> xs, z, k;
   match (xs last)
   case some -> x:
@@ -1424,7 +1424,7 @@ define fold_right<A, B> (List<A>, B, (A, B -> B) -> B):
   else:
     z
 
-define fold_right_non_empty<A> (List<A>, (A, A -> A) -> Optional<A>):
+define fold_right_non_empty[A] (List[A], (A, A -> A) -> Optional[A]):
   -> xs, f;
   match (xs last)
   case some -> x:
@@ -1435,27 +1435,27 @@ define fold_right_non_empty<A> (List<A>, (A, A -> A) -> Optional<A>):
   else:
     none
 
-define map_concat<A, B> (List<A>, (A -> List<B>) -> List<B>):
+define map_concat[A, B] (List[A], (A -> List[B]) -> List[B]):
   map concat
 
-define concat<T> (List<List<T>> -> List<T>):
+define concat[T] (List[List[T]] -> List[T]):
   [] \cat fold_left
 
-define concat_optionals<T> (List<Optional<T>> -> List<T>):
+define concat_optionals[T] (List[Optional[T]] -> List[T]):
   []
   { match case some { append } case none {} }
   fold_left
 
-define maximum<T> (List<T> -> Optional<T>):
+define maximum[T] (List[T] -> Optional[T]):
   \max fold_left_non_empty
 
-define minimum<T> (List<T> -> Optional<T>):
+define minimum[T] (List[T] -> Optional[T]):
   \min fold_left_non_empty
 
-define cartesian<A, B> (List<A>, List<B> -> List<Pair<A, B>>):
+define cartesian[A, B] (List[A], List[B] -> List[Pair[A, B]]):
   \pair cartesian_with
 
-define cartesian_with<A, B, C> (List<A>, List<B>, (A, B -> C) -> List<C>):
+define cartesian_with[A, B, C] (List[A], List[B], (A, B -> C) -> List[C]):
   -> xs, ys, f;
   xs do (map_concat) -> x:
     ys do (map) -> y:
@@ -1463,85 +1463,85 @@ define cartesian_with<A, B, C> (List<A>, List<B>, (A, B -> C) -> List<C>):
 
 vocab mlatu {
 
-  intrinsic print (List<Char> -> +IO)
-  intrinsic get_line (-> List<Char> +IO)
+  intrinsic print (List[Char] -> +IO)
+  intrinsic get_line (-> List[Char] +IO)
 
   // FIXME: Figure out handles and generalize this.
   intrinsic flush_stdout (-> +IO)
 
-  intrinsic read_file (List<Char> -> List<Char> +IO)
-  intrinsic write_file (List<Char>, List<Char> -> +IO)
-  intrinsic append_file (List<Char>, List<Char> -> +IO)
+  intrinsic read_file (List[Char] -> List[Char] +IO)
+  intrinsic write_file (List[Char], List[Char] -> +IO)
+  intrinsic append_file (List[Char], List[Char] -> +IO)
 }
 
-trait show<T> (T -> List<Char>)
+trait show[T] (T -> List[Char])
 
-instance show (List<Char> -> List<Char>) {}
+instance show (List[Char] -> List[Char]) {}
 
-instance show (Char -> List<Char>):
+instance show (Char -> List[Char]):
   -> x;
   [x]
 
-instance show (Bool -> List<Char>):
+instance show (Bool -> List[Char]):
   if { "true" } else { "false" }
 
 vocab mlatu {
 
-  intrinsic show_int8 (Int8 -> List<Char>)
-  intrinsic show_int16 (Int16 -> List<Char>)
-  intrinsic show_int32 (Int32 -> List<Char>)
-  intrinsic show_int64 (Int64 -> List<Char>)
-  intrinsic show_uint8 (UInt8 -> List<Char>)
-  intrinsic show_uint16 (UInt16 -> List<Char>)
-  intrinsic show_uint32 (UInt32 -> List<Char>)
-  intrinsic show_uint64 (UInt64 -> List<Char>)
-  intrinsic show_float32 (Float32 -> List<Char>)
-  intrinsic show_float64 (Float64 -> List<Char>)
+  intrinsic show_int8 (Int8 -> List[Char])
+  intrinsic show_int16 (Int16 -> List[Char])
+  intrinsic show_int32 (Int32 -> List[Char])
+  intrinsic show_int64 (Int64 -> List[Char])
+  intrinsic show_uint8 (UInt8 -> List[Char])
+  intrinsic show_uint16 (UInt16 -> List[Char])
+  intrinsic show_uint32 (UInt32 -> List[Char])
+  intrinsic show_uint64 (UInt64 -> List[Char])
+  intrinsic show_float32 (Float32 -> List[Char])
+  intrinsic show_float64 (Float64 -> List[Char])
 
 }
 
-instance show (Int8 -> List<Char>):
+instance show (Int8 -> List[Char]):
   _::mlatu::show_int8
 
-instance show (Int16 -> List<Char>):
+instance show (Int16 -> List[Char]):
   _::mlatu::show_int16
 
-instance show (Int32 -> List<Char>):
+instance show (Int32 -> List[Char]):
   _::mlatu::show_int32
 
-instance show (Int64 -> List<Char>):
+instance show (Int64 -> List[Char]):
   _::mlatu::show_int64
 
-instance show (UInt8 -> List<Char>):
+instance show (UInt8 -> List[Char]):
   _::mlatu::show_uint8
 
-instance show (UInt16 -> List<Char>):
+instance show (UInt16 -> List[Char]):
   _::mlatu::show_uint16
 
-instance show (UInt32 -> List<Char>):
+instance show (UInt32 -> List[Char]):
   _::mlatu::show_uint32
 
-instance show (UInt64 -> List<Char>):
+instance show (UInt64 -> List[Char]):
   _::mlatu::show_uint64
 
-instance show (Float32 -> List<Char>):
+instance show (Float32 -> List[Char]):
   _::mlatu::show_float32
 
-instance show (Float64 -> List<Char>):
+instance show (Float64 -> List[Char]):
   _::mlatu::show_float64
 
-trait read<T> (List<Char> -> Optional<T>)
+trait read[T] (List[Char] -> Optional[T])
 
-instance read (List<Char> -> Optional<List<Char>>) { some }
+instance read (List[Char] -> Optional[List[Char]]) { some }
 
-instance read (List<Char> -> Optional<Char>):
+instance read (List[Char] -> Optional[Char]):
   -> cs;
   if (cs length = 1):
     cs head
   else:
     none
 
-instance read (List<Char> -> Optional<Bool>):
+instance read (List[Char] -> Optional[Bool]):
   -> cs;
   if (cs = "true"): true some
   elif (cs = "false"): false some
@@ -1549,141 +1549,141 @@ instance read (List<Char> -> Optional<Bool>):
 
 vocab mlatu {
 
-  intrinsic read_int8 (List<Char> -> Optional<Int8>)
-  intrinsic read_int16 (List<Char> -> Optional<Int16>)
-  intrinsic read_int32 (List<Char> -> Optional<Int32>)
-  intrinsic read_int64 (List<Char> -> Optional<Int64>)
-  intrinsic read_uint8 (List<Char> -> Optional<UInt8>)
-  intrinsic read_uint16 (List<Char> -> Optional<UInt16>)
-  intrinsic read_uint32 (List<Char> -> Optional<UInt32>)
-  intrinsic read_uint64 (List<Char> -> Optional<UInt64>)
-  intrinsic read_float32 (List<Char> -> Optional<Float32>)
-  intrinsic read_float64 (List<Char> -> Optional<Float64>)
+  intrinsic read_int8 (List[Char] -> Optional[Int8])
+  intrinsic read_int16 (List[Char] -> Optional[Int16])
+  intrinsic read_int32 (List[Char] -> Optional[Int32])
+  intrinsic read_int64 (List[Char] -> Optional[Int64])
+  intrinsic read_uint8 (List[Char] -> Optional[UInt8])
+  intrinsic read_uint16 (List[Char] -> Optional[UInt16])
+  intrinsic read_uint32 (List[Char] -> Optional[UInt32])
+  intrinsic read_uint64 (List[Char] -> Optional[UInt64])
+  intrinsic read_float32 (List[Char] -> Optional[Float32])
+  intrinsic read_float64 (List[Char] -> Optional[Float64])
 
 }
 
-instance read (List<Char> -> Optional<Int8>):
+instance read (List[Char] -> Optional[Int8]):
   _::mlatu::read_int8
 
-instance read (List<Char> -> Optional<Int16>):
+instance read (List[Char] -> Optional[Int16]):
   _::mlatu::read_int16
 
-instance read (List<Char> -> Optional<Int32>):
+instance read (List[Char] -> Optional[Int32]):
   _::mlatu::read_int32
 
-instance read (List<Char> -> Optional<Int64>):
+instance read (List[Char] -> Optional[Int64]):
   _::mlatu::read_int64
 
-instance read (List<Char> -> Optional<UInt8>):
+instance read (List[Char] -> Optional[UInt8]):
   _::mlatu::read_uint8
 
-instance read (List<Char> -> Optional<UInt16>):
+instance read (List[Char] -> Optional[UInt16]):
   _::mlatu::read_uint16
 
-instance read (List<Char> -> Optional<UInt32>):
+instance read (List[Char] -> Optional[UInt32]):
   _::mlatu::read_uint32
 
-instance read (List<Char> -> Optional<UInt64>):
+instance read (List[Char] -> Optional[UInt64]):
   _::mlatu::read_uint64
 
-instance read (List<Char> -> Optional<Float32>):
+instance read (List[Char] -> Optional[Float32]):
   _::mlatu::read_float32
 
-instance read (List<Char> -> Optional<Float64>):
+instance read (List[Char] -> Optional[Float64]):
   _::mlatu::read_float64
 
-define print<T> (T -> +IO) /* where (show<T>) */ :
+define print[T] (T -> +IO) /* where (show[T]) */ :
   show _::mlatu::print
 
-define println<T> (T -> +IO):
+define println[T] (T -> +IO):
   print newline
 
 define newline (-> +IO):
   "\n" print
 
-define get_line (-> List<Char> +IO):
+define get_line (-> List[Char] +IO):
   _::mlatu::get_line
 
-define ask (List<Char> -> List<Char> +IO):
+define ask (List[Char] -> List[Char] +IO):
   print _::mlatu::flush_stdout get_line
 
-define read_file (List<Char> -> List<Char> +IO):
+define read_file (List[Char] -> List[Char] +IO):
   _::mlatu::read_file
 
-define write_file (List<Char>, List<Char> -> +IO):
+define write_file (List[Char], List[Char] -> +IO):
   _::mlatu::write_file
 
-define append_file (List<Char>, List<Char> -> +IO):
+define append_file (List[Char], List[Char] -> +IO):
   _::mlatu::append_file
 
-permission Fail<R..., S..., +P> (R..., (R... -> S... +Fail +P) -> S... +P):
+permission Fail[R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
   with (+Fail)
 
-permission Exit<R..., S..., +P> (R..., (R... -> S... +Exit +P) -> S... +P):
+permission Exit[R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
   with (+Exit)
 
 vocab mlatu {
 
-  intrinsic abort<R..., S...> (R..., List<Char> -> S... +Fail)
-  intrinsic exit<R..., S...> (R..., Int32 -> S... +Exit)
+  intrinsic abort[R..., S...] (R..., List[Char] -> S... +Fail)
+  intrinsic exit[R..., S...] (R..., Int32 -> S... +Exit)
 
 }
 
-define abort<R..., S...> (R... -> S... +Fail):
+define abort[R..., S...] (R... -> S... +Fail):
   "abort called" _::mlatu::abort
 
-define exit<R..., S...> (R..., Int32 -> S... +Exit):
+define exit[R..., S...] (R..., Int32 -> S... +Exit):
   _::mlatu::exit
 
-define fail<R..., S...> (R..., List<Char> -> S... +Fail):
+define fail[R..., S...] (R..., List[Char] -> S... +Fail):
   _::mlatu::abort
 
-define assert<+P> (List<Char>, (-> Bool +P) -> +Fail +P):
+define assert[+P] (List[Char], (-> Bool +P) -> +Fail +P):
   -> message, test;
   do (with (-Fail)):
     test call
   if (not):
     message _::mlatu::abort
 
-permission IO<R..., S..., +P> (R..., (R... -> S... +IO +P) -> S... +P):
+permission IO[R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
   with (+IO)
 
-define drop<T> (T ->):
+define drop[T] (T ->):
   -> _;
 
-define drop2<A, B> (A, B ->):
+define drop2[A, B] (A, B ->):
   -> _, _;
 
-define dup<T> (T -> T, T):
+define dup[T] (T -> T, T):
   -> x;
   x x
 
-define dup2<A, B> (A, B -> A, B, A, B):
+define dup2[A, B] (A, B -> A, B, A, B):
   -> x, y;
   x y x y
 
-define swap<A, B> (A, B -> B, A):
+define swap[A, B] (A, B -> B, A):
   -> x, y;
   y x
 
-define swapped<R..., S..., A, B>
+define swapped[R..., S..., A, B]
 ((R..., A, B -> S...) -> (R..., B, A -> S...)):
   \swap swap compose
 
-define dip<R..., S..., T> (R..., T, (R... -> S...) -> S..., T):
+define dip[R..., S..., T] (R..., T, (R... -> S...) -> S..., T):
   -> x, f;
   f call x
 
-define compose<R..., S..., T...>
+define compose[R..., S..., T...]
 ((R... -> S...), (S... -> T...) -> (R... -> T...)):
   -> f, g;
   { f call g call }
 
-define function<T> (T -> (-> T)):
+define function[T] (T -> (-> T)):
   -> x;
   { x }
 
-define apply<R..., S..., T, +P> (T, (R..., T -> S... +P) -> (R... -> S... +P)):
+define apply[R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)):
   -> x, f;
   { x f call }
 
@@ -1692,7 +1692,7 @@ about apply:
     Partially applies the topmost argument of a function.
     """
 
-define fix<R..., S...> (R..., (R..., (R... -> S...) -> S...) -> S...):
+define fix[R..., S...] (R..., (R..., (R... -> S...) -> S...) -> S...):
   -> f;
   { f fix } f call
 
@@ -1711,19 +1711,19 @@ about fix:
         } fix
     """
 
-define both<A, B, C, D> (A, B, (A -> C), (B -> D) -> C, D):
+define both[A, B, C, D] (A, B, (A -> C), (B -> D) -> C, D):
   -> x, y, f, g;
   x f call -> a;
   y g call -> b;
   a b
 
-define both_to<A, B, C> (A, (A -> B), (A -> C) -> B, C):
+define both_to[A, B, C] (A, (A -> B), (A -> C) -> B, C):
   -> x, f, g;
   x f call -> a;
   x g call -> b;
   a b
 
-define to_both<A, B> (A, A, (A -> B) -> B, B):
+define to_both[A, B] (A, A, (A -> B) -> B, B):
   -> x, y, f;
   x f call -> a;
   y f call -> b;
@@ -1731,17 +1731,17 @@ define to_both<A, B> (A, A, (A -> B) -> B, B):
 
 vocab mlatu {
 
-  intrinsic draw (List<List<RGBA>> -> +IO)
+  intrinsic draw (List[List[RGBA]] -> +IO)
 
 }
 
 type RGBA:
   case rgba (UInt8, UInt8, UInt8, UInt8)
 
-define draw (List<List<RGBA>> -> +IO):
+define draw (List[List[RGBA]] -> +IO):
   _::mlatu::draw
 
-define circle (Int32 -> List<List<RGBA>>):
+define circle (Int32 -> List[List[RGBA]]):
   -> r;
   0u8 0u8 0u8 0u8 rgba
   (2 * r + 1) replicate
