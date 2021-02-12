@@ -27,12 +27,16 @@ data TypeDefinition = TypeDefinition
   }
   deriving (Show)
 
--- FIXME: Support parameters.
 instance Pretty TypeDefinition where
-  pPrint definition =
+  pPrint (TypeDefinition constructors name _ parameters) =
     Pretty.vcat
       [ "type"
-          Pretty.<+> pPrint (name definition)
-          Pretty.<> ":",
-        Pretty.nest 4 $ Pretty.vcat $ map pPrint $ constructors definition
+          Pretty.<+> pPrint name,
+        Pretty.colon,
+        Pretty.braces $
+          Pretty.hsep $
+            map pPrint parameters,
+        Pretty.nest
+          4
+          $ Pretty.vcat $ map pPrint constructors
       ]

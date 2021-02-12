@@ -83,51 +83,49 @@ data Rep
   deriving (Eq, Show)
 
 valueRep :: (Show a) => Value a -> Rep
-valueRep value = case value of
-  Term.Character c -> Character c
-  Term.Float literal -> case Literal.floatBits literal of
-    Bits.Float32 -> Float32 $ Literal.floatValue literal
-    Bits.Float64 -> Float64 $ Literal.floatValue literal
-  Term.Integer literal -> rep $ Literal.integerValue literal
-    where
-      rep = case Literal.integerBits literal of
-        Bits.Signed8 -> Int8 . fromInteger
-        Bits.Signed16 -> Int16 . fromInteger
-        Bits.Signed32 -> Int32 . fromInteger
-        Bits.Signed64 -> Int64 . fromInteger
-        Bits.Unsigned8 -> UInt8 . fromInteger
-        Bits.Unsigned16 -> UInt16 . fromInteger
-        Bits.Unsigned32 -> UInt32 . fromInteger
-        Bits.Unsigned64 -> UInt64 . fromInteger
-  Term.Name name -> Name name
-  Term.Text text -> Text text
-  _nonRepableTerm -> error $ toText $ "cannot convert value to rep: " ++ show value
+valueRep (Term.Character c) = Character c
+valueRep (Term.Float literal) = case Literal.floatBits literal of
+  Bits.Float32 -> Float32 $ Literal.floatValue literal
+  Bits.Float64 -> Float64 $ Literal.floatValue literal
+valueRep (Term.Integer literal) = rep $ Literal.integerValue literal
+  where
+    rep = case Literal.integerBits literal of
+      Bits.Signed8 -> Int8 . fromInteger
+      Bits.Signed16 -> Int16 . fromInteger
+      Bits.Signed32 -> Int32 . fromInteger
+      Bits.Signed64 -> Int64 . fromInteger
+      Bits.Unsigned8 -> UInt8 . fromInteger
+      Bits.Unsigned16 -> UInt16 . fromInteger
+      Bits.Unsigned32 -> UInt32 . fromInteger
+      Bits.Unsigned64 -> UInt64 . fromInteger
+valueRep (Term.Name name) = Name name
+valueRep (Term.Text text) = Text text
+valueRep value = error $ toText $ "cannot convert value to rep: " ++ show value
 
 instance Pretty Rep where
-  pPrint rep = case rep of
-    Algebraic (ConstructorIndex index) values ->
-      Pretty.hsep $
-        map pPrint values ++ [Pretty.hcat ["#", Pretty.int index]]
-    Array values ->
-      Pretty.brackets $
-        Pretty.list $
-          Vector.toList $ fmap pPrint values
-    Character c -> Pretty.quotes $ Pretty.char c
-    Closure name closure ->
-      Pretty.hsep $
-        map pPrint closure ++ [Pretty.hcat ["#", pPrint name]]
-    Float32 f -> pPrint f
-    Float64 f -> pPrint f
-    Int8 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed8]
-    Int16 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed16]
-    Int32 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed32]
-    Int64 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed64]
-    UInt8 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned8]
-    UInt16 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned16]
-    UInt32 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned32]
-    UInt64 i -> Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned64]
-    Name n -> Pretty.hcat ["\\", pPrint n]
-    Text t -> Pretty.doubleQuotes $ Pretty.text $ toString t
+  pPrint (Algebraic (ConstructorIndex index) values) =
+    Pretty.hsep $
+      map pPrint values ++ [Pretty.hcat ["#", Pretty.int index]]
+  pPrint (Array values) =
+    Pretty.brackets $
+      Pretty.list $
+        Vector.toList $ fmap pPrint values
+  pPrint (Character c) = Pretty.quotes $ Pretty.char c
+  pPrint (Closure name closure) =
+    Pretty.hsep $
+      map pPrint closure ++ [Pretty.hcat ["#", pPrint name]]
+  pPrint (Float32 f) = pPrint f
+  pPrint (Float64 f) = pPrint f
+  pPrint (Int8 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed8]
+  pPrint (Int16 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed16]
+  pPrint (Int32 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed32]
+  pPrint (Int64 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Signed64]
+  pPrint (UInt8 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned8]
+  pPrint (UInt16 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned16]
+  pPrint (UInt32 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned32]
+  pPrint (UInt64 i) = Pretty.hcat [Pretty.int $ fromIntegral i, pPrint Bits.Unsigned64]
+  pPrint (Name n) = Pretty.hcat ["\\", pPrint n]
+  pPrint (Text t) = Pretty.doubleQuotes $ Pretty.text $ toString t
 
 -- | Interprets a program dictionary.
 interpret ::

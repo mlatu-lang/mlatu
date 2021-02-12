@@ -246,12 +246,6 @@ groupParser = do
 
 -- See note [Angle Brackets].
 
-angledParser :: Parser a -> Parser a
-angledParser =
-  Parsec.between
-    (parserMatchOperator "<" <|> parserMatch Token.AngleBegin)
-    (parserMatchOperator ">" <|> parserMatch Token.AngleEnd)
-
 bracketedParser :: Parser a -> Parser a
 bracketedParser =
   Parsec.between

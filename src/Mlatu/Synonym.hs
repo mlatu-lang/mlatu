@@ -19,6 +19,5 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 data Synonym = Synonym !Qualified !GeneralName !Origin
   deriving (Show)
 
--- FIXME: Real instance.
 instance Pretty Synonym where
   pPrint (Synonym name1 name2 _) = pPrint name1 <> "=" <> pPrint name2
