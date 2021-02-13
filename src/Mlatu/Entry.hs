@@ -100,9 +100,9 @@ instance Pretty Entry where
       [ "type",
         Pretty.hsep ["defined at", pPrint origin],
         Pretty.hcat $
-          "with parameters <" :
+          "with parameters [" :
           intersperse ", " (map pPrint parameters)
-            ++ [">"],
+            ++ ["]"],
         Pretty.vcat
           [ "and data constructors",
             Pretty.nest 4 $

@@ -15,10 +15,11 @@ import Data.ByteString qualified as BS
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Text qualified as Text
 import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Name (Qualified (..), Qualifier (..), Unqualified (..))
+import Mlatu.Name (Qualified (..), Qualifier (..), Unqualified (..), qualifierName, unqualifiedName)
 import Mlatu.Type (Constructor (..), Type (..), Var (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Type)
+import Control.Lens ((^.))
 
 -- | Mangles a fully qualified, fully saturated name into a linker symbol.
 --
@@ -99,8 +100,8 @@ typ t = case t of
       -- apply
       ["_A", typ a, typ b]
   TypeConstructor _ (Constructor constructor)
-    | qualifierName constructor == Vocabulary.global ->
-      case unqualifiedName constructor of
+    | constructor ^. qualifierName == Vocabulary.global ->
+      case constructor ^. unqualifiedName of
         "Bool" -> "_B" -- bool
         "Char" -> "_C" -- char
         "Float32" -> "_F4" -- float

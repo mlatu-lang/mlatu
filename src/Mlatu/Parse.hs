@@ -14,6 +14,7 @@ module Mlatu.Parse
   )
 where
 
+import Control.Lens (over, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
 import Data.Text qualified as Text
@@ -32,7 +33,7 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
-import Mlatu.Fragment (Fragment (Fragment))
+import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Informer (Informer (..))
 import Mlatu.Kind (Kind (..))
@@ -98,18 +99,20 @@ fragment line path mainPermissions mainName tokens =
           halt
         Right result -> return (Data.desugar (insertMain result))
   where
-    isMain = (== fromMaybe Definition.mainName mainName) . Definition.name
-    insertMain f = case find isMain $ Fragment.definitions f of
+    isMain def = def ^. Definition.name == fromMaybe Definition.mainName mainName
+    insertMain f = case find isMain $ f ^. Fragment.definitions of
       Just {} -> f
       Nothing ->
-        f
-          { Fragment.definitions =
+        over
+          Fragment.definitions
+          ( \defs ->
               Definition.main
                 mainPermissions
                 mainName
                 (Term.identityCoercion () (Origin.point path line 1)) :
-              Fragment.definitions f
-          }
+              defs
+          )
+          f
 
 -- | Parses only a name.
 generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
@@ -141,56 +144,34 @@ partitionElements ::
 partitionElements mainPermissions mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
-    rev f =
-      Fragment
-        { Fragment.declarations = reverse $ Fragment.declarations f,
-          Fragment.definitions = reverse $ Fragment.definitions f,
-          Fragment.metadata = reverse $ Fragment.metadata f,
-          Fragment.synonyms = reverse $ Fragment.synonyms f,
-          Fragment.types = reverse $ Fragment.types f
-        }
+    rev = over Fragment.declarations reverse . over Fragment.definitions reverse . over Fragment.metadata reverse . over Fragment.synonyms reverse . over Fragment.synonyms reverse
 
     go :: Element () -> Fragment () -> Fragment ()
     go element acc = case element of
       Element.Declaration x ->
-        acc
-          { Fragment.declarations = x : Fragment.declarations acc
-          }
-      Element.Definition x ->
-        acc
-          { Fragment.definitions = x : Fragment.definitions acc
-          }
-      Element.Metadata x ->
-        acc
-          { Fragment.metadata = x : Fragment.metadata acc
-          }
-      Element.Synonym x ->
-        acc
-          { Fragment.synonyms = x : Fragment.synonyms acc
-          }
-      Element.TypeDefinition x ->
-        acc
-          { Fragment.types = x : Fragment.types acc
-          }
+        over Fragment.declarations (x :) acc
+      Element.Definition x -> over Fragment.definitions (x :) acc
+      Element.Metadata x -> over Fragment.metadata (x :) acc
+      Element.Synonym x -> over Fragment.synonyms (x :) acc
+      Element.TypeDefinition x -> over Fragment.types (x :) acc
       Element.Term x ->
-        acc
-          { Fragment.definitions =
+        over
+          Fragment.definitions
+          ( \defs ->
               case findIndex
-                ((== fromMaybe Definition.mainName mainName) . Definition.name)
-                $ Fragment.definitions acc of
-                Just index -> case splitAt index $ Fragment.definitions acc of
+                (\def -> def ^. Definition.name == fromMaybe Definition.mainName mainName)
+                defs of
+                Just index -> case splitAt index defs of
                   (a, existing : b) ->
                     a
-                      ++ existing
-                        { Definition.body =
-                            composeUnderLambda (Definition.body existing) x
-                        } :
+                      ++ over Definition.body (`composeUnderLambda` x) existing :
                     b
                   _nonMain -> error "cannot find main definition"
                 Nothing ->
                   Definition.main mainPermissions mainName x :
-                  Fragment.definitions acc
-          }
+                  defs
+          )
+          acc
         where
           -- In top-level code, we want local parameteriable bindings to remain in scope even
           -- when separated by other top-level program elements, e.g.:
@@ -293,18 +274,18 @@ unqualifiedNameParser =
 wordNameParser :: Parser Unqualified
 wordNameParser = (<?> "word name") $
   parseOne $
-    \token -> case Located.item token of
+    \token -> case token ^. Located.item of
       Token.Word name -> Just name
       _nonWord -> Nothing
 
 operatorNameParser :: Parser Unqualified
 operatorNameParser = (<?> "operator name") $ do
   angles <- many $
-    parseOne $ \token -> case Located.item token of
+    parseOne $ \token -> case token ^. Located.item of
       Token.AngleBegin -> Just "<"
       Token.AngleEnd -> Just ">"
       _nonAngle -> Nothing
-  rest <- parseOne $ \token -> case Located.item token of
+  rest <- parseOne $ \token -> case token ^. Located.item of
     Token.Operator (Unqualified name) -> Just name
     _nonUnqualifiedOperator -> Nothing
   return $ Unqualified $ Text.concat $ angles ++ [rest]
@@ -313,7 +294,7 @@ parseOne :: (Located (Token 'Nonlayout) -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
   where
     advance :: SourcePos -> t -> [Located (Token 'Nonlayout)] -> SourcePos
-    advance _ _ (token : _) = Origin.begin $ Located.origin token
+    advance _ _ (token : _) = Origin.begin $ token ^. Located.origin
     advance sourcePos _ _ = sourcePos
 
 elementParser :: Parser (Element ())
@@ -368,9 +349,9 @@ metadataParser = (<?> "metadata block") $ do
           <*> (blockParser <?> "metadata value block")
   return
     Metadata
-      { Metadata.fields = HashMap.fromList fields,
-        Metadata.name = QualifiedName name,
-        Metadata.origin = origin
+      { Metadata._fields = HashMap.fromList fields,
+        Metadata._name = QualifiedName name,
+        Metadata._origin = origin
       }
 
 typeDefinitionParser :: Parser TypeDefinition
@@ -384,10 +365,10 @@ typeDefinitionParser = (<?> "type definition") $ do
   constructors <- blockedParser $ many constructorParser
   return
     TypeDefinition
-      { TypeDefinition.constructors = constructors,
-        TypeDefinition.name = name,
-        TypeDefinition.origin = origin,
-        TypeDefinition.parameters = parameters
+      { TypeDefinition._constructors = constructors,
+        TypeDefinition._name = name,
+        TypeDefinition._origin = origin,
+        TypeDefinition._parameters = parameters
       }
 
 constructorParser :: Parser DataConstructor
@@ -579,18 +560,18 @@ definitionParser keyword category = do
   body <- blockLikeParser <?> "definition body"
   return
     Definition
-      { Definition.body = body,
-        Definition.category = category,
-        Definition.fixity = fixity,
-        Definition.inferSignature = False,
-        Definition.merge = Merge.Deny,
-        Definition.name = name,
-        Definition.origin = origin,
+      { Definition._body = body,
+        Definition._category = category,
+        Definition._fixity = fixity,
+        Definition._inferSignature = False,
+        Definition._merge = Merge.Deny,
+        Definition._name = name,
+        Definition._origin = origin,
         -- HACK: Should be passed in from outside?
-        Definition.parent = case keyword of
+        Definition._parent = case keyword of
           Token.Instance -> Just $ Parent.Type name
           _nonInstance -> Nothing,
-        Definition.signature = sig
+        Definition._signature = sig
       }
 
 signatureParser :: Parser Signature
@@ -645,7 +626,7 @@ termParser = (<?> "expression") $ do
     ]
 
 toLiteral :: Located (Token 'Nonlayout) -> Maybe (Value (), Origin)
-toLiteral token = case Located.item token of
+toLiteral token = case token ^. Located.item of
   Token.Character x -> Just (Character x, origin)
   Token.Float x -> Just (Float x, origin)
   Token.Integer x -> Just (Integer x, origin)
@@ -653,7 +634,7 @@ toLiteral token = case Located.item token of
   _nonLiteral -> Nothing
   where
     origin :: Origin
-    origin = Located.origin token
+    origin = token ^. Located.origin
 
 sectionParser :: Parser (Term ())
 sectionParser =

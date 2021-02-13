@@ -18,6 +18,7 @@ module Mlatu.Parser
   )
 where
 
+import Control.Lens ((^.))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
@@ -38,7 +39,7 @@ type GeneralParser l a = ParsecT [Located (Token l)] Qualifier Identity a
 
 getTokenOrigin :: GeneralParser l Origin
 getTokenOrigin =
-  Located.origin
+  (^. Located.origin)
     <$> Parsec.lookAhead (tokenSatisfy (const True))
 
 tokenSatisfy ::
@@ -55,11 +56,11 @@ tokenSatisfy predicate =
       Located (Token l) ->
       [Located (Token l)] ->
       SourcePos
-    advance _ _ (token : _) = Origin.begin (Located.origin token)
+    advance _ _ (token : _) = Origin.begin (token ^. Located.origin)
     advance sourcePos _ _ = sourcePos
 
 parserMatch :: Token l -> GeneralParser l (Located (Token l))
-parserMatch token = tokenSatisfy ((== token) . Located.item) <?> show token
+parserMatch token = tokenSatisfy (\l -> l ^. Located.item == token) <?> show token
 
 parserMatch_ :: Token l -> GeneralParser l ()
 parserMatch_ = void . parserMatch

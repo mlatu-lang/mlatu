@@ -3,6 +3,7 @@ module Test.Resolve
   )
 where
 
+import Control.Lens (over)
 import Mlatu (fragmentFromSource)
 import Mlatu.Definition (Definition (Definition))
 import Mlatu.Definition qualified as Definition
@@ -155,19 +156,20 @@ testWord contextSource viewpoint name expected = do
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
         fragment =
-          mempty
-            { Fragment.definitions =
+          over
+            Fragment.definitions
+            ( \_ ->
                 one
                   Definition
-                    { Definition.body = Term.Word () Operator.Postfix name [] origin,
-                      Definition.category = Category.Word,
-                      Definition.fixity = Operator.Postfix,
-                      Definition.inferSignature = False,
-                      Definition.merge = Merge.Deny,
-                      Definition.name = Qualified viewpoint "test",
-                      Definition.origin = origin,
-                      Definition.parent = Nothing,
-                      Definition.signature =
+                    { Definition._body = Term.Word () Operator.Postfix name [] origin,
+                      Definition._category = Category.Word,
+                      Definition._fixity = Operator.Postfix,
+                      Definition._inferSignature = False,
+                      Definition._merge = Merge.Deny,
+                      Definition._name = Qualified viewpoint "test",
+                      Definition._origin = origin,
+                      Definition._parent = Nothing,
+                      Definition._signature =
                         Signature.Quantified
                           [Parameter origin "R" Stack]
                           ( Signature.StackFunction
@@ -180,7 +182,9 @@ testWord contextSource viewpoint name expected = do
                           )
                           origin
                     }
-            }
+            )
+            mempty
+
     Enter.fragment fragment contextDictionary
   case Dictionary.toList <$> dictionary of
     Right definitions -> case find matching definitions of

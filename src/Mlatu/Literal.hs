@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Literal
 -- Description : Representations of literal values
@@ -10,9 +12,17 @@ module Mlatu.Literal
   ( FloatLiteral (..),
     IntegerLiteral (..),
     floatValue,
+    floatSignificand,
+    floatFractional,
+    floatExponent,
+    floatBits,
+    integerValue,
+    integerBase,
+    integerBits,
   )
 where
 
+import Control.Lens (makeLenses, (^.))
 import Data.Ratio ((%))
 import Mlatu.Base (Base (..))
 import Mlatu.Bits (FloatBits (..), IntegerBits (..))
@@ -23,11 +33,13 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data IntegerLiteral = IntegerLiteral
-  { integerValue :: !Integer,
-    integerBase :: !Base,
-    integerBits :: !IntegerBits
+  { _integerValue :: !Integer,
+    _integerBase :: !Base,
+    _integerBits :: !IntegerBits
   }
   deriving (Show)
+
+makeLenses ''IntegerLiteral
 
 -- Integer literals compare equality regardless of base and bits.
 instance Eq IntegerLiteral where
@@ -37,7 +49,7 @@ instance Pretty IntegerLiteral where
   pPrint literal =
     Pretty.hcat
       [ if value < 0 then "-" else "",
-        case integerBase literal of
+        case literal ^. integerBase of
           Binary -> "0b"
           Octal -> "0o"
           Decimal -> ""
@@ -48,21 +60,23 @@ instance Pretty IntegerLiteral where
           _nonDefault -> pPrint bits
       ]
     where
-      value = integerValue literal
-      bits = integerBits literal
-      (base, digits) = case integerBase literal of
+      value = literal ^. integerValue
+      bits = literal ^. integerBits
+      (base, digits) = case literal ^. integerBase of
         Binary -> (2, "01")
         Octal -> (8, ['0' .. '7'])
         Decimal -> (10, ['0' .. '9'])
         Hexadecimal -> (16, ['0' .. '9'] ++ ['A' .. 'F'])
 
 data FloatLiteral = FloatLiteral
-  { floatSignificand :: !Integer,
-    floatFractional :: !Int,
-    floatExponent :: !Int,
-    floatBits :: !FloatBits
+  { _floatSignificand :: !Integer,
+    _floatFractional :: !Int,
+    _floatExponent :: !Int,
+    _floatBits :: !FloatBits
   }
   deriving (Show)
+
+makeLenses ''FloatLiteral
 
 -- Float literals compar equality regardless of bits.
 instance Eq FloatLiteral where
@@ -78,7 +92,7 @@ instance Pretty FloatLiteral where
           Float32 -> pPrint bits
       ]
     where
-      bits = floatBits literal
+      bits = literal ^. floatBits
       value = floatValue literal
 
 -- Note [Float Literals]:

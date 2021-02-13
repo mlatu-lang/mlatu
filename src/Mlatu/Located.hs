@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Located
 -- Description : Imbuing a value with a location
@@ -8,6 +10,9 @@
 -- Portability : GHC
 module Mlatu.Located
   ( Located (..),
+  origin,
+  indent,
+  item,
   )
 where
 
@@ -15,13 +20,16 @@ import Mlatu.Indent (Indent)
 import Mlatu.Origin (Origin)
 import Relude
 import Text.Show qualified
+import Control.Lens (makeLenses)
 
 -- | Imbues a value (such as a 'Token') with an origin and indent level.
 data Located a = At
-  { origin :: !Origin,
-    indent :: !Indent,
-    item :: !a
+  { _origin :: !Origin,
+    _indent :: !Indent,
+    _item :: !a
   }
 
+makeLenses ''Located
+
 instance (Show a) => Show (Located a) where
-  show = show . item
+  show = show . _item

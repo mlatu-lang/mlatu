@@ -4,6 +4,7 @@ module Interact
 where
 
 import Control.Exception (catch)
+import Control.Lens ((^.))
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
 import Mlatu (runMlatu)
@@ -134,13 +135,13 @@ run = do
                               "<interactive>"
                               expression
                           checkpoint
-                          case Fragment.definitions fragment of
-                            [main] | Definition.name main == Definition.mainName -> do
+                          case fragment ^. Fragment.definitions of
+                            [main] | main ^. Definition.name == Definition.mainName -> do
                               resolved <- Enter.resolveAndDesugar dictionary main
                               checkpoint
                               (_, typ) <-
                                 typecheck dictionary Nothing $
-                                  Definition.body resolved
+                                  resolved ^. Definition.body
                               checkpoint
                               return (Just typ)
                             _otherDefinition -> return Nothing

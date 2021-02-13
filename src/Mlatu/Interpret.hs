@@ -61,6 +61,7 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (hPrintf)
 import Text.Show qualified
+import Control.Lens ((^.))
 
 -- | Representation of a runtime value.
 data Rep
@@ -84,12 +85,12 @@ data Rep
 
 valueRep :: (Show a) => Value a -> Rep
 valueRep (Term.Character c) = Character c
-valueRep (Term.Float literal) = case Literal.floatBits literal of
+valueRep (Term.Float literal) = case literal ^. Literal.floatBits of
   Bits.Float32 -> Float32 $ Literal.floatValue literal
   Bits.Float64 -> Float64 $ Literal.floatValue literal
-valueRep (Term.Integer literal) = rep $ Literal.integerValue literal
+valueRep (Term.Integer literal) = rep $ literal ^. Literal.integerValue
   where
-    rep = case Literal.integerBits literal of
+    rep = case literal ^. Literal.integerBits of
       Bits.Signed8 -> Int8 . fromInteger
       Bits.Signed16 -> Int16 . fromInteger
       Bits.Signed32 -> Int32 . fromInteger
@@ -687,7 +688,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             Int8 x ::: r <- readIORef stackRef
             let !result = fromIntegral $ f $ fromIntegral x
             writeIORef stackRef $ Int8 result ::: r
-
+  
           binaryInt8 :: (Int8 -> Int8 -> Int8) -> IO ()
           binaryInt8 f = do
             Int8 y ::: Int8 x ::: r <- readIORef stackRef

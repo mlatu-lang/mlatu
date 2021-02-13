@@ -31,4 +31,4 @@ instance Hashable Instantiated where
 instance Pretty Instantiated where
   pPrint (Instantiated n ts) =
     Pretty.hcat
-      [pPrint n, "::<", Pretty.list $ map pPrint ts, ">"]
+      [pPrint n, "::[", Pretty.list $ map pPrint ts, "]"]

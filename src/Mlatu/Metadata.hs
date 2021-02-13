@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Metadata
 -- Description : Metadata about identifiers in the dictionary
@@ -8,9 +10,14 @@
 -- Portability : GHC
 module Mlatu.Metadata
   ( Metadata (..),
+    name,
+    fields,
+    origin
   )
 where
 
+
+import Control.Lens (makeLenses, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
@@ -21,21 +28,22 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
-  { fields :: !(HashMap Unqualified (Term ())),
-    name :: !GeneralName,
-    origin :: !Origin
+  { _fields :: !(HashMap Unqualified (Term ())),
+    _name :: !GeneralName,
+    _origin :: !Origin
   }
   deriving (Show)
+
+makeLenses ''Metadata
 
 instance Pretty Metadata where
   pPrint metadata =
     Pretty.vcat
-      [ Pretty.hcat ["about ", pPrint $ name metadata, ":"],
+      [ Pretty.hcat ["about ", pPrint $ metadata ^. name, ":"],
         Pretty.nest 4 $
           Pretty.vcat $
             map field $
-              HashMap.toList $
-                fields metadata
+              HashMap.toList $ metadata ^. fields
       ]
     where
       field (key, value) =

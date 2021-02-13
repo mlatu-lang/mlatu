@@ -65,6 +65,7 @@ dependencies:
   - transformers
   - unordered-containers
   - vector
+  - lens
   - relude
 
 library:

@@ -13,6 +13,8 @@ module Mlatu.Enter
   )
 where
 
+import Control.Lens ((^.))
+import Control.Lens.Setter (over)
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Bracket (bracket)
 import Mlatu.Declaration (Declaration)
@@ -36,9 +38,10 @@ import Mlatu.Metadata qualified as Metadata
 import Mlatu.Monad (K)
 import Mlatu.Name
   ( GeneralName (QualifiedName),
-    Qualified (Qualified, qualifierName),
+    Qualified (Qualified),
     Unqualified,
     qualifierFromName,
+    qualifierName,
   )
 import Mlatu.Parse qualified as Parse
 import Mlatu.Pretty qualified as Pretty
@@ -59,35 +62,35 @@ import Text.PrettyPrint qualified as Pretty
 fragment :: Fragment () -> Dictionary -> K Dictionary
 fragment f =
   -- TODO: Link constructors to parent type.
-  foldlMx declareType (Fragment.types f)
+  foldlMx declareType (f ^. Fragment.types)
     -- We enter declarations of all traits and intrinsics.
-    >=> foldlMx enterDeclaration (Fragment.declarations f)
+    >=> foldlMx enterDeclaration (f ^. Fragment.declarations)
     -- Then declare all permissions.
     >=> foldlMx
       declareWord
-      ( filter ((== Category.Permission) . Definition.category) $
-          Fragment.definitions f
+      ( filter (\def -> def ^. Definition.category == Category.Permission) $
+          f ^. Fragment.definitions
       )
     -- With everything type-level declared, we can resolve type signatures.
     >=> foldlMx
       resolveSignature
-      (map Declaration.name (Fragment.declarations f))
+      (map Declaration.name (f ^. Fragment.declarations))
     -- And declare regular words.
     >=> foldlMx
       declareWord
-      ( filter ((/= Category.Permission) . Definition.category) $
-          Fragment.definitions f
+      ( filter (\def -> def ^. Definition.category /= Category.Permission) $
+          f ^. Fragment.definitions
       )
     -- Then resolve their signatures.
     >=> foldlMx
       resolveSignature
-      ( map Definition.name (Fragment.definitions f)
-          ++ map Declaration.name (Fragment.declarations f)
+      ( map (^. Definition.name) (f ^. Fragment.definitions)
+          ++ map Declaration.name (f ^. Fragment.declarations)
       )
     -- Add their metadata (esp. for operator metadata).
-    >=> foldlMx addMetadata (Fragment.metadata f)
+    >=> foldlMx addMetadata (f ^. Fragment.metadata)
     -- And finally enter their definitions.
-    >=> foldlMx defineWord (Fragment.definitions f)
+    >=> foldlMx defineWord (f ^. Fragment.definitions)
   where
     foldlMx :: (Foldable f, Monad m) => (b -> a -> m b) -> f a -> b -> m b
     foldlMx = flip . foldlM
@@ -119,19 +122,19 @@ enterDeclaration dictionary declaration = do
 -- declare type, declare & define constructors
 declareType :: Dictionary -> TypeDefinition -> K Dictionary
 declareType dictionary typ =
-  let name = TypeDefinition.name typ
+  let name = typ ^. TypeDefinition.name
    in case Dictionary.lookup (Instantiated name []) dictionary of
         -- Not previously declared.
         Nothing -> do
           let entry =
                 Entry.Type
-                  (TypeDefinition.origin typ)
-                  (TypeDefinition.parameters typ)
-                  (TypeDefinition.constructors typ)
+                  (typ ^. TypeDefinition.origin)
+                  (typ ^. TypeDefinition.parameters)
+                  (typ ^. TypeDefinition.constructors)
           return $ Dictionary.insert (Instantiated name []) entry dictionary
         -- Previously declared with the same parameters.
         Just (Entry.Type _origin parameters _ctors)
-          | parameters == TypeDefinition.parameters typ ->
+          | parameters == typ ^. TypeDefinition.parameters ->
             return dictionary
         -- Already declared or defined differently.
         Just {} ->
@@ -147,23 +150,23 @@ declareType dictionary typ =
 declareWord ::
   Dictionary -> Definition () -> K Dictionary
 declareWord dictionary definition =
-  let name = Definition.name definition
-      signature = Definition.signature definition
+  let name = definition ^. Definition.name
+      signature = definition ^. Definition.signature
    in case Dictionary.lookup (Instantiated name []) dictionary of
         -- Not previously declared or defined.
         Nothing -> do
           let entry =
                 Entry.Word
-                  (Definition.category definition)
-                  (Definition.merge definition)
-                  (Definition.origin definition)
-                  (Definition.parent definition)
+                  (definition ^. Definition.category)
+                  (definition ^. Definition.merge)
+                  (definition ^. Definition.origin)
+                  (definition ^. Definition.parent)
                   (Just signature)
                   Nothing
           return $ Dictionary.insert (Instantiated name []) entry dictionary
         -- Already declared with the same signature.
         Just (Entry.Word _ _ originalOrigin _ mSignature _)
-          | Definition.inferSignature definition || mSignature == Just signature ->
+          | definition ^. Definition.inferSignature || mSignature == Just signature ->
             return dictionary
           | otherwise ->
             do
@@ -178,27 +181,27 @@ declareWord dictionary definition =
         -- Already declared or defined as a trait.
         Just (Entry.Trait _origin traitSignature)
           -- TODO: Better error reporting when a non-instance matches a trait.
-          | Definition.category definition == Category.Instance ->
+          | definition ^. Definition.category == Category.Instance ->
             do
-              let qualifier = qualifierName name
+              let qualifier = name ^. qualifierName
               resolvedSignature <-
                 Resolve.run $
                   Resolve.signature
                     dictionary
                     qualifier
-                    $ Definition.signature definition
+                    $ definition ^. Definition.signature
               mangledName <-
                 mangleInstance
                   dictionary
-                  (Definition.name definition)
+                  (definition ^. Definition.name)
                   resolvedSignature
                   traitSignature
               let entry =
                     Entry.Word
-                      (Definition.category definition)
-                      (Definition.merge definition)
-                      (Definition.origin definition)
-                      (Definition.parent definition)
+                      (definition ^. Definition.category)
+                      (definition ^. Definition.merge)
+                      (definition ^. Definition.origin)
+                      (definition ^. Definition.parent)
                       (Just resolvedSignature)
                       Nothing
               return $ Dictionary.insert mangledName entry dictionary
@@ -215,10 +218,10 @@ declareWord dictionary definition =
 
 addMetadata :: Dictionary -> Metadata -> K Dictionary
 addMetadata dictionary0 metadata =
-  foldlM addField dictionary0 $ HashMap.toList $ Metadata.fields metadata
+  foldlM addField dictionary0 $ HashMap.toList $ metadata ^. Metadata.fields
   where
-    QualifiedName qualified = Metadata.name metadata
-    origin = Metadata.origin metadata
+    QualifiedName qualified = metadata ^. Metadata.name
+    origin = metadata ^. Metadata.origin
     qualifier = qualifierFromName qualified
 
     addField :: Dictionary -> (Unqualified, Term ()) -> K Dictionary
@@ -235,7 +238,7 @@ addMetadata dictionary0 metadata =
 
 resolveSignature :: Dictionary -> Qualified -> K Dictionary
 resolveSignature dictionary name = do
-  let qualifier = qualifierName name
+  let qualifier = name ^. qualifierName
   case Dictionary.lookup (Instantiated name []) dictionary of
     Just (Entry.Word category merge origin parent (Just signature) body) -> do
       signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
@@ -254,24 +257,24 @@ defineWord ::
   Definition () ->
   K Dictionary
 defineWord dictionary definition = do
-  let name = Definition.name definition
+  let name = definition ^. Definition.name
   resolved <- resolveAndDesugar dictionary definition
   checkpoint
-  let resolvedSignature = Definition.signature resolved
+  let resolvedSignature = resolved ^. Definition.signature
   -- Note that we use the resolved signature here.
   (typecheckedBody, typ) <-
     typecheck
       dictionary
-      ( if Definition.inferSignature definition
+      ( if definition ^. Definition.inferSignature
           then Nothing
           else Just resolvedSignature
       )
-      $ Definition.body resolved
+      $ resolved ^. Definition.body
   checkpoint
   case Dictionary.lookup (Instantiated name []) dictionary of
     -- Already declared or defined as a trait.
     Just (Entry.Trait _origin traitSignature)
-      | Definition.category definition == Category.Instance ->
+      | definition ^. Definition.category == Category.Instance ->
         do
           mangledName <-
             mangleInstance
@@ -287,10 +290,10 @@ defineWord dictionary definition = do
               $ Quantify.term typ typecheckedBody
           let entry =
                 Entry.Word
-                  (Definition.category definition)
-                  (Definition.merge definition)
-                  (Definition.origin definition)
-                  (Definition.parent definition)
+                  (definition ^. Definition.category)
+                  (definition ^. Definition.merge)
+                  (definition ^. Definition.origin)
+                  (definition ^. Definition.parent)
                   (Just resolvedSignature)
                   (Just flattenedBody)
           return $ Dictionary.insert mangledName entry dictionary'
@@ -309,7 +312,7 @@ defineWord dictionary definition = do
                 origin'
                 parent
                 ( Just $
-                    if Definition.inferSignature definition
+                    if definition ^. Definition.inferSignature
                       then Signature.Type typ
                       else resolvedSignature
                 )
@@ -325,17 +328,17 @@ defineWord dictionary definition = do
           mSignature
           body
         )
-        | Definition.inferSignature definition
+        | definition ^. Definition.inferSignature
             || Just resolvedSignature == mSignature -> do
           composedBody <- case body of
             Just existing -> do
               let strippedBody = Term.stripMetadata existing
-              return $ Term.Compose () strippedBody $ Definition.body resolved
-            Nothing -> return $ Definition.body resolved
+              return $ Term.Compose () strippedBody $ resolved ^. Definition.body
+            Nothing -> return $ resolved ^. Definition.body
           (composed, composedType) <-
             typecheck
               dictionary
-              ( if Definition.inferSignature definition
+              ( if definition ^. Definition.inferSignature
                   then Nothing
                   else Just resolvedSignature
               )
@@ -351,7 +354,7 @@ defineWord dictionary definition = do
                   merge
                   origin'
                   parent
-                  ( if Definition.inferSignature definition
+                  ( if definition ^. Definition.inferSignature
                       then Nothing -- Just (Signature.Type composedType)
                       else mSignature
                   )
@@ -361,7 +364,7 @@ defineWord dictionary definition = do
     Just (Entry.Word _ Merge.Deny originalOrigin _ (Just _sig) _) -> do
       report $
         Report.WordRedefinition
-          (Definition.origin definition)
+          (definition ^. Definition.origin)
           name
           originalOrigin
       return dictionary
@@ -431,4 +434,4 @@ resolveAndDesugar dictionary definition = do
   -- quotations can be rewritten into closures that explicitly capture the
   -- variables they use from the enclosing scope.
 
-  return postfix {Definition.body = scope $ Definition.body postfix}
+  return $ over Definition.body scope postfix

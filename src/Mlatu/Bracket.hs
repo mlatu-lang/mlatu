@@ -27,6 +27,7 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
+import Control.Lens (set, (^.))
 
 -- | Desugars layout-based syntax into explicit brace-delimited blocks according
 -- to the *layout rule*:
@@ -78,7 +79,7 @@ between open close = do
   return (begin : inner ++ [end])
 
 nonbracket :: Located (Token 'Layout) -> Bool
-nonbracket = not . (`elem` brackets) . Located.item
+nonbracket = not . (`elem` brackets) . (^. Located.item)
 
 brackets :: [Token 'Layout]
 brackets =
@@ -99,23 +100,23 @@ blockBrackets =
 layoutBlock :: Bracketer [Located (Token 'Nonlayout)]
 layoutBlock = do
   colon <- parserMatch Colon
-  let colonOrigin = Located.origin colon
-      Indent colonIndent = Located.indent colon
+  let colonOrigin = colon ^. Located.origin
+      Indent colonIndent = colon ^. Located.indent
       validFirst =
         (> colonIndent)
           . Parsec.sourceColumn
           . Origin.begin
-          . Located.origin
+          . (^. Located.origin)
   firstToken <-
     Parsec.lookAhead (tokenSatisfy validFirst)
       <?> "a token with a source column greater than \
           \the start of the layout block"
-  let firstOrigin = Origin.begin (Located.origin firstToken)
+  let firstOrigin = Origin.begin (firstToken ^. Located.origin)
       inside =
         (>= Parsec.sourceColumn firstOrigin)
           . Parsec.sourceColumn
           . Origin.begin
-          . Located.origin
+          . (^. Located.origin)
 
   body <- concat <$> many (unitWhere inside)
   return $
@@ -125,6 +126,6 @@ layoutBlock = do
 fromLayout ::
   Located (Token 'Layout) ->
   Bracketer (Located (Token 'Nonlayout))
-fromLayout located = case Token.fromLayout (Located.item located) of
-  Just nonlayout -> pure located {Located.item = nonlayout}
+fromLayout located = case Token.fromLayout (located ^. Located.item) of
+  Just nonlayout -> pure $ set Located.item nonlayout located
   Nothing -> Parsec.unexpected "colon not beginning valid layout block"

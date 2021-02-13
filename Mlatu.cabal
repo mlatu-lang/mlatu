@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 94324a56cdc1159e53cf98ca362bd8d82c0060a1ec4a9ec08afebc9de1f05c1f
+-- hash: 41cec1625e171cb9f46236751d9b5b59d1e14932d9c35d71effc82d9f93982ba
 
 name:           Mlatu
 version:        0.1.0.0
@@ -45,8 +45,6 @@ library
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
-      Mlatu.Entry.Type
-      Mlatu.Entry.Word
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Indent
@@ -103,6 +101,7 @@ library
     , bytestring
     , containers
     , hashable
+    , lens
     , parsec
     , pretty
     , relude
@@ -131,6 +130,7 @@ executable mlatu
     , containers
     , hashable
     , haskeline
+    , lens
     , parsec
     , pretty
     , relude
@@ -172,8 +172,6 @@ test-suite test
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
-      Mlatu.Entry.Type
-      Mlatu.Entry.Word
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Indent
@@ -234,6 +232,7 @@ test-suite test
     , hashable
     , hspec
     , knob
+    , lens
     , parsec
     , pretty
     , relude
