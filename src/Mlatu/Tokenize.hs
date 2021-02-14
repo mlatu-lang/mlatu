@@ -13,7 +13,6 @@ module Mlatu.Tokenize
   )
 where
 
-import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
 import Mlatu.Base (Base (..))
@@ -37,6 +36,7 @@ import Text.Parsec (Column, ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos qualified as Parsec
 import Text.PrettyPrint qualified as Pretty
+import qualified Data.ByteString as BS
 
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.
@@ -249,7 +249,7 @@ tokenTokenizer =
                 (hint, value) <-
                   Parsec.char '0'
                     *> Parsec.choice
-                      [ base 'b' "01" (readBin . toText) Binary "binary",
+                      [ base 'b' "01" readBin Binary "binary",
                         base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
                         base
                           'x'
@@ -333,7 +333,7 @@ tokenTokenizer =
               ]
       ]
 
-nestableCharacter :: Char -> Char -> Tokenizer String
+nestableCharacter :: Char -> Char -> Tokenizer [Char]
 nestableCharacter open close = go
   where
     go =
@@ -349,8 +349,8 @@ nestableCharacter open close = go
 letter :: Tokenizer Char
 letter = Parsec.satisfy isLetter
 
-readBin :: Text -> Integer
-readBin = go 0 . toString
+readBin :: String -> Integer
+readBin = go 0
   where
     go :: Integer -> String -> Integer
     go acc ds = case ds of

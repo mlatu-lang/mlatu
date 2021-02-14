@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Type
 -- Description : Types
@@ -21,13 +19,9 @@ module Mlatu.Type
     void,
     setOrigin,
     origin,
-    varKind,
-    varNameHint,
-    varTypeId,
   )
 where
 
-import Control.Lens (makeLenses)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
 import Mlatu.Kind (Kind (..))
@@ -38,11 +32,6 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Type, join, void)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
-
--- | Type variables are distinguished by globally unique identifiers. This makes
--- it easier to support capture-avoiding substitution on types.
-newtype TypeId = TypeId Int
-  deriving (Enum, Bounded, Eq, Hashable, Ord, Show)
 
 -- | This is the type language. It describes a system of conventional Hindley–
 -- Milner types, with type constructors joined by type application, as well as
@@ -65,13 +54,11 @@ newtype Constructor = Constructor Qualified
   deriving (Eq, Hashable, Show)
 
 data Var = Var
-  { _varNameHint :: !Unqualified,
-    _varTypeId :: !TypeId,
-    _varKind :: !Kind
+  { varNameHint :: !Unqualified,
+    varTypeId :: !TypeId,
+    varKind :: !Kind
   }
   deriving (Show)
-
-makeLenses ''Var
 
 instance Eq Var where
   -- We ignore the name hint for equality tests.
@@ -114,6 +101,11 @@ setOrigin o = go
       TypeConstant _ var -> TypeConstant o var
       Forall _ var t -> Forall o var $ go t
       TypeValue _ x -> TypeValue o x
+
+-- | Type variables are distinguished by globally unique identifiers. This makes
+-- it easier to support capture-avoiding substitution on types.
+newtype TypeId = TypeId Int
+  deriving (Enum, Bounded, Eq, Hashable, Ord, Show)
 
 instance Eq Type where
   (a :@ b) == (c :@ d) = (a, b) == (c, d)

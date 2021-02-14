@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Definition
 -- Description : Definitions of words, instances, and permissions
@@ -13,20 +11,9 @@ module Mlatu.Definition
     isMain,
     main,
     mainName,
-    body,
-    category,
-    fixity,
-    inferSignature,
-    merge,
-    name,
-    origin,
-    parent,
-    signature,
   )
 where
 
-
-import Control.Lens (makeLenses, (^.))
 import Mlatu.Entry.Category (Category)
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge (Merge)
@@ -49,26 +36,24 @@ import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Definition a = Definition
-  { _body :: !(Term a),
-    _category :: !Category,
-    _fixity :: !Fixity,
-    _inferSignature :: !Bool,
-    _merge :: !Merge,
-    _name :: !Qualified,
-    _origin :: !Origin,
-    _parent :: !(Maybe Parent),
-    _signature :: !Signature
+  { body :: !(Term a),
+    category :: !Category,
+    fixity :: !Fixity,
+    inferSignature :: !Bool,
+    merge :: !Merge,
+    name :: !Qualified,
+    origin :: !Origin,
+    parent :: !(Maybe Parent),
+    signature :: !Signature
   }
   deriving (Show)
-
-makeLenses ''Definition
 
 instance Pretty (Definition a) where
   pPrint definition =
     Pretty.asDefinition
-      (pPrint $ definition ^. name)
-      (pPrint $ definition ^. signature)
-      (pPrint $ definition ^. body)
+      (pPrint $ name definition)
+      (pPrint $ signature definition)
+      (pPrint $ body definition)
       (pPrint Token.Define)
 
 -- | The main definition, created implicitly from top-level code in program
@@ -83,15 +68,15 @@ main ::
   Definition a
 main permissions mName term =
   Definition
-    { _body = term,
-      _category = Category.Word,
-      _fixity = Operator.Postfix,
-      _inferSignature = True,
-      _merge = Merge.Compose,
-      _name = fromMaybe mainName mName,
-      _origin = o,
-      _parent = Nothing,
-      _signature =
+    { body = term,
+      category = Category.Word,
+      fixity = Operator.Postfix,
+      inferSignature = True,
+      merge = Merge.Compose,
+      name = fromMaybe mainName mName,
+      origin = o,
+      parent = Nothing,
+      signature =
         Signature.Quantified
           [Parameter o "R" Stack]
           ( Signature.StackFunction
@@ -113,4 +98,4 @@ mainName = Qualified Vocabulary.global "main"
 
 -- | Whether a given definition refers to (the default-named) @main@.
 isMain :: Definition a -> Bool
-isMain def = def ^. name == mainName
+isMain = (== mainName) . name

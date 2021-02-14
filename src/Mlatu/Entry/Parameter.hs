@@ -31,4 +31,4 @@ instance Pretty Parameter where
   pPrint (Parameter _ name Stack) = Pretty.hcat [pPrint name, "..."]
   pPrint (Parameter _ name Label) = Pretty.hcat ["+", pPrint name]
   pPrint (Parameter _ name Permission) = Pretty.hcat ["+", pPrint name]
-  pPrint (Parameter _ name (_ :-> _)) = Pretty.hcat [pPrint name, "[_]"]
+  pPrint (Parameter _ name (_ :-> _)) = Pretty.hcat [pPrint name, "<_>"]

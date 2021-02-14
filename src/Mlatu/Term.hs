@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Term
 -- Description : The core language
@@ -26,12 +24,9 @@ module Mlatu.Term
     stripMetadata,
     stripValue,
     typ,
-    permitted,
-    permitName,
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Data.List (partition)
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind qualified as Kind
@@ -54,29 +49,6 @@ import Mlatu.Type (Type, TypeId)
 import Relude hiding (Compose, Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
-
--- | A value, used to represent literals in a parsed program, as well as runtime
--- values in the interpreter.
-data Value a
-  = -- | A quotation with explicit variable capture; see "Mlatu.Scope".
-    Capture ![Closed] !(Term a)
-  | -- | A character literal.
-    Character !Char
-  | -- | A captured variable.
-    Closed !ClosureIndex
-  | -- | A floating-point literal.
-    Float !FloatLiteral
-  | -- | An integer literal.
-    Integer !IntegerLiteral
-  | -- | A local variable.
-    Local !LocalIndex
-  | -- | A reference to a name.
-    Name !Qualified
-  | -- | A parsed quotation.
-    Quotation !(Term a)
-  | -- | A text literal.
-    Text !Text
-  deriving (Eq, Show)
 
 -- | This is the core language. It permits pushing values to the stack, invoking
 -- definitions, and moving values between the stack and local variables.
@@ -141,12 +113,33 @@ data Else a = Else !(Term a) !Origin
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
-  { _permitted :: !Bool,
-    _permitName :: !GeneralName
+  { permitted :: !Bool,
+    permitName :: !GeneralName
   }
   deriving (Eq, Show)
 
-makeLenses ''Permit
+-- | A value, used to represent literals in a parsed program, as well as runtime
+-- values in the interpreter.
+data Value a
+  = -- | A quotation with explicit variable capture; see "Mlatu.Scope".
+    Capture ![Closed] !(Term a)
+  | -- | A character literal.
+    Character !Char
+  | -- | A captured variable.
+    Closed !ClosureIndex
+  | -- | A floating-point literal.
+    Float !FloatLiteral
+  | -- | An integer literal.
+    Integer !IntegerLiteral
+  | -- | A local variable.
+    Local !LocalIndex
+  | -- | A reference to a name.
+    Name !Qualified
+  | -- | A parsed quotation.
+    Quotation !(Term a)
+  | -- | A text literal.
+    Text !Text
+  deriving (Eq, Show)
 
 -- FIXME: 'compose' should work on 'Term ()'.
 compose :: a -> Origin -> [Term a] -> Term a
@@ -174,7 +167,7 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                (map (^. permitName) grants)
+                (map permitName grants)
                 o
             ]
             [ Signature.StackFunction
@@ -182,14 +175,14 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                (map (^. permitName) revokes)
+                (map permitName revokes)
                 o
             ]
             []
             o
         )
         o
-    (grants, revokes) = partition (^. permitted) permits
+    (grants, revokes) = partition permitted permits
 
 decompose :: Term a -> [Term a]
 -- TODO: Verify that this is correct.

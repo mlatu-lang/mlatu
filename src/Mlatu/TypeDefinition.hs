@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.TypeDefinition
 -- Description : Definitions of types
@@ -10,14 +8,9 @@
 -- Portability : GHC
 module Mlatu.TypeDefinition
   ( TypeDefinition (..),
-    constructors,
-    name,
-    origin,
-    parameters,
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
@@ -27,25 +20,23 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data TypeDefinition = TypeDefinition
-  { _constructors :: ![DataConstructor],
-    _name :: !Qualified,
-    _origin :: !Origin,
-    _parameters :: ![Parameter]
+  { constructors :: ![DataConstructor],
+    name :: !Qualified,
+    origin :: !Origin,
+    parameters :: ![Parameter]
   }
   deriving (Show)
 
-makeLenses ''TypeDefinition
-
 instance Pretty TypeDefinition where
-  pPrint typedef =
+  pPrint (TypeDefinition constructors name _ parameters) =
     Pretty.vcat
       [ "type"
-          Pretty.<+> pPrint (typedef ^. name),
+          Pretty.<+> pPrint name,
         Pretty.colon,
         Pretty.braces $
           Pretty.hsep $
-            map pPrint $ typedef ^. parameters,
+            map pPrint parameters,
         Pretty.nest
           4
-          $ Pretty.vcat $ map pPrint $ typedef ^. constructors
+          $ Pretty.vcat $ map pPrint constructors
       ]

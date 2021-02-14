@@ -263,7 +263,7 @@ parseError parsecError = ParseError origin unexpected' expected'
             <*> state (span (Parsec.Expect "" ==))
 
     unexpected' :: [Pretty.Doc]
-    unexpected' = ((++) `on` unexpectedMessages) sysUnexpected unexpected
+    unexpected' = ((++)`on` unexpectedMessages) sysUnexpected unexpected
 
     expected' :: Pretty.Doc
     expected' =

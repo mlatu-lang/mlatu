@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Operator
 -- Description : Infix operator metadata
@@ -13,17 +11,25 @@ module Mlatu.Operator
     Fixity (..),
     Operator (..),
     Precedence (..),
-    associativity,
-    name,
-    precedence,
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Mlatu.Name (Qualified)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+
+-- | Operator metadata for infix desugaring.
+data Operator = Operator
+  { associativity :: !Associativity,
+    name :: !Qualified,
+    precedence :: !Precedence
+  }
+  deriving (Show)
+
+-- | Whether a word was declared infix (@+@) or postfix (@plus@).
+data Fixity = Infix | Postfix
+  deriving (Eq, Show)
 
 -- | Whether an operator associates leftward:
 --
@@ -48,29 +54,15 @@ instance Bounded Precedence where
   minBound = Precedence 0
   maxBound = Precedence 9
 
--- | Operator metadata for infix desugaring.
-data Operator = Operator
-  { _associativity :: !Associativity,
-    _name :: !Qualified,
-    _precedence :: !Precedence
-  }
-  deriving (Show)
-
-makeLenses ''Operator
-
--- | Whether a word was declared infix (@+@) or postfix (@plus@).
-data Fixity = Infix | Postfix
-  deriving (Eq, Show)
-
 instance Pretty Operator where
   pPrint operator =
     Pretty.hsep $
       ("infix" :) $
-        ( case operator ^. associativity of
+        ( case associativity operator of
             Nonassociative -> id
             Leftward -> ("left" :)
             Rightward -> ("right" :)
         )
-          [ pPrint $ operator ^. precedence,
-            pPrint $ operator ^. name
+          [ pPrint $ precedence operator,
+            pPrint $ name operator
           ]

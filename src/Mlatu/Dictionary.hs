@@ -134,9 +134,9 @@ operatorMetadata dictionary =
           return
             ( name,
               Operator
-                { Operator._associativity = associativity,
-                  Operator._name = name,
-                  Operator._precedence = precedence
+                { Operator.associativity = associativity,
+                  Operator.name = name,
+                  Operator.precedence = precedence
                 }
             )
 

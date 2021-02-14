@@ -11,7 +11,6 @@ module Mlatu.Desugar.Infix
   )
 where
 
-import Control.Lens (set, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
@@ -48,7 +47,7 @@ desugar dictionary definition = do
         map
           ( \p ->
               HashMap.elems $
-                HashMap.filter ((== p) . (^. Operator.precedence)) operatorMetadata
+                HashMap.filter ((== p) . Operator.precedence) operatorMetadata
           )
           $ reverse universe
 
@@ -72,14 +71,14 @@ desugar dictionary definition = do
               desugaredTerms <- many $ expression <|> lambda
               let origin = case desugaredTerms of
                     term : _ -> Term.origin term
-                    _noTerms -> definition ^. Definition.origin
+                    _noTerms -> Definition.origin definition
               return $ Term.compose () origin desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
             report $ Report.parseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
-                  _noTerms -> definition ^. Definition.origin
+                  _noTerms -> Definition.origin definition
             return $ Term.compose () origin terms
           Right result -> return result
 
@@ -126,13 +125,13 @@ desugar dictionary definition = do
         Quotation body -> Quotation <$> desugarTerms' body
         Text {} -> return value
 
-  desugared <- desugarTerms' $ definition ^. Definition.body
-  return $ set Definition.body desugared definition
+  desugared <- desugarTerms' $ Definition.body definition
+  return definition {Definition.body = desugared}
 
 toOperator :: Operator -> Expr.Operator [Term ()] () Identity (Term ())
 toOperator operator = Expr.Infix
-  (binaryOperator (QualifiedName (operator ^. Operator.name)))
-  $ case operator ^. Operator.associativity of
+  (binaryOperator (QualifiedName (Operator.name operator)))
+  $ case Operator.associativity operator of
     Operator.Nonassociative -> Expr.AssocNone
     Operator.Leftward -> Expr.AssocRight
     Operator.Rightward -> Expr.AssocLeft

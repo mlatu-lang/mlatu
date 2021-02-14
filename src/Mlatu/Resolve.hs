@@ -14,7 +14,6 @@ module Mlatu.Resolve
   )
 where
 
-import Control.Lens (set, (^.))
 import Data.List (elemIndex)
 import Data.Set qualified as Set
 import Mlatu.Definition (Definition)
@@ -45,14 +44,14 @@ run = flip evalStateT []
 definition :: Dictionary -> Definition () -> Resolved (Definition ())
 definition dictionary def = do
   -- FIXME: reportDuplicate dictionary def
-  let vocabulary = (^. qualifierName) $ def ^. Definition.name
-  body <- term dictionary vocabulary $ def ^. Definition.body
-  sig <- signature dictionary vocabulary $ def ^. Definition.signature
-  return $
-    set
-      Definition.body
-      body
-      (set Definition.signature sig def)
+  let vocabulary = qualifierName $ Definition.name def
+  body <- term dictionary vocabulary $ Definition.body def
+  sig <- signature dictionary vocabulary $ Definition.signature def
+  return
+    def
+      { Definition.body = body,
+        Definition.signature = sig
+      }
 
 term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
 term dictionary vocabulary = recur
@@ -191,10 +190,10 @@ generalName category resolveLocal isDefined vocabulary name origin =
       if isDefined qualified
         then return name
         else do
-          let qualified' = case (vocabulary, qualified ^. qualifierName) of
+          let qualified' = case (vocabulary, qualifierName qualified) of
                 (Qualifier _root1 prefix, Qualifier _root2 suffix) ->
                   Qualified (Qualifier Absolute (prefix ++ suffix)) $
-                    qualified ^. unqualifiedName
+                    unqualifiedName qualified
           if isDefined qualified'
             then return $ QualifiedName qualified'
             else do

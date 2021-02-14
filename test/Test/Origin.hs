@@ -11,7 +11,6 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Parsec.Pos (Column, Line)
-import Control.Lens ((^.))
 
 spec :: Spec
 spec = do
@@ -92,7 +91,7 @@ testOrigin :: [Text] -> Expectation
 testOrigin test =
   let (input, origins) = deinterleave test
    in fmap
-        (map (^. Located.origin))
+        (map Located.origin)
         ( runIdentity $
             runMlatu $
               tokenize 1 "test" $

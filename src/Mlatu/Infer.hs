@@ -21,7 +21,6 @@ where
 
 -- mport Data.Foldable (foldrM)
 
-import Control.Lens ((^.))
 import Data.Foldable (foldrM)
 import Data.List (partition)
 import Data.Map qualified as Map
@@ -53,7 +52,7 @@ import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Literal qualified as Literal
 import Mlatu.Monad (K)
-import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..), unqualifiedName)
+import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
@@ -437,7 +436,7 @@ inferCase
         let typ = Type.fun origin b2 b1 e1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
-        let matching ctor = DataConstructor.name ctor == name ^. unqualifiedName
+        let matching ctor = DataConstructor.name ctor == unqualifiedName name
         dataConstructors' <- case partition matching dataConstructors of
           ([], remaining) -> do
             report $ Report.RedundantCase origin
@@ -469,12 +468,12 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     return
       (Closed $ ClosureIndex index, Unsafe.fromJust (TypeEnv.closure tenv0 !!? index), tenv0)
   Float x ->
-    let ctor = case x ^. Literal.floatBits of
+    let ctor = case Literal.floatBits x of
           Float32 -> "Float32"
           Float64 -> "Float64"
      in return (Float x, TypeConstructor origin ctor, tenv0)
   Integer x ->
-    let ctor = case x ^. Literal.integerBits of
+    let ctor = case Literal.integerBits x of
           Signed8 -> "Int8"
           Signed16 -> "Int16"
           Signed32 -> "Int32"

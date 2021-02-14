@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Name
 -- Description : Program identifiers
@@ -22,17 +20,31 @@ module Mlatu.Name
     toParts,
     qualifiedFromQualifier,
     qualifierFromName,
-    unqualifiedName,
-    qualifierName,
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Data.Char (isLetter)
 import Data.Text qualified as Text
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+
+-- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
+data GeneralName
+  = QualifiedName !Qualified
+  | UnqualifiedName !Unqualified
+  | LocalName !LocalIndex
+  deriving (Eq, Ord, Show)
+
+instance IsString GeneralName where
+  fromString = UnqualifiedName . fromString
+
+-- | A qualified name is an unqualified name (@x@) plus a qualifier (@q::@).
+data Qualified = Qualified
+  { qualifierName :: !Qualifier,
+    unqualifiedName :: !Unqualified
+  }
+  deriving (Eq, Ord, Show)
 
 -- | A qualifier is a list of vocabulary names, rooted globally or within the
 -- current vocabulary.
@@ -68,28 +80,9 @@ newtype ConstructorIndex = ConstructorIndex Int
 newtype LocalIndex = LocalIndex Int
   deriving (Eq, Ord, Show)
 
--- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
-data GeneralName
-  = QualifiedName !Qualified
-  | UnqualifiedName !Unqualified
-  | LocalName !LocalIndex
-  deriving (Eq, Ord, Show)
-
-instance IsString GeneralName where
-  fromString = UnqualifiedName . fromString
-
--- | A qualified name is an unqualified name (@x@) plus a qualifier (@q::@).
-data Qualified = Qualified
-  { _qualifierName :: !Qualifier,
-    _unqualifiedName :: !Unqualified
-  }
-  deriving (Eq, Ord, Show)
-
-makeLenses ''Qualified
-
 -- TODO: Use types, not strings.
 isOperatorName :: Qualified -> Bool
-isOperatorName = match . (^. unqualifiedName)
+isOperatorName = match . unqualifiedName
   where
     match (Unqualified name) =
       not $
@@ -134,10 +127,10 @@ instance IsString Unqualified where
   fromString = Unqualified . toText
 
 instance Pretty Qualified where
-  pPrint (Qualified qualifier unqualified) =
-    pPrint qualifier
-      <> "::"
-      <> pPrint unqualified
+  pPrint (Qualified qualifierName unqualifiedName) =
+    pPrint qualifierName
+      Pretty.<> "::"
+      Pretty.<> pPrint unqualifiedName
 
 instance Pretty Qualifier where
   pPrint (Qualifier Absolute parts) = pPrint $ Qualifier Relative $ "_" : parts

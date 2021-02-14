@@ -11,7 +11,6 @@ module Mlatu.Desugar.Data
   )
 where
 
-import Control.Lens (over, (^.))
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Definition (Definition (Definition))
@@ -22,7 +21,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..), qualifierName)
+import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..))
@@ -41,51 +40,56 @@ import Relude
 -- > define none<T> (-> Optional<T>) { ... }
 -- > define some<T> (T -> Optional<T>) { ... }
 desugar :: Fragment () -> Fragment ()
-desugar fragment = over Fragment.definitions (\x -> x ++ concatMap desugarTypeDefinition (fragment ^. Fragment.types)) fragment
+desugar fragment =
+  fragment
+    { Fragment.definitions =
+        Fragment.definitions fragment
+          ++ concatMap desugarTypeDefinition (Fragment.types fragment)
+    }
 
 desugarTypeDefinition :: TypeDefinition -> [Definition ()]
 desugarTypeDefinition definition =
   zipWith (desugarConstructor definition) [0 ..] $
-    definition ^. TypeDefinition.constructors
+    TypeDefinition.constructors definition
 
 desugarConstructor :: TypeDefinition -> Int -> DataConstructor -> Definition ()
 desugarConstructor definition index constructor =
   Definition
-    { Definition._body =
+    { Definition.body =
         New
           ()
           (ConstructorIndex index)
           (length $ DataConstructor.fields constructor)
           $ DataConstructor.origin constructor,
-      Definition._category = Category.Constructor,
-      Definition._fixity = Operator.Postfix,
-      Definition._inferSignature = False,
-      Definition._merge = Merge.Deny,
-      Definition._name =
+      Definition.category = Category.Constructor,
+      Definition.fixity = Operator.Postfix,
+      Definition.inferSignature = False,
+      Definition.merge = Merge.Deny,
+      Definition.name =
         Qualified qualifier $
           DataConstructor.name constructor,
-      Definition._origin = origin,
-      Definition._parent =
+      Definition.origin = origin,
+      Definition.parent =
         Just $
           Parent.Type $
-            definition ^. TypeDefinition.name,
-      Definition._signature = constructorSignature
+            TypeDefinition.name definition,
+      Definition.signature = constructorSignature
     }
   where
     resultSignature =
       foldl'
         (\a b -> Signature.Application a b origin)
-        ( Signature.Variable (QualifiedName $ definition ^. TypeDefinition.name) $
-            definition ^. TypeDefinition.origin
+        ( Signature.Variable (QualifiedName $ TypeDefinition.name definition) $
+            TypeDefinition.origin definition
         )
         $ map
           ( \(Parameter parameterOrigin parameter _kind) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
-          $ definition ^. TypeDefinition.parameters
+          $ TypeDefinition.parameters definition
     constructorSignature =
       Signature.Quantified
-        (definition ^. TypeDefinition.parameters)
+        (TypeDefinition.parameters definition)
         ( Signature.Function
             (DataConstructor.fields constructor)
             [resultSignature]
@@ -94,4 +98,4 @@ desugarConstructor definition index constructor =
         )
         origin
     origin = DataConstructor.origin constructor
-    qualifier = (^. qualifierName) $ definition ^. TypeDefinition.name
+    qualifier = qualifierName $ TypeDefinition.name definition
