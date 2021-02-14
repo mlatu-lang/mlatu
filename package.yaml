@@ -9,8 +9,6 @@ license: BSD2
 
 ghc-options:
   - -Wall
-  - -fwrite-ide-info
-  - -hiedir=.hie
 
 default-extensions:
   - NoImplicitPrelude
