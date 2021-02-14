@@ -3,7 +3,7 @@ module Test.Resolve
   )
 where
 
-import Control.Lens (over)
+import Optics (over)
 import Mlatu (fragmentFromSource)
 import Mlatu.Definition (Definition (Definition))
 import Mlatu.Definition qualified as Definition

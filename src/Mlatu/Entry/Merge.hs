@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 -- |
 -- Module      : Mlatu.Entry.Merge
 -- Description : Merge behavior for dictionary entries
@@ -8,13 +9,18 @@
 -- Portability : GHC
 module Mlatu.Entry.Merge
   ( Merge (..),
+  _Deny,
+  _Compose
   )
 where
 
 import Relude
+import Optics.TH (makePrisms)
 
 -- | When adding a definition to the dictionary, if an existing definition has
 -- the same name, the default 'Merge' behavior of 'Deny' raises an error, while
 -- 'Compose' composes the bodies of the two definitions.
 data Merge = Deny | Compose
   deriving (Eq, Show)
+
+makePrisms ''Merge

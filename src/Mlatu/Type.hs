@@ -24,10 +24,15 @@ module Mlatu.Type
     varKind,
     varNameHint,
     varTypeId,
+    _TypeConstructor,
+    _TypeVar,
+    _TypeConstant,
+    _Forall,
+    _TypeValue,
+    (.:@)
   )
 where
 
-import Control.Lens (makeLenses)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
 import Mlatu.Kind (Kind (..))
@@ -35,6 +40,7 @@ import Mlatu.Name (Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics.TH (makeLenses, makePrisms)
 import Relude hiding (Type, join, void)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
@@ -43,6 +49,20 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 -- it easier to support capture-avoiding substitution on types.
 newtype TypeId = TypeId Int
   deriving (Enum, Bounded, Eq, Hashable, Ord, Show)
+
+newtype Constructor = Constructor Qualified
+  deriving (Eq, Hashable, Show)
+
+data Var = Var
+  { _varNameHint :: !Unqualified,
+    _varTypeId :: !TypeId,
+    _varKind :: !Kind
+  }
+  deriving (Show)
+
+makeLenses ''Var
+
+infixl 1 :@
 
 -- | This is the type language. It describes a system of conventional Hindley–
 -- Milner types, with type constructors joined by type application, as well as
@@ -58,20 +78,9 @@ data Type
   | Forall !Origin !Var !Type
   | TypeValue !Origin !Int
   deriving (Show)
+  
+makePrisms ''Type
 
-infixl 1 :@
-
-newtype Constructor = Constructor Qualified
-  deriving (Eq, Hashable, Show)
-
-data Var = Var
-  { _varNameHint :: !Unqualified,
-    _varTypeId :: !TypeId,
-    _varKind :: !Kind
-  }
-  deriving (Show)
-
-makeLenses ''Var
 
 instance Eq Var where
   -- We ignore the name hint for equality tests.

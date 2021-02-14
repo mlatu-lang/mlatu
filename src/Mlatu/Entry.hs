@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Entry
 -- Description : Dictionary entries
@@ -7,7 +9,13 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Entry
-  ( Entry (..),
+  ( Entry(..),
+  _Word,
+  _Metadata,
+  _Synonym,
+  _Trait,
+  _Type,
+  _InstantiatedType
   )
 where
 
@@ -26,6 +34,8 @@ import Mlatu.Type (Type)
 import Relude hiding (Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
+import Optics (view)
 
 -- | An entry in the dictionary.
 --
@@ -60,6 +70,8 @@ data Entry
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show)
+
+makePrisms ''Entry
 
 instance Pretty Entry where
   pPrint (Word category _ origin mParent mSignature _) =
@@ -113,11 +125,11 @@ instance Pretty Entry where
     where
       constructor ctor =
         Pretty.hcat
-          [ pPrint $ DataConstructor.name ctor,
+          [ pPrint $ view DataConstructor.name ctor,
             " with fields (",
             Pretty.hcat $
               intersperse ", " $
-                map pPrint $ DataConstructor.fields ctor,
+                map pPrint $ view DataConstructor.fields ctor,
             ")"
           ]
   pPrint (InstantiatedType origin size) =

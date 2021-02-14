@@ -22,7 +22,7 @@ module Mlatu.Literal
   )
 where
 
-import Control.Lens (makeLenses, (^.))
+import Optics.TH (makeLenses)
 import Data.Ratio ((%))
 import Mlatu.Base (Base (..))
 import Mlatu.Bits (FloatBits (..), IntegerBits (..))
@@ -31,6 +31,7 @@ import Relude
 import Relude.Unsafe qualified as Unsafe
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics (view)
 
 data IntegerLiteral = IntegerLiteral
   { _integerValue :: !Integer,
@@ -49,7 +50,7 @@ instance Pretty IntegerLiteral where
   pPrint literal =
     Pretty.hcat
       [ if value < 0 then "-" else "",
-        case literal ^. integerBase of
+        case view integerBase literal of
           Binary -> "0b"
           Octal -> "0o"
           Decimal -> ""
@@ -60,9 +61,9 @@ instance Pretty IntegerLiteral where
           _nonDefault -> pPrint bits
       ]
     where
-      value = literal ^. integerValue
-      bits = literal ^. integerBits
-      (base, digits) = case literal ^. integerBase of
+      value = view integerValue literal
+      bits = view integerBits literal
+      (base, digits) = case view integerBase literal of
         Binary -> (2, "01")
         Octal -> (8, ['0' .. '7'])
         Decimal -> (10, ['0' .. '9'])
@@ -92,7 +93,7 @@ instance Pretty FloatLiteral where
           Float32 -> pPrint bits
       ]
     where
-      bits = literal ^. floatBits
+      bits = view floatBits literal
       value = floatValue literal
 
 -- Note [Float Literals]:

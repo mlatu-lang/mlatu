@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 41cec1625e171cb9f46236751d9b5b59d1e14932d9c35d71effc82d9f93982ba
+-- hash: c7dc097e3cd2679f6cb0c488daeea9d014c98adfe0801177946d51f2677f98e6
 
 name:           Mlatu
 version:        0.1.0.0
@@ -93,7 +93,7 @@ library
   hs-source-dirs:
       src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  ghc-options: -Wall -O2
   build-depends:
       JuicyPixels
     , base >=4.8
@@ -101,7 +101,7 @@ library
     , bytestring
     , containers
     , hashable
-    , lens
+    , optics
     , parsec
     , pretty
     , relude
@@ -121,7 +121,7 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  ghc-options: -Wall -O2
   build-depends:
       Mlatu
     , base >=4.8
@@ -130,7 +130,7 @@ executable mlatu
     , containers
     , hashable
     , haskeline
-    , lens
+    , optics
     , parsec
     , pretty
     , relude
@@ -220,7 +220,7 @@ test-suite test
       test
       src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie
+  ghc-options: -Wall
   build-depends:
       HUnit
     , JuicyPixels
@@ -232,7 +232,7 @@ test-suite test
     , hashable
     , hspec
     , knob
-    , lens
+    , optics
     , parsec
     , pretty
     , relude

@@ -19,12 +19,12 @@ import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Literal qualified as Literal
 import Mlatu.Name (Unqualified)
+import Optics (view)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Show qualified
 import Unsafe.Coerce (unsafeCoerce)
-import Control.Lens ((^.))
 
 data Token (l :: Layoutness) where
   -- | @about@
@@ -177,7 +177,7 @@ instance Pretty (Token l) where
     Float a ->
       Pretty.hcat
         [ Pretty.double $ Literal.floatValue a,
-          pPrint $ a ^. Literal.floatBits
+          pPrint $ view Literal.floatBits a
         ]
     GroupBegin -> "("
     GroupEnd -> ")"

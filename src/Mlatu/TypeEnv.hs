@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.TypeEnv
 -- Description : Type inference environment
@@ -12,6 +14,11 @@ module Mlatu.TypeEnv
     freshTv,
     freshTypeId,
     getClosed,
+        tvs,
+    vs,
+    closure,
+    sigs,
+    currentType
   )
 where
 
@@ -23,7 +30,7 @@ import Mlatu.Name
     ClosureIndex (ClosureIndex),
     LocalIndex (LocalIndex),
     Qualified,
-    Unqualified,
+    Unqualified
   )
 import Mlatu.Origin (Origin)
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
@@ -32,6 +39,8 @@ import Relude.Extra (next)
 import System.IO.Unsafe (unsafePerformIO)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makeLenses)
+import Optics (view)
 
 -- The typing environment tracks the state of inference. It answers the
 -- following questions:
@@ -44,21 +53,23 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { tvs :: !(Map TypeId Type),
-    vs :: ![Type],
-    closure :: ![Type],
-    sigs :: !(Map Qualified Type),
-    currentType :: !(IORef TypeId)
+  { _tvs :: !(Map TypeId Type),
+    _vs :: ![Type],
+    _closure :: ![Type],
+    _sigs :: !(Map Qualified Type),
+    _currentType :: !(IORef TypeId)
   }
+
+makeLenses ''TypeEnv
 
 empty :: TypeEnv
 empty =
   TypeEnv
-    { tvs = Map.empty,
-      vs = [],
-      closure = [],
-      sigs = Map.empty,
-      currentType = currentTypeId
+    { _tvs = Map.empty,
+      _vs = [],
+      _closure = [],
+      _sigs = Map.empty,
+      _currentType = currentTypeId
     }
 
 currentTypeId :: IORef TypeId
@@ -71,17 +82,17 @@ freshTv tenv name origin k =
 
 freshTypeId :: TypeEnv -> K TypeId
 freshTypeId tenv = do
-  x <- liftIO $ readIORef $ currentType tenv
-  liftIO $ writeIORef (currentType tenv) $ next x
+  x <- liftIO $ readIORef $ view currentType tenv
+  liftIO $ writeIORef (view currentType tenv) $ next x
   return x
 
 instance Pretty TypeEnv where
   pPrint tenv =
     Pretty.vcat $
       map (\(v, t) -> Pretty.hsep [pPrint v, "~", pPrint t]) $
-        Map.toList $ tvs tenv
+        Map.toList $ view tvs tenv
 
 getClosed :: TypeEnv -> Closed -> Maybe Type
 getClosed tenv name = case name of
-  ClosedLocal (LocalIndex index) -> vs tenv !!? index
-  ClosedClosure (ClosureIndex index) -> closure tenv !!? index
+  ClosedLocal (LocalIndex index) -> view vs tenv !!? index
+  ClosedClosure (ClosureIndex index) -> view closure tenv !!? index

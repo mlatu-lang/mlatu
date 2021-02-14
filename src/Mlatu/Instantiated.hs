@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Instantiated
 -- Description : Fully qualified instantiated names
@@ -8,6 +10,8 @@
 -- Portability : GHC
 module Mlatu.Instantiated
   ( Instantiated (..),
+  name,
+  types,
   )
 where
 
@@ -17,12 +21,15 @@ import Mlatu.Type (Type)
 import Relude hiding (Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makeLenses)
 
 data Instantiated = Instantiated
-  { name :: !Qualified,
-    types :: ![Type]
+  { _name :: !Qualified,
+    _types :: ![Type]
   }
   deriving (Eq, Show)
+
+makeLenses ''Instantiated
 
 instance Hashable Instantiated where
   hashWithSalt s (Instantiated n ts) =

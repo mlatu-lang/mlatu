@@ -16,11 +16,17 @@ module Mlatu.Operator
     associativity,
     name,
     precedence,
+    _Nonassociative,
+    _Leftward,
+    _Rightward,
+    _Infix,
+    _Postfix,
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Mlatu.Name (Qualified)
+import Optics (view)
+import Optics.TH (makeLenses, makePrisms)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
@@ -38,6 +44,8 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 -- > a + b + c  // error
 data Associativity = Nonassociative | Leftward | Rightward
   deriving (Show)
+
+makePrisms ''Associativity
 
 -- | The precedence level (from 0 to 9) of an operator; higher-precedence
 -- operators bind more tightly than lower-precedence operators.
@@ -62,15 +70,17 @@ makeLenses ''Operator
 data Fixity = Infix | Postfix
   deriving (Eq, Show)
 
+makePrisms ''Fixity
+
 instance Pretty Operator where
   pPrint operator =
     Pretty.hsep $
       ("infix" :) $
-        ( case operator ^. associativity of
+        ( case view associativity operator of
             Nonassociative -> id
             Leftward -> ("left" :)
             Rightward -> ("right" :)
         )
-          [ pPrint $ operator ^. precedence,
-            pPrint $ operator ^. name
+          [ pPrint $ view precedence operator,
+            pPrint $ view name operator
           ]

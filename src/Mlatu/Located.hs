@@ -10,17 +10,17 @@
 -- Portability : GHC
 module Mlatu.Located
   ( Located (..),
-  origin,
-  indent,
-  item,
+    origin,
+    indent,
+    item,
   )
 where
 
 import Mlatu.Indent (Indent)
 import Mlatu.Origin (Origin)
+import Optics.TH (makeLenses)
 import Relude
 import Text.Show qualified
-import Control.Lens (makeLenses)
 
 -- | Imbues a value (such as a 'Token') with an origin and indent level.
 data Located a = At

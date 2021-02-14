@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-17.2
+resolver: nightly-2020-12-14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,6 +38,14 @@ packages:
 #
 extra-deps:
   - knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+  - bytestring-encoding-0.1.0.0@sha256:460b49779fbf0112e8e2f1753c1ed9131eb18827600c298f4d6bb51c4e8c1c0d,1727
+  - heapsize-0.3.0.1@sha256:0b69aa97a46d819b700ac7b145f3b5493c3565cf2c5b8298682238d405d0326e,1417
+  - hie-compat-0.1.0.0@sha256:bf4c51730a9ffce50fd73a0e14d21d22720fa3cbe38fd5e4761fdce576d781ee,1339
+  - hiedb-0.3.0.1@sha256:b8a275772f1d194d35894c6b9f2a3ea69c6c307bdef6cda8b31798b3e0e48f49,2593
+  - hls-plugin-api-0.7.0.0@sha256:8652bae71d869b03809d0daf2bc265dca7c6f02048204cb47fd5d7a241c60ef4,1552
+  - implicit-hie-cradle-0.3.0.2@sha256:7ad0d10c475ad2b45a068aa0c1b150078ec579746df3b1754d91820354c90696,2594
+  - retrie-0.1.1.1@sha256:690d072e7e441728cc6eb715e0be7ef66538869865438f60da401875fd8a7354,4224
+  - implicit-hie-0.1.2.5@sha256:517a98ef72f92f0a1617495222774fed3a751a64b0c06fbfc7b858d7aa5de279,2998
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

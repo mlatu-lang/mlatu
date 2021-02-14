@@ -11,7 +11,6 @@ module Mlatu.Desugar.Infix
   )
 where
 
-import Control.Lens (set, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
@@ -27,6 +26,7 @@ import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
+import Optics (set, view)
 import Relude hiding (Compose)
 import Relude.Extra (universe)
 import Text.Parsec (ParsecT, SourcePos, (<?>))
@@ -48,7 +48,7 @@ desugar dictionary definition = do
         map
           ( \p ->
               HashMap.elems $
-                HashMap.filter ((== p) . (^. Operator.precedence)) operatorMetadata
+                HashMap.filter ((== p) . view Operator.precedence) operatorMetadata
           )
           $ reverse universe
 
@@ -72,14 +72,14 @@ desugar dictionary definition = do
               desugaredTerms <- many $ expression <|> lambda
               let origin = case desugaredTerms of
                     term : _ -> Term.origin term
-                    _noTerms -> definition ^. Definition.origin
+                    _noTerms -> view Definition.origin definition
               return $ Term.compose () origin desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
             report $ Report.parseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
-                  _noTerms -> definition ^. Definition.origin
+                  _noTerms -> view Definition.origin definition
             return $ Term.compose () origin terms
           Right result -> return result
 
@@ -126,13 +126,13 @@ desugar dictionary definition = do
         Quotation body -> Quotation <$> desugarTerms' body
         Text {} -> return value
 
-  desugared <- desugarTerms' $ definition ^. Definition.body
+  desugared <- desugarTerms' $ view Definition.body definition
   return $ set Definition.body desugared definition
 
 toOperator :: Operator -> Expr.Operator [Term ()] () Identity (Term ())
 toOperator operator = Expr.Infix
-  (binaryOperator (QualifiedName (operator ^. Operator.name)))
-  $ case operator ^. Operator.associativity of
+  (binaryOperator (QualifiedName (view Operator.name operator)))
+  $ case view Operator.associativity operator of
     Operator.Nonassociative -> Expr.AssocNone
     Operator.Leftward -> Expr.AssocRight
     Operator.Rightward -> Expr.AssocLeft

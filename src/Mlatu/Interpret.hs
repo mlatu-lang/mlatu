@@ -51,6 +51,7 @@ import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (log)
+import Optics (view)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Extra (safeToEnum)
 import Relude.Unsafe qualified as Unsafe
@@ -61,7 +62,6 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (hPrintf)
 import Text.Show qualified
-import Control.Lens ((^.))
 
 -- | Representation of a runtime value.
 data Rep
@@ -85,12 +85,12 @@ data Rep
 
 valueRep :: (Show a) => Value a -> Rep
 valueRep (Term.Character c) = Character c
-valueRep (Term.Float literal) = case literal ^. Literal.floatBits of
+valueRep (Term.Float literal) = case view Literal.floatBits literal of
   Bits.Float32 -> Float32 $ Literal.floatValue literal
   Bits.Float64 -> Float64 $ Literal.floatValue literal
-valueRep (Term.Integer literal) = rep $ literal ^. Literal.integerValue
+valueRep (Term.Integer literal) = rep $ view Literal.integerValue literal
   where
-    rep = case literal ^. Literal.integerBits of
+    rep = case view Literal.integerBits literal of
       Bits.Signed8 -> Int8 . fromInteger
       Bits.Signed16 -> Int16 . fromInteger
       Bits.Signed32 -> Int32 . fromInteger
@@ -339,8 +339,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "or_int32" -> binaryInt32 (.|.)
         "and_int32" -> binaryInt32 (.&.)
         "xor_int32" -> binaryInt32 xor
-        "shl_int32" -> binaryInt32Int shift
-        "rol_int32" -> binaryInt32Int rotate
+        "shl_int32" -> binaryInt32 shift
+        "rol_int32" -> binaryInt32 rotate
         "not_int64" -> unaryInt64 complement
         "or_int64" -> binaryInt64 (.|.)
         "and_int64" -> binaryInt64 (.&.)
@@ -688,7 +688,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             Int8 x ::: r <- readIORef stackRef
             let !result = fromIntegral $ f $ fromIntegral x
             writeIORef stackRef $ Int8 result ::: r
-  
+
           binaryInt8 :: (Int8 -> Int8 -> Int8) -> IO ()
           binaryInt8 f = do
             Int8 y ::: Int8 x ::: r <- readIORef stackRef
@@ -725,14 +725,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             let !result = fromIntegral $ f $ fromIntegral x
             writeIORef stackRef $ Int32 result ::: r
 
-          binaryInt32 :: (Int32 -> Int32 -> Int32) -> IO ()
+          binaryInt32 :: (Num a) => (Int32 -> a -> Int32) -> IO ()
           binaryInt32 f = do
-            Int32 y ::: Int32 x ::: r <- readIORef stackRef
-            let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
-            writeIORef stackRef $ Int32 result ::: r
-
-          binaryInt32Int :: (Int32 -> Int -> Int32) -> IO ()
-          binaryInt32Int f = do
             Int32 y ::: Int32 x ::: r <- readIORef stackRef
             let !result = fromIntegral $ f (fromIntegral x) (fromIntegral y)
             writeIORef stackRef $ Int32 result ::: r

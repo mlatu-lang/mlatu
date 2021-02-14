@@ -21,7 +21,6 @@ where
 
 -- mport Data.Foldable (foldrM)
 
-import Control.Lens ((^.))
 import Data.Foldable (foldrM)
 import Data.List (partition)
 import Data.Map qualified as Map
@@ -72,6 +71,7 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
 import Mlatu.Zonk qualified as Zonk
+import Optics (view, over, set)
 import Relude hiding (Compose, Type)
 import Relude.Unsafe qualified as Unsafe
 import Text.PrettyPrint qualified as Pretty
@@ -97,11 +97,7 @@ typecheck dictionary mDeclaredSignature term = do
       (\(name, signature) -> (,) name <$> typeFromSignature tenv0 signature)
       $ Dictionary.signatures dictionary
   let tenv1 =
-        tenv0
-          { TypeEnv.sigs =
-              Map.union (Map.fromList declaredTypes) $
-                TypeEnv.sigs tenv0
-          }
+        over TypeEnv.sigs (Map.union (Map.fromList declaredTypes)) tenv0
   inferType0 dictionary tenv1 declaredType term
 
 -- | Mangles an instance name according to its trait signature.
@@ -210,10 +206,10 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   Lambda _ name@(Unqualified unqualified) _ term origin -> do
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
     a <- TypeEnv.freshTv tenv0 varTypeName origin Value
-    let oldLocals = TypeEnv.vs tenv0
-    let localEnv = tenv0 {TypeEnv.vs = a : TypeEnv.vs tenv0}
+    let oldLocals = view TypeEnv.vs tenv0
+    let localEnv = over TypeEnv.vs (a:) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
-    let tenv2 = tenv1 {TypeEnv.vs = oldLocals}
+    let tenv2 = set TypeEnv.vs oldLocals tenv1 
     (b, c, e, tenv3) <- Unify.function tenv2 t1
     let typ = Type.fun origin (Type.prod origin b a) c e
         type' = Zonk.typ tenvFinal typ
@@ -427,7 +423,7 @@ inferCase
   (Case qualified@(QualifiedName name) body origin) = do
     (body', bodyType, tenv1) <- inferType dictionary tenvFinal tenv0 body
     (a1, b1, e1, tenv2) <- Unify.function tenv1 bodyType
-    case Map.lookup name $ TypeEnv.sigs tenv2 of
+    case Map.lookup name $ view TypeEnv.sigs tenv2 of
       Just signature -> do
         (a2, b2, e2, tenv3) <- Unify.function tenv2 signature
         -- Note that we swap the consumption and production of the constructor
@@ -437,7 +433,7 @@ inferCase
         let typ = Type.fun origin b2 b1 e1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
-        let matching ctor = DataConstructor.name ctor == name ^. unqualifiedName
+        let matching ctor = view DataConstructor.name ctor == view unqualifiedName name
         dataConstructors' <- case partition matching dataConstructors of
           ([], remaining) -> do
             report $ Report.RedundantCase origin
@@ -459,22 +455,22 @@ inferValue ::
 inferValue dictionary tenvFinal tenv0 origin = \case
   Capture names term -> do
     let types = mapMaybe (TypeEnv.getClosed tenv0) names
-    let oldClosure = TypeEnv.closure tenv0
-    let localEnv = tenv0 {TypeEnv.closure = types}
+    let oldClosure = view TypeEnv.closure tenv0
+    let localEnv = set TypeEnv.closure types tenv0 
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
-    let tenv2 = tenv1 {TypeEnv.closure = oldClosure}
+    let tenv2 = set TypeEnv.closure oldClosure tenv1
     return (Capture names term', t1, tenv2)
   Character x -> return (Character x, TypeConstructor origin "Char", tenv0)
   Closed (ClosureIndex index) ->
     return
-      (Closed $ ClosureIndex index, Unsafe.fromJust (TypeEnv.closure tenv0 !!? index), tenv0)
+      (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
   Float x ->
-    let ctor = case x ^. Literal.floatBits of
+    let ctor = case view Literal.floatBits x of
           Float32 -> "Float32"
           Float64 -> "Float64"
      in return (Float x, TypeConstructor origin ctor, tenv0)
   Integer x ->
-    let ctor = case x ^. Literal.integerBits of
+    let ctor = case view Literal.integerBits x of
           Signed8 -> "Int8"
           Signed16 -> "Int16"
           Signed32 -> "Int32"
@@ -486,7 +482,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
      in return (Integer x, TypeConstructor origin ctor, tenv0)
   Local (LocalIndex index) ->
     return
-      (Local $ LocalIndex index, Unsafe.fromJust (TypeEnv.vs tenv0 !!? index), tenv0)
+      (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
   Quotation {} -> error "quotation should not appear during type inference"
   Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
     Just (Entry.Word _ _ _ _ (Just signature) _) -> do
@@ -516,7 +512,7 @@ inferCall ::
   Origin ->
   K (Term Type, Type, TypeEnv)
 inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
-  case Map.lookup name $ TypeEnv.sigs tenv0 of
+  case Map.lookup name $ view TypeEnv.sigs tenv0 of
     Just t@Forall {} -> do
       (typ, params, tenv1) <- Instantiate.prenex tenv0 t
       let type' = Type.setOrigin origin typ
@@ -817,7 +813,7 @@ dataType origin params ctors dictionary =
               foldr
                 ( binary "Sum"
                     . foldr (binary "Product") (unary "Unit")
-                    . DataConstructor.fields
+                    . view DataConstructor.fields
                 )
                 (unary "Void")
                 ctors

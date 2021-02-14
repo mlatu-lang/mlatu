@@ -11,9 +11,65 @@ packages:
       sha256: 3cdacac3d8d6a75fc501c77fc419c65e1dcdb0f1f4212e99c5e7c3ceb2998454
   original:
     hackage: knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+- completed:
+    hackage: bytestring-encoding-0.1.0.0@sha256:460b49779fbf0112e8e2f1753c1ed9131eb18827600c298f4d6bb51c4e8c1c0d,1727
+    pantry-tree:
+      size: 713
+      sha256: d7eec4aa2c1ff4eed17a6ab6cec6bb4aa6faeff7a6a1ec5f829a23efc06b1778
+  original:
+    hackage: bytestring-encoding-0.1.0.0@sha256:460b49779fbf0112e8e2f1753c1ed9131eb18827600c298f4d6bb51c4e8c1c0d,1727
+- completed:
+    hackage: heapsize-0.3.0.1@sha256:0b69aa97a46d819b700ac7b145f3b5493c3565cf2c5b8298682238d405d0326e,1417
+    pantry-tree:
+      size: 330
+      sha256: 0cca5bf22f4ebe76f2056ce0ef0c6bc558c24241762cdef79dc7a13b7f8b289f
+  original:
+    hackage: heapsize-0.3.0.1@sha256:0b69aa97a46d819b700ac7b145f3b5493c3565cf2c5b8298682238d405d0326e,1417
+- completed:
+    hackage: hie-compat-0.1.0.0@sha256:bf4c51730a9ffce50fd73a0e14d21d22720fa3cbe38fd5e4761fdce576d781ee,1339
+    pantry-tree:
+      size: 1037
+      sha256: 9acfd8a63fae2927cbb46fa2302cf1fd478186bdba2f4e5189c0f6a2e61fe4f8
+  original:
+    hackage: hie-compat-0.1.0.0@sha256:bf4c51730a9ffce50fd73a0e14d21d22720fa3cbe38fd5e4761fdce576d781ee,1339
+- completed:
+    hackage: hiedb-0.3.0.1@sha256:b8a275772f1d194d35894c6b9f2a3ea69c6c307bdef6cda8b31798b3e0e48f49,2593
+    pantry-tree:
+      size: 880
+      sha256: b350d828dc0e54903b95b3979b69cff739f9ac0c84f3f44b9756bbf956e1d78b
+  original:
+    hackage: hiedb-0.3.0.1@sha256:b8a275772f1d194d35894c6b9f2a3ea69c6c307bdef6cda8b31798b3e0e48f49,2593
+- completed:
+    hackage: hls-plugin-api-0.7.0.0@sha256:8652bae71d869b03809d0daf2bc265dca7c6f02048204cb47fd5d7a241c60ef4,1552
+    pantry-tree:
+      size: 356
+      sha256: f58c6aceea29dc3d320d4ef20b491891ad76e4dab59416f4daa87e8fd45d4e52
+  original:
+    hackage: hls-plugin-api-0.7.0.0@sha256:8652bae71d869b03809d0daf2bc265dca7c6f02048204cb47fd5d7a241c60ef4,1552
+- completed:
+    hackage: implicit-hie-cradle-0.3.0.2@sha256:7ad0d10c475ad2b45a068aa0c1b150078ec579746df3b1754d91820354c90696,2594
+    pantry-tree:
+      size: 381
+      sha256: fa584b2e13064ba4e613b2e1904b7d210b6240584e05f0b793315087e88ce5e3
+  original:
+    hackage: implicit-hie-cradle-0.3.0.2@sha256:7ad0d10c475ad2b45a068aa0c1b150078ec579746df3b1754d91820354c90696,2594
+- completed:
+    hackage: retrie-0.1.1.1@sha256:690d072e7e441728cc6eb715e0be7ef66538869865438f60da401875fd8a7354,4224
+    pantry-tree:
+      size: 5662
+      sha256: fef6abad8e1893b64f9ebaf07dd71a676a0d6743b2c8c8549fda513435a79803
+  original:
+    hackage: retrie-0.1.1.1@sha256:690d072e7e441728cc6eb715e0be7ef66538869865438f60da401875fd8a7354,4224
+- completed:
+    hackage: implicit-hie-0.1.2.5@sha256:517a98ef72f92f0a1617495222774fed3a751a64b0c06fbfc7b858d7aa5de279,2998
+    pantry-tree:
+      size: 844
+      sha256: 9bf2645187637b647dfaebf37a45a57e221b3527592ce3b1cfd9faf90339dac3
+  original:
+    hackage: implicit-hie-0.1.2.5@sha256:517a98ef72f92f0a1617495222774fed3a751a64b0c06fbfc7b858d7aa5de279,2998
 snapshots:
 - completed:
-    size: 563099
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/2.yaml
-    sha256: 92b1a17e31d0a978fca4bf270305d4d1dd8092271bf60eafbc9349c890854026
-  original: lts-17.2
+    size: 558061
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2020/12/14.yaml
+    sha256: 0c80697b1db876c0ab31b43e42be53f886657a336eca59c73c361078e631d65b
+  original: nightly-2020-12-14

@@ -20,7 +20,7 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.HUnit (assertFailure)
 import Test.Hspec (Spec, describe, it, shouldBe)
-import Control.Lens ((^.))
+import Optics (view)
 
 spec :: Spec
 spec = do
@@ -252,5 +252,5 @@ floatLiteral v f e bits = Float (FloatLiteral v f e bits)
 
 testTokenize :: Text -> Either [Report] [Token 'Layout]
 testTokenize =
-  fmap (map (^. Located.item)) . runIdentity . runMlatu
+  fmap (map (view Located.item)) . runIdentity . runMlatu
     . tokenize 1 ""

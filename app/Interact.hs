@@ -4,7 +4,7 @@ module Interact
 where
 
 import Control.Exception (catch)
-import Control.Lens ((^.))
+import Optics (view)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
 import Mlatu (runMlatu)
@@ -135,13 +135,13 @@ run = do
                               "<interactive>"
                               expression
                           checkpoint
-                          case fragment ^. Fragment.definitions of
-                            [main] | main ^. Definition.name == Definition.mainName -> do
+                          case view Fragment.definitions fragment of
+                            [main] | view Definition.name main == Definition.mainName -> do
                               resolved <- Enter.resolveAndDesugar dictionary main
                               checkpoint
                               (_, typ) <-
                                 typecheck dictionary Nothing $
-                                  resolved ^. Definition.body
+                                  view Definition.body resolved
                               checkpoint
                               return (Just typ)
                             _otherDefinition -> return Nothing
@@ -317,7 +317,7 @@ toCompletion finished name =
 renderDictionary :: IORef Dictionary -> IO ()
 renderDictionary dictionaryRef = do
   names <-
-    sort . map (Name.toParts . Instantiated.name . fst) . Dictionary.toList
+    sort . map (Name.toParts . view Instantiated.name . fst) . Dictionary.toList
       <$> readIORef dictionaryRef
   let loop :: Int -> [[Text]] -> IO ()
       loop depth acc = case foldr0 commonPrefix [] acc of

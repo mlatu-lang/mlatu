@@ -24,37 +24,23 @@ module Mlatu.Name
     qualifierFromName,
     unqualifiedName,
     qualifierName,
+    _Relative,
+    _Absolute,
+    _ClosedLocal,
+    _ClosedClosure,
+    _QualifiedName,
+    _UnqualifiedName,
+  _LocalName
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Data.Char (isLetter)
 import Data.Text qualified as Text
+import Optics (view)
+import Optics.TH (makeLenses, makePrisms)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
-
--- | A qualifier is a list of vocabulary names, rooted globally or within the
--- current vocabulary.
-data Qualifier = Qualifier !Root ![Text]
-  deriving (Eq, Ord, Show)
-
--- | A 'Relative' qualifier refers to a sub-vocabulary of the current one. An
--- 'Absolute' qualifier refers to the global vocabulary.
-data Root = Relative | Absolute
-  deriving (Eq, Ord, Show)
-
--- | An unqualified name is an ordinary symbol.
-newtype Unqualified = Unqualified Text
-  deriving (Eq, Ord, Show)
-
--- | A closed name is a local or closure variable that was captured by a
--- quotation. FIXME: this can be removed if closure variables are rewritten into
--- implicit locals.
-data Closed
-  = ClosedLocal !LocalIndex
-  | ClosedClosure !ClosureIndex
-  deriving (Eq, Show)
 
 -- | An index into a closure.
 newtype ClosureIndex = ClosureIndex Int
@@ -68,15 +54,31 @@ newtype ConstructorIndex = ConstructorIndex Int
 newtype LocalIndex = LocalIndex Int
   deriving (Eq, Ord, Show)
 
--- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
-data GeneralName
-  = QualifiedName !Qualified
-  | UnqualifiedName !Unqualified
-  | LocalName !LocalIndex
+-- | A qualifier is a list of vocabulary names, rooted globally or within the
+-- current vocabulary.
+data Qualifier = Qualifier !Root ![Text]
   deriving (Eq, Ord, Show)
 
-instance IsString GeneralName where
-  fromString = UnqualifiedName . fromString
+-- | A 'Relative' qualifier refers to a sub-vocabulary of the current one. An
+-- 'Absolute' qualifier refers to the global vocabulary.
+data Root = Relative | Absolute
+  deriving (Eq, Ord, Show)
+
+makePrisms ''Root
+
+-- | An unqualified name is an ordinary symbol.
+newtype Unqualified = Unqualified Text
+  deriving (Eq, Ord, Show)
+
+-- | A closed name is a local or closure variable that was captured by a
+-- quotation. FIXME: this can be removed if closure variables are rewritten into
+-- implicit locals.
+data Closed
+  = ClosedLocal !LocalIndex
+  | ClosedClosure !ClosureIndex
+  deriving (Eq, Show)
+
+makePrisms ''Closed
 
 -- | A qualified name is an unqualified name (@x@) plus a qualifier (@q::@).
 data Qualified = Qualified
@@ -87,9 +89,21 @@ data Qualified = Qualified
 
 makeLenses ''Qualified
 
+-- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
+data GeneralName
+  = QualifiedName !Qualified
+  | UnqualifiedName !Unqualified
+  | LocalName !LocalIndex
+  deriving (Eq, Ord, Show)
+
+makePrisms ''GeneralName
+
+instance IsString GeneralName where
+  fromString = UnqualifiedName . fromString
+
 -- TODO: Use types, not strings.
 isOperatorName :: Qualified -> Bool
-isOperatorName = match . (^. unqualifiedName)
+isOperatorName = match . view unqualifiedName
   where
     match (Unqualified name) =
       not $

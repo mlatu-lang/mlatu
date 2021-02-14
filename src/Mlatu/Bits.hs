@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Bits
 -- Description : Fixed-size Mlatu types
@@ -8,12 +10,23 @@
 -- Portability : GHC
 module Mlatu.Bits
   ( FloatBits (..),
+  _Float32,
+  _Float64,
     IntegerBits (..),
+    _Signed8,
+    _Signed16,
+    _Signed32,
+    _Signed64,
+    _Unsigned8,
+    _Unsigned16,
+    _Unsigned32,
+    _Unsigned64
   )
 where
 
 import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
 
 -- | Standard sizes of fixed-precision floating-point numbers.
 data FloatBits
@@ -22,6 +35,8 @@ data FloatBits
   | -- | @f64@
     Float64
   deriving (Eq, Show)
+
+makePrisms ''FloatBits
 
 -- | Standard sizes of fixed-precision integer numbers.
 data IntegerBits
@@ -35,6 +50,8 @@ data IntegerBits
   | Unsigned32
   | Unsigned64
   deriving (Eq, Show)
+
+makePrisms ''IntegerBits
 
 instance Pretty IntegerBits where
   pPrint bits = case bits of

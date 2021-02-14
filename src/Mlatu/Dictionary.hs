@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Dictionary
 -- Description : Program database
@@ -42,20 +44,24 @@ import Mlatu.Signature (Signature)
 import Mlatu.Term qualified as Term
 import Relude hiding (empty, fromList, toList)
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makeLenses)
+import Optics (over, preview, view)
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
-  { entries :: HashMap Instantiated Entry
+  { _entries :: HashMap Instantiated Entry
   }
   deriving (Show)
 
+makeLenses ''Dictionary
+
 instance Pretty Dictionary where
-  pPrint (Dictionary entries) = pPrint (HashMap.keys entries)
+  pPrint = pPrint . HashMap.keys . view entries
 
 empty :: Dictionary
 empty =
   Dictionary
-    { entries = HashMap.empty
+    { _entries = HashMap.empty
     }
 
 fromList :: [(Instantiated, Entry)] -> Dictionary
@@ -64,17 +70,14 @@ fromList = Dictionary . HashMap.fromList
 -- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
 -- lead to an invalid dictionary state.
 insert :: Instantiated -> Entry -> Dictionary -> Dictionary
-insert name entry dictionary =
-  dictionary
-    { entries = HashMap.insert name entry $ entries dictionary
-    }
+insert = (over entries .) . HashMap.insert
 
 lookup :: Instantiated -> Dictionary -> Maybe Entry
-lookup = (. entries) . HashMap.lookup
+lookup = (. view entries) . HashMap.lookup
 
 -- | Whether a name is present in the dictionary.
 member :: Instantiated -> Dictionary -> Bool
-member = (. entries) . HashMap.member
+member = (. view entries) . HashMap.member
 
 -- | Compiles all operator metadata for infix desugaring.
 operatorMetadata ::
@@ -88,10 +91,10 @@ operatorMetadata dictionary =
     getMetadata :: (Informer m) => Qualified -> m (Qualified, Operator)
     getMetadata name =
       let key = Qualified (qualifierFromName name) (Unqualified "operator")
-       in case HashMap.lookup (Instantiated key []) $ entries dictionary of
+       in case HashMap.lookup (Instantiated key []) (view entries dictionary) >>= preview Entry._Metadata of
             -- TODO: Report invalid metadata.
             -- TODO: Avoid redundant decomposition.
-            Just (Entry.Metadata _ term)
+            Just (_, term)
               -- Just associativity.
               | [Term.Word _ _ (UnqualifiedName (Unqualified assoc)) _ _] <-
                   Term.decompose term,
@@ -142,7 +145,7 @@ operatorMetadata dictionary =
 
 -- | All type signatures (for words or traits) in the dictionary.
 signatures :: Dictionary -> [(Qualified, Signature)]
-signatures = mapMaybe getSignature . HashMap.toList . entries
+signatures = mapMaybe getSignature . HashMap.toList . view entries
   where
     getSignature :: (Instantiated, Entry) -> Maybe (Qualified, Signature)
     getSignature (Instantiated name [], Entry.Word _ _ _ _ (Just signature) _) =
@@ -152,11 +155,11 @@ signatures = mapMaybe getSignature . HashMap.toList . entries
     getSignature _ = Nothing
 
 toList :: Dictionary -> [(Instantiated, Entry)]
-toList = HashMap.toList . entries
+toList = HashMap.toList . view entries
 
 -- | All type names (for data types or permissions) in the dictionary.
 typeNames :: Dictionary -> [Qualified]
-typeNames = mapMaybe typeName . HashMap.toList . entries
+typeNames = mapMaybe typeName . HashMap.toList . view entries
   where
     typeName (Instantiated name _, Entry.Word Category.Permission _ _ _ _ _) =
       Just name
@@ -165,7 +168,7 @@ typeNames = mapMaybe typeName . HashMap.toList . entries
 
 -- | All word names (for words or traits) in the dictionary.
 wordNames :: Dictionary -> [Qualified]
-wordNames = mapMaybe wordName . HashMap.toList . entries
+wordNames = mapMaybe wordName . HashMap.toList . view entries
   where
     wordName (Instantiated name [], Entry.Word {}) = Just name
     -- TODO: Figure out how to get mangled names out of this...

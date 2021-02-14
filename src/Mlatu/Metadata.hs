@@ -12,16 +12,16 @@ module Mlatu.Metadata
   ( Metadata (..),
     name,
     fields,
-    origin
+    origin,
   )
 where
 
-
-import Control.Lens (makeLenses, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Term (Term)
+import Optics.TH (makeLenses)
+import Optics (view)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
@@ -39,11 +39,11 @@ makeLenses ''Metadata
 instance Pretty Metadata where
   pPrint metadata =
     Pretty.vcat
-      [ Pretty.hcat ["about ", pPrint $ metadata ^. name, ":"],
+      [ Pretty.hcat ["about ", pPrint $ view name metadata, ":"],
         Pretty.nest 4 $
           Pretty.vcat $
             map field $
-              HashMap.toList $ metadata ^. fields
+              HashMap.toList $ view fields metadata
       ]
     where
       field (key, value) =

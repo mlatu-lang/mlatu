@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Origin
 -- Description : Source locations
@@ -8,11 +10,16 @@
 -- Portability : GHC
 module Mlatu.Origin
   ( Origin (..),
-    begin,
-    end,
-    point,
-    pos,
-    range,
+  name,
+  beginLine,
+  beginColumn,
+  endLine,
+  endColumn,
+  begin,
+  end,
+  point,
+  pos,
+  range,
   )
 where
 
@@ -29,35 +36,39 @@ import Text.Parsec.Pos
   )
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makeLenses)
+import Optics (view)
 
 -- | A source location, in the form of an origin name (typically a file path)
 -- and source span between two ('Line', 'Column') pairs.
 data Origin = Origin
-  { name :: !Text,
-    beginLine :: !Line,
-    beginColumn :: !Column,
-    endLine :: !Line,
-    endColumn :: !Column
+  { _name :: !Text,
+    _beginLine :: !Line,
+    _beginColumn :: !Column,
+    _endLine :: !Line,
+    _endColumn :: !Column
   }
   deriving (Eq, Show)
 
+makeLenses ''Origin
+
 -- | The starting 'SourcePos' of an 'Origin'.
 begin :: Origin -> SourcePos
-begin = newPos <$> toString . name <*> beginLine <*> beginColumn
+begin = newPos <$> toString . view name <*> view beginLine <*> view beginColumn
 
 -- | The ending 'SourcePos' of an 'Origin'.
 end :: Origin -> SourcePos
-end = newPos <$> toString . name <*> endLine <*> endColumn
+end = newPos <$> toString . view name <*> view endLine <*> view endColumn
 
 -- | A zero-width 'Origin' at the given 'Line' and 'Column'.
 point :: SourceName -> Line -> Column -> Origin
 point path line column =
   Origin
-    { name = toText path,
-      beginLine = line,
-      beginColumn = column,
-      endLine = line,
-      endColumn = column
+    { _name = toText path,
+      _beginLine = line,
+      _beginColumn = column,
+      _endLine = line,
+      _endColumn = column
     }
 
 -- | Makes a zero-width 'Origin' from a 'SourcePos'.
@@ -68,17 +79,17 @@ pos = point <$> sourceName <*> sourceLine <*> sourceColumn
 range :: SourcePos -> SourcePos -> Origin
 range a b =
   Origin
-    { name = toText $ sourceName a,
-      beginLine = sourceLine a,
-      beginColumn = sourceColumn a,
-      endLine = sourceLine b,
-      endColumn = sourceColumn b
+    { _name = toText $ sourceName a,
+      _beginLine = sourceLine a,
+      _beginColumn = sourceColumn a,
+      _endLine = sourceLine b,
+      _endColumn = sourceColumn b
     }
 
 instance Pretty Origin where
   pPrint origin =
     Pretty.hcat $
-      [ Pretty.text $ toString $ name origin,
+      [ Pretty.text $ toString $ view name origin,
         ":",
         pPrint al,
         ".",
@@ -87,7 +98,7 @@ instance Pretty Origin where
       ]
         ++ (if al == bl then [pPrint bc] else [pPrint bl, ".", pPrint bc])
     where
-      al = beginLine origin
-      bl = endLine origin
-      ac = beginColumn origin
-      bc = endColumn origin
+      al = view beginLine origin
+      bl = view endLine origin
+      ac = view beginColumn origin
+      bc = view endColumn origin

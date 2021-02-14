@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Base
 -- Description : Numeric literal bases
@@ -12,6 +14,7 @@ module Mlatu.Base
 where
 
 import Relude
+import Optics.TH (makePrisms)
 
 -- | The radix of an integer literal.
 data Base
@@ -24,3 +27,5 @@ data Base
   | -- | @0x@
     Hexadecimal
   deriving (Show)
+
+makePrisms ''Base

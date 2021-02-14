@@ -18,14 +18,13 @@ module Mlatu.Fragment
   )
 where
 
-import Control.Lens (makeLenses, (^.))
-import Control.Lens.Setter (over)
 import Mlatu.Declaration (Declaration)
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
+import Optics (over, makeLenses, view)
 import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -64,8 +63,8 @@ instance Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
-        [ map pPrint $ fragment ^. definitions,
-          map pPrint $ fragment ^. metadata,
-          map pPrint $ fragment ^. synonyms,
-          map pPrint $ fragment ^. types
+        [ map pPrint $ view definitions fragment,
+          map pPrint $ view metadata fragment,
+          map pPrint $ view synonyms fragment,
+          map pPrint $ view types fragment
         ]

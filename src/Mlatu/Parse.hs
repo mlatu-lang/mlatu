@@ -14,7 +14,6 @@ module Mlatu.Parse
   )
 where
 
-import Control.Lens (over, (^.))
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
 import Data.Text qualified as Text
@@ -66,6 +65,7 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics (over, view)
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
 import Text.Parsec ((<?>))
@@ -99,8 +99,8 @@ fragment line path mainPermissions mainName tokens =
           halt
         Right result -> return (Data.desugar (insertMain result))
   where
-    isMain def = def ^. Definition.name == fromMaybe Definition.mainName mainName
-    insertMain f = case find isMain $ f ^. Fragment.definitions of
+    isMain def = view Definition.name def == fromMaybe Definition.mainName mainName
+    insertMain f = case find isMain $ view  Fragment.definitions f of
       Just {} -> f
       Nothing ->
         over
@@ -159,7 +159,7 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
           Fragment.definitions
           ( \defs ->
               case findIndex
-                (\def -> def ^. Definition.name == fromMaybe Definition.mainName mainName)
+                (\x -> fromMaybe Definition.mainName mainName == view Definition.name x)
                 defs of
                 Just index -> case splitAt index defs of
                   (a, existing : b) ->
@@ -274,18 +274,18 @@ unqualifiedNameParser =
 wordNameParser :: Parser Unqualified
 wordNameParser = (<?> "word name") $
   parseOne $
-    \token -> case token ^. Located.item of
+    \token -> case view Located.item token of
       Token.Word name -> Just name
       _nonWord -> Nothing
 
 operatorNameParser :: Parser Unqualified
 operatorNameParser = (<?> "operator name") $ do
   angles <- many $
-    parseOne $ \token -> case token ^. Located.item of
+    parseOne $ \token -> case view Located.item token of
       Token.AngleBegin -> Just "<"
       Token.AngleEnd -> Just ">"
       _nonAngle -> Nothing
-  rest <- parseOne $ \token -> case token ^. Located.item of
+  rest <- parseOne $ \token -> case view Located.item token of
     Token.Operator (Unqualified name) -> Just name
     _nonUnqualifiedOperator -> Nothing
   return $ Unqualified $ Text.concat $ angles ++ [rest]
@@ -294,7 +294,7 @@ parseOne :: (Located (Token 'Nonlayout) -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
   where
     advance :: SourcePos -> t -> [Located (Token 'Nonlayout)] -> SourcePos
-    advance _ _ (token : _) = Origin.begin $ token ^. Located.origin
+    advance _ _ (token : _) = Origin.begin $ view Located.origin token
     advance sourcePos _ _ = sourcePos
 
 elementParser :: Parser (Element ())
@@ -381,9 +381,9 @@ constructorParser = (<?> "constructor definition") $ do
         groupedParser constructorFieldsParser
   return
     DataConstructor
-      { DataConstructor.fields = fields,
-        DataConstructor.name = name,
-        DataConstructor.origin = origin
+      { DataConstructor._fields = fields,
+        DataConstructor._name = name,
+        DataConstructor._origin = origin
       }
 
 constructorFieldsParser :: Parser [Signature]
@@ -511,10 +511,10 @@ declarationParser keyword category = do
   sig <- signatureParser
   return
     Declaration
-      { Declaration.category = category,
-        Declaration.name = name,
-        Declaration.origin = origin,
-        Declaration.signature = sig
+      { Declaration._category = category,
+        Declaration._name = name,
+        Declaration._origin = origin,
+        Declaration._signature = sig
       }
 
 basicDefinitionParser :: Parser (Definition ())
@@ -626,7 +626,7 @@ termParser = (<?> "expression") $ do
     ]
 
 toLiteral :: Located (Token 'Nonlayout) -> Maybe (Value (), Origin)
-toLiteral token = case token ^. Located.item of
+toLiteral token = case view Located.item token of
   Token.Character x -> Just (Character x, origin)
   Token.Float x -> Just (Float x, origin)
   Token.Integer x -> Just (Integer x, origin)
@@ -634,7 +634,7 @@ toLiteral token = case token ^. Located.item of
   _nonLiteral -> Nothing
   where
     origin :: Origin
-    origin = token ^. Located.origin
+    origin = view Located.origin token
 
 sectionParser :: Parser (Term ())
 sectionParser =

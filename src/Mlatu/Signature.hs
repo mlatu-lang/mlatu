@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Signature
 -- Description : Type signatures
@@ -8,7 +10,14 @@
 -- Portability : GHC
 module Mlatu.Signature
   ( Signature (..),
-    origin,
+  _Application,
+  _Bottom,
+  _Function,
+  _Quantified,
+  _Variable,
+  _StackFunction,
+  _Type,
+  origin,
   )
 where
 
@@ -22,6 +31,7 @@ import Mlatu.Type qualified as Type
 import Relude hiding (Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
 
 -- | A parsed type signature.
 data Signature
@@ -47,6 +57,8 @@ data Signature
     -- typechecking.
     Type !Type
   deriving (Show)
+
+makePrisms ''Signature
 
 -- | Signatures are compared regardless of origin.
 instance Eq Signature where

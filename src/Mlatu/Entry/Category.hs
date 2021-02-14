@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Entry.Category
 -- Description : Types of dictionary entries
@@ -8,11 +10,16 @@
 -- Portability : GHC
 module Mlatu.Entry.Category
   ( Category (..),
+  _Constructor,
+  _Instance,
+  _Permission,
+  _Word
   )
 where
 
 import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
 
 data Category
   = Constructor
@@ -20,6 +27,8 @@ data Category
   | Permission
   | Word
   deriving (Eq, Show)
+
+makePrisms ''Category
 
 instance Pretty Category where
   pPrint Constructor = "constructor"

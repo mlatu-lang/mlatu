@@ -17,11 +17,12 @@ module Mlatu.TypeDefinition
   )
 where
 
-import Control.Lens (makeLenses, (^.))
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
+import Optics.TH (makeLenses)
+import Optics (view)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
@@ -40,12 +41,12 @@ instance Pretty TypeDefinition where
   pPrint typedef =
     Pretty.vcat
       [ "type"
-          Pretty.<+> pPrint (typedef ^. name),
+          Pretty.<+> pPrint (view name typedef),
         Pretty.colon,
         Pretty.braces $
           Pretty.hsep $
-            map pPrint $ typedef ^. parameters,
+            map pPrint $ view parameters typedef,
         Pretty.nest
           4
-          $ Pretty.vcat $ map pPrint $ typedef ^. constructors
+          $ Pretty.vcat $ map pPrint $ view constructors typedef
       ]

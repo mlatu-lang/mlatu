@@ -24,10 +24,10 @@ import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
 import Mlatu.Token qualified as Token
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics (set, view)
 import Relude
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
-import Control.Lens (set, (^.))
 
 -- | Desugars layout-based syntax into explicit brace-delimited blocks according
 -- to the *layout rule*:
@@ -79,7 +79,7 @@ between open close = do
   return (begin : inner ++ [end])
 
 nonbracket :: Located (Token 'Layout) -> Bool
-nonbracket = not . (`elem` brackets) . (^. Located.item)
+nonbracket = not . (`elem` brackets) . view Located.item
 
 brackets :: [Token 'Layout]
 brackets =
@@ -100,23 +100,23 @@ blockBrackets =
 layoutBlock :: Bracketer [Located (Token 'Nonlayout)]
 layoutBlock = do
   colon <- parserMatch Colon
-  let colonOrigin = colon ^. Located.origin
-      Indent colonIndent = colon ^. Located.indent
+  let colonOrigin = view Located.origin colon
+      Indent colonIndent = view Located.indent colon
       validFirst =
         (> colonIndent)
           . Parsec.sourceColumn
           . Origin.begin
-          . (^. Located.origin)
+          . view Located.origin
   firstToken <-
     Parsec.lookAhead (tokenSatisfy validFirst)
       <?> "a token with a source column greater than \
           \the start of the layout block"
-  let firstOrigin = Origin.begin (firstToken ^. Located.origin)
+  let firstOrigin = Origin.begin (view Located.origin firstToken)
       inside =
         (>= Parsec.sourceColumn firstOrigin)
           . Parsec.sourceColumn
           . Origin.begin
-          . (^. Located.origin)
+          . view Located.origin
 
   body <- concat <$> many (unitWhere inside)
   return $
@@ -126,6 +126,6 @@ layoutBlock = do
 fromLayout ::
   Located (Token 'Layout) ->
   Bracketer (Located (Token 'Nonlayout))
-fromLayout located = case Token.fromLayout (located ^. Located.item) of
+fromLayout located = case Token.fromLayout (view Located.item located) of
   Just nonlayout -> pure $ set Located.item nonlayout located
   Nothing -> Parsec.unexpected "colon not beginning valid layout block"

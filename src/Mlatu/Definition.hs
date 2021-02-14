@@ -25,8 +25,6 @@ module Mlatu.Definition
   )
 where
 
-
-import Control.Lens (makeLenses, (^.))
 import Mlatu.Entry.Category (Category)
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge (Merge)
@@ -45,6 +43,8 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics.TH (makeLenses)
+import Optics (view)
 import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -66,9 +66,9 @@ makeLenses ''Definition
 instance Pretty (Definition a) where
   pPrint definition =
     Pretty.asDefinition
-      (pPrint $ definition ^. name)
-      (pPrint $ definition ^. signature)
-      (pPrint $ definition ^. body)
+      (pPrint $ view name definition)
+      (pPrint $ view signature definition)
+      (pPrint $ view body definition)
       (pPrint Token.Define)
 
 -- | The main definition, created implicitly from top-level code in program
@@ -113,4 +113,4 @@ mainName = Qualified Vocabulary.global "main"
 
 -- | Whether a given definition refers to (the default-named) @main@.
 isMain :: Definition a -> Bool
-isMain def = def ^. name == mainName
+isMain def = view name def == mainName

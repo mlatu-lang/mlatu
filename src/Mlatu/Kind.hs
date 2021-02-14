@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Kind
 -- Description : The kinds of types
@@ -8,12 +10,18 @@
 -- Portability : GHC
 module Mlatu.Kind
   ( Kind (..),
+  _Value,
+  _Stack,
+  _Label,
+  _Permission,
+  (.:->)
   )
 where
 
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
 
 -- | A kind (κ) is the type of a type. Types with the \"value\" kind (@*@) are
 -- inhabited by values; all other types are used only to enforce program
@@ -29,6 +37,8 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
 data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
   deriving (Eq, Show)
+
+makePrisms ''Kind
 
 instance Hashable Kind where
   hashWithSalt s Value = hashWithSalt s (0 :: Int)

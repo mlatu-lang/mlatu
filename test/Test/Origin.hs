@@ -11,7 +11,7 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Parsec.Pos (Column, Line)
-import Control.Lens ((^.))
+import Optics (view)
 
 spec :: Spec
 spec = do
@@ -92,7 +92,7 @@ testOrigin :: [Text] -> Expectation
 testOrigin test =
   let (input, origins) = deinterleave test
    in fmap
-        (map (^. Located.origin))
+        (map (view Located.origin))
         ( runIdentity $
             runMlatu $
               tokenize 1 "test" $
@@ -137,11 +137,11 @@ parseOrigins = concatMap (uncurry goLine) . zip [1 ..]
     toOrigin :: Line -> Span -> Origin
     toOrigin line (Span begin end) =
       Origin
-        { Origin.name = "test",
-          Origin.beginLine = line,
-          Origin.beginColumn = begin,
-          Origin.endLine = line,
-          Origin.endColumn = end
+        { Origin._name = "test",
+          Origin._beginLine = line,
+          Origin._beginColumn = begin,
+          Origin._endLine = line,
+          Origin._endColumn = end
         }
 
     go :: Env -> Char -> Env

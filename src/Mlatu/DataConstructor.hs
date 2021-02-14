@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.DataConstructor
 -- Description : Constructors of data types
@@ -8,6 +10,9 @@
 -- Portability : GHC
 module Mlatu.DataConstructor
   ( DataConstructor (..),
+  fields,
+  name,
+  origin
   )
 where
 
@@ -17,17 +22,21 @@ import Mlatu.Signature (Signature)
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makeLenses)
+import Optics (view)
 
 -- | A single data constructor case, e.g., @case some (T)@.
 data DataConstructor = DataConstructor
-  { fields :: ![Signature],
-    name :: !Unqualified,
-    origin :: !Origin
+  { _fields :: ![Signature],
+    _name :: !Unqualified,
+    _origin :: !Origin
   }
   deriving (Show)
 
+makeLenses ''DataConstructor
+
 -- FIXME: Support fields.
 instance Pretty DataConstructor where
-  pPrint (DataConstructor _ name _) =
+  pPrint dc =
     "case"
-      Pretty.<+> pPrint name
+      Pretty.<+> pPrint (view name dc)

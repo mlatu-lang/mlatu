@@ -11,7 +11,6 @@ module Mlatu.Desugar.Data
   )
 where
 
-import Control.Lens (over, (^.))
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Definition (Definition (Definition))
@@ -28,6 +27,7 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
+import Optics (over, view)
 import Relude
 
 -- | Desugars data type constructors into word definitions, e.g.:
@@ -41,12 +41,14 @@ import Relude
 -- > define none<T> (-> Optional<T>) { ... }
 -- > define some<T> (T -> Optional<T>) { ... }
 desugar :: Fragment () -> Fragment ()
-desugar fragment = over Fragment.definitions (\x -> x ++ concatMap desugarTypeDefinition (fragment ^. Fragment.types)) fragment
+desugar fragment = over Fragment.definitions (concatMap desugarTypeDefinition types ++) fragment
+  where 
+    types = view Fragment.types fragment
 
 desugarTypeDefinition :: TypeDefinition -> [Definition ()]
 desugarTypeDefinition definition =
   zipWith (desugarConstructor definition) [0 ..] $
-    definition ^. TypeDefinition.constructors
+    view TypeDefinition.constructors definition
 
 desugarConstructor :: TypeDefinition -> Int -> DataConstructor -> Definition ()
 desugarConstructor definition index constructor =
@@ -55,43 +57,43 @@ desugarConstructor definition index constructor =
         New
           ()
           (ConstructorIndex index)
-          (length $ DataConstructor.fields constructor)
-          $ DataConstructor.origin constructor,
+          (length $ view DataConstructor.fields constructor)
+          $ view DataConstructor.origin constructor,
       Definition._category = Category.Constructor,
       Definition._fixity = Operator.Postfix,
       Definition._inferSignature = False,
       Definition._merge = Merge.Deny,
       Definition._name =
         Qualified qualifier $
-          DataConstructor.name constructor,
+          view DataConstructor.name constructor,
       Definition._origin = origin,
       Definition._parent =
         Just $
           Parent.Type $
-            definition ^. TypeDefinition.name,
+            view TypeDefinition.name definition,
       Definition._signature = constructorSignature
     }
   where
     resultSignature =
       foldl'
         (\a b -> Signature.Application a b origin)
-        ( Signature.Variable (QualifiedName $ definition ^. TypeDefinition.name) $
-            definition ^. TypeDefinition.origin
+        ( Signature.Variable (QualifiedName $ view TypeDefinition.name definition) $
+            view TypeDefinition.origin definition
         )
         $ map
           ( \(Parameter parameterOrigin parameter _kind) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
-          $ definition ^. TypeDefinition.parameters
+          $ view TypeDefinition.parameters definition
     constructorSignature =
       Signature.Quantified
-        (definition ^. TypeDefinition.parameters)
+        (view TypeDefinition.parameters definition)
         ( Signature.Function
-            (DataConstructor.fields constructor)
+            (view DataConstructor.fields constructor)
             [resultSignature]
             []
             origin
         )
         origin
-    origin = DataConstructor.origin constructor
-    qualifier = (^. qualifierName) $ definition ^. TypeDefinition.name
+    origin = view DataConstructor.origin constructor
+    qualifier = view qualifierName (view TypeDefinition.name definition)

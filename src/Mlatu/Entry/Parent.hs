@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Entry.Parent
 -- Description : Links to parent entries
@@ -8,6 +10,8 @@
 -- Portability : GHC
 module Mlatu.Entry.Parent
   ( Parent (..),
+  _Trait,
+  _Type,
   )
 where
 
@@ -16,12 +20,15 @@ import Mlatu.Pretty qualified as Pretty
 import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Optics.TH (makePrisms)
 
 -- | A parent trait (of an instance) or data type (of a constructor).
 data Parent
   = Trait !Qualified
   | Type !Qualified
   deriving (Show)
+
+makePrisms ''Parent
 
 instance Pretty Parent where
   pPrint (Trait name) = Pretty.hsep ["trait", Pretty.quote name]
