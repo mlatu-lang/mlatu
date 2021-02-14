@@ -1,10 +1,10 @@
-cabal-version: 2.0
+cabal-version: 1.12
 
 -- This file has been generated from package.yaml by hpack version 0.34.3.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5336c869a5a64af3f9d28a5367a2bf72adcdc0998cbf77c9a57544583a25b3ed
+-- hash: c7dc097e3cd2679f6cb0c488daeea9d014c98adfe0801177946d51f2677f98e6
 
 name:           Mlatu
 version:        0.1.0.0
@@ -89,8 +89,6 @@ library
       Mlatu.Vocabulary
       Mlatu.Zonk
   other-modules:
-      Paths_Mlatu
-  autogen-modules:
       Paths_Mlatu
   hs-source-dirs:
       src

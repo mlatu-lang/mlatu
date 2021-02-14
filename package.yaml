@@ -73,7 +73,9 @@ library:
   dependencies:
     - JuicyPixels
     - base64-bytestring
-  generated-other-modules: Paths_Mlatu
+  when:
+    - condition: false
+      other-modules: Paths_name
 
 executables:
   mlatu:
