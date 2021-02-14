@@ -41,7 +41,7 @@ import Relude
 -- > define none<T> (-> Optional<T>) { ... }
 -- > define some<T> (T -> Optional<T>) { ... }
 desugar :: Fragment () -> Fragment ()
-desugar fragment = over Fragment.definitions (concatMap desugarTypeDefinition types ++) fragment
+desugar fragment = over Fragment.definitions (\x -> x ++ concatMap desugarTypeDefinition types) fragment
   where 
     types = view Fragment.types fragment
 
