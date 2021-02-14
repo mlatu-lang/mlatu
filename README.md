@@ -20,46 +20,6 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 - [ ] Write a TextMate grammar for syntax highlighting
 
-## Examples
-
-Here's the always popular fizz-buzz interview question:
-
-```
-define divisible (Int32, Int32 -> Bool +Fail):
-  (%) 0 (=)
-
-define fizzbuzz (Int32 -> List[Char]):
-  -> n;
-  do (with (+Fail)):
-    n 5 divisible
-    n 3 divisible
-
-  if:
-    if: "FizzBuzz"
-    else: "Fizz"
-  else:
-    if: "Buzz"
-    else: n show
-
-define fizzbuzzes (Int32, Int32 -> +IO):
-  -> c, m;
-  c fizzbuzz say
-  if (c < m): (c + 1) m fizzbuzzes
-
-1 100 fizzbuzzes
-```
-
-Here's a basic fibonacci function:
-
-```
-define fib (UInt64 -> UInt64):
-  -> n;
-  if (n <= 1u64):
-    1u64
-  else:
-    (n - 2u64) fib + (n - 1u64) fib
-```
-
 ## Miscellany
 
 The source is based with gratitude off of [the source of Kitten][Kitten GitHub] by Jon Purdy.
