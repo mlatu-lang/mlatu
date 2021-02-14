@@ -18,7 +18,6 @@ module Mlatu.Name
     Unqualified (..),
     isOperatorName,
     toParts,
-    qualifiedFromQualifier,
     qualifierFromName,
   )
 where
@@ -92,17 +91,6 @@ isOperatorName = match . unqualifiedName
 toParts :: Qualified -> [Text]
 toParts (Qualified (Qualifier _root parts) (Unqualified part)) =
   parts ++ [part]
-
-qualifiedFromQualifier :: Qualifier -> Maybe Qualified
-qualifiedFromQualifier (Qualifier root parts) =
-  viaNonEmpty
-    ( \nonEmptyParts ->
-        Qualified
-          (Qualifier root (init nonEmptyParts))
-          ( Unqualified (last nonEmptyParts)
-          )
-    )
-    parts
 
 qualifierFromName :: Qualified -> Qualifier
 qualifierFromName (Qualified (Qualifier root parts) (Unqualified name)) =

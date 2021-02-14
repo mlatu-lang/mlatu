@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 94324a56cdc1159e53cf98ca362bd8d82c0060a1ec4a9ec08afebc9de1f05c1f
+-- hash: ccbafe27b9a106eb336fc33fdb2035c86524edc8277abf94960b24c9539b85ef
 
 name:           Mlatu
 version:        0.1.0.0
@@ -30,7 +30,6 @@ library
       Mlatu.Base
       Mlatu.Bits
       Mlatu.Bracket
-      Mlatu.CollectInstantiations
       Mlatu.DataConstructor
       Mlatu.Declaration
       Mlatu.Definition
@@ -58,10 +57,8 @@ library
       Mlatu.Interpret
       Mlatu.Kind
       Mlatu.Layoutness
-      Mlatu.Linearize
       Mlatu.Literal
       Mlatu.Located
-      Mlatu.Mangle
       Mlatu.Metadata
       Mlatu.Monad
       Mlatu.Name
@@ -95,7 +92,7 @@ library
   hs-source-dirs:
       src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  ghc-options: -Wall -O2
   build-depends:
       JuicyPixels
     , base >=4.8
@@ -122,7 +119,7 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie -O2
+  ghc-options: -Wall -O2
   build-depends:
       Mlatu
     , base >=4.8
@@ -157,7 +154,6 @@ test-suite test
       Mlatu.Base
       Mlatu.Bits
       Mlatu.Bracket
-      Mlatu.CollectInstantiations
       Mlatu.DataConstructor
       Mlatu.Declaration
       Mlatu.Definition
@@ -185,10 +181,8 @@ test-suite test
       Mlatu.Interpret
       Mlatu.Kind
       Mlatu.Layoutness
-      Mlatu.Linearize
       Mlatu.Literal
       Mlatu.Located
-      Mlatu.Mangle
       Mlatu.Metadata
       Mlatu.Monad
       Mlatu.Name
@@ -222,7 +216,7 @@ test-suite test
       test
       src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -fwrite-ide-info -hiedir=.hie
+  ghc-options: -Wall
   build-depends:
       HUnit
     , JuicyPixels

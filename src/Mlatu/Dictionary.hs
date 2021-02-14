@@ -9,7 +9,6 @@
 module Mlatu.Dictionary
   ( Dictionary,
     empty,
-    fromList,
     insert,
     lookup,
     member,
@@ -57,9 +56,6 @@ empty =
   Dictionary
     { entries = HashMap.empty
     }
-
-fromList :: [(Instantiated, Entry)] -> Dictionary
-fromList = Dictionary . HashMap.fromList
 
 -- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
 -- lead to an invalid dictionary state.

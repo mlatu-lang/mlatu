@@ -1,5 +1,6 @@
 { roots =
-  [ "^Main.main\$"
+  [ "^Paths_.*"
+  , "^Main.main\$"
   , "Test.Common.spec"
   , "Test.Infer.spec"
   , "Test.InstanceCheck.spec"

@@ -8,7 +8,6 @@
 -- Portability : GHC
 module Mlatu.Definition
   ( Definition (..),
-    isMain,
     main,
     mainName,
   )
@@ -95,7 +94,3 @@ main permissions mName term =
 -- | Default name of main definition.
 mainName :: Qualified
 mainName = Qualified Vocabulary.global "main"
-
--- | Whether a given definition refers to (the default-named) @main@.
-isMain :: Definition a -> Bool
-isMain = (== mainName) . name

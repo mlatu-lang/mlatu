@@ -15,8 +15,6 @@ module Mlatu.Type
     fun,
     join,
     prod,
-    Mlatu.Type.sum,
-    void,
     setOrigin,
     origin,
   )
@@ -73,14 +71,8 @@ fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
 prod :: Origin -> Type -> Type -> Type
 prod o a b = TypeConstructor o "Prod" :@ a :@ b
 
-sum :: Origin -> Type -> Type -> Type
-sum o a b = TypeConstructor o "Sum" :@ a :@ b
-
 join :: Origin -> Type -> Type -> Type
 join o a b = TypeConstructor o "Join" :@ a :@ b
-
-void :: Origin -> Type
-void o = TypeConstructor o "Void"
 
 origin :: Type -> Origin
 origin = \case

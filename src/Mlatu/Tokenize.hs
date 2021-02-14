@@ -13,6 +13,7 @@ module Mlatu.Tokenize
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
 import Mlatu.Base (Base (..))
@@ -36,7 +37,6 @@ import Text.Parsec (Column, ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos qualified as Parsec
 import Text.PrettyPrint qualified as Pretty
-import qualified Data.ByteString as BS
 
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.

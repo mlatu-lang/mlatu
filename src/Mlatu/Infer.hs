@@ -9,12 +9,10 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Infer
-  ( dataType,
-    inferType0,
+  ( inferType0,
     mangleInstance,
     typeFromSignature,
     typeKind,
-    typeSize,
     typecheck,
   )
 where
@@ -58,10 +56,8 @@ import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Regeneralize (regeneralize)
 import Mlatu.Report qualified as Report
-import Mlatu.Resolve qualified as Resolve
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor (..), Type (..), Var (..))
@@ -754,86 +750,6 @@ typeKind dictionary = go
                       "to type",
                       Pretty.quote b
                     ]
-
--- | Calculates the size of a type.
-typeSize :: Dictionary -> Type -> K Type
-typeSize dictionary = eval
-  where
-    eval :: Type -> K Type
-    eval (a :@ b) = do
-      a' <- eval a
-      b' <- eval b
-      apply a' b'
-    eval (Type.TypeConstructor origin "Unit") = return $ Type.TypeValue origin 0
-    eval (Type.TypeConstructor origin "Void") = return $ Type.TypeValue origin 0
-    eval (Type.TypeConstructor origin "Int8") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "Int16") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "Int32") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "Int64") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "UInt8") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "UInt16") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "UInt32") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "UInt64") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "Float32") = return $ Type.TypeValue origin 1
-    eval (Type.TypeConstructor origin "Float64") = return $ Type.TypeValue origin 1
-    eval t@(Type.TypeConstructor _ (Type.Constructor name)) =
-      case Dictionary.lookup (Instantiated name []) dictionary of
-        Just (Entry.Type origin params ctors) -> do
-          typ <- dataType origin params ctors dictionary
-          eval typ
-        _noInstantiation -> return t
-    eval t@Type.TypeValue {} = return t
-    eval t@Type.TypeVar {} = return t
-    eval t@Type.TypeConstant {} = return t
-    eval t@Type.Forall {} = return t
-
-    apply (Type.Forall _ (Var _name typeId _) body) arg = do
-      body' <- Substitute.typ TypeEnv.empty typeId arg body
-      eval body'
-    apply (Type.TypeConstructor origin "Sum" :@ TypeValue _ a) (TypeValue _ b) =
-      return $ Type.TypeValue origin $ max a b
-    apply (Type.TypeConstructor origin "Product" :@ TypeValue _ a) (TypeValue _ b) =
-      return $ Type.TypeValue origin $ a + b
-    apply (Type.TypeConstructor origin "Fun" :@ _ :@ _) _ =
-      return $ Type.TypeValue origin 1
-    apply (Type.TypeConstructor origin "List") _ =
-      return $ Type.TypeValue origin 3 -- begin+end+capacity
-    apply t arg = return $ t :@ arg
-
--- | Converts a data type definition into a generic sum of products, for
--- 'typeSize' calculation.
-dataType :: Origin -> [Parameter] -> [DataConstructor] -> Dictionary -> K Type
-dataType origin params ctors dictionary =
-  let tag = case ctors of
-        [] -> unary "Void" -- 0 -> void layout, no tag
-        [_] -> unary "Void" -- 1 -> struct layout, no tag
-        _multiList -> unary "UInt64" -- n -> union layout, tag
-        -- Product of tag and sum of products of fields.
-      sig =
-        Signature.Quantified
-          params
-          ( binary "Product" tag $
-              foldr
-                ( binary "Sum"
-                    . foldr (binary "Product") (unary "Unit")
-                    . DataConstructor.fields
-                )
-                (unary "Void")
-                ctors
-          )
-          origin
-      binary name a b =
-        Signature.Application
-          (Signature.Application (unary name) a origin)
-          b
-          origin
-      unary name =
-        Signature.Variable
-          (QualifiedName (Qualified Vocabulary.global name))
-          origin
-   in -- FIXME: Use correct vocabulary.
-      typeFromSignature TypeEnv.empty
-        =<< Resolve.run (Resolve.signature dictionary Vocabulary.global sig)
 
 capitalize :: Text -> Text
 capitalize x

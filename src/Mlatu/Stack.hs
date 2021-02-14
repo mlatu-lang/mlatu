@@ -8,16 +8,14 @@
 -- Portability : GHC
 module Mlatu.Stack
   ( Stack (..),
-    Mlatu.Stack.empty,
-    Mlatu.Stack.fromList,
-    popMaybe,
+    fromList,
     popNote,
     pops,
     pushes,
   )
 where
 
-import Relude
+import Relude hiding (fromList)
 
 -- | A stack with strictly evaluated elements and spine.
 data Stack a = Bottom | !a ::: !(Stack a)
@@ -25,16 +23,8 @@ data Stack a = Bottom | !a ::: !(Stack a)
 
 infixr 5 :::
 
-empty :: Stack a -> Bool
-empty Bottom = True
-empty _ = False
-
 fromList :: [a] -> Stack a
 fromList = foldr (:::) Bottom
-
-popMaybe :: Stack a -> Maybe (a, Stack a)
-popMaybe Bottom = Nothing
-popMaybe (a ::: s) = Just (a, s)
 
 popNote :: Stack a -> Stack a
 popNote Bottom = error "Mlatu.Stack.drop: empty stack"

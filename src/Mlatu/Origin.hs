@@ -9,7 +9,6 @@
 module Mlatu.Origin
   ( Origin (..),
     begin,
-    end,
     point,
     pos,
     range,
@@ -44,10 +43,6 @@ data Origin = Origin
 -- | The starting 'SourcePos' of an 'Origin'.
 begin :: Origin -> SourcePos
 begin = newPos <$> toString . name <*> beginLine <*> beginColumn
-
--- | The ending 'SourcePos' of an 'Origin'.
-end :: Origin -> SourcePos
-end = newPos <$> toString . name <*> endLine <*> endColumn
 
 -- | A zero-width 'Origin' at the given 'Line' and 'Column'.
 point :: SourceName -> Line -> Column -> Origin
