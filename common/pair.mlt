@@ -1,0 +1,25 @@
+// TODO: map Optional
+
+type Pair[A, B]:
+  case pair (A, B)
+
+define => [K, V] (K, V -> Pair[K, V]) { pair }
+
+about =>:
+  docs: """
+    A mnemonic operator for creating key-value pairs.
+    """
+  operator:
+    right 1
+
+define unpair[A, B] (Pair[A, B] -> A, B):
+  match case pair {}
+
+define flip[A, B] (Pair[A, B] -> Pair[B, A]):
+  unpair swap pair
+
+define first[A, B] (Pair[A, B] -> A):
+  unpair drop
+
+define second[A, B] (Pair[A, B] -> B):
+  unpair swap drop

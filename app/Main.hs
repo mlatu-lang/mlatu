@@ -7,10 +7,12 @@ import Mlatu (compile, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Vocabulary qualified as Vocabulary
-import Paths_Mlatu (getDataFileName)
-import Relude
+import Paths_Mlatu (getDataDir)
+import Relude hiding (find)
 import Report (reportAll)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
+import System.Directory (doesFileExist)
+import System.FilePath.Find (always, fileName, find, (~~?))
 
 main :: IO ()
 main = do
@@ -33,8 +35,8 @@ main = do
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   let paths = Arguments.inputPaths arguments
-  commonPath <- getDataFileName "common.mlt"
-  result <- runMlatu $ compile mainPermissions Nothing (commonPath : paths)
+  commonPaths <- getCommonPaths
+  result <- runMlatu $ compile mainPermissions Nothing (commonPaths ++ paths)
   case result of
     Left reports -> do
       reportAll reports
@@ -58,3 +60,12 @@ runBatch arguments = do
       [ QualifiedName $ Qualified Vocabulary.global "IO",
         QualifiedName $ Qualified Vocabulary.global "Fail"
       ]
+
+getCommonPaths :: IO [FilePath]
+getCommonPaths = do
+  dir <- getDataDir
+  files <- search dir
+  filterM doesFileExist files
+  where
+    search :: FilePath -> IO [FilePath]
+    search = find always (fileName ~~? "*.mlt")

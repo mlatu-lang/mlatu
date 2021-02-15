@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ccbafe27b9a106eb336fc33fdb2035c86524edc8277abf94960b24c9539b85ef
+-- hash: 8826613544117c45af4fe1e9ef52af0908ee6ed0ecfa39336996b5a064397ce6
 
 name:           Mlatu
 version:        0.1.0.0
@@ -18,7 +18,18 @@ license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
 data-files:
-    common.mlt
+    common/basic.mlt
+    common/bool.mlt
+    common/drawing.mlt
+    common/either.mlt
+    common/fail.mlt
+    common/int.mlt
+    common/io.mlt
+    common/list.mlt
+    common/optional.mlt
+    common/other.mlt
+    common/pair.mlt
+    common/string.mlt
 
 source-repository head
   type: git
@@ -119,13 +130,15 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -O2
+  ghc-options: -Wall -O2 -O2
   build-depends:
       Mlatu
     , base >=4.8
     , bytestring
     , cmdargs
     , containers
+    , directory
+    , filemanip
     , hashable
     , haskeline
     , parsec
@@ -150,73 +163,11 @@ test-suite test
       Test.Resolve
       Test.Tokenize
       Test.Zonk
-      Mlatu
-      Mlatu.Base
-      Mlatu.Bits
-      Mlatu.Bracket
-      Mlatu.DataConstructor
-      Mlatu.Declaration
-      Mlatu.Definition
-      Mlatu.Desugar.Data
-      Mlatu.Desugar.Infix
-      Mlatu.Desugar.Quotations
-      Mlatu.Dictionary
-      Mlatu.Element
-      Mlatu.Enter
-      Mlatu.Entry
-      Mlatu.Entry.Category
-      Mlatu.Entry.Merge
-      Mlatu.Entry.Parameter
-      Mlatu.Entry.Parent
-      Mlatu.Entry.Type
-      Mlatu.Entry.Word
-      Mlatu.Fragment
-      Mlatu.Free
-      Mlatu.Indent
-      Mlatu.Infer
-      Mlatu.Informer
-      Mlatu.InstanceCheck
-      Mlatu.Instantiate
-      Mlatu.Instantiated
-      Mlatu.Interpret
-      Mlatu.Kind
-      Mlatu.Layoutness
-      Mlatu.Literal
-      Mlatu.Located
-      Mlatu.Metadata
-      Mlatu.Monad
-      Mlatu.Name
-      Mlatu.Occurrences
-      Mlatu.Operator
-      Mlatu.Origin
-      Mlatu.Parse
-      Mlatu.Parser
-      Mlatu.Pretty
-      Mlatu.Quantify
-      Mlatu.Queue
-      Mlatu.Regeneralize
-      Mlatu.Report
-      Mlatu.Resolve
-      Mlatu.Scope
-      Mlatu.Signature
-      Mlatu.Stack
-      Mlatu.Substitute
-      Mlatu.Synonym
-      Mlatu.Term
-      Mlatu.Token
-      Mlatu.Tokenize
-      Mlatu.Type
-      Mlatu.TypeDefinition
-      Mlatu.TypeEnv
-      Mlatu.Unify
-      Mlatu.Vocabulary
-      Mlatu.Zonk
       Paths_Mlatu
   hs-source-dirs:
       test
-      src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall
+  ghc-options: -Wall -O2
   build-depends:
       HUnit
     , JuicyPixels
@@ -225,6 +176,8 @@ test-suite test
     , base64-bytestring
     , bytestring
     , containers
+    , directory
+    , filemanip
     , hashable
     , hspec
     , knob

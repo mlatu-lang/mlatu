@@ -38,5 +38,3 @@ jobs:
       run: cabal build --enable-tests --enable-benchmarks all
     - name: Run tests
       run: cabal test all
-    - name: ormolu-action
-      uses: mrkkrp/ormolu-action@v1

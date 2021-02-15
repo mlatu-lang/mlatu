@@ -1,0 +1,39 @@
+vocab mlatu {
+
+  intrinsic print (List[Char] -> +IO)
+  intrinsic get_line (-> List[Char] +IO)
+
+  // FIXME: Figure out handles and generalize this.
+  intrinsic flush_stdout (-> +IO)
+
+  intrinsic read_file (List[Char] -> List[Char] +IO)
+  intrinsic write_file (List[Char], List[Char] -> +IO)
+  intrinsic append_file (List[Char], List[Char] -> +IO)
+}
+
+define print[T] (T -> +IO) /* where (show[T]) */ :
+  show _::mlatu::print
+
+define println[T] (T -> +IO):
+  print newline
+
+define newline (-> +IO):
+  "\n" print
+
+define get_line (-> List[Char] +IO):
+  _::mlatu::get_line
+
+define ask (List[Char] -> List[Char] +IO):
+  print _::mlatu::flush_stdout get_line
+
+define read_file (List[Char] -> List[Char] +IO):
+  _::mlatu::read_file
+
+define write_file (List[Char], List[Char] -> +IO):
+  _::mlatu::write_file
+
+define append_file (List[Char], List[Char] -> +IO):
+  _::mlatu::append_file
+
+permission IO[R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
+  with (+IO)

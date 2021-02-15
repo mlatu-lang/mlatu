@@ -8,15 +8,17 @@ where
 import qualified Data.ByteString as ByteString
 import qualified Data.Knob as Knob
 import qualified Data.Vector as Vector
-import Mlatu (fragmentFromSource)
+import Mlatu (compile, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
-import qualified Mlatu.Dictionary as Dictionary
 import qualified Mlatu.Enter as Enter
 import Mlatu.Interpret (Rep (..), interpret)
 import Mlatu.Monad (runMlatu)
 import Mlatu.Name (ConstructorIndex (ConstructorIndex))
 import qualified Mlatu.Report as Report
-import Relude hiding (stderr, stdin, stdout)
+import Paths_Mlatu (getDataDir)
+import Relude hiding (find, stderr, stdin, stdout)
+import System.Directory (doesFileExist)
+import System.FilePath.Find (always, fileName, find, (~~?))
 import System.IO (hClose)
 import Test.Common (ioPermission)
 import Test.HUnit (assertEqual, assertFailure)
@@ -27,16 +29,8 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    commonSource <- (fmap decodeUtf8 . readFileBS) "common.mlt"
-    mDictionary <- runMlatu $ do
-      common <-
-        fragmentFromSource
-          ioPermission
-          Nothing
-          1
-          "common.mlt"
-          commonSource
-      Enter.fragment common Dictionary.empty
+    commonPaths <- getCommonPaths
+    mDictionary <- runMlatu $ compile ioPermission Nothing commonPaths
     case mDictionary of
       Left reports ->
         error $
@@ -240,3 +234,12 @@ testInterpretFull
           toString $
             unlines $
               map (toText . Pretty.render . Report.human) reports
+
+getCommonPaths :: IO [FilePath]
+getCommonPaths = do
+  dir <- getDataDir
+  files <- search dir
+  filterM doesFileExist files
+  where
+    search :: FilePath -> IO [FilePath]
+    search = find always (fileName ~~? "*.mlt")
