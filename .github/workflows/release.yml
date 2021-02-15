@@ -24,7 +24,7 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: "3.2"
       - name: Set some Windows-specific things
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         env:
           GHC_VER: ${{ matrix.ghc }}
         run: |
@@ -32,7 +32,7 @@ jobs:
           GHC_VER=$(echo $GHC_VER | sed 's/8.10.2.2/8.10.2/g')
           echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
       - name: Set some Linux-specific things
-        if: matrix.os == "ubuntu-latest"
+        if: matrix.os == 'ubuntu-latest'
         env:
           GHC_VER: ${{ matrix.ghc }}
         run: |
@@ -48,8 +48,8 @@ jobs:
           Build
           # Try building it twice in case of flakey builds on Windows
         run: |
-          cabal build exe:hls -O2 $LINUX_CABAL_ARGS || \
-          cabal build exe:hls -O2 $LINUX_CABAL_ARGS -j1
+          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS || \
+          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS -j1
       - name: Compress binary
         id: compress_binary
         run: |
