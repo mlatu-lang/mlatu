@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
-      - uses: haskell/action/setup@v1
+      - uses: haskell/actions/setup@v1
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: "3.2"
