@@ -22,9 +22,29 @@
 		"comments": {
 			"patterns": [
 				{
-					"name": "comment.line.double-slash",
-					"begin": "//",
-					"end": "\n"
+					"name": "comment.line.double-slash.mlatu",
+					"match": "//.*$"
+				},
+				{
+					"name": "comment.block.mlatu",
+					"begin": "/\\*",
+					"end": "\\*/"
+				}
+			]
+		},
+		"constants": {
+			"patterns": [
+				{
+					"name": "constant.numeric.mlatu",
+					"match": "\\b[+-]?[0-9]+(?:\\.[0-9]+)?\\b"
+				},
+				{
+					"name": "constant.character.escaape.mlatu",
+					"match": "\\\\."
+				},
+				{
+					"name": "constant.language.mlatu",
+					"match": "\\b(true|false)\\b"
 				}
 			]
 		},
@@ -52,7 +72,7 @@
 			"patterns": [
 				{
 					"name": "entity.name.type.mlatu",
-					"match": "([A-Z]([a-zA-Z0-9]+))"
+					"match": "\\b[A-Z][0-9A-Za-z_]*\\b"
 				}
 			]
 		},
