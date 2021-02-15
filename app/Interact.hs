@@ -40,8 +40,8 @@ import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
-import Paths_Mlatu (getDataFileName)
-import Relude
+import Paths_Mlatu (getDataDir)
+import Relude hiding (find)
 import Relude.Extra (next)
 import Relude.Extra.Enum (prev)
 import Report (reportAll)
@@ -60,20 +60,13 @@ import System.IO (hPrint, hPutStrLn)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (printf)
+import System.Directory (doesFileExist)
+import System.FilePath.Find (always, fileName, find, (~~?))
 
 run :: IO ()
 run = do
-  commonPath <- getDataFileName "common.mlt"
-  commonSource <- (fmap decodeUtf8 . readFileBS) commonPath
-  commonDictionary <- runMlatu $ do
-    fragment <-
-      Mlatu.fragmentFromSource
-        [QualifiedName $ Qualified Vocabulary.global "IO"]
-        (Just $ Qualified Vocabulary.global "main")
-        1
-        commonPath
-        commonSource
-    Enter.fragment fragment Dictionary.empty
+  commonPaths <- getCommonPaths
+  commonDictionary <- runMlatu $ Mlatu.compile [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing commonPaths
   dictionaryRef <-
     newIORef =<< case commonDictionary of
       Left reports -> do
@@ -466,3 +459,12 @@ getEntry lineNumber0 = do
         go Outside n [] = n == 0
         isOpen = (`elem` ("([{" :: String))
         isClose = (`elem` ("}])" :: String))
+
+getCommonPaths :: IO [FilePath]
+getCommonPaths = do
+  dir <- getDataDir
+  files <- search dir
+  filterM doesFileExist files
+  where
+    search :: FilePath -> IO [FilePath]
+    search = find always (fileName ~~? "*.mlt")

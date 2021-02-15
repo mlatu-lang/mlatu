@@ -9,6 +9,10 @@ license: BSD2
 
 ghc-options:
   - -Wall
+  - -O2
+
+data-files:
+  - common/*.mlt
 
 default-extensions:
   - NoImplicitPrelude
@@ -67,8 +71,6 @@ dependencies:
 
 library:
   source-dirs: src
-  ghc-options:
-    - -O2
   dependencies:
     - JuicyPixels
     - base64-bytestring
@@ -86,13 +88,13 @@ executables:
       - Mlatu
       - cmdargs
       - haskeline
+      - filemanip
+      - directory
 
 tests:
   test:
     main: Main.hs
-    source-dirs:
-      - test
-      - src
+    source-dirs: test
     dependencies:
       - HUnit
       - JuicyPixels
@@ -100,5 +102,5 @@ tests:
       - base64-bytestring
       - hspec
       - knob
-data-files:
-  - common.mlt
+      - filemanip
+      - directory
