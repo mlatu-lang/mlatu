@@ -48,7 +48,8 @@ jobs:
           Build
           # Try building it twice in case of flakey builds on Windows
         run: |
-          cabal update; \
+          cabal update; 
+          cabal build exe:mlatu -O2 || \
           cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS || \
           cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS -j1
       - name: Compress binary
@@ -59,7 +60,7 @@ jobs:
           MLATU=mlatu-${{env.GHC_VERSION}}
           mv $MLATU_BUILD $MLATU${{env.EXE_EXT}}
           if [[ "$OSTYPE" == "msys" ]]; then
-            7z a $MLATU_BUILD.zip $MLATU${{env.EXE_EXT}}
+            7z a $MLATU.zip $MLATU${{env.EXE_EXT}}
             echo ::set-output name=path::$MLATU.zip
             echo ::set-output name=content_type::application/zip
             echo ::set-output name=extension::zip
