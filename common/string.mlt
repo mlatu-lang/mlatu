@@ -1,0 +1,118 @@
+trait show[T] (T -> List[Char])
+
+instance show (List[Char] -> List[Char]) {}
+
+instance show (Char -> List[Char]):
+  -> x;
+  [x]
+
+instance show (Bool -> List[Char]):
+  if { "true" } else { "false" }
+
+vocab mlatu {
+
+  intrinsic show_int8 (Int8 -> List[Char])
+  intrinsic show_int16 (Int16 -> List[Char])
+  intrinsic show_int32 (Int32 -> List[Char])
+  intrinsic show_int64 (Int64 -> List[Char])
+  intrinsic show_uint8 (UInt8 -> List[Char])
+  intrinsic show_uint16 (UInt16 -> List[Char])
+  intrinsic show_uint32 (UInt32 -> List[Char])
+  intrinsic show_uint64 (UInt64 -> List[Char])
+  intrinsic show_float32 (Float32 -> List[Char])
+  intrinsic show_float64 (Float64 -> List[Char])
+
+}
+
+instance show (Int8 -> List[Char]):
+  _::mlatu::show_int8
+
+instance show (Int16 -> List[Char]):
+  _::mlatu::show_int16
+
+instance show (Int32 -> List[Char]):
+  _::mlatu::show_int32
+
+instance show (Int64 -> List[Char]):
+  _::mlatu::show_int64
+
+instance show (UInt8 -> List[Char]):
+  _::mlatu::show_uint8
+
+instance show (UInt16 -> List[Char]):
+  _::mlatu::show_uint16
+
+instance show (UInt32 -> List[Char]):
+  _::mlatu::show_uint32
+
+instance show (UInt64 -> List[Char]):
+  _::mlatu::show_uint64
+
+instance show (Float32 -> List[Char]):
+  _::mlatu::show_float32
+
+instance show (Float64 -> List[Char]):
+  _::mlatu::show_float64
+
+trait read[T] (List[Char] -> Optional[T])
+
+instance read (List[Char] -> Optional[List[Char]]) { some }
+
+instance read (List[Char] -> Optional[Char]):
+  -> cs;
+  if (cs length = 1):
+    cs head
+  else:
+    none
+
+instance read (List[Char] -> Optional[Bool]):
+  -> cs;
+  if (cs = "true"): true some
+  elif (cs = "false"): false some
+  else: none
+
+vocab mlatu {
+
+  intrinsic read_int8 (List[Char] -> Optional[Int8])
+  intrinsic read_int16 (List[Char] -> Optional[Int16])
+  intrinsic read_int32 (List[Char] -> Optional[Int32])
+  intrinsic read_int64 (List[Char] -> Optional[Int64])
+  intrinsic read_uint8 (List[Char] -> Optional[UInt8])
+  intrinsic read_uint16 (List[Char] -> Optional[UInt16])
+  intrinsic read_uint32 (List[Char] -> Optional[UInt32])
+  intrinsic read_uint64 (List[Char] -> Optional[UInt64])
+  intrinsic read_float32 (List[Char] -> Optional[Float32])
+  intrinsic read_float64 (List[Char] -> Optional[Float64])
+
+}
+
+instance read (List[Char] -> Optional[Int8]):
+  _::mlatu::read_int8
+
+instance read (List[Char] -> Optional[Int16]):
+  _::mlatu::read_int16
+
+instance read (List[Char] -> Optional[Int32]):
+  _::mlatu::read_int32
+
+instance read (List[Char] -> Optional[Int64]):
+  _::mlatu::read_int64
+
+instance read (List[Char] -> Optional[UInt8]):
+  _::mlatu::read_uint8
+
+instance read (List[Char] -> Optional[UInt16]):
+  _::mlatu::read_uint16
+
+instance read (List[Char] -> Optional[UInt32]):
+  _::mlatu::read_uint32
+
+instance read (List[Char] -> Optional[UInt64]):
+  _::mlatu::read_uint64
+
+instance read (List[Char] -> Optional[Float32]):
+  _::mlatu::read_float32
+
+instance read (List[Char] -> Optional[Float64]):
+  _::mlatu::read_float64
+

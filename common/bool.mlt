@@ -1,0 +1,155 @@
+type Bool:
+  case false
+  case true
+
+trait not[T] (T -> T)
+
+instance not (Bool -> Bool):
+  if:
+    false
+  else:
+    true
+
+instance not (Int8 -> Int8) { _::mlatu::not_int8 }
+instance not (Int16 -> Int16) { _::mlatu::not_int16 }
+instance not (Int32 -> Int32) { _::mlatu::not_int32 }
+instance not (Int64 -> Int64) { _::mlatu::not_int64 }
+instance not (UInt8 -> UInt8) { _::mlatu::not_uint8 }
+instance not (UInt16 -> UInt16) { _::mlatu::not_uint16 }
+instance not (UInt32 -> UInt32) { _::mlatu::not_uint32 }
+instance not (UInt64 -> UInt64) { _::mlatu::not_uint64 }
+
+// Strict intersection.
+trait & [T] (T, T -> T)
+
+about &:
+  operator:
+    right 3
+
+instance & (Bool, Bool -> Bool):
+  -> x, y;
+  if (x):
+    y
+  else:
+    false
+
+instance & (Int8, Int8 -> Int8) { _::mlatu::and_int8 }
+instance & (Int16, Int16 -> Int16) { _::mlatu::and_int16 }
+instance & (Int32, Int32 -> Int32) { _::mlatu::and_int32 }
+instance & (Int64, Int64 -> Int64) { _::mlatu::and_int64 }
+instance & (UInt8, UInt8 -> UInt8) { _::mlatu::and_uint8 }
+instance & (UInt16, UInt16 -> UInt16) { _::mlatu::and_uint16 }
+instance & (UInt32, UInt32 -> UInt32) { _::mlatu::and_uint32 }
+instance & (UInt64, UInt64 -> UInt64) { _::mlatu::and_uint64 }
+
+// Lazy intersection.
+trait && [T] (T, (-> T) -> T)
+
+about &&:
+  operator:
+    right 3
+
+instance && (Bool, (-> Bool) -> Bool):
+  -> x, y;
+  if (x):
+    y call
+  else:
+    false
+
+// Strict union.
+trait | [T] (T, T -> T)
+
+about |:
+  operator:
+    right 2
+
+instance | (Bool, Bool -> Bool):
+  -> x, y;
+  if (x):
+    true
+  else:
+    y
+
+instance | (Int8, Int8 -> Int8) { _::mlatu::or_int8 }
+instance | (Int16, Int16 -> Int16) { _::mlatu::or_int16 }
+instance | (Int32, Int32 -> Int32) { _::mlatu::or_int32 }
+instance | (Int64, Int64 -> Int64) { _::mlatu::or_int64 }
+instance | (UInt8, UInt8 -> UInt8) { _::mlatu::or_uint8 }
+instance | (UInt16, UInt16 -> UInt16) { _::mlatu::or_uint16 }
+instance | (UInt32, UInt32 -> UInt32) { _::mlatu::or_uint32 }
+instance | (UInt64, UInt64 -> UInt64) { _::mlatu::or_uint64 }
+
+// Lazy union.
+trait || [T] (T, (-> T) -> T)
+
+about ||:
+  operator:
+    right 2
+
+instance || (Bool, (-> Bool) -> Bool):
+  -> x, y;
+  if (x):
+    true
+  else:
+    y call
+
+// Strict difference.
+trait ~ [A] (A, A -> A)
+
+about ~:
+  operator:
+    5
+
+instance ~ (Bool, Bool -> Bool):
+  swap
+  if { not }
+
+instance ~ (Int8, Int8 -> Int8) { _::mlatu::xor_int8 }
+instance ~ (Int16, Int16 -> Int16) { _::mlatu::xor_int16 }
+instance ~ (Int32, Int32 -> Int32) { _::mlatu::xor_int32 }
+instance ~ (Int64, Int64 -> Int64) { _::mlatu::xor_int64 }
+instance ~ (UInt8, UInt8 -> UInt8) { _::mlatu::xor_uint8 }
+instance ~ (UInt16, UInt16 -> UInt16) { _::mlatu::xor_uint16 }
+instance ~ (UInt32, UInt32 -> UInt32) { _::mlatu::xor_uint32 }
+instance ~ (UInt64, UInt64 -> UInt64) { _::mlatu::xor_uint64 }
+
+// Strict implication.
+trait --> [T] (T, T -> T)
+
+about -->:
+  operator:
+    right 1
+
+instance --> (Bool, Bool -> Bool):
+  -> a, b;
+  if (a) { b } else { true }
+
+instance --> (Int8, Int8 -> Int8) { -> a, b; a not | b }
+instance --> (Int16, Int16 -> Int16) { -> a, b; a not | b }
+instance --> (Int32, Int32 -> Int32) { -> a, b; a not | b }
+instance --> (Int64, Int64 -> Int64) { -> a, b; a not | b }
+instance --> (UInt8, UInt8 -> UInt8) { -> a, b; a not | b }
+instance --> (UInt16, UInt16 -> UInt16) { -> a, b; a not | b }
+instance --> (UInt32, UInt32 -> UInt32) { -> a, b; a not | b }
+instance --> (UInt64, UInt64 -> UInt64) { -> a, b; a not | b }
+
+// Lazy implication.
+define ---> (Bool, (-> Bool) -> Bool):
+  -> a, b;
+  if (a) { b call } else { true }
+
+about --->:
+  operator:
+    right 1
+
+define until[R...] (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call not):
+    f until
+
+// do (while) { ... }
+define while[R...] (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call):
+    f while
+

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 646663b8bdc096fd90078c39d44071051ee55afeb2444c1cd56da3c9f366707d
+-- hash: 8826613544117c45af4fe1e9ef52af0908ee6ed0ecfa39336996b5a064397ce6
 
 name:           Mlatu
 version:        0.1.0.0
@@ -18,7 +18,18 @@ license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
 data-files:
-    common/common.mlt
+    common/basic.mlt
+    common/bool.mlt
+    common/drawing.mlt
+    common/either.mlt
+    common/fail.mlt
+    common/int.mlt
+    common/io.mlt
+    common/list.mlt
+    common/optional.mlt
+    common/other.mlt
+    common/pair.mlt
+    common/string.mlt
 
 source-repository head
   type: git
