@@ -48,6 +48,7 @@ jobs:
           Build
           # Try building it twice in case of flakey builds on Windows
         run: |
+          cabal update; \
           cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS || \
           cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS -j1
       - name: Compress binary
@@ -55,7 +56,7 @@ jobs:
         run: |
           # We normalize windows+choco ghc version 8.10.2.2
           MLATU_BUILD=$(find dist-newstyle \( -name 'mlatu' -o -name 'mlatu.exe' \) -type f)
-          MLATU=haskell-language-server-${{env.GHC_VERSION}}
+          MLATU=mlatu-${{env.GHC_VERSION}}
           mv $MLATU_BUILD $MLATU${{env.EXE_EXT}}
           if [[ "$OSTYPE" == "msys" ]]; then
             7z a $MLATU_BUILD.zip $MLATU${{env.EXE_EXT}}
