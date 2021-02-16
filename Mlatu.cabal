@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8826613544117c45af4fe1e9ef52af0908ee6ed0ecfa39336996b5a064397ce6
+-- hash: 43f961dca9cfc093ec8adb7a470751eac0b4f80866dac00747a783381a8a0d1c
 
 name:           Mlatu
 version:        0.1.0.0
@@ -20,7 +20,6 @@ build-type:     Simple
 data-files:
     common/basic.mlt
     common/bool.mlt
-    common/drawing.mlt
     common/either.mlt
     common/fail.mlt
     common/int.mlt
@@ -105,9 +104,7 @@ library
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
   ghc-options: -Wall -O2
   build-depends:
-      JuicyPixels
-    , base >=4.8
-    , base64-bytestring
+      base >=4.8
     , bytestring
     , containers
     , hashable
@@ -170,10 +167,8 @@ test-suite test
   ghc-options: -Wall -O2
   build-depends:
       HUnit
-    , JuicyPixels
     , Mlatu
     , base >=4.8
-    , base64-bytestring
     , bytestring
     , containers
     , directory

@@ -71,9 +71,6 @@ dependencies:
 
 library:
   source-dirs: src
-  dependencies:
-    - JuicyPixels
-    - base64-bytestring
   when:
     - condition: false
       other-modules: Paths_name
@@ -97,9 +94,7 @@ tests:
     source-dirs: test
     dependencies:
       - HUnit
-      - JuicyPixels
       - Mlatu
-      - base64-bytestring
       - hspec
       - knob
       - filemanip

@@ -13,14 +13,10 @@ module Mlatu.Interpret
   )
 where
 
-import Codec.Picture.Png qualified as Png
-import Codec.Picture.Types qualified as Picture
 import Control.Exception (ArithException (..), catch, throwIO)
 import Data.Bits
   ( Bits (complement, rotate, shift, (.&.), (.|.)),
   )
-import Data.ByteString qualified as ByteString
-import Data.ByteString.Base64 qualified as Base64
 import Data.Fixed (mod')
 import Data.Vector (Vector, (!))
 import Data.Vector qualified as Vector
@@ -52,14 +48,12 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (log)
 import Relude hiding (Compose, Type, callStack)
-import Relude.Extra (safeToEnum)
 import Relude.Unsafe qualified as Unsafe
 import System.Exit (ExitCode (..))
 import System.IO (hFlush, hGetLine, hPutChar, hPutStrLn, readIO)
 import System.IO.Error (IOError, isAlreadyInUseError, isDoesNotExistError, isPermissionError)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
-import Text.Printf (hPrintf)
 import Text.Show qualified
 
 -- | Representation of a runtime value.
@@ -644,42 +638,6 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               writeIORef stackRef $ Array xs' ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
-        "draw" -> do
-          Array ys ::: rest <- readIORef stackRef
-          writeIORef stackRef rest
-          let height = length ys
-              width =
-                if null ys
-                  then 0
-                  else case ys ! 0 of
-                    Array xs -> Vector.length xs
-                    _nonArray -> error "draw: the typechecker has failed us (rows)"
-          hPrintf
-            stdout'
-            "\ESC]1337;File=width=%dpx;height=%dpx;inline=1:%s\BEL\n"
-            width
-            height
-            $ mapMaybe ((safeToEnum :: Int -> Maybe Char) . fromIntegral) $
-              ByteString.unpack $
-                Base64.encode $
-                  toStrict $
-                    Png.encodePng $
-                      Picture.generateImage
-                        ( \x y -> case ys ! y of
-                            Array xs -> case xs ! x of
-                              Algebraic _ channels -> case channels of
-                                [UInt8 r, UInt8 g, UInt8 b, UInt8 a] ->
-                                  Picture.PixelRGBA8
-                                    (fromIntegral r)
-                                    (fromIntegral g)
-                                    (fromIntegral b)
-                                    (fromIntegral a)
-                                _nonChannel -> error "draw: the typechecker has failed us (channel)"
-                              _nonColumn -> error "draw: the typechecker has failed us (column)"
-                            _nonRow -> error "draw: the typechecker has failed us (row)"
-                        )
-                        width
-                        height
         _nonIntrinsic -> error "no such intrinsic"
         where
           unaryInt8 :: (Int8 -> Int8) -> IO ()
