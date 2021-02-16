@@ -44,20 +44,25 @@ define fizzbuzz (Int32 -> List[Char]):
     else: n show
 define fizzbuzzes (Int32, Int32 -> +IO):
   -> c, m;
-  c fizzbuzz say
+  c fizzbuzz println
   if (c < m): (c + 1) m fizzbuzzes
 1 100 fizzbuzzes
 ```
 
-Here's a basic fibonacci function:
+Here's a naive recursive fibonacci function:
 
 ```
 define fib (UInt64 -> UInt64):
   -> n;
-  if (n <= 1u64):
+  if (n = 0u64):
+    0u64
+  elif (n = 1u64):
     1u64
   else:
-    (n - 2u64) fib + (n - 1u64) fib
+    (n - 2u64) fib + 
+    (n - 1u64) fib
+
+10u64 fib
 ```
 
 ## Installation and Usage

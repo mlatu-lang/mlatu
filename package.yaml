@@ -87,6 +87,7 @@ executables:
       - Mlatu
       - cmdargs
       - haskeline
+ #     - time
 
 tests:
   test:

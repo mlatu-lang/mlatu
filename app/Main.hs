@@ -2,15 +2,18 @@ module Main where
 
 import Arguments (Arguments, parseArguments)
 import Arguments qualified
+-- import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Interact qualified
-import Mlatu (compile, runMlatu, getCommonPaths)
+import Mlatu (compile, getCommonPaths, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Paths_Mlatu (getDataDir)
-import Relude hiding (find)
+import Relude
 import Report (reportAll)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
+import Text.PrettyPrint.HughesPJ qualified as Pretty
+import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 
 main :: IO ()
 main = do
@@ -34,25 +37,22 @@ runBatch :: Arguments -> IO ()
 runBatch arguments = do
   let paths = Arguments.inputPaths arguments
   commonPaths <- getCommonPaths getDataDir
+  -- time1 <- getCurrentTime
   result <- runMlatu $ compile mainPermissions Nothing (commonPaths ++ paths)
   case result of
     Left reports -> do
       reportAll reports
       exitFailure
-    Right program -> case Arguments.compileMode arguments of
-      Arguments.CheckMode -> pass
-      Arguments.CompileMode _format -> pass
-      Arguments.InterpretMode ->
-        void $
-          interpret
-            program
-            Nothing
-            []
-            stdin
-            stdout
-            stderr
-            []
-      Arguments.FormatMode -> pass
+    Right program ->
+      case Arguments.compileMode arguments of
+        Arguments.CheckMode -> pass
+        Arguments.CompileMode _ -> pass
+        Arguments.InterpretMode -> do
+          reps <- interpret program Nothing [] stdin stdout stderr []
+          -- time2 <- getCurrentTime
+          -- putStrLn $ "Time: " <> show (diffUTCTime time2 time1)
+          forM_ reps (putStrLn . Pretty.render . pPrint)
+        Arguments.FormatMode -> pass
   where
     mainPermissions =
       [ QualifiedName $ Qualified Vocabulary.global "IO",
