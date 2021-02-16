@@ -68,6 +68,8 @@ dependencies:
   - unordered-containers
   - vector
   - relude
+  - filemanip
+  - directory
 
 library:
   source-dirs: src
@@ -85,8 +87,6 @@ executables:
       - Mlatu
       - cmdargs
       - haskeline
-      - filemanip
-      - directory
 
 tests:
   test:
@@ -97,5 +97,3 @@ tests:
       - Mlatu
       - hspec
       - knob
-      - filemanip
-      - directory

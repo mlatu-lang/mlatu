@@ -83,7 +83,7 @@ instance Pretty Signature where
           ++ map ((Pretty.char '+' Pretty.<>) . pPrint) es
   pPrint (Quantified names typ _) =
     Pretty.hsep
-      [ Pretty.angles $ Pretty.list $ map prettyVar names,
+      [ Pretty.brackets $ Pretty.list $ map prettyVar names,
         pPrint typ
       ]
     where

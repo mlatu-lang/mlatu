@@ -97,9 +97,9 @@ instance (MonadIO m) => MonadIO (KT m) where
     return $ Right (x, reports)
 
 instance (Monad m) => Informer (KT m) where
-  checkpoint = KT $ \_context reports ->
+  checkpoint lvls = KT $ \_context reports ->
     return $
-      if not (any (\(Report lvl _) -> lvl == Error) reports) then Right ((), reports) else Left reports
+      if not (any (\(Report lvl _) -> lvl `elem` lvls) reports) then Right ((), reports) else Left reports
   halt = KT $ \_context reports -> return $ Left reports
   report r = KT $ \context reports ->
     return . Right . (,) () $

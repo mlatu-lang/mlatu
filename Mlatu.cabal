@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 43f961dca9cfc093ec8adb7a470751eac0b4f80866dac00747a783381a8a0d1c
+-- hash: b5a1722ad9a773c8b90c33db14602785ff1f49d580ab17c7cd162a528f95a402
 
 name:           Mlatu
 version:        0.1.0.0
@@ -58,6 +58,7 @@ library
       Mlatu.Entry.Word
       Mlatu.Fragment
       Mlatu.Free
+      Mlatu.Hint
       Mlatu.Indent
       Mlatu.Infer
       Mlatu.Informer
@@ -107,6 +108,8 @@ library
       base >=4.8
     , bytestring
     , containers
+    , directory
+    , filemanip
     , hashable
     , parsec
     , pretty

@@ -3,7 +3,7 @@ module Test.InstanceCheck
   )
 where
 
-import Mlatu.Informer (checkpoint)
+import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Monad (runMlatu)
@@ -93,7 +93,7 @@ testInstanceCheck :: Sign -> Type -> Type -> IO ()
 testInstanceCheck sign a b = do
   result <- runMlatu $ do
     instanceCheck "polymorphic" a "concrete" b
-    checkpoint
+    errorCheckpoint
   case sign of
     Positive ->
       assertBool (Pretty.render $ Pretty.hsep [pPrint a, "<:", pPrint b]) $

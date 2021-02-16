@@ -34,7 +34,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (Fragment))
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (errorCheckpoint, Informer (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
@@ -115,7 +115,7 @@ fragment line path mainPermissions mainName tokens =
 generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
 generalName line path text = do
   tokens <- tokenize line path text
-  checkpoint
+  errorCheckpoint
   bracketed <- bracket path tokens
   let parsed = Parsec.runParser nameParser Vocabulary.global path bracketed
   case parsed of

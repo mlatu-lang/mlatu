@@ -11,6 +11,7 @@ module Mlatu
     compile,
     runMlatu,
     tokenize,
+    getCommonPaths
   )
 where
 
@@ -20,8 +21,9 @@ import Mlatu.Enter qualified as Enter
 import Mlatu.Monad (K, runMlatu)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Tokenize (tokenize)
-import Relude
-import Text.Parsec.Text ()
+import Relude hiding (find)
+import System.Directory (doesFileExist)
+import System.FilePath.Find (always, fileName, find, (~~?))
 
 -- | This is a simple wrapper for the compiler pipeline. It adds a list of
 -- program fragments to the dictionary from a list of source paths. At each
@@ -49,4 +51,11 @@ compile mainPermissions mainName paths = do
   -- dictionary <-
   Enter.fragment parsed Dictionary.empty
 
--- collectInstantiations dictionary
+getCommonPaths :: IO FilePath -> IO [FilePath]
+getCommonPaths f = do
+  dir <- f
+  files <- search dir
+  filterM doesFileExist files
+  where
+    search :: FilePath -> IO [FilePath]
+    search = find always (fileName ~~? "*.mlt")

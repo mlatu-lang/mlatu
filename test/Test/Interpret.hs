@@ -8,7 +8,7 @@ where
 import qualified Data.ByteString as ByteString
 import qualified Data.Knob as Knob
 import qualified Data.Vector as Vector
-import Mlatu (compile, fragmentFromSource)
+import Mlatu (compile, getCommonPaths, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import qualified Mlatu.Enter as Enter
 import Mlatu.Interpret (Rep (..), interpret)
@@ -17,8 +17,6 @@ import Mlatu.Name (ConstructorIndex (ConstructorIndex))
 import qualified Mlatu.Report as Report
 import Paths_Mlatu (getDataDir)
 import Relude hiding (find, stderr, stdin, stdout)
-import System.Directory (doesFileExist)
-import System.FilePath.Find (always, fileName, find, (~~?))
 import System.IO (hClose)
 import Test.Common (ioPermission)
 import Test.HUnit (assertEqual, assertFailure)
@@ -29,16 +27,17 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    commonPaths <- getCommonPaths
-    mDictionary <- runMlatu $ compile ioPermission Nothing commonPaths
-    case mDictionary of
-      Left reports ->
-        error $
-          toText $
-            Pretty.render $
-              Pretty.vcat $
-                "unable to set up interpreter tests:" : map Report.human reports
-      Right dictionary -> return $ testInterpretFull dictionary
+      commonPaths <- getCommonPaths getDataDir
+      mDictionary <- runMlatu $ compile ioPermission Nothing commonPaths
+      case mDictionary of
+        Left reports ->
+          error $
+            toText $
+              Pretty.render $
+                Pretty.vcat $
+                  "unable to set up interpreter tests:" : map Report.human reports
+        Right dictionary -> return $ testInterpretFull dictionary
+
 
   let testInterpret = testInterpretWithHandles "" Nothing Nothing
 
@@ -235,11 +234,3 @@ testInterpretFull
             unlines $
               map (toText . Pretty.render . Report.human) reports
 
-getCommonPaths :: IO [FilePath]
-getCommonPaths = do
-  dir <- getDataDir
-  files <- search dir
-  filterM doesFileExist files
-  where
-    search :: FilePath -> IO [FilePath]
-    search = find always (fileName ~~? "*.mlt")

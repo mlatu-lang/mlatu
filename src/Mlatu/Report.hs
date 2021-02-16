@@ -14,6 +14,7 @@ module Mlatu.Report
     human,
     parseError,
     makeError,
+    makeWarning,
   )
 where
 
@@ -54,6 +55,9 @@ data Report = Report Level ReportKind
 makeError :: ReportKind -> Report
 makeError = Report Error
 
+makeWarning :: ReportKind -> Report
+makeWarning = Report Warn
+
 data ReportKind
   = MissingTypeSignature !Origin !Qualified
   | MultiplePermissionVariables !Origin !Type !Type
@@ -72,6 +76,7 @@ data ReportKind
   | StackDepthMismatch !Origin
   | InvalidOperatorMetadata !Origin !Qualified !(Term ())
   | ParseError !Origin ![Pretty.Doc] !Pretty.Doc
+  | UseCommon !Origin !Qualified
   | Context ![(Origin, Pretty.Doc)] !Report
   deriving (Eq, Show)
 
@@ -227,6 +232,13 @@ human (Report lvl kind) =
         Pretty.hcat
           [ showOriginPrefix origin,
             "this case is redundant and will never match"
+          ]
+      (UseCommon origin instead) ->
+        Pretty.hcat
+          [ showOriginPrefix origin,
+            "I think you can use ",
+            pPrint instead,
+            " from the common library instead of what you have here"
           ]
       (Chain reports) -> Pretty.vsep $ map kindMsg reports
       (OccursCheckFailure a b) ->

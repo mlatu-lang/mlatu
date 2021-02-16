@@ -43,7 +43,7 @@ import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
@@ -246,7 +246,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     (cases', caseTypes, constructors', tenv1) <-
       foldlM inferCase' ([], [], constructors, tenv0) cases
     -- Checkpoint to halt after redundant cases are reported.
-    checkpoint
+    errorCheckpoint
     (else', elseType, tenv2) <- case else_ of
       Else body elseOrigin -> do
         (body', bodyType, tenv') <- inferType' tenv1 body

@@ -3,11 +3,11 @@ module Test.Infer
   )
 where
 
-import Mlatu (fragmentFromSource)
+import Mlatu (compile, fragmentFromSource, getCommonPaths)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
-import Mlatu.Informer (checkpoint)
+import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
@@ -19,6 +19,7 @@ import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.Vocabulary qualified as Vocabulary
+import Paths_Mlatu (getDataDir)
 import Relude hiding (Type)
 import Test.Common (Sign (..))
 import Test.HUnit (assertBool, assertFailure)
@@ -49,21 +50,21 @@ spec = do
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
-        "type Pair[A, B] { case pair (A, B) }\n\
-        \define => [K, V] (K, V -> Pair[K, V]) { pair }\n\
-        \about => { operator { right 1 } }\n\
-        \define test (-> List[Pair[Int32, Int32]]) { [1 => 1, 2 => 2, 3 => 3] }"
+        "define test (-> List[Pair[Int32, Int32]]) { [1 => 1, 2 => 2, 3 => 3] }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
 
     it "typechecks intrinsics" $ do
       testTypecheck
         Positive
-        "define test [R..., S..., +P] (R... -> S... +P) { _::mlatu::magic }"
+        "vocab mlatu {\
+        \ intrinsic magic[R..., S...] (R... -> S...)\
+        \}\
+        \define test [R..., S..., +P] (R... -> S... +P) { _::mlatu::magic }"
         $ Type.fun o r s e
 
       testTypecheck
         Positive
-        "define test (-> Int32) { 1 2 _::mlatu::add_int }"
+        "define test (-> Int32) { 1 2 _::mlatu::add_int32 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks data types" $ do
@@ -90,48 +91,20 @@ spec = do
         Positive
         "define one (-> Int32) { 1 }\n\
         \define two (-> Int32) { 2 }\n\
-        \define test (-> Int32) { one two _::mlatu::add_int }"
+        \define test (-> Int32) { one two _::mlatu::add_int32 }"
         $ Type.fun o r (Type.prod o r int) e
 
       testTypecheck
         Positive
-        "define up (Int32 -> Int32) { 1 _::mlatu::add_int }\n\
-        \define down (Int32 -> Int32) { -1 _::mlatu::add_int }\n\
-        \define test (-> Int32) { 1 up 2 down _::mlatu::add_int }"
+        "define up (Int32 -> Int32) { 1 _::mlatu::add_int32 }\n\
+        \define down (Int32 -> Int32) { -1 _::mlatu::add_int32 }\n\
+        \define test (-> Int32) { 1 up 2 down _::mlatu::add_int32 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks operators" $ do
       testTypecheck
         Positive
-        "define + (Int32, Int32 -> Int32) { _::mlatu::add_int }\n\
-        \define test (-> Int32) { 1 + 1 }"
-        $ Type.fun o r (Type.prod o r int) e
-
-      testTypecheck
-        Positive
-        "define + (Int32, Int32 -> Int32) { _::mlatu::add_int }\n\
-        \about +:\n\
-        \  operator:\n\
-        \    right 5\n\
-        \define test (-> Int32) { 1 + 1 }"
-        $ Type.fun o r (Type.prod o r int) e
-
-      testTypecheck
-        Positive
-        "define + (Int32, Int32 -> Int32) { _::mlatu::add_int }\n\
-        \about +:\n\
-        \  operator:\n\
-        \    right\n\
-        \define test (-> Int32) { 1 + 1 }"
-        $ Type.fun o r (Type.prod o r int) e
-
-      testTypecheck
-        Positive
-        "define + (Int32, Int32 -> Int32) { _::mlatu::add_int }\n\
-        \about +:\n\
-        \  operator:\n\
-        \    5\n\
-        \define test (-> Int32) { 1 + 1 }"
+        "define test (-> Int32) { 1 + 1 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks nested scopes" $ do
@@ -244,7 +217,7 @@ spec = do
       testTypecheck
         Positive
         "define curried_add (Int32 -> Int32 -> Int32) {\n\
-        \  -> x; { -> y; x y _::mlatu::add_int }\n\
+        \  -> x; { -> y; x y _::mlatu::add_int32 }\n\
         \}\n\
         \define test (-> Int32) { 1 2 curried_add call }"
         $ Type.fun o r (Type.prod o r int) e
@@ -287,9 +260,8 @@ testTypecheck sign input expected = do
   result <- runMlatu $ do
     let io = [QualifiedName $ Qualified Vocabulary.global "IO"]
     fragment <- fragmentFromSource io Nothing 1 "<test>" input
-    -- FIXME: Avoid redundantly reparsing common vocabulary.
-    common <- fragmentFromSource io Nothing 1 "<common>" commonSource
-    commonDictionary <- Enter.fragment common Dictionary.empty
+    commonPaths <- liftIO $ getCommonPaths getDataDir
+    commonDictionary <- compile io Nothing commonPaths
     Enter.fragment fragment commonDictionary
   case Dictionary.toList <$> result of
     Right definitions -> case find matching definitions of
@@ -297,7 +269,7 @@ testTypecheck sign input expected = do
         let actual = Term.typ term
         check <- runMlatu $ do
           instanceCheck "inferred" actual "declared" expected
-          checkpoint
+          errorCheckpoint
         case sign of
           Positive ->
             assertBool
@@ -326,28 +298,3 @@ testTypecheck sign input expected = do
       -- FIXME: This might accept a negative test for the wrong
       -- reason.
       Negative -> pass
-
--- FIXME: Avoid redundantly re-parsing common vocabulary.
-commonSource :: Text
-commonSource =
-  "\
-  \vocab mlatu {\
-  \  intrinsic call[R..., S...] (R..., (R... -> S...) -> S...)\n\
-  \  intrinsic magic[R..., S...] (R... -> S...)\n\
-  \  intrinsic add_int (_::Int32, _::Int32 -> _::Int32)\n\
-  \}\n\
-  \define call[R..., S...] (R..., (R... -> S...) -> S...) {\n\
-  \  _::mlatu::call\n\
-  \}\n\
-  \intrinsic abort[R..., S...] (R... -> S... +Fail)\n\
-  \type Char {}\n\
-  \type Float64 {}\n\
-  \type Int32 {}\n\
-  \type List[T] {}\n\
-  \permission IO[R..., S..., +E] (R..., (R... -> S... +IO +E) -> S... +E) {\n\
-  \  with (+IO)\n\
-  \}\n\
-  \permission Fail[R..., S..., +E] (R..., (R... -> S... +Fail +E) -> S... +E) {\n\
-  \  with (+Fail)\n\
-  \}\n\
-  \\&"
