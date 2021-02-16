@@ -87,18 +87,18 @@ spec = do
         `shouldBe` Right
           [Operator (Unqualified "\x2192?")]
 
-    -- This is to support stack quantifiers, e.g., "<R...>" should be parsed as:
+    -- This is to support stack quantifiers, e.g., "[R...]" should be parsed as:
     --
-    --     <
+    --     [
     --     R
     --     ...
-    --     >
+    --     ]
     --
     -- And not:
     --
-    --     <
+    --     [
     --     R
-    --     ...>
+    --     ...]
     --
     it "produces multiple tokens for ellipsis followed by symbol" $ do
       testTokenize "...?"

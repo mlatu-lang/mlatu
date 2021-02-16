@@ -37,9 +37,11 @@ term t = go $ Term.decompose t
     go :: (Eq a) => [Term.Term a] -> K ()
     go = \case
       [] -> pass
-      (t1:t2:_) | t1 == t2 -> report $ 
-        Report.makeWarning $ Report.UseCommon (Term.origin t) dup_name
-      (_:ts) -> go ts
+      (t1@Term.Push {} : t2@Term.Push {} : _)
+        | t1 == t2 ->
+          report $
+            Report.makeWarning $ Report.UseCommon (Term.origin t) dup_name
+      (_ : ts) -> go ts
 
     dup_name = Qualified Vocabulary.global "dup"
 

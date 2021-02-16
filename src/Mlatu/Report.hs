@@ -237,7 +237,7 @@ human (Report lvl kind) =
         Pretty.hcat
           [ showOriginPrefix origin,
             "I think you can use ",
-            pPrint instead,
+            Pretty.quote instead,
             " from the common library instead of what you have here"
           ]
       (Chain reports) -> Pretty.vsep $ map kindMsg reports

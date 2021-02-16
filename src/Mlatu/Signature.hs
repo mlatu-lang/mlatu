@@ -71,7 +71,7 @@ origin signature = case signature of
 instance Pretty Signature where
   pPrint (Application a b _) =
     Pretty.hcat
-      [pPrint a, Pretty.angles $ pPrint b]
+      [pPrint a, Pretty.brackets $ pPrint b]
   pPrint (Bottom _) = "<bottom>"
   pPrint (Function as bs es _) =
     Pretty.parens $

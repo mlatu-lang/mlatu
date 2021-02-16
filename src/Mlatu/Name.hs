@@ -115,8 +115,9 @@ instance IsString Unqualified where
   fromString = Unqualified . toText
 
 instance Pretty Qualified where
-  pPrint (Qualified qualifierName unqualifiedName) =
-    pPrint qualifierName
+  pPrint (Qualified (Qualifier Absolute []) unqualifiedName) = pPrint unqualifiedName
+  pPrint (Qualified qualifier unqualifiedName) =
+    pPrint qualifier
       Pretty.<> "::"
       Pretty.<> pPrint unqualifiedName
 

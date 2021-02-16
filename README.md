@@ -12,13 +12,17 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 ## Todo (unordered)
 
-- [ ] Generate Rust code from IR
+- [ ] Create a compiler backend that generates Rust code
 
-- [ ] Format IR back into Mlatu
+- [ ] Create a formatter that can format the common files
 
-- [ ] Rework syntax into something a little bit nicer
+- [ ] Benchmark or profile so that performance can be optimized
 
-- [ ] Write a TextMate grammar for syntax highlighting
+- [ ] Hint on code that is repetitious of common functions
+
+- [ ] Support generic trait instances
+
+- [ ] Support trait constraints on parameters
 
 ## Examples
 

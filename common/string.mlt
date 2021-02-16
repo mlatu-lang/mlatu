@@ -9,6 +9,20 @@ instance show (Char -> List[Char]):
 instance show (Bool -> List[Char]):
   if { "true" } else { "false" }
 
+instance show[A, B] (Either[A, B] -> List[Char]):
+  match 
+  case left:
+    show
+  case right: 
+    show
+
+instance show[T] (Optional[T] -> List[Char]):
+  match 
+  case some -> x: 
+    "some " x show cat
+  case none:
+    "none"
+
 vocab mlatu {
 
   intrinsic show_int8 (Int8 -> List[Char])

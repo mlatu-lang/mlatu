@@ -39,6 +39,18 @@ define elem[T] (T, List[T] -> Bool):
   case none:
     false
 
+define not_elem[T] (T, List[T] -> Bool):
+  -> x, xs;
+  match (xs head_tail)
+  case some:
+    unpair -> h, t;
+    if (x = h):
+      false
+    else:
+      x t not_elem
+  case none:
+    true
+
 // TODO: Partial instances.
 instance > (List[Int32], List[Int32] -> Bool):
   -> xs, ys;
@@ -332,32 +344,18 @@ define cartesian_with[A, B, C] (List[A], List[B], (A, B -> C) -> List[C]):
     ys do (map) -> y:
       x y f call
 
-// These (all, and, any, or) would be cleaner with lazy folds or slices.
-
 define all[T] (List[T], (T -> Bool) -> Bool):
   -> xs, f;
-  match (xs head_tail)
-  case some:
-    unpair -> h, t;
-    if (h f call):
-      t f all
-    else:
-      false
-  case none:
-    true
+  xs true { f call (&) } fold_left 
 
-// define and (List<Bool> -> Bool)
+define and (List[Bool] -> Bool):
+  -> xs;
+  xs true \& fold_left 
 
 define any[T] (List[T], (T -> Bool) -> Bool):
   -> xs, f;
-  match (xs head_tail)
-  case some:
-    unpair -> h, t;
-    if (h f call):
-      true
-    else:
-      t f any
-  case none:
-    false
+  xs true { f call (|) } fold_left 
 
-// define or[T] (List<Bool> -> Bool)
+define or (List[Bool] -> Bool):
+  -> xs;
+  xs true \| fold_left 

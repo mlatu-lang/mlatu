@@ -157,7 +157,7 @@ instance Pretty Type where
           Pretty.hcat ["+", recur a, " ", recur b]
         TypeConstructor _ "Join" :@ a ->
           Pretty.parens $ Pretty.hcat ["+", recur a]
-        a :@ b -> Pretty.hcat [recur a, Pretty.angles $ recur b]
+        a :@ b -> Pretty.hcat [recur a, Pretty.brackets $ recur b]
         TypeConstructor _ constructor -> pPrint constructor
         TypeVar _ var@(Var name i k) ->
           -- The default cases here shouldn't happen if the context was built
@@ -185,7 +185,7 @@ instance Pretty Type where
             prettyForall (Forall _ x t) vars = prettyForall t (x : vars)
             prettyForall t vars =
               Pretty.hcat
-                [ Pretty.angles $
+                [ Pretty.brackets $
                     Pretty.list $
                       map (recur . TypeVar (origin t)) vars,
                   Pretty.parens $ recur t

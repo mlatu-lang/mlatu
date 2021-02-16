@@ -10,7 +10,7 @@ vocab mlatu {
 }
 
 define abort[R..., S...] (R... -> S... +Fail):
-  "abort called" _::mlatu::abort
+  "abort called" fail
 
 define exit[R..., S...] (R..., Int32 -> S... +Exit):
   _::mlatu::exit
@@ -23,4 +23,8 @@ define assert[+P] (List[Char], (-> Bool +P) -> +Fail +P):
   do (with (-Fail)):
     test call
   if (not):
-    message _::mlatu::abort
+    message fail
+
+define assert_eq[T] (List[Char], T, T -> +Fail):
+  -> message, x, y;
+  message { x = y } assert

@@ -270,7 +270,7 @@ instance Pretty (Term a) where
     Compose _ a b -> pPrint a Pretty.$+$ pPrint b
     Generic name i body _ ->
       Pretty.hsep
-        [ Pretty.angles $ Pretty.hcat [pPrint name, "/*", pPrint i, "*/"],
+        [ Pretty.brackets $ Pretty.hcat [pPrint name, "/*", pPrint i, "*/"],
           pPrint body
         ]
     Group a -> Pretty.parens (pPrint a)
