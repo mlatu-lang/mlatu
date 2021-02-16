@@ -62,5 +62,5 @@ term tenv t args = foldlM go t args
   where
     go (Generic _name x expr _origin) arg = Substitute.term tenv x arg expr
     go _ _ = do
-      report $ Report.TypeArgumentCountMismatch t $ map (Zonk.typ tenv) args
+      report $ Report.makeError $ Report.TypeArgumentCountMismatch t $ map (Zonk.typ tenv) args
       halt

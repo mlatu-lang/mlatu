@@ -49,7 +49,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
              in typ tenv2 r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
-        report $ Report.TypeMismatch t1' t2'
+        report $ Report.makeError $ Report.TypeMismatch t1' t2'
         halt
   (_, TypeConstructor _ "Join" :@ _ :@ _) -> commute
   -- We fall back to regular unification for value type constructors. This makes
@@ -60,7 +60,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     tenv1 <- typ tenv0 a c
     typ tenv1 b d
   _mismatch -> do
-    report $ Report.TypeMismatch t1' t2'
+    report $ Report.makeError $ Report.TypeMismatch t1' t2'
     halt
 
     -- Unification is commutative. If we fail to handle a case, this can result in
@@ -93,13 +93,15 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
         let t' = Zonk.typ tenv0 t
          in do
               report $
-                Report.Chain $
-                  [ Report.TypeMismatch (TypeVar origin v) t',
-                    Report.OccursCheckFailure (TypeVar origin v) t'
-                  ]
-                    ++ case t' of
-                      TypeConstructor _ "Prod" :@ _ :@ _ -> [Report.StackDepthMismatch (Type.origin t')]
-                      _nonProd -> []
+                Report.makeError $
+                  Report.Chain $
+                    [ Report.TypeMismatch (TypeVar origin v) t',
+                      Report.OccursCheckFailure (TypeVar origin v) t'
+                    ]
+                      ++ case t' of
+                        TypeConstructor _ "Prod" :@ _ :@ _ -> [Report.StackDepthMismatch (Type.origin t')]
+                        _nonProd -> []
+
               halt
       else declare
   where

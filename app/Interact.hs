@@ -6,7 +6,7 @@ where
 import Control.Exception (catch)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
-import Mlatu (runMlatu)
+import Mlatu (getCommonPaths, runMlatu)
 import Mlatu qualified
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -17,7 +17,7 @@ import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Infer (typeFromSignature, typecheck)
-import Mlatu.Informer (checkpoint)
+import Mlatu.Informer (errorCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Instantiated qualified as Instantiated
 import Mlatu.Interpret (Failure, interpret)
@@ -41,7 +41,7 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
 import Paths_Mlatu (getDataDir)
-import Relude hiding (find)
+import Relude
 import Relude.Extra (next)
 import Relude.Extra.Enum (prev)
 import Report (reportAll)
@@ -60,12 +60,10 @@ import System.IO (hPrint, hPutStrLn)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (printf)
-import System.Directory (doesFileExist)
-import System.FilePath.Find (always, fileName, find, (~~?))
 
 run :: IO ()
 run = do
-  commonPaths <- getCommonPaths
+  commonPaths <- getCommonPaths getDataDir
   commonDictionary <- runMlatu $ Mlatu.compile [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing commonPaths
   dictionaryRef <-
     newIORef =<< case commonDictionary of
@@ -126,21 +124,50 @@ run = do
                               lineNumber
                               "<interactive>"
                               expression
-                          checkpoint
+                          errorCheckpoint
                           case Fragment.definitions fragment of
                             [main] | Definition.name main == Definition.mainName -> do
                               resolved <- Enter.resolveAndDesugar dictionary main
-                              checkpoint
+                              errorCheckpoint
                               (_, typ) <-
                                 typecheck dictionary Nothing $
                                   Definition.body resolved
-                              checkpoint
+                              errorCheckpoint
                               return (Just typ)
                             _otherDefinition -> return Nothing
 
                       liftIO $ case mResults of
                         Left reports -> reportAll reports
                         Right (Just typ) -> putStrLn $ Pretty.render $ pPrint typ
+                        Right Nothing ->
+                          hPutStrLn stderr $
+                            Pretty.render $
+                              Pretty.hsep
+                                [ "That doesn't look like an expression"
+                                ]
+                      loop
+                    ("debug", expression) -> do
+                      dictionary <- liftIO $ readIORef dictionaryRef
+                      mResults <- liftIO $
+                        runMlatu $ do
+                          fragment <-
+                            Mlatu.fragmentFromSource
+                              [QualifiedName $ Qualified Vocabulary.global "IO"]
+                              Nothing
+                              lineNumber
+                              "<interactive>"
+                              expression
+                          errorCheckpoint
+                          case Fragment.definitions fragment of
+                            [main] | Definition.name main == Definition.mainName -> do
+                              resolved <- Enter.resolveAndDesugar dictionary main
+                              errorCheckpoint
+                              return $ Just $ Definition.body resolved
+                            _otherDefinition -> return Nothing
+
+                      liftIO $ case mResults of
+                        Left reports -> reportAll reports
+                        Right (Just to_show) -> print to_show
                         Right Nothing ->
                           hPutStrLn stderr $
                             Pretty.render $
@@ -178,7 +205,7 @@ run = do
                         "<interactive>"
                         line
                     dictionary' <- Enter.fragment fragment dictionary
-                    checkpoint
+                    _ <- errorCheckpoint
                     callFragment <-
                       Mlatu.fragmentFromSource
                         [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -188,7 +215,7 @@ run = do
                         -- TODO: Avoid stringly typing.
                         (toText $ Pretty.render $ pPrint entryName)
                     dictionary'' <- Enter.fragment callFragment dictionary'
-                    checkpoint
+                    errorCheckpoint
                     let tenv = TypeEnv.empty
                         mainBody = case Dictionary.lookup
                           (Instantiated Definition.mainName [])
@@ -216,7 +243,7 @@ run = do
                     -- current stack state, as long as the state was modified
                     -- correctly by the interpreter.
                     _ <- Unify.typ tenv stackScheme (Term.typ mainBody)
-                    checkpoint
+                    errorCheckpoint
                     return (dictionary'', mainBody)
                 case mResults of
                   Left reports -> do
@@ -459,12 +486,3 @@ getEntry lineNumber0 = do
         go Outside n [] = n == 0
         isOpen = (`elem` ("([{" :: String))
         isClose = (`elem` ("}])" :: String))
-
-getCommonPaths :: IO [FilePath]
-getCommonPaths = do
-  dir <- getDataDir
-  files <- search dir
-  filterM doesFileExist files
-  where
-    search :: FilePath -> IO [FilePath]
-    search = find always (fileName ~~? "*.mlt")

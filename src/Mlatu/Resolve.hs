@@ -181,7 +181,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
               if isDefined global
                 then return (QualifiedName global)
                 else do
-                  lift $ report $ Report.CannotResolveName origin category name
+                  lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
                   return name
 
     -- A qualified name may refer to an intrinsic or a definition.
@@ -197,7 +197,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
           if isDefined qualified'
             then return $ QualifiedName qualified'
             else do
-              lift $ report $ Report.CannotResolveName origin category name
+              lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
               return name
     LocalName {} -> error "local name should not appear before name resolution"
 

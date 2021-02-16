@@ -28,8 +28,9 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
+import Mlatu.Hint qualified as Hint
 import Mlatu.Infer (mangleInstance, typecheck)
-import Mlatu.Informer (checkpoint, report)
+import Mlatu.Informer (errorCheckpoint, report)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Metadata (Metadata)
 import Mlatu.Metadata qualified as Metadata
@@ -168,12 +169,14 @@ declareWord dictionary definition =
           | otherwise ->
             do
               report $
-                Report.WordRedeclaration
-                  (Signature.origin signature)
-                  name
-                  signature
-                  originalOrigin
-                  mSignature
+                Report.makeError $
+                  Report.WordRedeclaration
+                    (Signature.origin signature)
+                    name
+                    signature
+                    originalOrigin
+                    mSignature
+
               return dictionary
         -- Already declared or defined as a trait.
         Just (Entry.Trait _origin traitSignature)
@@ -256,7 +259,7 @@ defineWord ::
 defineWord dictionary definition = do
   let name = Definition.name definition
   resolved <- resolveAndDesugar dictionary definition
-  checkpoint
+  errorCheckpoint
   let resolvedSignature = Definition.signature resolved
   -- Note that we use the resolved signature here.
   (typecheckedBody, typ) <-
@@ -267,7 +270,7 @@ defineWord dictionary definition = do
           else Just resolvedSignature
       )
       $ Definition.body resolved
-  checkpoint
+  errorCheckpoint
   case Dictionary.lookup (Instantiated name []) dictionary of
     -- Already declared or defined as a trait.
     Just (Entry.Trait _origin traitSignature)
@@ -360,10 +363,12 @@ defineWord dictionary definition = do
     -- Already defined, not concatenable.
     Just (Entry.Word _ Merge.Deny originalOrigin _ (Just _sig) _) -> do
       report $
-        Report.WordRedefinition
-          (Definition.origin definition)
-          name
-          originalOrigin
+        Report.makeError $
+          Report.WordRedefinition
+            (Definition.origin definition)
+            name
+            originalOrigin
+
       return dictionary
     -- Not previously declared as word.
     _nonDeclared ->
@@ -394,8 +399,7 @@ fragmentFromSource mainPermissions mainName line path source = do
   -- Sources are lexed into a stream of tokens.
 
   tokenized <- tokenize line path source
-  checkpoint
-
+  errorCheckpoint
   -- The layout rule is applied to desugar indentation-based syntax, so that the
   -- parser can find the ends of blocks without checking the indentation of
   -- tokens.
@@ -407,7 +411,12 @@ fragmentFromSource mainPermissions mainName line path source = do
   -- resolution can find their names.
 
   parsed <- Parse.fragment line path mainPermissions mainName bracketed
-  checkpoint
+
+  errorCheckpoint
+
+  _ <- Hint.fragment parsed
+
+  errorCheckpoint
 
   return parsed
 
@@ -418,14 +427,16 @@ resolveAndDesugar dictionary definition = do
 
   -- needs dictionary for declared names
   resolved <- Resolve.run $ Resolve.definition dictionary definition
-  checkpoint
+
+  errorCheckpoint
 
   -- After names have been resolved, the precedences of operators are known, so
   -- infix operators can be desugared into postfix syntax.
 
   -- needs dictionary for operator metadata
   postfix <- Infix.desugar dictionary resolved
-  checkpoint
+
+  errorCheckpoint
 
   -- In addition, now that we know which names refer to local variables,
   -- quotations can be rewritten into closures that explicitly capture the
