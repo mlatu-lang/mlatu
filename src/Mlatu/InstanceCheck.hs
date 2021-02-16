@@ -46,7 +46,7 @@ instanceCheck _ aScheme _ bScheme = do
   let bad = Set.filter (`Set.member` escaped) ids
   unless (Set.null bad) failure
   where
-    failure = report $ Report.FailedInstanceCheck aScheme bScheme
+    failure = report $ Report.makeError $ Report.FailedInstanceCheck aScheme bScheme
 
 -- | Skolemization replaces each quantified type variable with a type constant
 -- that unifies only with itself.
@@ -92,7 +92,7 @@ subsumptionCheckFun tenv0 a b e a' b' e' = do
       labels' = permissionList $ Zonk.typ tenv2 e'
   forM_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
     Just {} -> pass
-    Nothing -> report $ Report.MissingPermissionLabel e e' origin label
+    Nothing -> report $ Report.makeError $ Report.MissingPermissionLabel e e' origin label
   return tenv2
   where
     permissionList :: Type -> [(Origin, Constructor)]

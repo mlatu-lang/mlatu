@@ -17,7 +17,7 @@ where
 import Control.Monad.Fix (MonadFix (..))
 import Mlatu.Informer (Informer (..))
 import Mlatu.Origin (Origin)
-import Mlatu.Report (Report (..))
+import Mlatu.Report (Level (..), Report (..), ReportKind (..))
 import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
 import Text.PrettyPrint qualified as Pretty
@@ -99,10 +99,14 @@ instance (MonadIO m) => MonadIO (KT m) where
 instance (Monad m) => Informer (KT m) where
   checkpoint = KT $ \_context reports ->
     return $
-      if null reports then Right ((), reports) else Left reports
+      if not (any (\(Report lvl _) -> lvl == Error) reports) then Right ((), reports) else Left reports
   halt = KT $ \_context reports -> return $ Left reports
-  report r = KT $ \context reports -> return . Right . (,) () $ case context of
-    [] -> r : reports
-    _list -> Context context r : reports
+  report r = KT $ \context reports ->
+    return . Right . (,) () $
+      ( \case
+          [] -> r : reports
+          ctxt -> Report Info (Context ctxt r) : reports
+      )
+        context
   while origin message action = KT $ \context reports ->
     unKT action ((origin, message) : context) reports

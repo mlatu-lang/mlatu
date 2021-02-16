@@ -39,7 +39,6 @@ instance Monoid (Fragment a) where
         synonyms = mempty,
         types = mempty
       }
-  mappend = (<>)
 
 instance Semigroup (Fragment a) where
   (<>) a b =

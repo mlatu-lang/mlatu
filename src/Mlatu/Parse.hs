@@ -98,7 +98,7 @@ fragment line path mainPermissions mainName tokens =
           halt
         Right result -> return (Data.desugar (insertMain result))
   where
-    isMain = (== fromMaybe Definition.mainName mainName) . Definition.name
+    isMain = (fromMaybe Definition.mainName mainName ==) . Definition.name
     insertMain f = case find isMain $ Fragment.definitions f of
       Just {} -> f
       Nothing ->

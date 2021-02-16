@@ -63,7 +63,7 @@ spec = do
       let origin = Origin.point "" 1 3
       testTokenize "/*"
         `shouldBe` Left
-          [ Report.ParseError
+          [ Report.makeError $ Report.ParseError
               origin
               ["unexpected end of input"]
               "expected \"/*\" or \"*/\""
@@ -133,7 +133,7 @@ spec = do
       let origin = Origin.point "" 1 2
       testTokenize "\""
         `shouldBe` Left
-          [ Report.ParseError
+          [ Report.makeError $ Report.ParseError
               origin
               ["unexpected end of input"]
               "expected character, escape, or closing double quote"
@@ -142,7 +142,7 @@ spec = do
       let origin = Origin.point "" 1 2
       testTokenize "\x201C"
         `shouldBe` Left
-          [ Report.ParseError
+          [ Report.makeError $ Report.ParseError
               origin
               ["unexpected end of input"]
               "expected character, nested opening quote, \
@@ -152,7 +152,7 @@ spec = do
       let origin = Origin.point "" 2 1
       testTokenize "\"\n\""
         `shouldBe` Left
-          [ Report.ParseError
+          [ Report.makeError $ Report.ParseError
               origin
               [ "unexpected newline in text literal; \
                 \use an escape, gap, or paragraph instead"
@@ -203,7 +203,7 @@ spec = do
         \ bar\n\
         \  \"\"\""
         `shouldBe` Left
-          [ Report.ParseError
+          [ Report.makeError $ Report.ParseError
               origin
               ["unexpected \" bar\""]
               "expected all lines to be empty or begin with 2 spaces"

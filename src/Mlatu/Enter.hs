@@ -168,12 +168,14 @@ declareWord dictionary definition =
           | otherwise ->
             do
               report $
-                Report.WordRedeclaration
-                  (Signature.origin signature)
-                  name
-                  signature
-                  originalOrigin
-                  mSignature
+                Report.makeError $
+                  Report.WordRedeclaration
+                    (Signature.origin signature)
+                    name
+                    signature
+                    originalOrigin
+                    mSignature
+
               return dictionary
         -- Already declared or defined as a trait.
         Just (Entry.Trait _origin traitSignature)
@@ -360,10 +362,12 @@ defineWord dictionary definition = do
     -- Already defined, not concatenable.
     Just (Entry.Word _ Merge.Deny originalOrigin _ (Just _sig) _) -> do
       report $
-        Report.WordRedefinition
-          (Definition.origin definition)
-          name
-          originalOrigin
+        Report.makeError $
+          Report.WordRedefinition
+            (Definition.origin definition)
+            name
+            originalOrigin
+
       return dictionary
     -- Not previously declared as word.
     _nonDeclared ->

@@ -435,7 +435,7 @@ inferCase
         let matching ctor = DataConstructor.name ctor == unqualifiedName name
         dataConstructors' <- case partition matching dataConstructors of
           ([], remaining) -> do
-            report $ Report.RedundantCase origin
+            report $ Report.makeError $ Report.RedundantCase origin
             return remaining
           (_covered, remaining) -> return remaining
         return (Case qualified body' origin, typ, dataConstructors', tenv5)
@@ -519,10 +519,6 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
       let type'' = Zonk.typ tenvFinal type'
           params'' = map (Zonk.typ tenvFinal) params'
       let mangled = QualifiedName name
-      -- case params'' of
-      --   [] -> name
-      --   _ -> Qualified Vocabulary.global
-      --     $ Unqualified $ Mangle.name name params''
       return
         ( Word
             type''
@@ -535,7 +531,7 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
         )
     Just {} -> error "what is a non-quantified type doing as a type signature?"
     Nothing -> do
-      report $ Report.MissingTypeSignature origin name
+      report $ Report.makeError $ Report.MissingTypeSignature origin name
       halt
 inferCall _dictionary _tenvFinal _tenv0 name _ =
   -- FIXME: Use proper reporting. (Internal error?)
@@ -613,7 +609,7 @@ typeFromSignature tenv signature0 = do
       Just (preceding, typ, following) -> case find isTypeVar following of
         Nothing -> return (Just typ, preceding ++ following)
         Just type' -> do
-          report $ Report.MultiplePermissionVariables origin typ type'
+          report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
           halt
       Nothing -> return (Nothing, types)
       where
@@ -626,7 +622,7 @@ typeFromSignature tenv signature0 = do
       case existing of
         Just (var, varOrigin) -> return $ TypeVar varOrigin var
         Nothing -> lift $ do
-          report $ Report.CannotResolveType origin $ UnqualifiedName name
+          report $ Report.makeError $ Report.CannotResolveType origin $ UnqualifiedName name
           halt
     fromVar origin (QualifiedName name) =
       return $ TypeConstructor origin $ Constructor name

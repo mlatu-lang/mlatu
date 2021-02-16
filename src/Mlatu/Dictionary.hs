@@ -110,10 +110,12 @@ operatorMetadata dictionary =
                   Operator.Precedence $ fromInteger prec
               | otherwise -> do
                 report $
-                  Report.InvalidOperatorMetadata
-                    (Term.origin term)
-                    name
-                    term
+                  Report.makeError $
+                    Report.InvalidOperatorMetadata
+                      (Term.origin term)
+                      name
+                      term
+
                 yield defaultAssociativity defaultPrecedence
             _noMetadata -> yield defaultAssociativity defaultPrecedence
       where
