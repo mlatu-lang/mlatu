@@ -11,6 +11,7 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Paths_Mlatu (getDataDir)
 import Relude
 import Report (reportAll)
+import System.Directory (makeAbsolute)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
 import Text.PrettyPrint.HughesPJ qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
@@ -35,7 +36,7 @@ main = do
 
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
-  let paths = Arguments.inputPaths arguments
+  paths <- forM (Arguments.inputPaths arguments) makeAbsolute
   commonPaths <- getCommonPaths getDataDir
   -- time1 <- getCurrentTime
   result <- runMlatu $ compile mainPermissions Nothing (commonPaths ++ paths)
