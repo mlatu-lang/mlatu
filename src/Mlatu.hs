@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu
 -- Description : Compiler pipeline
@@ -11,19 +13,27 @@ module Mlatu
     compile,
     runMlatu,
     tokenize,
-    getCommonPaths
+    compileCommon,
   )
 where
 
+import Data.FileEmbed (embedDir)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Monad (K, runMlatu)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Tokenize (tokenize)
-import Relude hiding (find)
-import System.Directory (doesFileExist)
-import System.FilePath.Find (always, fileName, find, (~~?))
+import Relude
+
+common :: [(FilePath, ByteString)]
+common = $(embedDir "./common/")
+
+commonPaths :: [FilePath]
+commonPaths = map fst common
+
+commonSources :: [Text]
+commonSources = map (decodeUtf8 . snd) common
 
 -- | This is a simple wrapper for the compiler pipeline. It adds a list of
 -- program fragments to the dictionary from a list of source paths. At each
@@ -36,9 +46,10 @@ compile ::
   Maybe Qualified ->
   -- | List of source file paths.
   [FilePath] ->
+  Maybe Dictionary ->
   -- | Resulting dictionary.
   K Dictionary
-compile mainPermissions mainName paths = do
+compile mainPermissions mainName paths mDict = do
   -- Source files must be encoded in UTF-8.
 
   sources <- liftIO $ mapM (fmap decodeUtf8 . readFileBS) paths
@@ -49,13 +60,15 @@ compile mainPermissions mainName paths = do
         paths
         sources
   -- dictionary <-
-  Enter.fragment parsed Dictionary.empty
+  Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
-getCommonPaths :: IO FilePath -> IO [FilePath]
-getCommonPaths f = do
-  dir <- f
-  files <- search dir
-  filterM doesFileExist files
-  where
-    search :: FilePath -> IO [FilePath]
-    search = find always (fileName ~~? "*.mlt")
+compileCommon :: [GeneralName] -> Maybe Qualified -> K Dictionary
+compileCommon mainPermissions mainName = do
+  parsed <-
+    mconcat
+      <$> zipWithM
+        (Enter.fragmentFromSource mainPermissions mainName 1)
+        commonPaths
+        commonSources
+  -- dictionary <-
+  Enter.fragment parsed Dictionary.empty

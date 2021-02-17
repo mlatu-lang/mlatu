@@ -11,9 +11,6 @@ ghc-options:
   - -Wall
   - -O2
 
-data-files:
-  - common/*.mlt
-
 default-extensions:
   - NoImplicitPrelude
   - LambdaCase
@@ -68,8 +65,7 @@ dependencies:
   - unordered-containers
   - vector
   - relude
-  - filemanip
-  - directory
+  - file-embed
 
 library:
   source-dirs: src
@@ -87,7 +83,7 @@ executables:
       - Mlatu
       - cmdargs
       - haskeline
- #     - time
+      - directory
 
 tests:
   test:

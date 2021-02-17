@@ -3,7 +3,7 @@ module Test.Infer
   )
 where
 
-import Mlatu (compile, fragmentFromSource, getCommonPaths)
+import Mlatu (compileCommon, fragmentFromSource)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
@@ -19,7 +19,6 @@ import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.Vocabulary qualified as Vocabulary
-import Paths_Mlatu (getDataDir)
 import Relude hiding (Type)
 import Test.Common (Sign (..))
 import Test.HUnit (assertBool, assertFailure)
@@ -257,44 +256,52 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  result <- runMlatu $ do
-    let io = [QualifiedName $ Qualified Vocabulary.global "IO"]
-    fragment <- fragmentFromSource io Nothing 1 "<test>" input
-    commonPaths <- liftIO $ getCommonPaths getDataDir
-    commonDictionary <- compile io Nothing commonPaths
-    Enter.fragment fragment commonDictionary
-  case Dictionary.toList <$> result of
-    Right definitions -> case find matching definitions of
-      Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
-        let actual = Term.typ term
-        check <- runMlatu $ do
-          instanceCheck "inferred" actual "declared" expected
-          errorCheckpoint
-        case sign of
-          Positive ->
-            assertBool
-              (Pretty.render $ Pretty.hsep [pPrint actual, "<:", pPrint expected])
-              $ isRight check
-          Negative ->
-            assertBool
-              (Pretty.render $ Pretty.hsep [pPrint actual, "</:", pPrint expected])
-              $ isLeft check
-      _ ->
-        assertFailure $
+  mDictionary <- runMlatu $ compileCommon ioPermission Nothing
+  case mDictionary of
+    Left reports ->
+      error $
+        toText $
           Pretty.render $
-            Pretty.hsep
-              ["missing main word definition:", pPrint definitions]
-      where
-        matching (Instantiated (Qualified v "test") _, _)
-          | v == Vocabulary.global =
-            True
-        matching _ = False
-    Left reports -> case sign of
-      Positive ->
-        assertFailure $
-          toString $
-            unlines $
-              map (toText . Pretty.render . Report.human) reports
-      -- FIXME: This might accept a negative test for the wrong
-      -- reason.
-      Negative -> pass
+            Pretty.vcat $
+              "unable to set up inference tests:" : map Report.human reports
+    Right dictionary -> do
+      result <- runMlatu $ do
+        fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
+        Enter.fragment fragment dictionary
+      case Dictionary.toList <$> result of
+        Right definitions -> case find matching definitions of
+          Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
+            let actual = Term.typ term
+            check <- runMlatu $ do
+              instanceCheck "inferred" actual "declared" expected
+              errorCheckpoint
+            case sign of
+              Positive ->
+                assertBool
+                  (Pretty.render $ Pretty.hsep [pPrint actual, "<:", pPrint expected])
+                  $ isRight check
+              Negative ->
+                assertBool
+                  (Pretty.render $ Pretty.hsep [pPrint actual, "</:", pPrint expected])
+                  $ isLeft check
+          _ ->
+            assertFailure $
+              Pretty.render $
+                Pretty.hsep
+                  ["missing main word definition:", pPrint definitions]
+          where
+            matching (Instantiated (Qualified v "test") _, _)
+              | v == Vocabulary.global =
+                True
+            matching _ = False
+        Left reports -> case sign of
+          Positive ->
+            assertFailure $
+              toString $
+                unlines $
+                  map (toText . Pretty.render . Report.human) reports
+          -- FIXME: This might accept a negative test for the wrong
+          -- reason.
+          Negative -> pass
+  where
+    ioPermission = [QualifiedName $ Qualified Vocabulary.global "IO"]

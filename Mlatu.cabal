@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b5a1722ad9a773c8b90c33db14602785ff1f49d580ab17c7cd162a528f95a402
+-- hash: a79493e26e15a30d0b19cbba177512b2ca65dbc7e47227608313ffce2ae5b775
 
 name:           Mlatu
 version:        0.1.0.0
@@ -17,18 +17,6 @@ maintainer:     code@brightlysalty.33mail.com
 license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
-data-files:
-    common/basic.mlt
-    common/bool.mlt
-    common/either.mlt
-    common/fail.mlt
-    common/int.mlt
-    common/io.mlt
-    common/list.mlt
-    common/optional.mlt
-    common/other.mlt
-    common/pair.mlt
-    common/string.mlt
 
 source-repository head
   type: git
@@ -108,8 +96,7 @@ library
       base >=4.8
     , bytestring
     , containers
-    , directory
-    , filemanip
+    , file-embed
     , hashable
     , parsec
     , pretty
@@ -138,7 +125,7 @@ executable mlatu
     , cmdargs
     , containers
     , directory
-    , filemanip
+    , file-embed
     , hashable
     , haskeline
     , parsec
@@ -174,8 +161,7 @@ test-suite test
     , base >=4.8
     , bytestring
     , containers
-    , directory
-    , filemanip
+    , file-embed
     , hashable
     , hspec
     , knob
