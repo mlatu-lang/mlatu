@@ -6,7 +6,7 @@ where
 import Control.Exception (catch)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
-import Mlatu (getCommonPaths, runMlatu)
+import Mlatu (compileCommon, runMlatu)
 import Mlatu qualified
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -40,7 +40,6 @@ import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
-import Paths_Mlatu (getDataDir)
 import Relude
 import Relude.Extra (next)
 import Relude.Extra.Enum (prev)
@@ -63,8 +62,7 @@ import Text.Printf (printf)
 
 run :: IO ()
 run = do
-  commonPaths <- getCommonPaths getDataDir
-  commonDictionary <- runMlatu $ Mlatu.compile [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing commonPaths
+  commonDictionary <- runMlatu $ compileCommon [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
   dictionaryRef <-
     newIORef =<< case commonDictionary of
       Left reports -> do

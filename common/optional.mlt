@@ -49,3 +49,11 @@ define lift_optional_2[A, B, C] (Optional[A], Optional[B], (A, B -> C) -> Option
       none
   else:
     none
+
+define map_optional[A, B] (Optional[A], (A -> B) -> Optional[B]):
+  -> opt, f;
+  match (opt)
+  case some -> x:
+    x f call some 
+  else:
+    none

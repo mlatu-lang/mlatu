@@ -58,7 +58,7 @@ instance (Monad m) => Functor (KT m) where
       Right (x, reports') -> return $ Right (f x, reports')
 
 instance (Monad m) => Applicative (KT m) where
-  pure x = KT $ \_context reports -> return $ Right (x, reports)
+  pure x = KT $ const (return . Right . (x,))
   KT af <*> KT ax = KT $ \context reports -> do
     mf <- af context reports
     case mf of
@@ -70,7 +70,7 @@ instance (Monad m) => Applicative (KT m) where
       Left reports' -> return $ Left reports'
 
 instance (Monad m) => Monad (KT m) where
-  return x = KT $ \_context reports -> return $ Right (x, reports)
+  return = pure
   KT ax >>= f = KT $ \context reports -> do
     mx <- ax context reports
     case mx of

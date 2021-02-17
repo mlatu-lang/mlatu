@@ -5,39 +5,36 @@ module Test.Interpret
   )
 where
 
-import qualified Data.ByteString as ByteString
-import qualified Data.Knob as Knob
-import qualified Data.Vector as Vector
-import Mlatu (compile, getCommonPaths, fragmentFromSource)
+import Data.ByteString qualified as ByteString
+import Data.Knob qualified as Knob
+import Data.Vector qualified as Vector
+import Mlatu (compileCommon, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
-import qualified Mlatu.Enter as Enter
+import Mlatu.Enter qualified as Enter
 import Mlatu.Interpret (Rep (..), interpret)
 import Mlatu.Monad (runMlatu)
 import Mlatu.Name (ConstructorIndex (ConstructorIndex))
-import qualified Mlatu.Report as Report
-import Paths_Mlatu (getDataDir)
-import Relude hiding (find, stderr, stdin, stdout)
+import Mlatu.Report qualified as Report
+import Relude hiding (stderr, stdin, stdout)
 import System.IO (hClose)
 import Test.Common (ioPermission)
 import Test.HUnit (assertEqual, assertFailure)
 import Test.Hspec (Spec, describe, it, runIO)
-import qualified Text.PrettyPrint as Pretty
+import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-      commonPaths <- getCommonPaths getDataDir
-      mDictionary <- runMlatu $ compile ioPermission Nothing commonPaths
-      case mDictionary of
-        Left reports ->
-          error $
-            toText $
-              Pretty.render $
-                Pretty.vcat $
-                  "unable to set up interpreter tests:" : map Report.human reports
-        Right dictionary -> return $ testInterpretFull dictionary
-
+    mDictionary <- runMlatu $ compileCommon ioPermission Nothing
+    case mDictionary of
+      Left reports ->
+        error $
+          toText $
+            Pretty.render $
+              Pretty.vcat $
+                "unable to set up interpreter tests:" : map Report.human reports
+      Right dictionary -> return $ testInterpretFull dictionary
 
   let testInterpret = testInterpretWithHandles "" Nothing Nothing
 
@@ -233,4 +230,3 @@ testInterpretFull
           toString $
             unlines $
               map (toText . Pretty.render . Report.human) reports
-
