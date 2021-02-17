@@ -67,6 +67,7 @@ spec = do
               origin
               ["unexpected end of input"]
               "expected \"/*\" or \"*/\""
+              Nothing
           ]
 
   describe "with single tokens" $ do
@@ -137,6 +138,7 @@ spec = do
               origin
               ["unexpected end of input"]
               "expected character, escape, or closing double quote"
+              Nothing
           ]
     it "fails on unterminated nested text" $ do
       let origin = Origin.point "" 1 2
@@ -147,6 +149,7 @@ spec = do
               ["unexpected end of input"]
               "expected character, nested opening quote, \
               \escape, or closing right double quote"
+              Nothing
           ]
     it "fails on multi-line text" $ do
       let origin = Origin.point "" 2 1
@@ -158,6 +161,7 @@ spec = do
                 \use an escape, gap, or paragraph instead"
               ]
               "expected character or escape"
+              Nothing
           ]
 
   describe "with paragraph literals" $ do
@@ -207,6 +211,7 @@ spec = do
               origin
               ["unexpected \" bar\""]
               "expected all lines to be empty or begin with 2 spaces"
+              Nothing
           ]
   -- TODO: Add more negative tests for paragraph literals.
 

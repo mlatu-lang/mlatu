@@ -34,7 +34,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (Fragment))
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Informer (errorCheckpoint, Informer (..))
+import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
@@ -381,7 +381,7 @@ typeDefinitionParser = (<?> "type definition") $ do
     Operator.Infix -> Parsec.unexpected "type-level operator"
     Operator.Postfix -> pass
   parameters <- Parsec.option [] quantifierParser
-  constructors <- blockedParser $ many constructorParser
+  constructors <- blockedParser (many constructorParser)
   return
     TypeDefinition
       { TypeDefinition.constructors = constructors,
@@ -489,15 +489,27 @@ quantifierParser = typeListParser parameter
 
 parameter :: Parser Parameter
 parameter = do
-  origin <- getTokenOrigin
   Parsec.choice
-    [ (\unqualified -> Parameter origin unqualified Permission)
-        <$> (parserMatchOperator "+" *> wordNameParser),
-      do
-        name <- wordNameParser
-        Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis)
+    [ permissionParameter,
+      Parsec.try stackParameter,
+      valueParameter
     ]
+
+permissionParameter :: Parser Parameter
+permissionParameter = do
+  origin <- getTokenOrigin
+  _ <- parserMatchOperator "+"
+  (\unqualified -> Parameter origin unqualified Permission) <$> wordNameParser
+
+stackParameter :: Parser Parameter
+stackParameter = do
+  origin <- getTokenOrigin
+  (\name -> Parameter origin name Stack) <$> (wordNameParser <* parserMatch Token.Ellipsis)
+
+valueParameter :: Parser Parameter
+valueParameter = do
+  origin <- getTokenOrigin
+  (\name -> Parameter origin name Value) <$> wordNameParser
 
 typeListParser :: Parser a -> Parser [a]
 typeListParser element =

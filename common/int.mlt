@@ -158,28 +158,24 @@ vocab mlatu {
 
   // Unsigned integer arithmetic.
 
-  intrinsic neg_uint8 (UInt8 -> UInt8)
   intrinsic add_uint8 (UInt8, UInt8 -> UInt8)
   intrinsic sub_uint8 (UInt8, UInt8 -> UInt8)
   intrinsic mul_uint8 (UInt8, UInt8 -> UInt8)
   intrinsic div_uint8 (UInt8, UInt8 -> UInt8)
   intrinsic mod_uint8 (UInt8, UInt8 -> UInt8)
 
-  intrinsic neg_uint16 (UInt16 -> UInt16)
   intrinsic add_uint16 (UInt16, UInt16 -> UInt16)
   intrinsic sub_uint16 (UInt16, UInt16 -> UInt16)
   intrinsic mul_uint16 (UInt16, UInt16 -> UInt16)
   intrinsic div_uint16 (UInt16, UInt16 -> UInt16)
   intrinsic mod_uint16 (UInt16, UInt16 -> UInt16)
 
-  intrinsic neg_uint32 (UInt32 -> UInt32)
   intrinsic add_uint32 (UInt32, UInt32 -> UInt32)
   intrinsic sub_uint32 (UInt32, UInt32 -> UInt32)
   intrinsic mul_uint32 (UInt32, UInt32 -> UInt32)
   intrinsic div_uint32 (UInt32, UInt32 -> UInt32)
   intrinsic mod_uint32 (UInt32, UInt32 -> UInt32)
 
-  intrinsic neg_uint64 (UInt64 -> UInt64)
   intrinsic add_uint64 (UInt64, UInt64 -> UInt64)
   intrinsic sub_uint64 (UInt64, UInt64 -> UInt64)
   intrinsic mul_uint64 (UInt64, UInt64 -> UInt64)
@@ -337,10 +333,6 @@ instance neg (Int8 -> Int8) { _::mlatu::neg_int8 }
 instance neg (Int16 -> Int16) { _::mlatu::neg_int16 }
 instance neg (Int32 -> Int32) { _::mlatu::neg_int32 }
 instance neg (Int64 -> Int64) { _::mlatu::neg_int64 }
-instance neg (UInt8 -> UInt8) { _::mlatu::neg_uint8 }
-instance neg (UInt16 -> UInt16) { _::mlatu::neg_uint16 }
-instance neg (UInt32 -> UInt32) { _::mlatu::neg_uint32 }
-instance neg (UInt64 -> UInt64) { _::mlatu::neg_uint64 }
 instance neg (Float32 -> Float32) { _::mlatu::neg_float32 }
 instance neg (Float64 -> Float64) { _::mlatu::neg_float64 }
 

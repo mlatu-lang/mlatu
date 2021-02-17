@@ -18,7 +18,6 @@ module Mlatu.Report
   )
 where
 
-import Data.List (nub)
 import GHC.List (span)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Origin (Origin)
@@ -75,7 +74,7 @@ data ReportKind
   | OccursCheckFailure !Type !Type
   | StackDepthMismatch !Origin
   | InvalidOperatorMetadata !Origin !Qualified !(Term ())
-  | ParseError !Origin ![Pretty.Doc] !Pretty.Doc
+  | ParseError !Origin ![Pretty.Doc] !Pretty.Doc !(Maybe Pretty.Doc)
   | UseCommon !Origin !Qualified
   | Context ![(Origin, Pretty.Doc)] !Report
   deriving (Eq, Show)
@@ -268,9 +267,9 @@ human (Report lvl kind) =
             Pretty.colon,
             pPrint term
           ]
-      (ParseError origin unexpectedThing expectedThing) ->
+      (ParseError origin unexpectedThing expectedThing message) ->
         Pretty.hcat $
-          (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
+          showOriginPrefix origin : unexpectedThing ++ [Pretty.text "; "] ++ expectedThing : maybe [] (\x -> [Pretty.parens x]) message
       (Context context message) ->
         Pretty.vsep $
           map
@@ -282,42 +281,37 @@ showOriginPrefix :: Origin -> Pretty.Doc
 showOriginPrefix origin = Pretty.hcat [pPrint origin, ":"]
 
 parseError :: Parsec.ParseError -> Report
-parseError parsecError = Report Error (ParseError origin unexpected' expected')
+parseError parsecError = Report Error (ParseError origin unexpected' expected' messages')
   where
     origin :: Origin
     origin = Origin.pos $ Parsec.errorPos parsecError
 
-    sysUnexpected, unexpected, expected :: [Parsec.Message]
-    (sysUnexpected, unexpected, expected) =
+    sysUnexpected, unexpected, expected, messages :: [Parsec.Message]
+    (sysUnexpected, unexpected, expected, messages) =
       flip evalState (Parsec.errorMessages parsecError) $
-        (,,)
+        (,,,)
           <$> state (span (Parsec.SysUnExpect "" ==))
             <*> state (span (Parsec.UnExpect "" ==))
             <*> state (span (Parsec.Expect "" ==))
+            <*> state (span (Parsec.Message "" ==))
 
     unexpected' :: [Pretty.Doc]
-    unexpected' = ((++) `on` unexpectedMessages) sysUnexpected unexpected
+    unexpected' = Pretty.text " unexpected " : map parsecMessage (ordNub (sysUnexpected ++ unexpected))
 
     expected' :: Pretty.Doc
-    expected' =
-      Pretty.hsep
-        [ "expected",
-          Pretty.oxford "or" $
-            map Pretty.text $
-              ordNub $
-                filter (not . null) $ -- TODO: Replace with "end of input"
-                  map Parsec.messageString expected
-        ]
+    expected' = if not $ null xs then Pretty.hsep [Pretty.text "expected", Pretty.oxford (Pretty.text "or") xs] else Pretty.text ""
+      where
+        xs = map parsecMessage (ordNub expected)
 
-unexpectedMessages :: [Parsec.Message] -> [Pretty.Doc]
-unexpectedMessages = nub . map unexpectedMessage
+    messages' :: Maybe Pretty.Doc
+    messages' = if not $ null xs then Just $ Pretty.hsep xs else Nothing
+      where
+        xs = map parsecMessage $ ordNub messages
 
-unexpectedMessage :: Parsec.Message -> Pretty.Doc
-unexpectedMessage message =
+parsecMessage :: Parsec.Message -> Pretty.Doc
+parsecMessage message =
   let string = Parsec.messageString message
-   in Pretty.hsep
-        [ "unexpected",
-          if null string
-            then "end of input"
-            else Pretty.text string
-        ]
+   in case length string of
+        0 -> "end of input"
+        1 -> Pretty.quotes $ Pretty.text string
+        _ -> Pretty.text string

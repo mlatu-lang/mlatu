@@ -364,25 +364,21 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "ge_int64" -> boolInt64 (>=)
         "eq_int64" -> boolInt64 (==)
         "ne_int64" -> boolInt64 (/=)
-        "neg_uint8" -> unaryUInt8 negate
         "add_uint8" -> binaryUInt8 (+)
         "sub_uint8" -> binaryUInt8 (-)
         "mul_uint8" -> binaryUInt8 (*)
         "div_uint8" -> catchDivideByZero $ binaryUInt8 div
         "mod_uint8" -> catchDivideByZero $ binaryUInt8 mod
-        "neg_uint16" -> unaryUInt16 negate
         "add_uint16" -> binaryUInt16 (+)
         "sub_uint16" -> binaryUInt16 (-)
         "mul_uint16" -> binaryUInt16 (*)
         "div_uint16" -> catchDivideByZero $ binaryUInt16 div
         "mod_uint16" -> catchDivideByZero $ binaryUInt16 mod
-        "neg_uint32" -> unaryUInt32 negate
         "add_uint32" -> binaryUInt32 (+)
         "sub_uint32" -> binaryUInt32 (-)
         "mul_uint32" -> binaryUInt32 (*)
         "div_uint32" -> catchDivideByZero $ binaryUInt32 div
         "mod_uint32" -> catchDivideByZero $ binaryUInt32 mod
-        "neg_uint64" -> unaryUInt64 negate
         "add_uint64" -> binaryUInt64 (+)
         "sub_uint64" -> binaryUInt64 (-)
         "mul_uint64" -> binaryUInt64 (*)

@@ -26,37 +26,12 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 ## Examples
 
-Here's the always-popular FizzBuzz problem:
-
-```
-define divisible (Int32, Int32 -> Bool +Fail):
-  (%) 0 (=)
-define fizzbuzz (Int32 -> List[Char]):
-  -> n;
-  do (with (+Fail)):
-    n 5 divisible
-    n 3 divisible
-  if:
-    if: "FizzBuzz"
-    else: "Fizz"
-  else:
-    if: "Buzz"
-    else: n show
-define fizzbuzzes (Int32, Int32 -> +IO):
-  -> c, m;
-  c fizzbuzz println
-  if (c < m): (c + 1) m fizzbuzzes
-1 100 fizzbuzzes
-```
-
 Here's a naive recursive fibonacci function:
 
 ```
 define fib (UInt64 -> UInt64):
   -> n;
-  if (n = 0u64):
-    0u64
-  elif (n = 1u64):
+  if (n < 2u64):
     1u64
   else:
     (n - 2u64) fib + 
@@ -64,6 +39,7 @@ define fib (UInt64 -> UInt64):
 
 10u64 fib
 ```
+See the examples folder for more.
 
 ## Installation and Usage
 

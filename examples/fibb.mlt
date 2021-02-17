@@ -1,11 +1,9 @@
 define fib (UInt64 -> UInt64):
   -> n;
-  if (n = 0u64):
-    0u64
-  elif (n = 1u64):
+  if (n < 2u64):
     1u64
   else:
     (n - 2u64) fib + 
     (n - 1u64) fib
 
-10u64 fib
+40u64 fib

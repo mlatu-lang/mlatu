@@ -27,7 +27,7 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 
 common :: [(FilePath, ByteString)]
-common = $(embedDir "./common/")
+common = $(embedDir "./common")
 
 commonPaths :: [FilePath]
 commonPaths = map fst common
