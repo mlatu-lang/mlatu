@@ -51,7 +51,7 @@ import Numeric (log)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
 import System.Exit (ExitCode (..))
-import System.IO (hFlush, hGetLine, hPutStrLn, readIO)
+import System.IO (hFlush, hGetLine, hPutStrLn, readIO, hPutStr)
 import System.IO.Error (IOError, ioeGetErrorType)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
@@ -454,11 +454,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "eq_float64" -> boolFloat64 (==)
         "gt_string" -> boolString (>)
         "eq_string" -> boolString (==)
-        "show_int8" -> showInteger (show :: Int8 -> Text)
-        "show_int16" -> showInteger (show :: Int16 -> Text)
-        "show_int32" -> showInteger (show :: Int32 -> Text)
-        "show_int64" -> showInteger (show :: Int64 -> Text)
-        "show_uint8" -> showInteger (show :: Word8 -> Text)
+        "show_int8" -> showInteger (show @Text @Int8)
+        "show_int16" -> showInteger (show @Text @Int16)
+        "show_int32" -> showInteger (show @Text @Int32)
+        "show_int64" -> showInteger (show @Text @Int64)
+        "show_uint8" -> showInteger (show @Text @Word8)
         "show_uint16" -> showInteger (show :: Word16 -> Text)
         "show_uint32" -> showInteger (show :: Word32 -> Text)
         "show_uint64" -> showInteger (show :: Word64 -> Text)
@@ -543,7 +543,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "print" -> do
           Text txt ::: r <- readIORef stackRef
           writeIORef stackRef r
-          hPutStrLn stdout' $ toString txt
+          hPutStr stdout' $ toString txt
         "get_line" -> do
           line <- hGetLine stdin'
           modifyIORef' stackRef ((Text $ toText line) :::)

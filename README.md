@@ -12,7 +12,7 @@ Very experimental: contributions welcome, but please don't use this in productio
 
 ## Todo (unordered)
 
-- [ ] Create a compiler backend that generates Rust code
+- [ ] Create a compiler backend that generates WASM
 
 - [ ] Create a formatter that can format the common files
 

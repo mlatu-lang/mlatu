@@ -283,12 +283,12 @@ vocab mlatu {
 
 trait neg[T] (T -> T)
 
-instance neg (Int8 -> Int8) { 0i8 (-) }
-instance neg (Int16 -> Int16) { 0i16 (-) }
-instance neg (Int32 -> Int32) { 0i32 (-) }
-instance neg (Int64 -> Int64) { 0i64 (-) }
-instance neg (Float32 -> Float32) { 0.0f32 (-) }
-instance neg (Float64 -> Float64) { 0.0f64 (-) }
+instance neg (Int8 -> Int8) { zero swap (-) }
+instance neg (Int16 -> Int16) { zero swap (-) }
+instance neg (Int32 -> Int32) { zero swap (-) }
+instance neg (Int64 -> Int64) { zero swap (-) }
+instance neg (Float32 -> Float32) { zero swap (-) }
+instance neg (Float64 -> Float64) { zero swap (-) }
 
 trait + [T] (T, T -> T)
 
