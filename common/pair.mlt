@@ -23,3 +23,8 @@ define first[A, B] (Pair[A, B] -> A):
 
 define second[A, B] (Pair[A, B] -> B):
   unpair swap drop
+
+define map_pair[A, B, C, D] (Pair[A, B], (A -> C), (B -> D) -> Pair[C, D]):
+  -> p, f, g;
+  p unpair -> a, b;
+  (a f call) => (b g call)

@@ -8,8 +8,6 @@ vocab mlatu {
   intrinsic tail[T] (List[T] -> Optional[List[T]])
   intrinsic init[T] (List[T] -> Optional[List[T]])
   intrinsic last[T] (List[T] -> Optional[T])
-  intrinsic append[T] (List[T], T -> List[T])
-  intrinsic prepend[T] (T, List[T] -> List[T])
   intrinsic cat[T] (List[T], List[T] -> List[T])
   intrinsic get[T] (List[T], Int32 -> Optional[T])
   intrinsic set[T] (List[T], T, Int32 -> Optional[List[T]])
@@ -19,7 +17,6 @@ vocab mlatu {
 define empty[T] (List[T] -> Bool):
   _::mlatu::empty
 
-// TODO: Use Size, not Int32.
 define length[T] (List[T] -> Int32):
   match (tail)
   case none:
@@ -110,10 +107,12 @@ define last[T] (List[T] -> Optional[T]):
   _::mlatu::last
 
 define append[T] (List[T], T -> List[T]):
-  _::mlatu::append
+  -> list, elem;
+  list elem once cat
 
 define prepend[T] (T, List[T] -> List[T]):
-  _::mlatu::prepend
+  -> elem, list;
+  elem once list cat
 
 define cat[T] (List[T], List[T] -> List[T]):
   _::mlatu::cat
@@ -138,6 +137,9 @@ define modify[T] (List[T], (T -> T), Int32 -> Optional[List[T]]):
     none
   case some -> x:
     xs (x f call) i set
+
+define once[T] (T -> List[T]):
+  -> x; [x]
 
 define replicate[T] (T, Int32 -> List[T]):
   -> value, count;

@@ -292,25 +292,21 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "swap" -> do
           a ::: b ::: r <- readIORef stackRef
           writeIORef stackRef $ b ::: a ::: r
-        "neg_int8" -> unaryInt8 negate
         "add_int8" -> binaryInt8 (+)
         "sub_int8" -> binaryInt8 (-)
         "mul_int8" -> binaryInt8 (*)
         "div_int8" -> catchDivideByZero $ binaryInt8 div
         "mod_int8" -> catchDivideByZero $ binaryInt8 mod
-        "neg_int16" -> unaryInt16 negate
         "add_int16" -> binaryInt16 (+)
         "sub_int16" -> binaryInt16 (-)
         "mul_int16" -> binaryInt16 (*)
         "div_int16" -> catchDivideByZero $ binaryInt16 div
         "mod_int16" -> catchDivideByZero $ binaryInt16 mod
-        "neg_int32" -> unaryInt32 negate
         "add_int32" -> binaryInt32 (+)
         "sub_int32" -> binaryInt32 (-)
         "mul_int32" -> binaryInt32 (*)
         "div_int32" -> catchDivideByZero $ binaryInt32 div
         "mod_int32" -> catchDivideByZero $ binaryInt32 mod
-        "neg_int64" -> unaryInt64 negate
         "add_int64" -> binaryInt64 (+)
         "sub_int64" -> binaryInt64 (-)
         "mul_int64" -> binaryInt64 (*)
@@ -340,30 +336,14 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "xor_int64" -> binaryInt64 xor
         "shl_int64" -> binaryInt64Int shift
         "rol_int64" -> binaryInt64Int rotate
-        "lt_int8" -> boolInt8 (<)
         "gt_int8" -> boolInt8 (>)
-        "le_int8" -> boolInt8 (<=)
-        "ge_int8" -> boolInt8 (>=)
         "eq_int8" -> boolInt8 (==)
-        "ne_int8" -> boolInt8 (/=)
-        "lt_int16" -> boolInt16 (<)
         "gt_int16" -> boolInt16 (>)
-        "le_int16" -> boolInt16 (<=)
-        "ge_int16" -> boolInt16 (>=)
         "eq_int16" -> boolInt16 (==)
-        "ne_int16" -> boolInt16 (/=)
-        "lt_int32" -> boolInt32 (<)
         "gt_int32" -> boolInt32 (>)
-        "le_int32" -> boolInt32 (<=)
-        "ge_int32" -> boolInt32 (>=)
         "eq_int32" -> boolInt32 (==)
-        "ne_int32" -> boolInt32 (/=)
-        "lt_int64" -> boolInt64 (<)
         "gt_int64" -> boolInt64 (>)
-        "le_int64" -> boolInt64 (<=)
-        "ge_int64" -> boolInt64 (>=)
         "eq_int64" -> boolInt64 (==)
-        "ne_int64" -> boolInt64 (/=)
         "add_uint8" -> binaryUInt8 (+)
         "sub_uint8" -> binaryUInt8 (-)
         "mul_uint8" -> binaryUInt8 (*)
@@ -408,43 +388,21 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "xor_uint64" -> binaryUInt64 xor
         "shl_uint64" -> binaryUInt64Int shift
         "rol_uint64" -> binaryUInt64Int rotate
-        "lt_uint8" -> boolUInt8 (<)
         "gt_uint8" -> boolUInt8 (>)
-        "le_uint8" -> boolUInt8 (<=)
-        "ge_uint8" -> boolUInt8 (>=)
         "eq_uint8" -> boolUInt8 (==)
-        "ne_uint8" -> boolUInt8 (/=)
-        "lt_uint16" -> boolUInt16 (<)
         "gt_uint16" -> boolUInt16 (>)
-        "le_uint16" -> boolUInt16 (<=)
-        "ge_uint16" -> boolUInt16 (>=)
         "eq_uint16" -> boolUInt16 (==)
-        "ne_uint16" -> boolUInt16 (/=)
-        "lt_uint32" -> boolUInt32 (<)
         "gt_uint32" -> boolUInt32 (>)
-        "le_uint32" -> boolUInt32 (<=)
-        "ge_uint32" -> boolUInt32 (>=)
         "eq_uint32" -> boolUInt32 (==)
-        "ne_uint32" -> boolUInt32 (/=)
-        "lt_uint64" -> boolUInt64 (<)
         "gt_uint64" -> boolUInt64 (>)
-        "le_uint64" -> boolUInt64 (<=)
-        "ge_uint64" -> boolUInt64 (>=)
         "eq_uint64" -> boolUInt64 (==)
-        "ne_uint64" -> boolUInt64 (/=)
-        "lt_char" -> boolChar (<)
         "gt_char" -> boolChar (>)
-        "le_char" -> boolChar (<=)
-        "ge_char" -> boolChar (>=)
         "eq_char" -> boolChar (==)
-        "ne_char" -> boolChar (/=)
-        "neg_float32" -> unaryFloat32 negate
         "add_float32" -> binaryFloat32 (+)
         "sub_float32" -> binaryFloat32 (-)
         "mul_float32" -> binaryFloat32 (*)
         "div_float32" -> binaryFloat32 (/)
         "mod_float32" -> catchFloatModByZero $ binaryFloat32 mod'
-        "neg_float64" -> unaryFloat64 negate
         "add_float64" -> binaryFloat64 (+)
         "sub_float64" -> binaryFloat64 (-)
         "mul_float64" -> binaryFloat64 (*)
@@ -490,24 +448,12 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "round_float64" -> unaryFloat64 $ fromInteger . round
         "ceil_float64" -> unaryFloat64 $ fromInteger . ceiling
         "floor_float64" -> unaryFloat64 $ fromInteger . floor
-        "lt_float32" -> boolFloat32 (<)
         "gt_float32" -> boolFloat32 (>)
-        "le_float32" -> boolFloat32 (<=)
-        "ge_float32" -> boolFloat32 (>=)
         "eq_float32" -> boolFloat32 (==)
-        "ne_float32" -> boolFloat32 (/=)
-        "lt_float64" -> boolFloat64 (<)
         "gt_float64" -> boolFloat64 (>)
-        "le_float64" -> boolFloat64 (<=)
-        "ge_float64" -> boolFloat64 (>=)
         "eq_float64" -> boolFloat64 (==)
-        "ne_float64" -> boolFloat64 (/=)
-        "lt_string" -> boolString (<)
         "gt_string" -> boolString (>)
-        "le_string" -> boolString (<=)
-        "ge_string" -> boolString (>=)
         "eq_string" -> boolString (==)
-        "ne_string" -> boolString (/=)
         "show_int8" -> showInteger (show :: Int8 -> Text)
         "show_int16" -> showInteger (show :: Int16 -> Text)
         "show_int32" -> showInteger (show :: Int32 -> Text)
@@ -556,12 +502,6 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               writeIORef stackRef $ x ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
-        "append" -> do
-          x ::: Array xs ::: r <- readIORef stackRef
-          writeIORef stackRef $ Array (Vector.snoc xs x) ::: r
-        "prepend" -> do
-          Array xs ::: x ::: r <- readIORef stackRef
-          writeIORef stackRef $ Array (Vector.cons x xs) ::: r
         "cat" -> do
           Array ys ::: Array xs ::: r <- readIORef stackRef
           writeIORef stackRef $ Array (xs <> ys) ::: r

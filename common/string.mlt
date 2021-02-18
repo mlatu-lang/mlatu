@@ -4,20 +4,16 @@ vocab mlatu {
   intrinsic string_from_list (List[Char] -> String)
   intrinsic string_to_list (String -> List[Char])
   intrinsic string_concat (String, String -> String)
-  intrinsic lt_string (String, String -> Bool)
-  intrinsic le_string (String, String -> Bool)
-  intrinsic gt_string (String, String -> Bool)
-  intrinsic ge_string (String, String -> Bool)
-  intrinsic eq_string (String, String -> Bool)
-  intrinsic ne_string (String, String -> Bool)
+      intrinsic gt_string (String, String -> Bool)
+    intrinsic eq_string (String, String -> Bool)
 }
 
 instance > (String, String -> Bool) { _::mlatu::gt_string }
-instance < (String, String -> Bool) { _::mlatu::lt_string }
-instance <= (String, String -> Bool) { _::mlatu::le_string }
-instance >= (String, String -> Bool) { _::mlatu::ge_string }
+instance < (String, String -> Bool) { swap (>) }
+instance <= (String, String -> Bool) { (>) not }
+instance >= (String, String -> Bool) { (<) not }
 instance = (String, String -> Bool) { _::mlatu::eq_string}
-instance <> (String, String -> Bool) { _::mlatu::ne_string }
+instance <> (String, String -> Bool) { (=) not }
 
 instance + (String, String -> String):
   _::mlatu::string_concat
@@ -35,8 +31,7 @@ trait show[T] (T -> String)
 instance show (String -> String) {}
 
 instance show (Char -> String):
-  -> x;
-  [x] from_chars
+  once from_chars
 
 instance show (Bool -> String):
   if { "true" } else { "false" }
