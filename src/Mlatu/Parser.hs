@@ -26,7 +26,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Token (Token)
 import Relude
-import Text.Parsec ((<?>), Parsec)
+import Text.Parsec (ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
 
@@ -34,7 +34,7 @@ type Bracketer a = GeneralParser 'Layout a
 
 type Parser a = GeneralParser 'Nonlayout a
 
-type GeneralParser l a = Parsec [Located (Token l)] Qualifier a
+type GeneralParser l a = ParsecT [Located (Token l)] Qualifier Identity a
 
 getTokenOrigin :: GeneralParser l Origin
 getTokenOrigin =
