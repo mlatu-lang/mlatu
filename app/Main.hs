@@ -12,8 +12,6 @@ import Relude
 import Report (reportAll)
 import System.Directory (makeAbsolute)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
-import Text.PrettyPrint.HughesPJ qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 
 main :: IO ()
 main = do
@@ -51,9 +49,8 @@ runBatch arguments = do
             case Arguments.compileMode arguments of
               Arguments.CheckMode -> pass
               Arguments.CompileMode _ -> pass
-              Arguments.InterpretMode -> do
-                reps <- interpret program Nothing [] stdin stdout stderr []
-                forM_ reps (putStrLn . Pretty.render . pPrint)
+              Arguments.InterpretMode ->
+                void $ interpret program Nothing [] stdin stdout stderr []
               Arguments.FormatMode -> pass
   where
     mainPermissions =
