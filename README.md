@@ -37,7 +37,7 @@ define fib (UInt64 -> UInt64):
     (n - 2u64) fib + 
     (n - 1u64) fib
 
-10u64 fib
+10u64 fib print
 ```
 See the examples folder for more.
 
