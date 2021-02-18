@@ -7,7 +7,6 @@ where
 
 import Data.ByteString qualified as ByteString
 import Data.Knob qualified as Knob
-import Data.Vector qualified as Vector
 import Mlatu (compileCommon, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Enter qualified as Enter
@@ -49,9 +48,7 @@ spec = do
         ]
       testInterpret
         "\"meow\""
-        [ Array $
-            Vector.fromList
-              [Character 'm', Character 'e', Character 'o', Character 'w']
+        [ Text "meow"
         ]
     it "interprets 'hello world'" $ do
       testInterpret "\"meow\" println" []

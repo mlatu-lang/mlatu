@@ -97,51 +97,6 @@ instance = (List[Int32], List[Int32] -> Bool):
 
 instance <> (List[Int32], List[Int32] -> Bool) { (=) not }
 
-instance > (List[Char], List[Char] -> Bool):
-  -> xs, ys;
-  match (xs head_tail)
-  case some:
-    unpair -> x, xs_;
-    match (ys head_tail)
-    case some:
-      unpair -> y, ys_;
-      if (x > y):
-        true
-      elif (x < y):
-        false
-      else:
-        xs_ > ys_
-    case none:
-      true
-  case none:
-    false
-
-instance < (List[Char], List[Char] -> Bool) { swap (>) }
-instance <= (List[Char], List[Char] -> Bool) { (>) not }
-instance >= (List[Char], List[Char] -> Bool) { (<) not }
-
-instance = (List[Char], List[Char] -> Bool):
-  -> xs, ys;
-  if (xs length <> ys length):
-    false
-  else:
-    match (xs head_tail)
-    case some:
-      unpair -> x, xs_;
-      match (ys head_tail)
-      case some:
-        unpair -> y, ys_;
-        if (x <> y):
-          false
-        else:
-          xs_ = ys_
-      case none:
-        true
-    case none:
-      true
-
-instance <> (List[Char], List[Char] -> Bool) { (=) not }
-
 define head[T] (List[T] -> Optional[T]):
   _::mlatu::head
 
@@ -163,10 +118,8 @@ define prepend[T] (T, List[T] -> List[T]):
 define cat[T] (List[T], List[T] -> List[T]):
   _::mlatu::cat
 
-// FIXME: Requires generic instances; should be:
-// instance + [T] (List[T], List[T] -> List[T])
-instance + (List[Char], List[Char] -> List[Char]):
-  cat
+// instance + [T] (List[T], List[T] -> List[T]):
+//   cat
 
 define get[T] (List[T], Int32 -> Optional[T]):
   _::mlatu::get
@@ -317,6 +270,33 @@ define fold_right_non_empty[A] (List[A], (A, A -> A) -> Optional[A]):
     x f fold_right some
   else:
     none
+
+define zip[A, B] (List[A], List[B] -> List[Pair[A, B]]):
+  -> a, b;
+  match (a head_tail)
+  case some:
+    unpair -> x, xs;
+    match (b head_tail)
+    case some:
+      unpair -> y, ys;
+      x y pair -> z;
+      xs ys zip -> zs;
+      z zs prepend
+    case none:
+      []
+  case none:
+    []
+
+define unzip[A, B] (List[Pair[A, B]] -> List[A], List[B]):
+  match (head_tail)
+  case some:
+    unpair -> x, xs;
+    x unpair -> m, n;
+    xs unzip -> ms, ns;
+    m ms prepend 
+    n ns prepend
+  case none:
+    [] []
 
 define map_concat[A, B] (List[A], (A -> List[B]) -> List[B]):
   map concat

@@ -9,7 +9,7 @@ define from_optional[T] (Optional[T], T -> T):
   else:
     default
 
-define from_some[T] (Optional[T], List[Char] -> T +Fail):
+define from_some[T] (Optional[T], String -> T +Fail):
   -> message;
   match case some {}
   else:

@@ -1,132 +1,164 @@
-trait show[T] (T -> List[Char])
+type String {}
 
-instance show (List[Char] -> List[Char]) {}
+vocab mlatu {
+  intrinsic string_from_list (List[Char] -> String)
+  intrinsic string_to_list (String -> List[Char])
+  intrinsic string_concat (String, String -> String)
+  intrinsic lt_string (String, String -> Bool)
+  intrinsic le_string (String, String -> Bool)
+  intrinsic gt_string (String, String -> Bool)
+  intrinsic ge_string (String, String -> Bool)
+  intrinsic eq_string (String, String -> Bool)
+  intrinsic ne_string (String, String -> Bool)
+}
 
-instance show (Char -> List[Char]):
+instance > (String, String -> Bool) { _::mlatu::gt_string }
+instance < (String, String -> Bool) { _::mlatu::lt_string }
+instance <= (String, String -> Bool) { _::mlatu::le_string }
+instance >= (String, String -> Bool) { _::mlatu::ge_string }
+instance = (String, String -> Bool) { _::mlatu::eq_string}
+instance <> (String, String -> Bool) { _::mlatu::ne_string }
+
+instance + (String, String -> String):
+  _::mlatu::string_concat
+
+define chars (String -> List[Char]) {
+  _::mlatu::string_to_list
+}
+
+define from_chars (List[Char] -> String) {
+  _::mlatu::string_from_list
+}
+
+trait show[T] (T -> String)
+
+instance show (String -> String) {}
+
+instance show (Char -> String):
   -> x;
-  [x]
+  [x] from_chars
 
-instance show (Bool -> List[Char]):
+instance show (Bool -> String):
   if { "true" } else { "false" }
 
-instance show[A, B] (Either[A, B] -> List[Char]):
+instance show[A, B] (Either[A, B] -> String):
   match 
   case left:
     show
   case right: 
     show
 
-instance show[T] (Optional[T] -> List[Char]):
+instance show[T] (Optional[T] -> String):
   match 
   case some -> x: 
-    "some " x show cat
+    "some " + x show
   case none:
     "none"
 
 vocab mlatu {
 
-  intrinsic show_int8 (Int8 -> List[Char])
-  intrinsic show_int16 (Int16 -> List[Char])
-  intrinsic show_int32 (Int32 -> List[Char])
-  intrinsic show_int64 (Int64 -> List[Char])
-  intrinsic show_uint8 (UInt8 -> List[Char])
-  intrinsic show_uint16 (UInt16 -> List[Char])
-  intrinsic show_uint32 (UInt32 -> List[Char])
-  intrinsic show_uint64 (UInt64 -> List[Char])
-  intrinsic show_float32 (Float32 -> List[Char])
-  intrinsic show_float64 (Float64 -> List[Char])
+  intrinsic show_int8 (Int8 -> String)
+  intrinsic show_int16 (Int16 -> String)
+  intrinsic show_int32 (Int32 -> String)
+  intrinsic show_int64 (Int64 -> String)
+  intrinsic show_uint8 (UInt8 -> String)
+  intrinsic show_uint16 (UInt16 -> String)
+  intrinsic show_uint32 (UInt32 -> String)
+  intrinsic show_uint64 (UInt64 -> String)
+  intrinsic show_float32 (Float32 -> String)
+  intrinsic show_float64 (Float64 -> String)
 
 }
 
-instance show (Int8 -> List[Char]):
+instance show (Int8 -> String):
   _::mlatu::show_int8
 
-instance show (Int16 -> List[Char]):
+instance show (Int16 -> String):
   _::mlatu::show_int16
 
-instance show (Int32 -> List[Char]):
+instance show (Int32 -> String):
   _::mlatu::show_int32
 
-instance show (Int64 -> List[Char]):
+instance show (Int64 -> String):
   _::mlatu::show_int64
 
-instance show (UInt8 -> List[Char]):
+instance show (UInt8 -> String):
   _::mlatu::show_uint8
 
-instance show (UInt16 -> List[Char]):
+instance show (UInt16 -> String):
   _::mlatu::show_uint16
 
-instance show (UInt32 -> List[Char]):
+instance show (UInt32 -> String):
   _::mlatu::show_uint32
 
-instance show (UInt64 -> List[Char]):
+instance show (UInt64 -> String):
   _::mlatu::show_uint64
 
-instance show (Float32 -> List[Char]):
+instance show (Float32 -> String):
   _::mlatu::show_float32
 
-instance show (Float64 -> List[Char]):
+instance show (Float64 -> String):
   _::mlatu::show_float64
 
-trait read[T] (List[Char] -> Optional[T])
+trait read[T] (String -> Optional[T])
 
-instance read (List[Char] -> Optional[List[Char]]) { some }
+instance read (String -> Optional[String]) { some }
 
-instance read (List[Char] -> Optional[Char]):
-  -> cs;
+instance read (String -> Optional[Char]):
+  chars -> cs;
   if (cs length = 1):
     cs head
   else:
     none
 
-instance read (List[Char] -> Optional[Bool]):
-  -> cs;
-  if (cs = "true"): true some
-  elif (cs = "false"): false some
+instance read (String -> Optional[Bool]):
+  -> s;
+  if (s = "true"): true some
+  elif (s = "false"): false some
   else: none
 
 vocab mlatu {
 
-  intrinsic read_int8 (List[Char] -> Optional[Int8])
-  intrinsic read_int16 (List[Char] -> Optional[Int16])
-  intrinsic read_int32 (List[Char] -> Optional[Int32])
-  intrinsic read_int64 (List[Char] -> Optional[Int64])
-  intrinsic read_uint8 (List[Char] -> Optional[UInt8])
-  intrinsic read_uint16 (List[Char] -> Optional[UInt16])
-  intrinsic read_uint32 (List[Char] -> Optional[UInt32])
-  intrinsic read_uint64 (List[Char] -> Optional[UInt64])
-  intrinsic read_float32 (List[Char] -> Optional[Float32])
-  intrinsic read_float64 (List[Char] -> Optional[Float64])
+  intrinsic read_int8 (String -> Optional[Int8])
+  intrinsic read_int16 (String -> Optional[Int16])
+  intrinsic read_int32 (String -> Optional[Int32])
+  intrinsic read_int64 (String -> Optional[Int64])
+  intrinsic read_uint8 (String -> Optional[UInt8])
+  intrinsic read_uint16 (String -> Optional[UInt16])
+  intrinsic read_uint32 (String -> Optional[UInt32])
+  intrinsic read_uint64 (String -> Optional[UInt64])
+  intrinsic read_float32 (String -> Optional[Float32])
+  intrinsic read_float64 (String -> Optional[Float64])
 
 }
 
-instance read (List[Char] -> Optional[Int8]):
+instance read (String -> Optional[Int8]):
   _::mlatu::read_int8
 
-instance read (List[Char] -> Optional[Int16]):
+instance read (String -> Optional[Int16]):
   _::mlatu::read_int16
 
-instance read (List[Char] -> Optional[Int32]):
+instance read (String -> Optional[Int32]):
   _::mlatu::read_int32
 
-instance read (List[Char] -> Optional[Int64]):
+instance read (String -> Optional[Int64]):
   _::mlatu::read_int64
 
-instance read (List[Char] -> Optional[UInt8]):
+instance read (String -> Optional[UInt8]):
   _::mlatu::read_uint8
 
-instance read (List[Char] -> Optional[UInt16]):
+instance read (String -> Optional[UInt16]):
   _::mlatu::read_uint16
 
-instance read (List[Char] -> Optional[UInt32]):
+instance read (String -> Optional[UInt32]):
   _::mlatu::read_uint32
 
-instance read (List[Char] -> Optional[UInt64]):
+instance read (String -> Optional[UInt64]):
   _::mlatu::read_uint64
 
-instance read (List[Char] -> Optional[Float32]):
+instance read (String -> Optional[Float32]):
   _::mlatu::read_float32
 
-instance read (List[Char] -> Optional[Float64]):
+instance read (String -> Optional[Float64]):
   _::mlatu::read_float64
 

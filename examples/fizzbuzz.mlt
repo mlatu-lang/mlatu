@@ -1,6 +1,6 @@
 define divisible (Int32, Int32 -> Bool +Fail):
   (%) 0 (=)
-define fizzbuzz (Int32 -> List[Char]):
+define fizzbuzz (Int32 -> String):
   -> n;
   do (with (+Fail)):
     n 5 divisible

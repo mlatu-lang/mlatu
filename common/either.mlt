@@ -4,13 +4,13 @@ type Either[A, B]:
   case left (A)
   case right (B)
 
-define from_left[A, B] (Either[A, B], List[Char] -> A +Fail):
+define from_left[A, B] (Either[A, B], String -> A +Fail):
   -> message;
   match case left {}
   else:
     message fail
 
-define from_right[A, B] (Either[A, B], List[Char] -> B +Fail):
+define from_right[A, B] (Either[A, B], String -> B +Fail):
   -> message;
   match
   case right {}

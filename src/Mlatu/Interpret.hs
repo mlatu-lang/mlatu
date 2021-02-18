@@ -18,6 +18,7 @@ import Data.Bits
   ( Bits (complement, rotate, shift, (.&.), (.|.)),
   )
 import Data.Fixed (mod')
+import Data.Text qualified as Text
 import Data.Vector (Vector, (!))
 import Data.Vector qualified as Vector
 import Mlatu.Bits qualified as Bits
@@ -50,8 +51,8 @@ import Numeric (log)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
 import System.Exit (ExitCode (..))
-import System.IO (hFlush, hGetLine, hPutChar, hPutStrLn, readIO)
-import System.IO.Error (IOError, isAlreadyInUseError, isDoesNotExistError, isPermissionError)
+import System.IO (hFlush, hGetLine, hPutStrLn, readIO)
+import System.IO.Error (IOError, ioeGetErrorType)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Show qualified
@@ -94,7 +95,7 @@ valueRep (Term.Integer literal) = rep $ Literal.integerValue literal
       Bits.Unsigned64 -> UInt64 . fromInteger
 valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
-valueRep value = error $ toText $ "cannot convert value to rep: " ++ show value
+valueRep value = error $ toText ("cannot convert value to rep: " ++ show value)
 
 instance Pretty Rep where
   pPrint (Algebraic (ConstructorIndex index) values) =
@@ -262,21 +263,20 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         Term.Text text ->
           modifyIORef'
             stackRef
-            ((Array $ fmap Character $ Vector.fromList $ toString text) :::)
+            (Text text :::)
         _otherTerm -> modifyIORef' stackRef (valueRep value :::)
 
       intrinsic :: [Qualified] -> Unqualified -> IO ()
       intrinsic callStack name = case name of
         "abort" -> do
-          Array cs ::: r <- readIORef stackRef
+          Text txt ::: r <- readIORef stackRef
           writeIORef stackRef r
-          let message = map (\(Character c) -> c) $ Vector.toList cs
           throwIO $
             Failure $
               Pretty.vcat $
                 Pretty.hsep
                   [ "Execution failure:",
-                    Pretty.text message
+                    Pretty.text $ toString txt
                   ] :
                 "Call stack:" :
                 map (Pretty.nest 4 . pPrint) callStack
@@ -502,26 +502,32 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "ge_float64" -> boolFloat64 (>=)
         "eq_float64" -> boolFloat64 (==)
         "ne_float64" -> boolFloat64 (/=)
-        "show_int8" -> showInteger (show :: Int8 -> String)
-        "show_int16" -> showInteger (show :: Int16 -> String)
-        "show_int32" -> showInteger (show :: Int32 -> String)
-        "show_int64" -> showInteger (show :: Int64 -> String)
-        "show_uint8" -> showInteger (show :: Word8 -> String)
-        "show_uint16" -> showInteger (show :: Word16 -> String)
-        "show_uint32" -> showInteger (show :: Word32 -> String)
-        "show_uint64" -> showInteger (show :: Word64 -> String)
-        "show_float32" -> showFloat (show :: Float -> String)
-        "show_float64" -> showFloat (show :: Double -> String)
-        "read_int8" -> readInteger (readIO :: String -> IO Int8) Int8
-        "read_int16" -> readInteger (readIO :: String -> IO Int16) Int16
-        "read_int32" -> readInteger (readIO :: String -> IO Int32) Int32
-        "read_int64" -> readInteger (readIO :: String -> IO Int64) Int64
-        "read_uint8" -> readInteger (readIO :: String -> IO Word8) UInt8
-        "read_uint16" -> readInteger (readIO :: String -> IO Word16) UInt16
-        "read_uint32" -> readInteger (readIO :: String -> IO Word32) UInt32
-        "read_uint64" -> readInteger (readIO :: String -> IO Word64) UInt64
-        "read_float32" -> readFloat (readIO :: String -> IO Float) Float32
-        "read_float64" -> readFloat (readIO :: String -> IO Double) Float64
+        "lt_string" -> boolString (<)
+        "gt_string" -> boolString (>)
+        "le_string" -> boolString (<=)
+        "ge_string" -> boolString (>=)
+        "eq_string" -> boolString (==)
+        "ne_string" -> boolString (/=)
+        "show_int8" -> showInteger (show :: Int8 -> Text)
+        "show_int16" -> showInteger (show :: Int16 -> Text)
+        "show_int32" -> showInteger (show :: Int32 -> Text)
+        "show_int64" -> showInteger (show :: Int64 -> Text)
+        "show_uint8" -> showInteger (show :: Word8 -> Text)
+        "show_uint16" -> showInteger (show :: Word16 -> Text)
+        "show_uint32" -> showInteger (show :: Word32 -> Text)
+        "show_uint64" -> showInteger (show :: Word64 -> Text)
+        "show_float32" -> showFloat (show :: Float -> Text)
+        "show_float64" -> showFloat (show :: Double -> Text)
+        "read_int8" -> readInteger ((readIO :: String -> IO Int8) . toString) Int8
+        "read_int16" -> readInteger ((readIO :: String -> IO Int16) . toString) Int16
+        "read_int32" -> readInteger ((readIO :: String -> IO Int32) . toString) Int32
+        "read_int64" -> readInteger ((readIO :: String -> IO Int64) . toString) Int64
+        "read_uint8" -> readInteger ((readIO :: String -> IO Word8) . toString) UInt8
+        "read_uint16" -> readInteger ((readIO :: String -> IO Word16) . toString) UInt16
+        "read_uint32" -> readInteger ((readIO :: String -> IO Word32) . toString) UInt32
+        "read_uint64" -> readInteger ((readIO :: String -> IO Word64) . toString) UInt64
+        "read_float32" -> readFloat ((readIO :: String -> IO Float) . toString) Float32
+        "read_float64" -> readFloat ((readIO :: String -> IO Double) . toString) Float64
         "empty" -> do
           Array xs ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -559,6 +565,17 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "cat" -> do
           Array ys ::: Array xs ::: r <- readIORef stackRef
           writeIORef stackRef $ Array (xs <> ys) ::: r
+        "string_concat" -> do
+          Text y ::: Text x ::: r <- readIORef stackRef
+          writeIORef stackRef $ Text (Text.concat [x, y]) ::: r
+        "string_from_list" -> do
+          Array cs ::: r <- readIORef stackRef
+          let string = map (\(Character c) -> c) $ Vector.toList cs
+          writeIORef stackRef $ Text (toText string) ::: r
+        "string_to_list" -> do
+          Text txt ::: r <- readIORef stackRef
+          let string = Array (Vector.fromList $ map Character $ toString txt)
+          writeIORef stackRef $ string ::: r
         "get" -> do
           Int32 i ::: Array xs ::: r <- readIORef stackRef
           if i < 0 || i >= fromIntegral (length xs)
@@ -584,34 +601,31 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
         "print" -> do
-          Array cs ::: r <- readIORef stackRef
+          Text txt ::: r <- readIORef stackRef
           writeIORef stackRef r
-          mapM_ (\(Character c) -> hPutChar stdout' c) cs
+          hPutStrLn stdout' $ toString txt
         "get_line" -> do
           line <- hGetLine stdin'
-          modifyIORef' stackRef (Array (Vector.fromList (map Character line)) :::)
+          modifyIORef' stackRef ((Text $ toText line) :::)
         "flush_stdout" -> hFlush stdout'
         "read_file" -> do
-          Array cs ::: r <- readIORef stackRef
+          Text txt ::: r <- readIORef stackRef
           contents <-
             catchFileAccessErrors $
-              readFile $ map (\(Character c) -> c) $ Vector.toList cs
-          writeIORef stackRef $
-            Array
-              (Vector.fromList (map Character contents))
-              ::: r
+              readFile $ toString txt
+          writeIORef stackRef $ Text (toText contents) ::: r
         "write_file" -> do
-          Array cs ::: Array bs ::: r <- readIORef stackRef
+          Text cs ::: Text bs ::: r <- readIORef stackRef
           writeIORef stackRef r
           catchFileAccessErrors $
-            writeFile (map (\(Character c) -> c) $ Vector.toList cs) $
-              map (\(Character c) -> c) $ Vector.toList bs
+            writeFile (toString cs) $
+              toString bs
         "append_file" -> do
-          Array cs ::: Array bs ::: r <- readIORef stackRef
+          Text cs ::: Text bs ::: r <- readIORef stackRef
           writeIORef stackRef r
           catchFileAccessErrors $
-            appendFile (map (\(Character c) -> c) $ Vector.toList cs) $
-              map (\(Character c) -> c) $ Vector.toList bs
+            appendFile (toString cs) $
+              toString bs
         "tail" -> do
           Array xs ::: r <- readIORef stackRef
           if Vector.null xs
@@ -870,7 +884,13 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             let !result = fromEnum $ f x y
             writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
 
-          showInteger :: Num a => (a -> String) -> IO ()
+          boolString :: (Text -> Text -> Bool) -> IO ()
+          boolString f = do
+            Text y ::: Text x ::: r <- readIORef stackRef
+            let !result = fromEnum $ f x y
+            writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
+
+          showInteger :: Num a => (a -> Text) -> IO ()
           showInteger f = do
             rep ::: r <- readIORef stackRef
             let x = case rep of
@@ -884,23 +904,23 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                   UInt64 n -> toInteger n
                   _nonInt -> error "the typechecker has failed us (show integer)"
             writeIORef stackRef $
-              Array (Vector.fromList $ map Character $ f $ fromInteger x) ::: r
+              Text (f $ fromInteger x) ::: r
 
-          showFloat :: Fractional a => (a -> String) -> IO ()
+          showFloat :: Fractional a => (a -> Text) -> IO ()
           showFloat f = do
             rep ::: r <- readIORef stackRef
             let x = case rep of
                   Float32 n -> realToFrac n
                   Float64 n -> realToFrac n
-                  _nonInt -> error "the typechecker has failed us (show float)"
+                  _nonFloat -> error "the typechecker has failed us (show float)"
             writeIORef stackRef $
-              Array (Vector.fromList $ map Character $ f x) ::: r
+              Text (f x) ::: r
 
-          readInteger :: Integral a => (String -> IO a) -> (a -> Rep) -> IO ()
+          readInteger :: Integral a => (Text -> IO a) -> (a -> Rep) -> IO ()
           readInteger f rep = do
-            Array cs ::: r <- readIORef stackRef
+            Text txt ::: r <- readIORef stackRef
             do
-              result <- f $ map (\(Character c) -> c) $ Vector.toList cs
+              result <- f txt
               writeIORef stackRef $ rep result ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
@@ -908,11 +928,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                 writeIORef stackRef r
                 word callStack (Qualified Vocabulary.global "none") []
 
-          readFloat :: Real a => (String -> IO a) -> (a -> Rep) -> IO ()
+          readFloat :: Real a => (Text -> IO a) -> (a -> Rep) -> IO ()
           readFloat f rep = do
-            Array cs ::: r <- readIORef stackRef
+            Text txt ::: r <- readIORef stackRef
             do
-              result <- f $ map (\(Character c) -> c) $ Vector.toList cs
+              result <- f txt
               writeIORef stackRef $ rep result ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
@@ -950,16 +970,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               throwIO $
                 Failure $
                   Pretty.vcat $
-                    ( if isAlreadyInUseError e
-                        then "Execution failure: file already in use"
-                        else
-                          if isDoesNotExistError e
-                            then "Execution failure: file does not exist"
-                            else
-                              if isPermissionError e
-                                then "Execution failure: not permitted to open file"
-                                else "Execution failure: unknown file access error"
-                    ) :
+                    "Execution failure:" :
+                    show (ioeGetErrorType e) :
                     "Call stack:" :
                     map (Pretty.nest 4 . pPrint) callStack
 

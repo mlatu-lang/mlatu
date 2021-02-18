@@ -72,7 +72,7 @@ Welcome to Mlatu! Type //help for help or //quit to quit
 Second, you can use `mlatu` to interpret files:
 
 ```
-> mlatu source1.mlt source2.mlt
+> mlatu examples/fizzbuzz.mlt
 ```
 
 ## Miscellany

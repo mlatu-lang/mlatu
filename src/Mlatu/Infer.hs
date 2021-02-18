@@ -499,7 +499,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Text x ->
     return
       ( Text x,
-        TypeConstructor origin "List" :@ TypeConstructor origin "Char",
+        TypeConstructor origin "String",
         tenv0
       )
 
