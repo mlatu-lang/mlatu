@@ -1,5 +1,7 @@
 # The Mlatu Programming Language
 
+[![](https://tokei.rs/b1/github/brightly-salty/mlatu)](https://github.com/XAMPPRocky/tokei).
+
 Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. 
 
 Very experimental: contributions welcome, but please don't use this in production.
