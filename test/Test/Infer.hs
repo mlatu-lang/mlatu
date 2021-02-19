@@ -3,7 +3,7 @@ module Test.Infer
   )
 where
 
-import Mlatu (compileCommon, fragmentFromSource)
+import Mlatu (compilePrelude, Prelude(..), fragmentFromSource)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
@@ -256,7 +256,7 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  mDictionary <- runMlatu $ compileCommon ioPermission Nothing
+  mDictionary <- runMlatu $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
       error $

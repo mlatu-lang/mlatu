@@ -4,7 +4,7 @@ import Arguments (Arguments, parseArguments)
 import Arguments qualified
 -- import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Interact qualified
-import Mlatu (compile, compileCommon, runMlatu)
+import Mlatu (compile, compilePrelude, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Vocabulary qualified as Vocabulary
@@ -22,19 +22,13 @@ main = do
       Arguments.CheckMode -> do
         hPutStrLn stderr "Cannot run interactively in check mode."
         exitFailure
-      Arguments.CompileMode {} -> do
-        hPutStrLn stderr "Cannot run interactively in compile mode."
-        exitFailure
-      Arguments.InterpretMode -> Interact.run
-      Arguments.FormatMode -> do
-        hPutStrLn stderr "Cannot run interactively in format mode."
-        exitFailure
+      Arguments.InterpretMode -> Interact.run (Arguments.prelude arguments)
     (_ : _) -> runBatch arguments
 
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   paths <- forM (Arguments.inputPaths arguments) makeAbsolute
-  commonResult <- runMlatu $ compileCommon mainPermissions Nothing
+  commonResult <- runMlatu $ compilePrelude (Arguments.prelude arguments) mainPermissions Nothing
   case commonResult of 
     Left reports -> do 
       reportAll reports
@@ -48,10 +42,8 @@ runBatch arguments = do
           Right program ->
             case Arguments.compileMode arguments of
               Arguments.CheckMode -> pass
-              Arguments.CompileMode _ -> pass
               Arguments.InterpretMode ->
                 void $ interpret program Nothing [] stdin stdout stderr []
-              Arguments.FormatMode -> pass
   where
     mainPermissions =
       [ QualifiedName $ Qualified Vocabulary.global "IO",

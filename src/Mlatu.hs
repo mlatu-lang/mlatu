@@ -10,14 +10,15 @@
 -- Portability : GHC
 module Mlatu
   ( Enter.fragmentFromSource,
+    Prelude (..),
     compile,
     runMlatu,
     tokenize,
-    compileCommon,
+    compilePrelude,
   )
 where
 
-import Data.FileEmbed (embedDir)
+import Data.FileEmbed (embedDir, embedFile)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
@@ -27,13 +28,10 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 
 common :: [(FilePath, ByteString)]
-common = $(embedDir "./common")
+common = $(embedDir "./std/common")
 
-commonPaths :: [FilePath]
-commonPaths = map fst common
-
-commonSources :: [Text]
-commonSources = map (decodeUtf8 . snd) common
+foundation :: (FilePath, ByteString)
+foundation = ("./std/foundation.mlt", $(embedFile "./std/foundation.mlt"))
 
 -- | This is a simple wrapper for the compiler pipeline. It adds a list of
 -- program fragments to the dictionary from a list of source paths. At each
@@ -62,13 +60,21 @@ compile mainPermissions mainName paths mDict = do
   -- dictionary <-
   Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
-compileCommon :: [GeneralName] -> Maybe Qualified -> K Dictionary
-compileCommon mainPermissions mainName = do
+compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> K Dictionary
+compilePrelude prelude mainPermissions mainName = do
   parsed <-
     mconcat
       <$> zipWithM
         (Enter.fragmentFromSource mainPermissions mainName 1)
-        commonPaths
-        commonSources
+        preludePaths
+        (map decodeUtf8 preludeSources)
   -- dictionary <-
   Enter.fragment parsed Dictionary.empty
+  where
+    (preludePaths, preludeSources) = case prelude of
+      Foundation -> ([fst foundation], [snd foundation])
+      Common -> (fst foundation : map fst common, snd foundation : map snd common)
+
+data Prelude
+  = Foundation
+  | Common

@@ -7,7 +7,7 @@ where
 
 import Data.ByteString qualified as ByteString
 import Data.Knob qualified as Knob
-import Mlatu (compileCommon, fragmentFromSource)
+import Mlatu (compilePrelude, Prelude(..), fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Enter qualified as Enter
 import Mlatu.Interpret (Rep (..), interpret)
@@ -25,7 +25,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    mDictionary <- runMlatu $ compileCommon ioPermission Nothing
+    mDictionary <- runMlatu $ compilePrelude Common ioPermission Nothing
     case mDictionary of
       Left reports ->
         error $

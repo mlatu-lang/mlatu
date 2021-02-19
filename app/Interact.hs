@@ -6,7 +6,7 @@ where
 import Control.Exception (catch)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
-import Mlatu (compileCommon, runMlatu)
+import Mlatu (runMlatu, Prelude(..), compilePrelude)
 import Mlatu qualified
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -60,9 +60,9 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (printf)
 
-run :: IO ()
-run = do
-  commonDictionary <- runMlatu $ compileCommon [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
+run :: Prelude -> IO ()
+run prelude = do
+  commonDictionary <- runMlatu $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
   dictionaryRef <-
     newIORef =<< case commonDictionary of
       Left reports -> do

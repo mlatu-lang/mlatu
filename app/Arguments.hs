@@ -1,11 +1,12 @@
 module Arguments
   ( Arguments (..),
     CompileMode (..),
-    OutputFormat (..),
+    Prelude (..),
     parseArguments,
   )
 where
 
+import Mlatu (Prelude (..))
 import Relude
 import System.Console.CmdArgs.Explicit
   ( Arg,
@@ -29,18 +30,14 @@ import System.Console.CmdArgs.Explicit
 data Arguments = Arguments
   { compileMode :: !CompileMode,
     inputPaths :: ![FilePath],
-    outputPath :: !(Maybe FilePath),
     showHelp :: !Bool,
-    showVersion :: !Bool
+    showVersion :: !Bool,
+    prelude :: !Prelude
   }
 
 data CompileMode
   = CheckMode
-  | CompileMode !OutputFormat
   | InterpretMode
-  | FormatMode
-
-data OutputFormat = OutputIr
 
 parseArguments :: IO Arguments
 parseArguments = do
@@ -58,7 +55,7 @@ argumentsMode =
   mode
     "mlatu"
     defaultArguments
-    "Compiles and interprets Mlatu code."
+    "Interprets Mlatu code."
     bareArgument
     options
 
@@ -67,9 +64,9 @@ defaultArguments =
   Arguments
     { compileMode = InterpretMode,
       inputPaths = [],
-      outputPath = Nothing,
       showHelp = False,
-      showVersion = False
+      showVersion = False,
+      prelude = Common
     }
 
 bareArgument :: Arg Arguments
@@ -83,48 +80,25 @@ inputPathArgument path acc =
 
 options :: [Flag Arguments]
 options =
-  [ flagReq'
-      ["c", "compile"]
-      "ir"
-      "Compile to the given output format."
-      $ \format acc -> case format of
-        "ir" -> Right acc {compileMode = CompileMode OutputIr}
-        _ -> Left $ "Unknown output format '" ++ format ++ "'.",
-    flagBool'
+  [ flagBool
+      ["no-common", "foundation-only"]
+      ( \flag acc ->
+          if flag
+            then acc {prelude = Foundation}
+            else acc
+      )
+      "Compiles with the bare minimum prelude.",
+    flagBool
       ["check"]
-      "Check syntax and types without compiling or running."
-      $ \flag acc ->
-        acc
-          { compileMode = if flag then CheckMode else compileMode acc
-          },
-    flagBool' ["fmt", "format"] "Formats code in a pretty manner" $ \flag acc ->
-      acc
-        { compileMode = if flag then FormatMode else compileMode acc
-        },
-    flagReq'
-      ["o", "output"]
-      "PATH"
-      "File path for compile output."
-      $ \path acc -> case outputPath acc of
-        Just {} -> Left "Only one output path is allowed."
-        Nothing -> Right $ acc {outputPath = Just path},
+      ( \flag acc ->
+          if flag
+            then
+              acc
+                { compileMode = CheckMode
+                }
+            else acc
+      )
+      "Check syntax and types without compiling or running.",
     flagHelpSimple $ \acc -> acc {showHelp = True},
     flagVersion $ \acc -> acc {showVersion = True}
   ]
-
-flagReq' ::
-  [Name] ->
-  FlagHelp ->
-  Help ->
-  Update a ->
-  Flag a
-flagReq' names sample description option =
-  flagReq names option sample description
-
-flagBool' ::
-  [Name] ->
-  Help ->
-  (Bool -> a -> a) ->
-  Flag a
-flagBool' names description option =
-  flagBool names option description
