@@ -102,6 +102,8 @@ data Token (l :: Layoutness) where
   Vocab :: Token l
   -- | @::@
   VocabLookup :: Token l
+  -- | @where@
+  Where :: Token l
   -- | @with@
   With :: Token l
   -- | @word@
@@ -151,6 +153,7 @@ instance Eq (Token l) where
   VectorEnd == VectorEnd = True
   Vocab == Vocab = True
   VocabLookup == VocabLookup = True
+  Where == Where = True
   With == With = True
   Word a == Word b = a == b
   _ == _ = False
@@ -199,6 +202,7 @@ instance Pretty (Token l) where
     VectorEnd -> "]"
     Vocab -> "vocab"
     VocabLookup -> "::"
+    Where -> "where"
     With -> "with"
     Word name -> pPrint name
 

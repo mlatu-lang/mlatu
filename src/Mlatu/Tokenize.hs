@@ -322,6 +322,7 @@ tokenTokenizer =
                     "type" -> Type
                     "vocab" -> Vocab
                     "with" -> With
+                    "where" -> Where
                     _ -> Word (Unqualified name),
                 -- See note [Angle Brackets].
 

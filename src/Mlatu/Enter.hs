@@ -125,14 +125,14 @@ declareType dictionary typ =
         -- Not previously declared.
         Nothing -> do
           let entry =
-                Entry.Type
-                  (TypeDefinition.origin typ)
+                uncurry
+                  (Entry.Type (TypeDefinition.origin typ))
                   (TypeDefinition.parameters typ)
                   (TypeDefinition.constructors typ)
           return $ Dictionary.insert (Instantiated name []) entry dictionary
         -- Previously declared with the same parameters.
-        Just (Entry.Type _origin parameters _ctors)
-          | parameters == TypeDefinition.parameters typ ->
+        Just (Entry.Type _origin parameters _ _ctors)
+          | parameters == fst (TypeDefinition.parameters typ) ->
             return dictionary
         -- Already declared or defined differently.
         Just {} ->

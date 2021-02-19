@@ -20,10 +20,10 @@ import Mlatu.Entry.Parent (Parent)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
-import Mlatu.Signature (Signature)
+import Mlatu.Signature (Constraint, Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
-import Relude hiding (Type)
+import Relude hiding (Constraint, Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -56,7 +56,7 @@ data Entry
   | -- | A trait to which other entries can link.
     Trait !Origin !Signature
   | -- | A data type with some generic parameters.
-    Type !Origin ![Parameter] ![DataConstructor]
+    Type !Origin ![Parameter] ![Constraint] ![DataConstructor]
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show)
@@ -95,14 +95,15 @@ instance Pretty Entry where
         Pretty.hsep ["defined at", pPrint origin],
         Pretty.hsep ["with signature", pPrint signature]
       ]
-  pPrint (Type origin parameters ctors) =
+  pPrint (Type origin parameters constraints ctors) =
     Pretty.vcat
       [ "type",
         Pretty.hsep ["defined at", pPrint origin],
         Pretty.hcat $
-          "with parameters <" :
+          "with parameters [" :
           intersperse ", " (map pPrint parameters)
-            ++ [">"],
+            ++ ["] constrained so that "]
+            ++ intersperse "," (map pPrint constraints),
         Pretty.vcat
           [ "and data constructors",
             Pretty.nest 4 $

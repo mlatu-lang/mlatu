@@ -78,6 +78,7 @@ main permissions mName term =
       signature =
         Signature.Quantified
           [Parameter o "R" Stack]
+          []
           ( Signature.StackFunction
               (Signature.Variable "R" o)
               []

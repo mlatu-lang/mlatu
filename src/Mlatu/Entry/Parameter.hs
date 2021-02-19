@@ -18,7 +18,7 @@ import Relude
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
--- | A generic type parameter for a data type, like @T@ in @List<T>@.
+-- | A generic type parameter for a data type, like @T@ in @List[T]@.
 data Parameter = Parameter !Origin !Unqualified !Kind
   deriving (Show)
 

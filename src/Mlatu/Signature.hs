@@ -8,20 +8,26 @@
 -- Portability : GHC
 module Mlatu.Signature
   ( Signature (..),
+    Constraint (..),
     origin,
   )
 where
 
-import Mlatu.Entry.Parameter (Parameter (Parameter))
-import Mlatu.Kind (Kind (..))
-import Mlatu.Name (GeneralName)
+import Mlatu.Entry.Parameter (Parameter)
+import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Type (Type)
 import Mlatu.Type qualified as Type
-import Relude hiding (Type)
+import Relude hiding (Constraint, Type)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+
+data Constraint = Constraint !Unqualified ![Parameter]
+  deriving (Eq, Show)
+
+instance Pretty Constraint where
+  pPrint (Constraint name params) = Pretty.hcat [pPrint name, Pretty.brackets $ Pretty.list $ map pPrint params]
 
 -- | A parsed type signature.
 data Signature
@@ -32,7 +38,7 @@ data Signature
   | -- | @A, B -> C, D +P +Q@
     Function ![Signature] ![Signature] ![GeneralName] !Origin
   | -- | @\<R..., T, +P\> (...)@
-    Quantified ![Parameter] !Signature !Origin
+    Quantified ![Parameter] ![Constraint] !Signature !Origin
   | -- | @T@
     Variable !GeneralName !Origin
   | -- | @R..., A, B -> S..., C, D +P +Q@
@@ -52,7 +58,7 @@ data Signature
 instance Eq Signature where
   Application a b _ == Application c d _ = (a, b) == (c, d)
   Function a b c _ == Function d e f _ = (a, b, c) == (d, e, f)
-  Quantified a b _ == Quantified c d _ = (a, b) == (c, d)
+  Quantified a b c _ == Quantified d e f _ = (a, b, c) == (d, e, f)
   Variable a _ == Variable b _ = a == b
   StackFunction a b c d e _ == StackFunction f g h i j _ =
     (a, b, c, d, e) == (f, g, h, i, j)
@@ -63,7 +69,7 @@ origin signature = case signature of
   Application _ _ o -> o
   Bottom o -> o
   Function _ _ _ o -> o
-  Quantified _ _ o -> o
+  Quantified _ _ _ o -> o
   Variable _ o -> o
   StackFunction _ _ _ _ _ o -> o
   Type t -> Type.origin t
@@ -81,18 +87,12 @@ instance Pretty Signature where
           Pretty.list $ map pPrint bs
         ]
           ++ map ((Pretty.char '+' Pretty.<>) . pPrint) es
-  pPrint (Quantified names typ _) =
-    Pretty.hsep
-      [ Pretty.brackets $ Pretty.list $ map prettyVar names,
+  pPrint (Quantified names constraints typ _) =
+    Pretty.hsep $
+      [ Pretty.brackets $ Pretty.list $ map pPrint names,
         pPrint typ
       ]
-    where
-      prettyVar :: Parameter -> Pretty.Doc
-      prettyVar (Parameter _ name kind) = case kind of
-        Value -> pPrint name
-        Stack -> pPrint name Pretty.<> "..."
-        Permission -> Pretty.char '+' Pretty.<> pPrint name
-        _invalidForQuantified -> error "quantified signature contains variable of invalid kind"
+        ++ if not $ null constraints then Pretty.text " where " : map pPrint constraints else []
   pPrint (Variable name _) = pPrint name
   pPrint (StackFunction r as s bs es _) =
     Pretty.parens $

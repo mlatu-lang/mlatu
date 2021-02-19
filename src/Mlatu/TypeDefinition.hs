@@ -15,15 +15,16 @@ import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
-import Relude
+import Relude hiding (Constraint)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Mlatu.Signature (Constraint)
 
 data TypeDefinition = TypeDefinition
   { constructors :: ![DataConstructor],
     name :: !Qualified,
     origin :: !Origin,
-    parameters :: ![Parameter]
+    parameters :: !([Parameter], [Constraint])
   }
   deriving (Show)
 
@@ -35,7 +36,7 @@ instance Pretty TypeDefinition where
         Pretty.colon,
         Pretty.braces $
           Pretty.hsep $
-            map pPrint parameters,
+            map pPrint (fst parameters),
         Pretty.nest
           4
           $ Pretty.vcat $ map pPrint constructors
