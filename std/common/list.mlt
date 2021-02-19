@@ -9,15 +9,15 @@ vocab mlatu {
   intrinsic init[T] (List[T] -> Optional[List[T]])
   intrinsic last[T] (List[T] -> Optional[T])
   intrinsic cat[T] (List[T], List[T] -> List[T])
-  intrinsic get[T] (List[T], Int32 -> Optional[T])
-  intrinsic set[T] (List[T], T, Int32 -> Optional[List[T]])
+  intrinsic get[T] (List[T], Int -> Optional[T])
+  intrinsic set[T] (List[T], T, Int -> Optional[List[T]])
 
 }
 
 define empty[T] (List[T] -> Bool):
   _::mlatu::empty
 
-define length[T] (List[T] -> Int32):
+define length[T] (List[T] -> Int):
   match (tail)
   case none:
     0
@@ -49,7 +49,7 @@ define not_elem[T] (T, List[T] -> Bool):
     true
 
 // TODO: Partial instances.
-instance > (List[Int32], List[Int32] -> Bool):
+instance > (List[Int], List[Int] -> Bool):
   -> xs, ys;
   match (xs head_tail)
   case some:
@@ -68,11 +68,11 @@ instance > (List[Int32], List[Int32] -> Bool):
   case none:
     false
 
-instance < (List[Int32], List[Int32] -> Bool) { swap (>) }
-instance <= (List[Int32], List[Int32] -> Bool) { (>) not }
-instance >= (List[Int32], List[Int32] -> Bool) { (<) not }
+instance < (List[Int], List[Int] -> Bool) { swap (>) }
+instance <= (List[Int], List[Int] -> Bool) { (>) not }
+instance >= (List[Int], List[Int] -> Bool) { (<) not }
 
-instance = (List[Int32], List[Int32] -> Bool):
+instance = (List[Int], List[Int] -> Bool):
   -> xs, ys;
   if (xs length <> ys length):
     false
@@ -92,7 +92,7 @@ instance = (List[Int32], List[Int32] -> Bool):
     case none:
       true
 
-instance <> (List[Int32], List[Int32] -> Bool) { (=) not }
+instance <> (List[Int], List[Int] -> Bool) { (=) not }
 
 define head[T] (List[T] -> Optional[T]):
   _::mlatu::head
@@ -120,17 +120,17 @@ define cat[T] (List[T], List[T] -> List[T]):
 // instance + [T] (List[T], List[T] -> List[T]):
 //   cat
 
-define get[T] (List[T], Int32 -> Optional[T]):
+define get[T] (List[T], Int -> Optional[T]):
   _::mlatu::get
 
-define get_all[T] (List[T], List[Int32] -> List[Optional[T]]):
+define get_all[T] (List[T], List[Int] -> List[Optional[T]]):
   -> list, indices;
   indices { list swap get } map
 
-define set[T] (List[T], T, Int32 -> Optional[List[T]]):
+define set[T] (List[T], T, Int -> Optional[List[T]]):
   _::mlatu::set
 
-define modify[T] (List[T], (T -> T), Int32 -> Optional[List[T]]):
+define modify[T] (List[T], (T -> T), Int -> Optional[List[T]]):
   -> xs, f, i;
   match (xs i get)
   case none:
@@ -141,7 +141,7 @@ define modify[T] (List[T], (T -> T), Int32 -> Optional[List[T]]):
 define once[T] (T -> List[T]):
   -> x; [x]
 
-define replicate[T] (T, Int32 -> List[T]):
+define replicate[T] (T, Int -> List[T]):
   -> value, count;
   if (count <= 0):
     []
@@ -187,12 +187,12 @@ define map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P):
     ys f map -> zs;
     z zs prepend
 
-define map_index[A, B, +P] (List[A], (A, Int32 -> B +P) -> List[B] +P):
+define map_index[A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P):
   0 map_index::helper
 
 vocab map_index {
 
-  define helper[A, B, +P] (List[A], (A, Int32 -> B +P), Int32 -> List[B] +P):
+  define helper[A, B, +P] (List[A], (A, Int -> B +P), Int -> List[B] +P):
     -> xs, f, i;
     match (xs head_tail)
     case none:

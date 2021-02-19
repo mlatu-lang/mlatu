@@ -22,9 +22,9 @@ import Relude hiding (Compose, Type)
 -- | Zonking a type fully substitutes all type variables. That is, if you have:
 --
 -- > t0 ~ t1
--- > t1 ~ Int32
+-- > t1 ~ Int64
 --
--- Then zonking @t0@ gives you @Int32@.
+-- Then zonking @t0@ gives you @Int64@.
 typ :: TypeEnv -> Type -> Type
 typ tenv0 = recur
   where

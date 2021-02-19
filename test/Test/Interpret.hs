@@ -7,7 +7,7 @@ where
 
 import Data.ByteString qualified as ByteString
 import Data.Knob qualified as Knob
-import Mlatu (compilePrelude, Prelude(..), fragmentFromSource)
+import Mlatu (Prelude (..), compilePrelude, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Enter qualified as Enter
 import Mlatu.Interpret (Rep (..), interpret)
@@ -39,12 +39,12 @@ spec = do
 
   describe "with trivial programs" $ do
     it "interprets literals" $ do
-      testInterpret "0" [Int32 0]
+      testInterpret "0" [Int64 0]
       testInterpret "0.0" [Float64 0.0]
       testInterpret
         "1 2"
-        [ Int32 2,
-          Int32 1
+        [ Int64 2,
+          Int64 1
         ]
       testInterpret
         "\"meow\""
@@ -54,20 +54,20 @@ spec = do
       testInterpret "\"meow\" println" []
 
   describe "with operators" $ do
-    it "interprets Int32 operators" $ do
-      testInterpret "2 + 3" [Int32 5]
-      testInterpret "2 - 3" [Int32 -1]
-      testInterpret "2 * 3" [Int32 6]
-      testInterpret "2 / 3" [Int32 0]
-      testInterpret "2 % 3" [Int32 2]
-    it "interprets chains of Int32 operators" $ do
-      testInterpret "2 + 3 + 4" [Int32 9]
-      testInterpret "2 + 3 * 4" [Int32 14]
-      testInterpret "2 * 3 + 4" [Int32 10]
-      testInterpret "2 * 3 * 4" [Int32 24]
-    it "wraps Int32" $ do
-      testInterpret "2147483647 + 1" [Int32 -2147483648]
-      testInterpret "-2147483648 - 1" [Int32 2147483647]
+    it "interprets Int64 operators" $ do
+      testInterpret "2 + 3" [Int64 5]
+      testInterpret "2 - 3" [Int64 -1]
+      testInterpret "2 * 3" [Int64 6]
+      testInterpret "2 / 3" [Int64 0]
+      testInterpret "2 % 3" [Int64 2]
+    it "interprets chains of Int64 operators" $ do
+      testInterpret "2 + 3 + 4" [Int64 9]
+      testInterpret "2 + 3 * 4" [Int64 14]
+      testInterpret "2 * 3 + 4" [Int64 10]
+      testInterpret "2 * 3 * 4" [Int64 24]
+    it "wraps Int64" $ do
+      testInterpret "9223372036854775807 + 1" [Int64 -9223372036854775808]
+      testInterpret "-9223372036854775808 - 1" [Int64 9223372036854775807]
     it "interprets Float64 operators" $ do
       testInterpret "2.0 + 3.0" [Float64 5]
       testInterpret "2.0 - 3.0" [Float64 -1]
@@ -129,16 +129,16 @@ spec = do
 
   describe "with common math words" $ do
     it "computes absolute values" $ do
-      testInterpret "0 abs" [Int32 0]
-      testInterpret "+0 abs" [Int32 0]
-      testInterpret "-0 abs" [Int32 0]
-      testInterpret "1 abs" [Int32 1]
-      testInterpret "+1 abs" [Int32 1]
-      testInterpret "1000 abs" [Int32 1000]
-      testInterpret "+1000 abs" [Int32 1000]
-      testInterpret "-1000 abs" [Int32 1000]
-      testInterpret "2147483647 abs" [Int32 2147483647]
-      testInterpret "-2147483648 abs" [Int32 -2147483648]
+      testInterpret "0 abs" [Int64 0]
+      testInterpret "+0 abs" [Int64 0]
+      testInterpret "-0 abs" [Int64 0]
+      testInterpret "1 abs" [Int64 1]
+      testInterpret "+1 abs" [Int64 1]
+      testInterpret "1000 abs" [Int64 1000]
+      testInterpret "+1000 abs" [Int64 1000]
+      testInterpret "-1000 abs" [Int64 1000]
+      testInterpret "9223372036854775807 abs" [Int64 9223372036854775807]
+      testInterpret "-9223372036854775808 abs" [Int64 -9223372036854775808]
 
   describe "with functional combinators" $ do
     it "computes fixed points" $ do
@@ -150,7 +150,7 @@ spec = do
         \  else:\n\
         \    (n - 1) rec call * n\n\
         \} fix"
-        [Int32 120]
+        [Int64 120]
 
 testInterpretFull ::
   Dictionary ->

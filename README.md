@@ -31,15 +31,15 @@ Very experimental: contributions welcome, but please don't use this in productio
 Here's a naive recursive fibonacci function:
 
 ```
-define fib (UInt64 -> UInt64):
+define fib (Int -> Int):
   -> n;
-  if (n < 2u64):
-    1u64
+  if (n < 2):
+    1
   else:
-    (n - 2u64) fib + 
-    (n - 1u64) fib
+    (n - 2) fib + 
+    (n - 1) fib
 
-10u64 fib print
+20 fib print
 ```
 See the examples folder for more.
 
@@ -61,21 +61,18 @@ Note: `cabal install` should also work.
 
 ### Usage
 
-At the moment, there are only two ways to use `mlatu`.
-
-First, you can use `mlatu` without any arguments to start a REPL:
-
 ```
-> mlatu
-Welcome to Mlatu! Type //help for help or //quit to quit
-    1: 
+mlatu [OPTIONS] input-paths
+  Interprets Mlatu code.
+
+     --no-common --foundation-only  Compiles with the bare minimum prelude.
+     --check                        Check syntax and types without compiling
+                                    or running.
+  -? --help                         Display help message
+  -V --version                      Print version information
 ```
 
-Second, you can use `mlatu` to interpret files:
-
-```
-> mlatu examples/fizzbuzz.mlt
-```
+If `mlatu` is called without any input paths, an interactive REPL will be started. Type `//help` in the REPL for command options in the REPL.
 
 ## Miscellany
 

@@ -15,7 +15,6 @@ where
 
 import Data.Ratio ((%))
 import Mlatu.Base (Base (..))
-import Mlatu.Bits (FloatBits (..), IntegerBits (..))
 import Numeric (showIntAtBase)
 import Relude
 import Relude.Unsafe qualified as Unsafe
@@ -24,14 +23,12 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data IntegerLiteral = IntegerLiteral
   { integerValue :: !Integer,
-    integerBase :: !Base,
-    integerBits :: !IntegerBits
-  }
+    integerBase :: !Base  }
   deriving (Show)
 
 -- Integer literals compare equality regardless of base and bits.
 instance Eq IntegerLiteral where
-  IntegerLiteral a _baseA _bitsA == IntegerLiteral b _baseB _bitsB = a == b
+  IntegerLiteral a _baseA == IntegerLiteral b _baseB = a == b
 
 instance Pretty IntegerLiteral where
   pPrint literal =
@@ -42,14 +39,10 @@ instance Pretty IntegerLiteral where
           Octal -> "0o"
           Decimal -> ""
           Hexadecimal -> "0x",
-        Pretty.text $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) "",
-        case bits of
-          Signed32 -> ""
-          _nonDefault -> pPrint bits
+        Pretty.text $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
       ]
     where
       value = integerValue literal
-      bits = integerBits literal
       (base, digits) = case integerBase literal of
         Binary -> (2, "01")
         Octal -> (8, ['0' .. '7'])
@@ -59,26 +52,21 @@ instance Pretty IntegerLiteral where
 data FloatLiteral = FloatLiteral
   { floatSignificand :: !Integer,
     floatFractional :: !Int,
-    floatExponent :: !Int,
-    floatBits :: !FloatBits
+    floatExponent :: !Int
   }
   deriving (Show)
 
 -- Float literals compar equality regardless of bits.
 instance Eq FloatLiteral where
-  FloatLiteral a b c _bitsA == FloatLiteral d e f _bitsB = (a, c - b) == (d, f - e)
+  FloatLiteral a b c == FloatLiteral d e f = (a, c - b) == (d, f - e)
 
 instance Pretty FloatLiteral where
   pPrint literal =
     Pretty.hcat
       [ if value < 0 then "-" else "",
-        Pretty.double value,
-        case bits of
-          Float64 -> ""
-          Float32 -> pPrint bits
+        Pretty.double value
       ]
     where
-      bits = floatBits literal
       value = floatValue literal
 
 -- Note [Float Literals]:
@@ -95,7 +83,7 @@ instance Pretty FloatLiteral where
 -- exponent in scientific notation.
 
 floatValue :: Fractional a => FloatLiteral -> a
-floatValue (FloatLiteral a b c _bits) =
+floatValue (FloatLiteral a b c) =
   let e = c - b
       -- The intermediate rational step is necessary to preserve precision.
       shift = if e < 0 then 1 % 10 ^ negate e else 10 ^ e

@@ -6,13 +6,13 @@ permission Exit[R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
 
 vocab mlatu {
   intrinsic abort[R..., S...] (R..., String -> S... +Fail)
-  intrinsic exit[R..., S...] (R..., Int32 -> S... +Exit)
+  intrinsic exit[R..., S...] (R..., Int -> S... +Exit)
 }
 
 define abort[R..., S...] (R... -> S... +Fail):
   "abort called" fail
 
-define exit[R..., S...] (R..., Int32 -> S... +Exit):
+define exit[R..., S...] (R..., Int -> S... +Exit):
   _::mlatu::exit
 
 define fail[R..., S...] (R..., String -> S... +Fail):

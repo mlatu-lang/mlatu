@@ -1,6 +1,6 @@
-define divisible (Int32, Int32 -> Bool +Fail):
+define divisible (Int, Int -> Bool +Fail):
   (%) 0 (=)
-define fizzbuzz (Int32 -> String):
+define fizzbuzz (Int -> String):
   -> n;
   do (with (+Fail)):
     n 5 divisible
@@ -11,7 +11,7 @@ define fizzbuzz (Int32 -> String):
   else:
     if: "Buzz"
     else: n show
-define fizzbuzzes (Int32, Int32 -> +IO):
+define fizzbuzzes (Int, Int -> +IO):
   -> c, m;
   c fizzbuzz println
   if (c < m): (c + 1) m fizzbuzzes

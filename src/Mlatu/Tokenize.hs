@@ -17,10 +17,6 @@ import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
 import Mlatu.Base (Base (..))
-import Mlatu.Bits
-  ( FloatBits (..),
-    IntegerBits (..),
-  )
 import Mlatu.Indent (Indent (..))
 import Mlatu.Informer (Informer (..))
 import Mlatu.Layoutness (Layoutness (..))
@@ -226,69 +222,43 @@ tokenTokenizer =
                   <$> ( Parsec.char prefix
                           *> Parsec.many1 (Parsec.oneOf digits <?> (desc ++ " digit"))
                       )
-              integerBits =
-                Parsec.option Signed32 $
-                  Parsec.choice
-                    [ Parsec.char 'i'
-                        *> Parsec.choice
-                          [ Signed8 <$ Parsec.string "8",
-                            Signed16 <$ Parsec.string "16",
-                            Signed32 <$ Parsec.string "32",
-                            Signed64 <$ Parsec.string "64"
-                          ],
-                      Parsec.char 'u'
-                        *> Parsec.choice
-                          [ Unsigned8 <$ Parsec.string "8",
-                            Unsigned16 <$ Parsec.string "16",
-                            Unsigned32 <$ Parsec.string "32",
-                            Unsigned64 <$ Parsec.string "64"
-                          ]
-                    ]
           Parsec.choice
-            [ Parsec.try $ do
-                (hint, value) <-
-                  Parsec.char '0'
-                    *> Parsec.choice
-                      [ base 'b' "01" readBin Binary "binary",
-                        base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
-                        base
-                          'x'
-                          (['0' .. '9'] ++ ['A' .. 'F'])
-                          (fst . Unsafe.fromJust . viaNonEmpty head . readHex)
-                          Hexadecimal
-                          "hexadecimal"
-                      ]
-                Integer . IntegerLiteral (applySign sign value) hint <$> integerBits,
-              do
-                integer <- Parsec.many1 Parsec.digit
-                mFraction <-
-                  Parsec.optionMaybe $
-                    Parsec.char '.' *> Parsec.many Parsec.digit
-                mPower <-
-                  Parsec.optionMaybe $
-                    Parsec.oneOf "Ee"
+            [ Parsec.try $
+                (\(hint, value) -> Integer (IntegerLiteral (applySign sign value) hint))
+                  <$> ( Parsec.char '0'
+                          *> Parsec.choice
+                            [ base 'b' ['0' .. '1'] readBin Binary "binary",
+                              base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
+                              base
+                                'x'
+                                (['0' .. '9'] ++ ['A' .. 'F'])
+                                (fst . Unsafe.fromJust . viaNonEmpty head . readHex)
+                                Hexadecimal
+                                "hexadecimal"
+                            ]
+                      ),
+              ( \integer fraction power ->
+                  case (fraction, power) of
+                    (Nothing, Nothing) -> Integer (IntegerLiteral (applySign sign (fromMaybe 0 (readMaybe integer))) Decimal)
+                    (_, _) ->
+                      Float
+                        ( FloatLiteral
+                            (applySign sign (fromMaybe 0 (readMaybe (integer ++ fromMaybe "" fraction))))
+                            (maybe 0 length fraction)
+                            (maybe 0 (\(s, p) -> applySign s (fromMaybe 0 (readMaybe p))) power)
+                        )
+              )
+                <$> Parsec.many1 Parsec.digit
+                <*> Parsec.optionMaybe
+                  ( Parsec.char '.' *> Parsec.many Parsec.digit
+                  )
+                <*> Parsec.optionMaybe
+                  ( Parsec.oneOf "Ee"
                       *> ( (,)
                              <$> Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
                              <*> Parsec.many1 Parsec.digit
                          )
-                case (mFraction, mPower) of
-                  (Nothing, Nothing) -> do
-                    Integer . IntegerLiteral (applySign sign (fromMaybe 0 (readMaybe integer))) Decimal <$> integerBits
-                  _float -> do
-                    bits <-
-                      Parsec.option Float64 $
-                        Parsec.char 'f'
-                          *> Parsec.choice
-                            [ Float32 <$ Parsec.string "32",
-                              Float64 <$ Parsec.string "64"
-                            ]
-                    return $
-                      Float $
-                        FloatLiteral
-                          (applySign sign (fromMaybe 0 (readMaybe (integer ++ fromMaybe "" mFraction))))
-                          (maybe 0 length mFraction)
-                          (maybe 0 (\(s, p) -> applySign s (fromMaybe 0 (readMaybe p))) mPower)
-                          bits
+                  )
             ]
             <* Parsec.notFollowedBy Parsec.digit,
         Parsec.try $

@@ -52,47 +52,15 @@ instance show[T] (Optional[T] -> String):
 
 vocab mlatu {
 
-  intrinsic show_int8 (Int8 -> String)
-  intrinsic show_int16 (Int16 -> String)
-  intrinsic show_int32 (Int32 -> String)
-  intrinsic show_int64 (Int64 -> String)
-  intrinsic show_uint8 (UInt8 -> String)
-  intrinsic show_uint16 (UInt16 -> String)
-  intrinsic show_uint32 (UInt32 -> String)
-  intrinsic show_uint64 (UInt64 -> String)
-  intrinsic show_float32 (Float32 -> String)
-  intrinsic show_float64 (Float64 -> String)
+  intrinsic show_int64 (Int -> String)
+  intrinsic show_float64 (Double -> String)
 
 }
 
-instance show (Int8 -> String):
-  _::mlatu::show_int8
-
-instance show (Int16 -> String):
-  _::mlatu::show_int16
-
-instance show (Int32 -> String):
-  _::mlatu::show_int32
-
-instance show (Int64 -> String):
+instance show (Int -> String):
   _::mlatu::show_int64
 
-instance show (UInt8 -> String):
-  _::mlatu::show_uint8
-
-instance show (UInt16 -> String):
-  _::mlatu::show_uint16
-
-instance show (UInt32 -> String):
-  _::mlatu::show_uint32
-
-instance show (UInt64 -> String):
-  _::mlatu::show_uint64
-
-instance show (Float32 -> String):
-  _::mlatu::show_float32
-
-instance show (Float64 -> String):
+instance show (Double -> String):
   _::mlatu::show_float64
 
 trait read[T] (String -> Optional[T])
@@ -113,47 +81,14 @@ instance read (String -> Optional[Bool]):
   else: none
 
 vocab mlatu {
-
-  intrinsic read_int8 (String -> Optional[Int8])
-  intrinsic read_int16 (String -> Optional[Int16])
-  intrinsic read_int32 (String -> Optional[Int32])
-  intrinsic read_int64 (String -> Optional[Int64])
-  intrinsic read_uint8 (String -> Optional[UInt8])
-  intrinsic read_uint16 (String -> Optional[UInt16])
-  intrinsic read_uint32 (String -> Optional[UInt32])
-  intrinsic read_uint64 (String -> Optional[UInt64])
-  intrinsic read_float32 (String -> Optional[Float32])
-  intrinsic read_float64 (String -> Optional[Float64])
+  intrinsic read_int64 (String -> Optional[Int])
+  intrinsic read_float64 (String -> Optional[Double])
 
 }
 
-instance read (String -> Optional[Int8]):
-  _::mlatu::read_int8
-
-instance read (String -> Optional[Int16]):
-  _::mlatu::read_int16
-
-instance read (String -> Optional[Int32]):
-  _::mlatu::read_int32
-
-instance read (String -> Optional[Int64]):
+instance read (String -> Optional[Int]):
   _::mlatu::read_int64
 
-instance read (String -> Optional[UInt8]):
-  _::mlatu::read_uint8
-
-instance read (String -> Optional[UInt16]):
-  _::mlatu::read_uint16
-
-instance read (String -> Optional[UInt32]):
-  _::mlatu::read_uint32
-
-instance read (String -> Optional[UInt64]):
-  _::mlatu::read_uint64
-
-instance read (String -> Optional[Float32]):
-  _::mlatu::read_float32
-
-instance read (String -> Optional[Float64]):
+instance read (String -> Optional[Double]):
   _::mlatu::read_float64
 

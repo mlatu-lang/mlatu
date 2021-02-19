@@ -81,14 +81,7 @@ data ReportKind
   deriving (Eq, Show)
 
 human :: Report -> Pretty.Doc
-human (Report lvl kind) =
-  Pretty.hsep
-    [ case lvl of
-        Info -> "Info: "
-        Warn -> "Warn: "
-        Error -> "Error: ",
-      kindMsg kind
-    ]
+human (Report _ kind) = kindMsg kind
   where
     kindMsg = \case
       (MissingTypeSignature origin name) ->

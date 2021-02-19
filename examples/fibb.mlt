@@ -1,9 +1,9 @@
-define fib (UInt64 -> UInt64):
+define fib (Int -> Int):
   -> n;
-  if (n < 2u64):
-    1u64
+  if (n < 2):
+    1
   else:
-    (n - 2u64) fib + 
-    (n - 1u64) fib
+    (n - 2) fib + 
+    (n - 1) fib
 
-20u64 fib print
+20 fib print

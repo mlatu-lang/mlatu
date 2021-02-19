@@ -94,14 +94,14 @@ operatorMetadata dictionary =
                 Just associativity <- associativityFromName assoc ->
                 yield associativity defaultPrecedence
               -- Just precedence.
-              | [Term.Push _ (Term.Integer (IntegerLiteral prec _base _bits)) _] <-
+              | [Term.Push _ (Term.Integer (IntegerLiteral prec _)) _] <-
                   Term.decompose term,
                 validPrecedence prec ->
                 yield defaultAssociativity $
                   Operator.Precedence $ fromInteger prec
               -- Associativity and precedence.
               | [ Term.Word _ _ (UnqualifiedName (Unqualified assoc)) _ _,
-                  Term.Push _ (Term.Integer (IntegerLiteral prec _base _bits)) _
+                  Term.Push _ (Term.Integer (IntegerLiteral prec _)) _
                   ] <-
                   Term.decompose term,
                 Just associativity <- associativityFromName assoc,
@@ -110,7 +110,7 @@ operatorMetadata dictionary =
                   Operator.Precedence $ fromInteger prec
               | otherwise -> do
                 report $
-                  Report.makeError $
+                  Report.makeWarning $
                     Report.InvalidOperatorMetadata
                       (Term.origin term)
                       name

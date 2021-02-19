@@ -8,4 +8,4 @@ about type Unit:
     """
 
 type Pointer[T]:
-  case _pointer (UInt64)
+  case _pointer (Int)

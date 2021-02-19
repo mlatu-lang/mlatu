@@ -38,18 +38,18 @@ spec = do
     it "typechecks single literals" $ do
       testTypecheck
         Positive
-        "define test (-> Int32) { 0 }"
+        "define test (-> Int) { 0 }"
         $ Type.fun o r (Type.prod o r int) e
 
       testTypecheck
         Positive
-        "define test (-> Float64) { 1.0 }"
+        "define test (-> Double) { 1.0 }"
         $ Type.fun o r (Type.prod o r float) e
 
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
-        "define test (-> List[Pair[Int32, Int32]]) { [1 => 1, 2 => 2, 3 => 3] }"
+        "define test (-> List[Pair[Int, Int]]) { [1 => 1, 2 => 2, 3 => 3] }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
 
     it "typechecks intrinsics" $ do
@@ -63,7 +63,7 @@ spec = do
 
       testTypecheck
         Positive
-        "define test (-> Int32) { 1 2 _::mlatu::add_int32 }"
+        "define test (-> Int) { 1 2 _::mlatu::add_int64 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks data types" $ do
@@ -82,35 +82,35 @@ spec = do
     it "typechecks definitions" $ do
       testTypecheck
         Positive
-        "define one (-> Int32) { 1 }\n\
-        \define test (-> Int32) { one }"
+        "define one (-> Int) { 1 }\n\
+        \define test (-> Int) { one }"
         $ Type.fun o r (Type.prod o r int) e
 
       testTypecheck
         Positive
-        "define one (-> Int32) { 1 }\n\
-        \define two (-> Int32) { 2 }\n\
-        \define test (-> Int32) { one two _::mlatu::add_int32 }"
+        "define one (-> Int) { 1 }\n\
+        \define two (-> Int) { 2 }\n\
+        \define test (-> Int) { one two _::mlatu::add_int64 }"
         $ Type.fun o r (Type.prod o r int) e
 
       testTypecheck
         Positive
-        "define up (Int32 -> Int32) { 1 _::mlatu::add_int32 }\n\
-        \define down (Int32 -> Int32) { -1 _::mlatu::add_int32 }\n\
-        \define test (-> Int32) { 1 up 2 down _::mlatu::add_int32 }"
+        "define up (Int -> Int) { 1 _::mlatu::add_int64 }\n\
+        \define down (Int -> Int) { -1 _::mlatu::add_int64 }\n\
+        \define test (-> Int) { 1 up 2 down _::mlatu::add_int64 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks operators" $ do
       testTypecheck
         Positive
-        "define test (-> Int32) { 1 + 1 }"
+        "define test (-> Int) { 1 + 1 }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks nested scopes" $ do
       testTypecheck
         Positive
-        "intrinsic add (Int32, Int32 -> Int32)\n\
-        \define test (-> Int32, Int32) {\n\
+        "intrinsic add (Int, Int -> Int)\n\
+        \define test (-> Int, Int) {\n\
         \  1000 -> x1;\n\
         \  100 -> y1;\n\
         \  10\n\
@@ -140,7 +140,7 @@ spec = do
     it "typechecks closures with multiple types" $ do
       testTypecheck
         Positive
-        "define test (-> (-> Int32, Float64)) {\n\
+        "define test (-> (-> Int, Double)) {\n\
         \  0 0.0 -> x, y;\n\
         \  { x y }\n\
         \}"
@@ -162,7 +162,7 @@ spec = do
         \define flip[A, B] (Pair[A, B] -> Pair[A, B]) {\n\
         \  match case pair -> x, y { y x pair }\n\
         \}\n\
-        \define test (-> Pair[Char, Int32]) { 1 '1' pair flip }"
+        \define test (-> Pair[Char, Double]) { 1 '1' pair flip }"
         $ Type.fun o r (Type.prod o r (ctor "Pair" :@ char :@ int)) e
 
     it "accepts valid permissions" $ do
@@ -215,10 +215,10 @@ spec = do
     it "typechecks curried functions" $ do
       testTypecheck
         Positive
-        "define curried_add (Int32 -> Int32 -> Int32) {\n\
-        \  -> x; { -> y; x y _::mlatu::add_int32 }\n\
+        "define curried_add (Int -> Int -> Int) {\n\
+        \  -> x; { -> y; x y _::mlatu::add_int64 }\n\
         \}\n\
-        \define test (-> Int32) { 1 2 curried_add call }"
+        \define test (-> Int) { 1 2 curried_add call }"
         $ Type.fun o r (Type.prod o r int) e
 
     it "typechecks permissions of higher-order functions" $ do
@@ -226,19 +226,14 @@ spec = do
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
         \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
-        \define test (-> List[Int32] +IO) { [1, 2, 3] \\launch_missiles map }"
+        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles map }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ int)) (Type.join o io e)
 
   describe "with coercions" $ do
     it "typechecks identity coercions" $ do
       testTypecheck
         Positive
-        "define test (-> Int32) { 1i32 as (Int32) }"
-        $ Type.fun o r (Type.prod o r int) e
-
-      testTypecheck
-        Negative
-        "define test (-> Int32) { 1i64 as (Int32) }"
+        "define test (-> Int) { 1 as (Int) }"
         $ Type.fun o r (Type.prod o r int) e
   where
     o = Origin.point "" 0 0
@@ -249,10 +244,10 @@ spec = do
       TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
     char = ctor "Char"
-    int = ctor "Int32"
+    int = ctor "Int"
     io = ctor "IO"
     fail_ = ctor "Fail"
-    float = ctor "Float64"
+    float = ctor "Double"
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do

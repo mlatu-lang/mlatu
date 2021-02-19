@@ -176,11 +176,7 @@ instance Pretty (Token l) where
     Ellipsis -> "..."
     Elif -> "elif"
     Else -> "else"
-    Float a ->
-      Pretty.hcat
-        [ Pretty.double $ Literal.floatValue a,
-          pPrint $ Literal.floatBits a
-        ]
+    Float a -> Pretty.double $ Literal.floatValue a
     GroupBegin -> "("
     GroupEnd -> ")"
     If -> "if"

@@ -23,19 +23,6 @@ import Data.Foldable (foldrM)
 import Data.List (partition)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
-import Mlatu.Bits
-  ( FloatBits (Float32, Float64),
-    IntegerBits
-      ( Signed16,
-        Signed32,
-        Signed64,
-        Signed8,
-        Unsigned16,
-        Unsigned32,
-        Unsigned64,
-        Unsigned8
-      ),
-  )
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Dictionary (Dictionary)
@@ -48,7 +35,6 @@ import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Literal qualified as Literal
 import Mlatu.Monad (K)
 import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
@@ -463,22 +449,8 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Closed (ClosureIndex index) ->
     return
       (Closed $ ClosureIndex index, Unsafe.fromJust (TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x ->
-    let ctor = case Literal.floatBits x of
-          Float32 -> "Float32"
-          Float64 -> "Float64"
-     in return (Float x, TypeConstructor origin ctor, tenv0)
-  Integer x ->
-    let ctor = case Literal.integerBits x of
-          Signed8 -> "Int8"
-          Signed16 -> "Int16"
-          Signed32 -> "Int32"
-          Signed64 -> "Int64"
-          Unsigned8 -> "UInt8"
-          Unsigned16 -> "UInt16"
-          Unsigned32 -> "UInt32"
-          Unsigned64 -> "UInt64"
-     in return (Integer x, TypeConstructor origin ctor, tenv0)
+  Float x -> return (Float x, TypeConstructor origin "Double", tenv0)
+  Integer x -> return (Integer x, TypeConstructor origin "Int", tenv0)
   Local (LocalIndex index) ->
     return
       (Local $ LocalIndex index, Unsafe.fromJust (TypeEnv.vs tenv0 !!? index), tenv0)

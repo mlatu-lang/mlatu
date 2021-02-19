@@ -22,24 +22,24 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   it "with concrete types" $ do
-    --    Int32
-    -- <: Int32
+    --    Int
+    -- <: Int
     testInstanceCheck Positive int int
 
     --    <T> (T)
-    -- <: Int32
+    -- <: Int
     testInstanceCheck Positive (fx x) int
 
-    --    <R..., T, +P> (R... -> R..., T +P)
-    -- <: <R..., +P>    (R... -> R..., Int32 +P)
+    --    [R..., T, +P] (R... -> R..., T +P)
+    -- <: [R..., +P]    (R... -> R..., Int +P)
     testInstanceCheck
       Positive
       (fr $ fe $ fx $ Type.fun o r (Type.prod o r x) e)
       (fr $ fe $ Type.fun o r (Type.prod o r int) e)
 
   it "with parameterized types" $ do
-    --    <A, B> (Pair<A, B>)
-    -- <: <A>    (Pair<A, A>)
+    --    [A, B] (Pair[A, B])
+    -- <: [A]    (Pair[A, A])
     testInstanceCheck
       Positive
       (fx $ fy $ pair :@ x :@ y)
@@ -86,7 +86,7 @@ spec = do
     ctor =
       TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
-    int = ctor "Int32"
+    int = ctor "Int"
     pair = ctor "Pair"
 
 testInstanceCheck :: Sign -> Type -> Type -> IO ()
