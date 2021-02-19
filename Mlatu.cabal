@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a79493e26e15a30d0b19cbba177512b2ca65dbc7e47227608313ffce2ae5b775
+-- hash: ab9d7d03ca0832711752b05e0b72c9534e6fd6bbc80f4fda41f2278f67c875aa
 
 name:           Mlatu
 version:        0.1.0.0
@@ -105,6 +105,7 @@ library
     , transformers
     , unordered-containers
     , vector
+    , wasm
   default-language: Haskell2010
 
 executable mlatu
@@ -135,6 +136,7 @@ executable mlatu
     , transformers
     , unordered-containers
     , vector
+    , wasm
   default-language: Haskell2010
 
 test-suite test
@@ -172,4 +174,5 @@ test-suite test
     , transformers
     , unordered-containers
     , vector
+    , wasm
   default-language: Haskell2010

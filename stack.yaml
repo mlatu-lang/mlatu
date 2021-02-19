@@ -38,6 +38,8 @@ packages:
 #
 extra-deps:
   - knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+  - github: SPY/haskell-wasm
+    commit: d36342d626c22e38189bb3bf966ea52274bd622e
 # Override default flag values for local packages and extra-deps
 # flags: {}
 
