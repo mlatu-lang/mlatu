@@ -34,7 +34,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (Fragment))
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Informer (errorCheckpoint, Informer (..))
+import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
@@ -65,7 +65,7 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
-import Relude hiding (Compose)
+import Relude hiding (Constraint, Compose)
 import Relude.Unsafe qualified as Unsafe
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
@@ -380,7 +380,7 @@ typeDefinitionParser = (<?> "type definition") $ do
   case fixity of
     Operator.Infix -> Parsec.unexpected "type-level operator"
     Operator.Postfix -> pass
-  parameters <- Parsec.option [] quantifierParser
+  parameters <- Parsec.option ([], []) quantifierParser
   constructors <- blockedParser $ many constructorParser
   return
     TypeDefinition
@@ -484,8 +484,8 @@ basicTypeParser = (<?> "basic type") $ do
     Just suffix -> foldl' apply prefix suffix
     Nothing -> prefix
 
-quantifierParser :: Parser [Parameter]
-quantifierParser = typeListParser parameter
+quantifierParser :: Parser ([Parameter], [Signature.Constraint])
+quantifierParser = (,) <$> typeListParser parameter <*> constraintsParser
 
 parameter :: Parser Parameter
 parameter = do
@@ -496,22 +496,28 @@ parameter = do
       do
         name <- wordNameParser
         Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis)
+          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <* constraintsParser
     ]
+
+constraintsParser :: Parser [Signature.Constraint]
+constraintsParser = Parsec.option [] (parserMatch Token.Where *> (constraintParser `Parsec.sepEndBy1` commaParser))
+  where 
+    constraintParser = Signature.Constraint <$> wordNameParser <*> typeListParser parameter
 
 typeListParser :: Parser a -> Parser [a]
 typeListParser element =
-  bracketedParser $
-    element `Parsec.sepEndBy1` commaParser
+  bracketedParser
+    (element `Parsec.sepEndBy1` commaParser)
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
   origin <- getTokenOrigin
-  Signature.Quantified <$> quantifierParser <*> thing <*> pure origin
+  (params, sigs) <- quantifierParser
+  Signature.Quantified params sigs <$> thing <*> pure origin
 
 traitParser :: Parser Declaration
 traitParser =
-  (<?> "intrinsic declaration") $
+  (<?> "trait declaration") $
     declarationParser Token.Trait Declaration.Trait
 
 intrinsicParser :: Parser Declaration

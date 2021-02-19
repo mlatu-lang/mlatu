@@ -170,6 +170,7 @@ testWord contextSource viewpoint name expected = do
                       Definition.signature =
                         Signature.Quantified
                           [Parameter origin "R" Stack]
+                          []
                           ( Signature.StackFunction
                               (Signature.Variable "R" origin)
                               []
@@ -177,7 +178,7 @@ testWord contextSource viewpoint name expected = do
                               []
                               []
                               origin
-                          )
+                          ) 
                           origin
                     }
             }

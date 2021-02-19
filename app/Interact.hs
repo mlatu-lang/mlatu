@@ -227,6 +227,7 @@ run = do
                           [ Parameter currentOrigin "R" Stack,
                             Parameter currentOrigin "E" Permission
                           ]
+                          []
                           ( Signature.StackFunction
                               (Signature.Bottom currentOrigin)
                               []
