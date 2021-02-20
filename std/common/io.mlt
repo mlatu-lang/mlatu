@@ -35,5 +35,3 @@ define write_file (String, String -> +IO):
 define append_file (String, String -> +IO):
   _::mlatu::append_file
 
-permission IO[R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
-  with (+IO)

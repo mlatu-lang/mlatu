@@ -17,7 +17,7 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Informer (Informer (..))
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Operator (Operator)
 import Mlatu.Operator qualified as Operator
@@ -28,15 +28,15 @@ import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Relude hiding (Compose)
 import Relude.Extra (universe)
-import Text.Parsec (ParsecT, SourcePos, (<?>))
+import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
 
-type Rewriter a = ParsecT [Term ()] () Identity a
+type Rewriter a = Parsec [Term ()] () a
 
 -- | Desugars infix operators into postfix calls in the body of a 'Definition',
 -- according to the definitions and operator metadata in the 'Dictionary'.
-desugar :: Dictionary -> Definition () -> K (Definition ())
+desugar :: Dictionary -> Definition () -> M (Definition ())
 desugar dictionary definition = do
   operatorMetadata <- Dictionary.operatorMetadata dictionary
   let operatorTable :: [[Expr.Operator [Term ()] () Identity (Term ())]]
@@ -63,7 +63,7 @@ desugar dictionary definition = do
                 _otherTerm -> True
             return $ Term.compose () origin results
 
-      desugarTerms :: [Term ()] -> K (Term ())
+      desugarTerms :: [Term ()] -> M (Term ())
       desugarTerms terms = do
         terms' <- mapM desugarTerm terms
         let expression' = infixExpression <* Parsec.eof
@@ -82,7 +82,7 @@ desugar dictionary definition = do
             return $ Term.compose () origin terms
           Right result -> return result
 
-      desugarTerm :: Term () -> K (Term ())
+      desugarTerm :: Term () -> M (Term ())
       desugarTerm term = case term of
         Coercion {} -> return term
         Compose _ a b -> desugarTerms (Term.decompose a ++ Term.decompose b)
@@ -97,11 +97,11 @@ desugar dictionary definition = do
           Match hint ()
             <$> mapM desugarCase cases <*> desugarElse else_ <*> pure origin
           where
-            desugarCase :: Case () -> K (Case ())
+            desugarCase :: Case () -> M (Case ())
             desugarCase (Case name body caseOrigin) =
               Case name <$> desugarTerms' body <*> pure caseOrigin
 
-            desugarElse :: Else () -> K (Else ())
+            desugarElse :: Else () -> M (Else ())
             desugarElse (Else body elseOrigin) =
               Else <$> desugarTerms' body <*> pure elseOrigin
         New {} -> return term
@@ -110,10 +110,10 @@ desugar dictionary definition = do
         Push _ value origin -> Push () <$> desugarValue value <*> pure origin
         Word {} -> return term
 
-      desugarTerms' :: Term () -> K (Term ())
+      desugarTerms' :: Term () -> M (Term ())
       desugarTerms' = desugarTerms . Term.decompose
 
-      desugarValue :: Value () -> K (Value ())
+      desugarValue :: Value () -> M (Value ())
       desugarValue value = case value of
         Capture names body -> Capture names <$> desugarTerms' body
         Character {} -> return value

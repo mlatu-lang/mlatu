@@ -1,9 +1,3 @@
-permission Fail[R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
-  with (+Fail)
-
-permission Exit[R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
-  with (+Exit)
-
 vocab mlatu {
   intrinsic abort[R..., S...] (R..., String -> S... +Fail)
   intrinsic exit[R..., S...] (R..., Int -> S... +Exit)

@@ -6,7 +6,7 @@ where
 import Control.Exception (catch)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
-import Mlatu (runMlatu, Prelude(..), compilePrelude)
+import Mlatu (Prelude (..), compilePrelude, runMlatu)
 import Mlatu qualified
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -17,7 +17,7 @@ import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Infer (typeFromSignature, typecheck)
-import Mlatu.Informer (errorCheckpoint)
+import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Instantiated qualified as Instantiated
 import Mlatu.Interpret (Failure, interpret)
@@ -165,7 +165,7 @@ run prelude = do
 
                       liftIO $ case mResults of
                         Left reports -> reportAll reports
-                        Right (Just to_show) -> print to_show
+                        Right (Just to_show) -> print $ Term.decompose to_show
                         Right Nothing ->
                           hPutStrLn stderr $
                             Pretty.render $
@@ -203,7 +203,7 @@ run prelude = do
                         "<interactive>"
                         line
                     dictionary' <- Enter.fragment fragment dictionary
-                    _ <- errorCheckpoint
+                    _ <- warnCheckpoint
                     callFragment <-
                       Mlatu.fragmentFromSource
                         [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -213,7 +213,7 @@ run prelude = do
                         -- TODO: Avoid stringly typing.
                         (toText $ Pretty.render $ pPrint entryName)
                     dictionary'' <- Enter.fragment callFragment dictionary'
-                    errorCheckpoint
+                    warnCheckpoint
                     let tenv = TypeEnv.empty
                         mainBody = case Dictionary.lookup
                           (Instantiated Definition.mainName [])
@@ -242,7 +242,7 @@ run prelude = do
                     -- current stack state, as long as the state was modified
                     -- correctly by the interpreter.
                     _ <- Unify.typ tenv stackScheme (Term.typ mainBody)
-                    errorCheckpoint
+                    warnCheckpoint
                     return (dictionary'', mainBody)
                 case mResults of
                   Left reports -> do
@@ -320,9 +320,7 @@ completePrefix dictionaryRef prefix
         toString $ Text.intercalate "::" $ parts ++ [name]
 
 small :: [a] -> Bool
-small [] = True
-small [_] = True
-small _ = False
+small = (> 1) . length
 
 toCompletion :: Bool -> String -> Completion
 toCompletion finished name =

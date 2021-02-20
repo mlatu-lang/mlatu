@@ -35,7 +35,7 @@ import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
@@ -69,7 +69,7 @@ typecheck ::
   -- | Term to infer.
   Term a ->
   -- | Type-annotated term and its inferred type.
-  K (Term Type, Type)
+  M (Term Type, Type)
 typecheck dictionary mDeclaredSignature term = do
   let tenv0 = TypeEnv.empty
   declaredType <- traverse (typeFromSignature tenv0) mDeclaredSignature
@@ -87,7 +87,7 @@ typecheck dictionary mDeclaredSignature term = do
 
 -- | Mangles an instance name according to its trait signature.
 mangleInstance ::
-  Dictionary -> Qualified -> Signature -> Signature -> K Instantiated
+  Dictionary -> Qualified -> Signature -> Signature -> M Instantiated
 mangleInstance dictionary name instanceSignature traitSignature = do
   let tenv0 = TypeEnv.empty
   instanceType <- typeFromSignature tenv0 instanceSignature
@@ -112,7 +112,7 @@ inferType0 ::
   -- | Term to infer.
   Term a ->
   -- | Type-annotated term and its inferred type.
-  K (Term Type, Type)
+  M (Term Type, Type)
 inferType0 dictionary tenv mDeclared term = do
   rec (term', t, tenvFinal) <- inferType dictionary tenvFinal' tenv term
       tenvFinal' <- maybe (return tenvFinal) (Unify.typ tenvFinal t) mDeclared
@@ -132,7 +132,7 @@ inferType ::
   TypeEnv ->
   TypeEnv ->
   Term a ->
-  K (Term Type, Type, TypeEnv)
+  M (Term Type, Type, TypeEnv)
 inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- A coercion is a typed no-op.
   --
@@ -399,7 +399,7 @@ inferCase ::
   TypeEnv ->
   [DataConstructor] ->
   Case a ->
-  K (Case Type, Type, [DataConstructor], TypeEnv)
+  M (Case Type, Type, [DataConstructor], TypeEnv)
 inferCase
   dictionary
   tenvFinal
@@ -436,7 +436,7 @@ inferValue ::
   TypeEnv ->
   Origin ->
   Value a ->
-  K (Value Type, Type, TypeEnv)
+  M (Value Type, Type, TypeEnv)
 inferValue dictionary tenvFinal tenv0 origin = \case
   Capture names term -> do
     let types = mapMaybe (TypeEnv.getClosed tenv0) names
@@ -481,7 +481,7 @@ inferCall ::
   TypeEnv ->
   GeneralName ->
   Origin ->
-  K (Term Type, Type, TypeEnv)
+  M (Term Type, Type, TypeEnv)
 inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
   case Map.lookup name $ TypeEnv.sigs tenv0 of
     Just t@Forall {} -> do
@@ -516,7 +516,7 @@ inferCall _dictionary _tenvFinal _tenv0 name _ =
 -- | Desugars a parsed signature into an actual type. We resolve whether names
 -- refer to quantified type variables or data definitions, and make stack
 -- polymorphism explicit.
-typeFromSignature :: TypeEnv -> Signature -> K Type
+typeFromSignature :: TypeEnv -> Signature -> M Type
 typeFromSignature tenv signature0 = do
   (typ, env) <-
     usingStateT
@@ -533,7 +533,7 @@ typeFromSignature tenv signature0 = do
       (foldr forallVar typ $ Map.elems $ sigEnvVars env)
       $ sigEnvAnonymous env
   where
-    go :: Signature -> StateT SignatureEnv K Type
+    go :: Signature -> StateT SignatureEnv M Type
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
       Signature.Bottom origin -> return $ Type.bottom origin
@@ -560,7 +560,7 @@ typeFromSignature tenv signature0 = do
           declare ::
             Parameter ->
             (Map Unqualified (Var, Origin), [Var]) ->
-            K (Map Unqualified (Var, Origin), [Var])
+            M (Map Unqualified (Var, Origin), [Var])
           declare (Parameter varOrigin name kind) (envVars, freshVars) = do
             x <- freshTypeId tenv
             let var = Var name x kind
@@ -576,7 +576,7 @@ typeFromSignature tenv signature0 = do
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> return typ
 
-    permissionVar :: Origin -> [Type] -> K (Maybe Type, [Type])
+    permissionVar :: Origin -> [Type] -> M (Maybe Type, [Type])
     permissionVar origin types = case splitFind isTypeVar types of
       Just (preceding, typ, following) -> case find isTypeVar following of
         Nothing -> return (Just typ, preceding ++ following)
@@ -588,7 +588,7 @@ typeFromSignature tenv signature0 = do
         isTypeVar TypeVar {} = True
         isTypeVar _ = False
 
-    fromVar :: Origin -> GeneralName -> StateT SignatureEnv K Type
+    fromVar :: Origin -> GeneralName -> StateT SignatureEnv M Type
     fromVar origin (UnqualifiedName name) = do
       existing <- gets $ Map.lookup name . sigEnvVars
       case existing of
@@ -611,7 +611,7 @@ typeFromSignature tenv signature0 = do
       [Signature] ->
       [Type] ->
       Maybe Type ->
-      StateT SignatureEnv K Type
+      StateT SignatureEnv M Type
     makeFunction origin r as s bs es me = do
       as' <- mapM go as
       bs' <- mapM go bs
@@ -642,16 +642,16 @@ data SignatureEnv = SignatureEnv
     sigEnvVars :: !(Map Unqualified (Var, Origin))
   }
 
-valueKinded :: Dictionary -> [Type] -> K [Type]
+valueKinded :: Dictionary -> [Type] -> M [Type]
 valueKinded dictionary =
   filterM $
     fmap (Value ==) . typeKind dictionary
 
 -- | Infers the kind of a type.
-typeKind :: Dictionary -> Type -> K Kind
+typeKind :: Dictionary -> Type -> M Kind
 typeKind dictionary = go
   where
-    go :: Type -> K Kind
+    go :: Type -> M Kind
     go t = case t of
       TypeConstructor _origin (Constructor qualified) ->
         case Dictionary.lookup (Instantiated qualified []) dictionary of

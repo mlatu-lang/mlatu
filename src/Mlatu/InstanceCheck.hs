@@ -16,7 +16,7 @@ import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
 import Mlatu.Informer (Informer (..))
 import Mlatu.Instantiate qualified as Instantiate
-import Mlatu.Monad (K, attempt)
+import Mlatu.Monad (M, attempt)
 import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
@@ -33,7 +33,7 @@ import Text.PrettyPrint qualified as Pretty
 -- type signatures. Remember, when using this function, which way the subtyping
 -- relation goes: @∀α. α → α@ is a generic instance of @int → int@, not the
 -- other way around!
-instanceCheck :: Pretty.Doc -> Type -> Pretty.Doc -> Type -> K ()
+instanceCheck :: Pretty.Doc -> Type -> Pretty.Doc -> Type -> M ()
 instanceCheck _ aScheme _ bScheme = do
   let tenv0 = TypeEnv.empty
   let aType = aScheme
@@ -50,7 +50,7 @@ instanceCheck _ aScheme _ bScheme = do
 
 -- | Skolemization replaces each quantified type variable with a type constant
 -- that unifies only with itself.
-skolemize :: TypeEnv -> Type -> K (Set TypeId, Type)
+skolemize :: TypeEnv -> Type -> M (Set TypeId, Type)
 skolemize tenv0 t = case t of
   Forall origin (Var name x k) t' -> do
     c <- freshTypeId tenv0
@@ -71,7 +71,7 @@ skolemize tenv0 t = case t of
 -- | Subsumption checking is largely the same as unification, accounting for
 -- function type variance: if @(a -> b) <: (c -> d)@ then @b <: d@ (covariant)
 -- but @c <: a@ (contravariant).
-subsumptionCheck :: TypeEnv -> Type -> Type -> K TypeEnv
+subsumptionCheck :: TypeEnv -> Type -> Type -> M TypeEnv
 subsumptionCheck tenv0 (Forall origin (Var name x k) t) t2 = do
   (t1, _, tenv1) <- Instantiate.typ tenv0 origin name x k t
   subsumptionCheck tenv1 t1 t2
@@ -84,7 +84,7 @@ subsumptionCheck tenv0 (TypeConstructor _ "Fun" :@ a :@ b :@ e) t2 = do
 subsumptionCheck tenv0 t1 t2 = Unify.typ tenv0 t1 t2
 
 subsumptionCheckFun ::
-  TypeEnv -> Type -> Type -> Type -> Type -> Type -> Type -> K TypeEnv
+  TypeEnv -> Type -> Type -> Type -> Type -> Type -> Type -> M TypeEnv
 subsumptionCheckFun tenv0 a b e a' b' e' = do
   tenv1 <- subsumptionCheck tenv0 a' a
   tenv2 <- subsumptionCheck tenv1 b b'

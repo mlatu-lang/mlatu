@@ -16,7 +16,7 @@ import Data.Map qualified as Map
 import Mlatu.Informer (Informer (..))
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Occurrences (occurs)
 import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
@@ -29,7 +29,7 @@ import Relude hiding (Type)
 
 -- | There are two kinds of unification going on here: basic logical unification
 -- for value types, and row unification for permission types.
-typ :: TypeEnv -> Type -> Type -> K TypeEnv
+typ :: TypeEnv -> Type -> Type -> M TypeEnv
 typ tenv0 t1 t2 = case (t1', t2') of
   _ | t1' == t2' -> return tenv0
   (TypeVar origin x, t) -> unifyTv tenv0 origin x t
@@ -83,7 +83,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
 --
 -- See: Occurs Checks
 
-unifyTv :: TypeEnv -> Origin -> Var -> Type -> K TypeEnv
+unifyTv :: TypeEnv -> Origin -> Var -> Type -> M TypeEnv
 unifyTv tenv0 origin v@(Var _name x _) t = case t of
   TypeVar _origin (Var _name y _) | x == y -> return tenv0
   TypeVar {} -> declare
@@ -108,7 +108,7 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
     declare = return tenv0 {TypeEnv.tvs = Map.insert x t $ TypeEnv.tvs tenv0}
 
 -- | A convenience function for unifying a type with a function type.
-function :: TypeEnv -> Type -> K (Type, Type, Type, TypeEnv)
+function :: TypeEnv -> Type -> M (Type, Type, Type, TypeEnv)
 function tenv0 t = case t of
   TypeConstructor _ "Fun" :@ a :@ b :@ e -> return (a, b, e, tenv0)
   _nonFun -> do
@@ -131,7 +131,7 @@ rowIso ::
   Type ->
   Type ->
   Type ->
-  K (Maybe (Type, Maybe (TypeId, Type), TypeEnv))
+  M (Maybe (Type, Maybe (TypeId, Type), TypeEnv))
 -- The "head" rule: a row which already begins with the label is trivially
 -- rewritten by the identity substitution.
 

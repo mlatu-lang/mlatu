@@ -308,7 +308,12 @@ define concat[T] (List[List[T]] -> List[T]):
 
 define concat_optionals[T] (List[Optional[T]] -> List[T]):
   []
-  { match case some { append } case none {} }
+  { 
+    match 
+    case some:
+      append
+    else {}
+  }
   fold_left
 
 define maximum[T] (List[T] -> Optional[T]):
@@ -321,23 +326,21 @@ define cartesian[A, B] (List[A], List[B] -> List[Pair[A, B]]):
   \pair cartesian_with
 
 define cartesian_with[A, B, C] (List[A], List[B], (A, B -> C) -> List[C]):
-  -> xs, ys, f;
-  xs do (map_concat) -> x:
+  -> ys, f;
+  do (map_concat) -> x:
     ys do (map) -> y:
       x y f call
 
 define all[T] (List[T], (T -> Bool) -> Bool):
-  -> xs, f;
-  xs true { f call (&) } fold_left 
+  -> f;
+  true { f call (&) } fold_left 
 
 define and (List[Bool] -> Bool):
-  -> xs;
-  xs true \& fold_left 
+  true \& fold_left 
 
 define any[T] (List[T], (T -> Bool) -> Bool):
-  -> xs, f;
-  xs true { f call (|) } fold_left 
+  -> f;
+  true { f call (|) } fold_left 
 
 define or (List[Bool] -> Bool):
-  -> xs;
-  xs true \| fold_left 
+  true \| fold_left 

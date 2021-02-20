@@ -15,7 +15,7 @@ where
 import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
 import Mlatu.Kind qualified as Kind
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Term (Case (..), Else (..), Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
@@ -23,7 +23,7 @@ import Relude hiding (Compose, Type)
 
 -- | Capture-avoiding substitution of a type variable α with a type τ throughout
 -- a type σ, [α ↦ τ]σ.
-typ :: TypeEnv -> TypeId -> Type -> Type -> K Type
+typ :: TypeEnv -> TypeId -> Type -> Type -> M Type
 typ tenv0 x a = recur
   where
     recur t = case t of
@@ -38,7 +38,7 @@ typ tenv0 x a = recur
       m :@ n -> (:@) <$> recur m <*> recur n
       _noSubst -> return t
 
-term :: TypeEnv -> TypeId -> Type -> Term Type -> K (Term Type)
+term :: TypeEnv -> TypeId -> Type -> Term Type -> M (Term Type)
 term tenv x a = recur
   where
     recur t = case t of
@@ -63,11 +63,11 @@ term tenv x a = recur
           <*> goElse else_
           <*> pure origin
         where
-          goCase :: Case Type -> K (Case Type)
+          goCase :: Case Type -> M (Case Type)
           goCase (Case name body caseOrigin) =
             Case name <$> recur body <*> pure caseOrigin
 
-          goElse :: Else Type -> K (Else Type)
+          goElse :: Else Type -> M (Else Type)
           goElse (Else body elseOrigin) = Else <$> recur body <*> pure elseOrigin
       New tref index size origin ->
         New

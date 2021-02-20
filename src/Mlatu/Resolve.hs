@@ -22,7 +22,7 @@ import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Informer (Informer (..))
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name
 import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
@@ -34,11 +34,11 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
 
-type Resolved a = StateT [Unqualified] K a
+type Resolved a = StateT [Unqualified] M a
 
 -- | Name resolution is responsible for rewriting unqualified calls to
 -- definitions into fully qualified calls.
-run :: Resolved a -> K a
+run :: Resolved a -> M a
 run = flip evalStateT []
 
 definition :: Dictionary -> Definition () -> Resolved (Definition ())

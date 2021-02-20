@@ -15,7 +15,7 @@ where
 
 import Mlatu.Informer (Informer (..))
 import Mlatu.Kind (Kind)
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
@@ -39,7 +39,7 @@ typ ::
   TypeId ->
   Kind ->
   Type ->
-  K (Type, Type, TypeEnv)
+  M (Type, Type, TypeEnv)
 typ tenv0 origin name x k t = do
   ia <- freshTypeId tenv0
   let a = TypeVar origin $ Var name ia k
@@ -48,7 +48,7 @@ typ tenv0 origin name x k t = do
 
 -- | When generating an instantiation of a generic definition, we only want to
 -- instantiate the rank-1 quantifiers; all other quantifiers are irrelevant.
-prenex :: TypeEnv -> Type -> K (Type, [Type], TypeEnv)
+prenex :: TypeEnv -> Type -> M (Type, [Type], TypeEnv)
 prenex tenv0 q@(Forall origin (Var name x k) t) =
   while origin (Pretty.hsep ["instantiating", Pretty.quote q]) $ do
     (t', a, tenv1) <- typ tenv0 origin name x k t
@@ -57,7 +57,7 @@ prenex tenv0 q@(Forall origin (Var name x k) t) =
 prenex tenv0 t = return (t, [], tenv0)
 
 -- | Instantiates a generic expression with the given type arguments.
-term :: TypeEnv -> Term Type -> [Type] -> K (Term Type)
+term :: TypeEnv -> Term Type -> [Type] -> M (Term Type)
 term tenv t args = foldlM go t args
   where
     go (Generic _name x expr _origin) arg = Substitute.term tenv x arg expr

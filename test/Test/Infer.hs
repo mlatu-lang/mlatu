@@ -49,7 +49,7 @@ spec = do
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
-        "define test (-> List[Pair[Int, Int]]) { [1 => 1, 2 => 2, 3 => 3] }"
+        "define test (-> List[Pair[Int, Int]]) { [1 1 pair, 2 2 pair, 3 3 pair] }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
 
     it "typechecks intrinsics" $ do

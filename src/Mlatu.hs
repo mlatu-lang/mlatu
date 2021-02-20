@@ -22,7 +22,7 @@ import Data.FileEmbed (embedDir, embedFile)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Monad (K, runMlatu)
+import Mlatu.Monad (M, runMlatu)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Tokenize (tokenize)
 import Relude
@@ -46,7 +46,7 @@ compile ::
   [FilePath] ->
   Maybe Dictionary ->
   -- | Resulting dictionary.
-  K Dictionary
+  M Dictionary
 compile mainPermissions mainName paths mDict = do
   -- Source files must be encoded in UTF-8.
 
@@ -60,7 +60,7 @@ compile mainPermissions mainName paths mDict = do
   -- dictionary <-
   Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
-compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> K Dictionary
+compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> M Dictionary
 compilePrelude prelude mainPermissions mainName = do
   parsed <-
     mconcat

@@ -21,7 +21,7 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Free qualified as Free
 import Mlatu.Infer (inferType0)
 import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name (Closed (..), Qualified (..), Qualifier, Unqualified (..))
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
@@ -40,7 +40,7 @@ desugar ::
   Dictionary ->
   Qualifier ->
   Term Type ->
-  K (Term Type, Dictionary)
+  M (Term Type, Dictionary)
 desugar dictionary qualifier term0 = do
   ((term', _), (_, dictionary')) <-
     usingStateT (LambdaIndex 0, dictionary) $
@@ -50,7 +50,7 @@ desugar dictionary qualifier term0 = do
     go ::
       TypeEnv ->
       Term Type ->
-      StateT (LambdaIndex, Dictionary) K (Term Type, TypeEnv)
+      StateT (LambdaIndex, Dictionary) M (Term Type, TypeEnv)
     go tenv0 term = case term of
       Coercion {} -> done
       Compose typ a b -> do

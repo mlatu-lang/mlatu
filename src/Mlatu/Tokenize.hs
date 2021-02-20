@@ -110,20 +110,34 @@ blockBegin = BlockBegin <$ Parsec.char '{'
 blockEnd :: Tokenizer (Token l)
 blockEnd = BlockEnd <$ Parsec.char '}'
 
+groupBegin :: Tokenizer (Token l)
+groupBegin = GroupBegin <$ Parsec.char '('
+
+groupEnd :: Tokenizer (Token l)
+groupEnd = GroupEnd <$ Parsec.char ')'
+
 singleQuote :: Tokenizer Char
 singleQuote = Parsec.char '\''
 
-characterLiteral :: Tokenizer (Token l)
-characterLiteral = do
+singleQuoteCharacterLiteral :: Tokenizer (Token l)
+singleQuoteCharacterLiteral = do
   mc <- Parsec.between singleQuote singleQuote $ character '\''
   case mc of
     Just c -> return (Character c)
     Nothing -> Parsec.unexpected "empty character literal"
 
-bracketOperator :: Char -> Tokenizer (Token 'Layout)
-bracketOperator char =
-  Operator (Unqualified (one char))
-    <$ Parsec.try (Parsec.char char <* Parsec.notFollowedBy symbol)
+smartQuoteCharacterLiteral :: Tokenizer (Token l)
+smartQuoteCharacterLiteral = do
+  mc <-
+    Parsec.between (Parsec.char '\x2018') (Parsec.char '\x2019') $
+      nestableCharacter '\x2018' '\x2019'
+  case mc of
+    [c] -> return (Character c)
+    [] -> Parsec.unexpected "empty character literal"
+    _multiLit -> Parsec.unexpected "multi-character literal"
+
+characterLiteral :: Tokenizer (Token l)
+characterLiteral = singleQuoteCharacterLiteral <|> smartQuoteCharacterLiteral
 
 character :: Char -> Tokenizer (Maybe Char)
 character quote = char <|> escape
@@ -165,6 +179,167 @@ special = Parsec.oneOf "\"'(),:[\\]_{}"
 comma :: Tokenizer (Token l)
 comma = Comma <$ Parsec.char ','
 
+ellipsis :: Tokenizer (Token l)
+ellipsis =
+  Parsec.try $
+    Ellipsis
+      <$ Parsec.choice (map Parsec.string ["...", "\x2026"])
+
+ignore :: Tokenizer (Token l)
+ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
+
+vocabLookup :: Tokenizer (Token l)
+vocabLookup =
+  Parsec.try $
+    VocabLookup
+      <$ Parsec.choice (map Parsec.string ["::", "\x2237"])
+
+colon :: Tokenizer (Token 'Layout)
+colon = Colon <$ Parsec.char ':'
+
+vectorBegin :: Tokenizer (Token l)
+vectorBegin = VectorBegin <$ Parsec.char '['
+
+vectorEnd :: Tokenizer (Token l)
+vectorEnd = VectorEnd <$ Parsec.char ']'
+
+reference :: Tokenizer (Token l)
+reference = Reference <$ Parsec.char '\\'
+
+num :: Tokenizer (Token l)
+num = Parsec.try $ do
+  sign <- Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
+  let applySign :: (Num a) => Maybe Char -> a -> a
+      applySign s = if s `elem` [Just '-', Just '\x2212'] then negate else id
+      base ::
+        (Num a) =>
+        Char ->
+        String ->
+        (String -> a) ->
+        Base ->
+        String ->
+        Tokenizer (Base, a)
+      base prefix digits readBase hint desc =
+        (,) hint . readBase
+          <$> ( Parsec.char prefix
+                  *> Parsec.many1 (Parsec.oneOf digits <?> (desc ++ " digit"))
+              )
+  Parsec.choice
+    [ Parsec.try $
+        (\(hint, value) -> Integer (IntegerLiteral (applySign sign value) hint))
+          <$> ( Parsec.char '0'
+                  *> Parsec.choice
+                    [ base 'b' ['0' .. '1'] readBin Binary "binary",
+                      base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
+                      base
+                        'x'
+                        (['0' .. '9'] ++ ['A' .. 'F'])
+                        (fst . Unsafe.fromJust . viaNonEmpty head . readHex)
+                        Hexadecimal
+                        "hexadecimal"
+                    ]
+              ),
+      ( \integer fraction power ->
+          case (fraction, power) of
+            (Nothing, Nothing) -> Integer (IntegerLiteral (applySign sign (fromMaybe 0 (readMaybe integer))) Decimal)
+            (_, _) ->
+              Float
+                ( FloatLiteral
+                    (applySign sign (fromMaybe 0 (readMaybe (integer ++ fromMaybe "" fraction))))
+                    (maybe 0 length fraction)
+                    (maybe 0 (\(s, p) -> applySign s (fromMaybe 0 (readMaybe p))) power)
+                )
+      )
+        <$> Parsec.many1 Parsec.digit
+        <*> Parsec.optionMaybe
+          ( Parsec.char '.' *> Parsec.many Parsec.digit
+          )
+        <*> Parsec.optionMaybe
+          ( Parsec.oneOf "Ee"
+              *> ( (,)
+                     <$> Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
+                     <*> Parsec.many1 Parsec.digit
+                 )
+          )
+    ]
+    <* Parsec.notFollowedBy Parsec.digit
+
+doubleQuoteStringLiteral :: Tokenizer (Token l)
+doubleQuoteStringLiteral =
+  Text
+    <$> Parsec.between
+      (Parsec.char '"')
+      (Parsec.char '"' <?> "closing double quote")
+      text
+
+smartQuoteStringLiteral :: Tokenizer (Token l)
+smartQuoteStringLiteral =
+  Text
+    <$> Parsec.between
+      (Parsec.char '\x201C')
+      (Parsec.char '\x201D' <?> "closing right double quote")
+      (nestableText '\x201C' '\x201D')
+
+stringLiteral :: Tokenizer (Token l)
+stringLiteral = doubleQuoteStringLiteral <|> smartQuoteStringLiteral
+
+arrow :: Tokenizer (Token l)
+arrow =
+  Parsec.try $
+    Arrow
+      <$ Parsec.choice (map Parsec.string ["->", "\x2192"])
+      <* Parsec.notFollowedBy symbol
+
+angleBegin :: Tokenizer (Token l)
+angleBegin = AngleBegin <$ Parsec.char '<'
+
+angleEnd :: Tokenizer (Token l)
+angleEnd = AngleEnd <$ Parsec.char '>'
+
+alphanumeric :: Tokenizer (Token 'Layout)
+alphanumeric =
+  Parsec.choice
+    [ do
+        name <-
+          (toText .) . (:)
+            <$> (letter <|> Parsec.char '_')
+            <*> (many . Parsec.choice)
+              [letter, Parsec.char '_', Parsec.digit]
+        return $ case name of
+          "about" -> About
+          "as" -> As
+          "case" -> Case
+          "define" -> Define
+          "do" -> Do
+          "elif" -> Elif
+          "else" -> Else
+          "if" -> If
+          "instance" -> Instance
+          "intrinsic" -> Intrinsic
+          "match" -> Match
+          "permission" -> Permission
+          "return" -> Return
+          "synonym" -> Synonym
+          "trait" -> Trait
+          "type" -> Type
+          "vocab" -> Vocab
+          "with" -> With
+          "where" -> Where
+          _ -> Word (Unqualified name),
+      -- See note [Angle Brackets].
+
+      Operator (Unqualified (one '<'))
+        <$ Parsec.try (Parsec.char '<' <* Parsec.notFollowedBy symbol),
+      angleBegin,
+      Operator (Unqualified (one '>'))
+        <$ Parsec.try (Parsec.char '>' <* Parsec.notFollowedBy symbol),
+      angleEnd,
+      operator
+    ]
+
+operator :: Tokenizer (Token l)
+operator = Operator . Unqualified . toText <$> Parsec.many1 symbol
+
 tokenTokenizer :: Tokenizer (Located (Token 'Layout))
 tokenTokenizer =
   rangedTokenizer $
@@ -172,136 +347,21 @@ tokenTokenizer =
       [ blockBegin,
         blockEnd,
         characterLiteral,
-        do
-          mc <-
-            Parsec.between (Parsec.char '\x2018') (Parsec.char '\x2019') $
-              nestableCharacter '\x2018' '\x2019'
-          case mc of
-            [c] -> return (Character c)
-            [] -> Parsec.unexpected "empty character literal"
-            _multiLit -> Parsec.unexpected "multi-character literal",
         comma,
-        Parsec.try $
-          Ellipsis
-            <$ Parsec.choice (map Parsec.string ["...", "\x2026"]),
-        GroupBegin <$ Parsec.char '(',
-        GroupEnd <$ Parsec.char ')',
-        Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter,
-        Parsec.try $
-          VocabLookup
-            <$ Parsec.choice (map Parsec.string ["::", "\x2237"]),
-        Colon <$ Parsec.char ':',
-        VectorBegin <$ Parsec.char '[',
-        VectorEnd <$ Parsec.char ']',
-        Reference <$ Parsec.char '\\',
-        Text <$> paragraph,
-        Text
-          <$> Parsec.between
-            (Parsec.char '"')
-            (Parsec.char '"' <?> "closing double quote")
-            text,
-        Text
-          <$> Parsec.between
-            (Parsec.char '\x201C')
-            (Parsec.char '\x201D' <?> "closing right double quote")
-            (nestableText '\x201C' '\x201D'),
-        Parsec.try $ do
-          sign <- Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
-          let applySign :: (Num a) => Maybe Char -> a -> a
-              applySign s = if s `elem` [Just '-', Just '\x2212'] then negate else id
-              base ::
-                (Num a) =>
-                Char ->
-                String ->
-                (String -> a) ->
-                Base ->
-                String ->
-                Tokenizer (Base, a)
-              base prefix digits readBase hint desc =
-                (,) hint . readBase
-                  <$> ( Parsec.char prefix
-                          *> Parsec.many1 (Parsec.oneOf digits <?> (desc ++ " digit"))
-                      )
-          Parsec.choice
-            [ Parsec.try $
-                (\(hint, value) -> Integer (IntegerLiteral (applySign sign value) hint))
-                  <$> ( Parsec.char '0'
-                          *> Parsec.choice
-                            [ base 'b' ['0' .. '1'] readBin Binary "binary",
-                              base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
-                              base
-                                'x'
-                                (['0' .. '9'] ++ ['A' .. 'F'])
-                                (fst . Unsafe.fromJust . viaNonEmpty head . readHex)
-                                Hexadecimal
-                                "hexadecimal"
-                            ]
-                      ),
-              ( \integer fraction power ->
-                  case (fraction, power) of
-                    (Nothing, Nothing) -> Integer (IntegerLiteral (applySign sign (fromMaybe 0 (readMaybe integer))) Decimal)
-                    (_, _) ->
-                      Float
-                        ( FloatLiteral
-                            (applySign sign (fromMaybe 0 (readMaybe (integer ++ fromMaybe "" fraction))))
-                            (maybe 0 length fraction)
-                            (maybe 0 (\(s, p) -> applySign s (fromMaybe 0 (readMaybe p))) power)
-                        )
-              )
-                <$> Parsec.many1 Parsec.digit
-                <*> Parsec.optionMaybe
-                  ( Parsec.char '.' *> Parsec.many Parsec.digit
-                  )
-                <*> Parsec.optionMaybe
-                  ( Parsec.oneOf "Ee"
-                      *> ( (,)
-                             <$> Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
-                             <*> Parsec.many1 Parsec.digit
-                         )
-                  )
-            ]
-            <* Parsec.notFollowedBy Parsec.digit,
-        Parsec.try $
-          Arrow
-            <$ Parsec.choice (map Parsec.string ["->", "\x2192"])
-            <* Parsec.notFollowedBy symbol,
-        let alphanumeric =
-              (toText .) . (:)
-                <$> (letter <|> Parsec.char '_')
-                <*> (many . Parsec.choice) [letter, Parsec.char '_', Parsec.digit]
-         in Parsec.choice
-              [ do
-                  name <- alphanumeric
-                  return $ case name of
-                    "about" -> About
-                    "as" -> As
-                    "case" -> Case
-                    "define" -> Define
-                    "do" -> Do
-                    "elif" -> Elif
-                    "else" -> Else
-                    "if" -> If
-                    "instance" -> Instance
-                    "intrinsic" -> Intrinsic
-                    "jump" -> Jump
-                    "match" -> Match
-                    "permission" -> Permission
-                    "return" -> Return
-                    "synonym" -> Synonym
-                    "trait" -> Trait
-                    "type" -> Type
-                    "vocab" -> Vocab
-                    "with" -> With
-                    "where" -> Where
-                    _ -> Word (Unqualified name),
-                -- See note [Angle Brackets].
-
-                bracketOperator '<',
-                AngleBegin <$ Parsec.char '<',
-                bracketOperator '>',
-                AngleEnd <$ Parsec.char '>',
-                Operator . Unqualified . toText <$> Parsec.many1 symbol
-              ]
+        ellipsis,
+        groupBegin,
+        groupEnd,
+        ignore,
+        vocabLookup,
+        colon,
+        vectorBegin,
+        vectorEnd,
+        reference,
+        paragraph,
+        stringLiteral,
+        num,
+        arrow,
+        alphanumeric
       ]
 
 nestableCharacter :: Char -> Char -> Tokenizer [Char]
@@ -338,24 +398,26 @@ nestableText open close =
   toText . concat
     <$> many (nestableCharacter open close)
 
-paragraph :: Tokenizer Text
-paragraph = (<?> "paragraph") $ do
-  _ <- Parsec.try $ Parsec.string "\"\"\""
-  _ <- Parsec.endOfLine <?> "newline before paragraph body"
-  (prefix, body) <- untilLeft paragraphLine
-  body' <- forM body $ \line -> case Text.stripPrefix prefix line of
-    Just line' -> return line'
-    Nothing | Text.null line -> return ""
-    _prefix ->
-      Parsec.unexpected
-        (Pretty.render $ Pretty.doubleQuotes $ Pretty.text $ toString line)
-        -- HACK: Relies on formatting of messages to include "expected ...".
-        <?> concat
-          [ "all lines to be empty or begin with ",
-            show $ BS.length (encodeUtf8 prefix),
-            " spaces"
-          ]
-  return $ Text.intercalate "\n" body'
+paragraph :: Tokenizer (Token l)
+paragraph =
+  (<?> "paragraph") $
+    Text <$> do
+      _ <- Parsec.try $ Parsec.string "\"\"\""
+      _ <- Parsec.endOfLine <?> "newline before paragraph body"
+      (prefix, body) <- untilLeft paragraphLine
+      body' <- forM body $ \line -> case Text.stripPrefix prefix line of
+        Just line' -> return line'
+        Nothing | Text.null line -> return ""
+        _prefix ->
+          Parsec.unexpected
+            (Pretty.render $ Pretty.doubleQuotes $ Pretty.text $ toString line)
+            -- HACK: Relies on formatting of messages to include "expected ...".
+            <?> concat
+              [ "all lines to be empty or begin with ",
+                show $ BS.length (encodeUtf8 prefix),
+                " spaces"
+              ]
+      return $ Text.intercalate "\n" body'
 
 paragraphLine :: Tokenizer (Either Text Text)
 paragraphLine =

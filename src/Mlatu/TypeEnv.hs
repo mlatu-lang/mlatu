@@ -17,7 +17,7 @@ where
 
 import Data.Map qualified as Map
 import Mlatu.Kind (Kind)
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name
   ( Closed (..),
     ClosureIndex (ClosureIndex),
@@ -65,11 +65,11 @@ currentTypeId :: IORef TypeId
 currentTypeId = unsafePerformIO (newIORef (TypeId 0))
 {-# NOINLINE currentTypeId #-}
 
-freshTv :: TypeEnv -> Unqualified -> Origin -> Kind -> K Type
+freshTv :: TypeEnv -> Unqualified -> Origin -> Kind -> M Type
 freshTv tenv name origin k =
   TypeVar origin <$> (Var name <$> freshTypeId tenv <*> pure k)
 
-freshTypeId :: TypeEnv -> K TypeId
+freshTypeId :: TypeEnv -> M TypeId
 freshTypeId tenv = do
   x <- liftIO $ readIORef $ currentType tenv
   liftIO $ writeIORef (currentType tenv) $ next x

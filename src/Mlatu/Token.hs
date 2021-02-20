@@ -74,8 +74,6 @@ data Token (l :: Layoutness) where
   Integer :: !IntegerLiteral -> Token l
   -- | @intrinsic@
   Intrinsic :: Token l
-  -- | @jump@
-  Jump :: Token l
   -- | @match@
   Match :: Token l
   -- | @+@
@@ -139,7 +137,6 @@ instance Eq (Token l) where
   Instance == Instance = True
   Integer a == Integer b = a == b
   Intrinsic == Intrinsic = True
-  Jump == Jump = True
   Match == Match = True
   Operator a == Operator b = a == b
   Permission == Permission = True
@@ -165,7 +162,7 @@ instance Pretty (Token l) where
     AngleEnd -> ">"
     Arrow -> "->"
     As -> "as"
-    BlockBegin {} -> "{"
+    BlockBegin -> "{"
     BlockEnd -> "}"
     Case -> "case"
     Character c -> Pretty.quotes $ Pretty.char c
@@ -184,7 +181,6 @@ instance Pretty (Token l) where
     Instance -> "instance"
     Integer literal -> pPrint literal
     Intrinsic -> "intrinsic"
-    Jump -> "jump"
     Match -> "match"
     Operator name -> pPrint name
     Permission -> "permission"

@@ -5,16 +5,16 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Informer (Informer (..))
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name (Qualified (..))
 import Mlatu.Report qualified as Report
 import Mlatu.Synonym qualified as Synonym
-import Mlatu.Term qualified as Term
+import Mlatu.Term
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
-import Relude
+import Relude hiding (Compose)
 
-fragment :: (Eq a) => Fragment.Fragment a -> K ()
+fragment :: Fragment.Fragment () -> M ()
 fragment f = do
   forM_ (Fragment.declarations f) declaration
   forM_ (Fragment.definitions f) definition
@@ -23,33 +23,33 @@ fragment f = do
   forM_ (Fragment.types f) typeDefinition
   pass
 
-declaration :: Declaration.Declaration -> K ()
+declaration :: Declaration.Declaration -> M ()
 declaration _ = pass
 
-definition :: (Eq a) => Definition.Definition a -> K ()
+definition :: Definition.Definition () -> M ()
 definition d = do
   term (Definition.body d)
   pass
 
-term :: (Eq a) => Term.Term a -> K ()
-term t = go $ Term.decompose t
+term :: Term () -> M ()
+term t = go $ decompose t
   where
-    go :: (Eq a) => [Term.Term a] -> K ()
+    go :: [Term ()] -> M ()
     go = \case
       [] -> pass
-      (t1@Term.Push {} : t2@Term.Push {} : _)
-        | t1 == t2 ->
+      ((Push _ v1 _) : (Push _ v2 _) : _)
+        | v1 == v2 ->
           report $
-            Report.makeWarning $ Report.UseCommon (Term.origin t) dup_name
-      (_ : ts) -> go ts
+            Report.makeWarning $ Report.UseCommon (origin t) dupName
+      (_t : ts) -> go ts
 
-    dup_name = Qualified Vocabulary.global "dup"
+    dupName = Qualified Vocabulary.global "dup"
 
-metadata :: Metadata.Metadata -> K ()
+metadata :: Metadata.Metadata -> M ()
 metadata _ = pass
 
-synonym :: Synonym.Synonym -> K ()
+synonym :: Synonym.Synonym -> M ()
 synonym _ = pass
 
-typeDefinition :: TypeDefinition.TypeDefinition -> K ()
+typeDefinition :: TypeDefinition.TypeDefinition -> M ()
 typeDefinition _ = pass

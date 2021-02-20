@@ -41,7 +41,7 @@ import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
 import Mlatu.Metadata (Metadata (Metadata))
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name
   ( GeneralName (..),
     Qualified (Qualified),
@@ -65,7 +65,7 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
-import Relude hiding (Constraint, Compose)
+import Relude hiding (Compose, Constraint)
 import Relude.Unsafe qualified as Unsafe
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
@@ -84,7 +84,7 @@ fragment ::
   -- | Input tokens.
   [Located (Token 'Nonlayout)] ->
   -- | Parsed program fragment.
-  K (Fragment ())
+  M (Fragment ())
 fragment line path mainPermissions mainName tokens =
   let parsed =
         Parsec.runParser
@@ -243,8 +243,6 @@ groupParser :: Parser (Term ())
 groupParser = do
   origin <- getTokenOrigin
   groupedParser $ Group . compose () origin <$> Parsec.many1 termParser
-
--- See note [Angle Brackets].
 
 bracketedParser :: Parser a -> Parser a
 bracketedParser =
@@ -501,7 +499,7 @@ parameter = do
 
 constraintsParser :: Parser [Signature.Constraint]
 constraintsParser = Parsec.option [] (parserMatch Token.Where *> (constraintParser `Parsec.sepEndBy1` commaParser))
-  where 
+  where
     constraintParser = Signature.Constraint <$> wordNameParser <*> typeListParser parameter
 
 typeListParser :: Parser a -> Parser [a]

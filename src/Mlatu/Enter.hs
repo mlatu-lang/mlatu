@@ -34,7 +34,7 @@ import Mlatu.Informer (errorCheckpoint, report)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Metadata (Metadata)
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Monad (K)
+import Mlatu.Monad (M)
 import Mlatu.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified, qualifierName),
@@ -57,7 +57,7 @@ import Relude
 import Text.PrettyPrint qualified as Pretty
 
 -- | Enters a program fragment into a dictionary.
-fragment :: Fragment () -> Dictionary -> K Dictionary
+fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f =
   -- TODO: Link constructors to parent type.
   foldlMx declareType (Fragment.types f)
@@ -93,7 +93,7 @@ fragment f =
     foldlMx :: (Foldable f, Monad m) => (b -> a -> m b) -> f a -> b -> m b
     foldlMx = flip . foldlM
 
-enterDeclaration :: Dictionary -> Declaration -> K Dictionary
+enterDeclaration :: Dictionary -> Declaration -> M Dictionary
 enterDeclaration dictionary declaration = do
   let name = Declaration.name declaration
       signature = Declaration.signature declaration
@@ -118,7 +118,7 @@ enterDeclaration dictionary declaration = do
         return $ Dictionary.insert (Instantiated name []) entry dictionary
 
 -- declare type, declare & define constructors
-declareType :: Dictionary -> TypeDefinition -> K Dictionary
+declareType :: Dictionary -> TypeDefinition -> M Dictionary
 declareType dictionary typ =
   let name = TypeDefinition.name typ
    in case Dictionary.lookup (Instantiated name []) dictionary of
@@ -146,7 +146,7 @@ declareType dictionary typ =
                   ]
 
 declareWord ::
-  Dictionary -> Definition () -> K Dictionary
+  Dictionary -> Definition () -> M Dictionary
 declareWord dictionary definition =
   let name = Definition.name definition
       signature = Definition.signature definition
@@ -216,7 +216,7 @@ declareWord dictionary definition =
                     "already declared or defined without signature or as a non-word"
                   ]
 
-addMetadata :: Dictionary -> Metadata -> K Dictionary
+addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
   foldlM addField dictionary0 $ HashMap.toList $ Metadata.fields metadata
   where
@@ -224,7 +224,7 @@ addMetadata dictionary0 metadata =
     origin = Metadata.origin metadata
     qualifier = qualifierFromName qualified
 
-    addField :: Dictionary -> (Unqualified, Term ()) -> K Dictionary
+    addField :: Dictionary -> (Unqualified, Term ()) -> M Dictionary
     addField dictionary (unqualified, term) = do
       let name = Qualified qualifier unqualified
       case Dictionary.lookup (Instantiated name []) dictionary of
@@ -236,7 +236,7 @@ addMetadata dictionary0 metadata =
               (Entry.Metadata origin term)
               dictionary
 
-resolveSignature :: Dictionary -> Qualified -> K Dictionary
+resolveSignature :: Dictionary -> Qualified -> M Dictionary
 resolveSignature dictionary name = do
   let qualifier = qualifierName name
   case Dictionary.lookup (Instantiated name []) dictionary of
@@ -255,7 +255,7 @@ resolveSignature dictionary name = do
 defineWord ::
   Dictionary ->
   Definition () ->
-  K Dictionary
+  M Dictionary
 defineWord dictionary definition = do
   let name = Definition.name definition
   resolved <- resolveAndDesugar dictionary definition
@@ -394,7 +394,7 @@ fragmentFromSource ::
   -- | Source itself.
   Text ->
   -- | Parsed program fragment.
-  K (Fragment ())
+  M (Fragment ())
 fragmentFromSource mainPermissions mainName line path source = do
   -- Sources are lexed into a stream of tokens.
 
@@ -420,7 +420,7 @@ fragmentFromSource mainPermissions mainName line path source = do
 
   return parsed
 
-resolveAndDesugar :: Dictionary -> Definition () -> K (Definition ())
+resolveAndDesugar :: Dictionary -> Definition () -> M (Definition ())
 resolveAndDesugar dictionary definition = do
   -- Name resolution rewrites unqualified names into fully qualified names, so
   -- that it's evident from a name which program element it refers to.

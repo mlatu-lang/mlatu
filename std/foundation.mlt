@@ -25,3 +25,12 @@ define drop[T] (T ->):
 define swap[A, B] (A, B -> B, A):
   -> x, y;
   y x
+
+permission IO[R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
+  with (+IO)
+
+permission Fail[R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
+  with (+Fail)
+
+permission Exit[R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
+  with (+Exit)
