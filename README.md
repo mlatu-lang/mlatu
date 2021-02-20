@@ -4,27 +4,13 @@
 
 Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. 
 
-Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see the CONTRIBUTING.md for more information.
+Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 
 ## About the name
 
 "Mlatu" is the Lojban word for "cat", referencing [Cat][Cat GitHub] by Christopher Diggins, [Kitten][Kitten Site] by Jon Purdy, and the fact that Mlatu is a con*cat*enative programming language.
 
 "Mlatu" is pronounced "melatoo".
-
-## Todo (unordered)
-
-- [ ] Create a compiler backend that generates WASM
-
-- [ ] Create a formatter that can format the common files
-
-- [ ] Benchmark or profile so that performance can be optimized
-
-- [ ] Hint on code that is repetitious of common functions
-
-- [ ] Support generic trait instances
-
-- [ ] Support trait constraints on parameters
 
 ## Examples
 
