@@ -11,13 +11,17 @@ module Mlatu.Fragment
   )
 where
 
-import Mlatu.Declaration (Declaration)
+import Data.List (groupBy)
+import Mlatu.Declaration (Declaration (..))
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
+import Mlatu.Name (Qualified (qualifierName), Qualifier (..), Root (..))
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
+import Relude.Unsafe qualified as Unsafe
+import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A program fragment, consisting of a bag of top-level program elements.
@@ -54,8 +58,16 @@ instance Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
-        [ map pPrint $ definitions fragment,
+        [ map printGrouped groupedDeclarations,
+          map pPrint $ definitions fragment,
           map pPrint $ metadata fragment,
           map pPrint $ synonyms fragment,
           map pPrint $ types fragment
         ]
+    where
+      groupedDeclarations = groupBy (\a b -> (qualifierName . name) a == (qualifierName . name) b) (declarations fragment)
+      printGrouped decls = Pretty.vcat [Pretty.hsep ["vocab", pPrint commonName, "{"], Pretty.nest 2 $ Pretty.vcat (map pPrint decls), "}"]
+        where
+          commonName = case qualifierName $ name $ decls Unsafe.!! 0 of
+            (Qualifier Absolute parts) -> Qualifier Relative parts
+            n -> n

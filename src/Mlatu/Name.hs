@@ -122,7 +122,7 @@ instance Pretty Qualified where
       Pretty.<> pPrint unqualifiedName
 
 instance Pretty Qualifier where
-  pPrint (Qualifier Absolute parts) = pPrint $ Qualifier Relative parts
+  pPrint (Qualifier Absolute parts) = pPrint $ Qualifier Relative ("_" : parts)
   pPrint (Qualifier Relative parts) =
     Pretty.text $
       toString $ Text.intercalate "::" parts

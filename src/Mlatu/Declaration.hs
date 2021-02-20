@@ -12,10 +12,12 @@ module Mlatu.Declaration
   )
 where
 
-import Mlatu.Name (Qualified)
+import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Relude
+import Text.PrettyPrint qualified as Pretty
+import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | The type of declaration.
 data Category
@@ -25,6 +27,10 @@ data Category
     Trait
   deriving (Eq, Show)
 
+instance Pretty Category where
+  pPrint Intrinsic = "intrinsic"
+  pPrint Trait = "trait"
+
 data Declaration = Declaration
   { category :: !Category,
     name :: !Qualified,
@@ -32,3 +38,6 @@ data Declaration = Declaration
     signature :: !Signature
   }
   deriving (Show)
+
+instance Pretty Declaration where
+  pPrint (Declaration category name _ signature) = pPrint category Pretty.<+> pPrint (unqualifiedName name) Pretty.<+> pPrint signature

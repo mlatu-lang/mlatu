@@ -344,4 +344,12 @@ instance Pretty (Value a) where
     Local (LocalIndex index) -> "local." Pretty.<> Pretty.int index
     Name n -> Pretty.hcat ["\\", pPrint n]
     Quotation body -> Pretty.braces $ pPrint body
-    Text t -> Pretty.doubleQuotes $ Pretty.text $ toString t
+    Text t ->
+      Pretty.doubleQuotes $
+        Pretty.text $
+          concatMap
+            ( \case
+                '\n' -> "\\n"
+                c -> [c]
+            )
+            $ toString t
