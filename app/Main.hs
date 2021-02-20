@@ -5,7 +5,6 @@ import Arguments qualified
 import Interact qualified
 import Mlatu (compile, compilePrelude, fragmentFromSource, runMlatu)
 import Mlatu.Interpret (interpret)
-import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
@@ -49,7 +48,7 @@ formatMode :: FilePath -> IO ()
 formatMode path = do 
   bs <- readFileBS path
   result <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path (decodeUtf8 bs)
-  handleLeft result (\fragment -> writeFile path $ Pretty.render $ pPrint fragment)
+  handleLeft result (writeFile path . Pretty.render . pPrint)
 
 checkMode :: Arguments.Prelude -> [FilePath] -> IO ()
 checkMode prelude paths = do
