@@ -29,19 +29,15 @@ main = do
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   paths <- forM (Arguments.inputPaths arguments) makeAbsolute
-        case result of
-          Left reports -> do
-            reportAll reports
-            exitFailure
-          Right program ->
-            case Arguments.compileMode arguments of
-              Arguments.CheckMode -> pass
-              Arguments.InterpretMode ->
+  ((runDictionary `handleResult`) . compile mainPermissions Nothing paths . Just)
+    `handleResult` compilePrelude (Arguments.prelude arguments) mainPermissions Nothing
   where
     mainPermissions =
       [ QualifiedName $ Qualified Vocabulary.global "IO",
         QualifiedName $ Qualified Vocabulary.global "Fail"
-      ]    runDictionary program =
+      ]
+    runDictionary :: Dictionary -> IO ()
+    runDictionary program =
       case Arguments.compileMode arguments of
         Arguments.CheckMode -> pass
         Arguments.InterpretMode ->
