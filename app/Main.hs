@@ -2,10 +2,11 @@ module Main where
 
 import Arguments (Arguments, parseArguments)
 import Arguments qualified
--- import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Interact qualified
 import Mlatu (compile, compilePrelude, runMlatu)
+import Mlatu.Dictionary (Dictionary)
 import Mlatu.Interpret (interpret)
+import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
@@ -28,13 +29,6 @@ main = do
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   paths <- forM (Arguments.inputPaths arguments) makeAbsolute
-  commonResult <- runMlatu $ compilePrelude (Arguments.prelude arguments) mainPermissions Nothing
-  case commonResult of 
-    Left reports -> do 
-      reportAll reports
-      exitFailure
-    Right commonDictionary -> do 
-        result <- runMlatu $ compile mainPermissions Nothing paths (Just commonDictionary)
         case result of
           Left reports -> do
             reportAll reports
@@ -43,9 +37,22 @@ runBatch arguments = do
             case Arguments.compileMode arguments of
               Arguments.CheckMode -> pass
               Arguments.InterpretMode ->
-                void $ interpret program Nothing [] stdin stdout stderr []
   where
     mainPermissions =
       [ QualifiedName $ Qualified Vocabulary.global "IO",
         QualifiedName $ Qualified Vocabulary.global "Fail"
-      ]
+      ]    runDictionary program =
+      case Arguments.compileMode arguments of
+        Arguments.CheckMode -> pass
+        Arguments.InterpretMode ->
+          void $ interpret program Nothing [] stdin stdout stderr []
+
+handleResult :: (Dictionary -> IO ()) -> M Dictionary -> IO ()
+handleResult dictionaryHandler dictionaryProducer = do
+  do
+    e <- runMlatu dictionaryProducer
+    bifor_
+      e
+      ( reportAll >=> const exitFailure
+      )
+      dictionaryHandler
