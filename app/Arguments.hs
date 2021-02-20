@@ -14,6 +14,7 @@ import System.Console.CmdArgs.Explicit
     HelpFormat (HelpFormatDefault),
     Mode,
     flagArg,
+    flagReq,
     flagBool,
     flagHelpSimple,
     flagVersion,
@@ -33,6 +34,7 @@ data Arguments = Arguments
 data CompileMode
   = CheckMode
   | InterpretMode
+  | FormatMode
 
 parseArguments :: IO Arguments
 parseArguments = do
@@ -83,16 +85,16 @@ options =
             else acc
       )
       "Compiles with the bare minimum prelude.",
-    flagBool
-      ["check"]
+    flagReq
+      ["mode", "m"]
       ( \flag acc ->
-          if flag
-            then
-              acc
-                { compileMode = CheckMode
-                }
-            else acc
+          case flag of
+            "check" -> Right $ acc {compileMode = CheckMode}
+            "fmt" -> Right $ acc {compileMode = FormatMode}
+            "interpret" -> Right $ acc {compileMode = InterpretMode}
+            _ -> Left "Mode not recognized"
       )
+      "check"
       "Check syntax and types without compiling or running.",
     flagHelpSimple $ \acc -> acc {showHelp = True},
     flagVersion $ \acc -> acc {showVersion = True}

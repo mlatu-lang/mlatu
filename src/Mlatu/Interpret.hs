@@ -252,7 +252,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     Pretty.text $ toString txt
                   ] :
                 "Call stack:" :
-                map (Pretty.nest 4 . pPrint) callStack
+                map (Pretty.nest 2 . pPrint) callStack
         "exit" -> do
           Int64 i ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -526,7 +526,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     Pretty.vcat $
                       "Execution failure: integer division by zero" :
                       "Call stack:" :
-                      map (Pretty.nest 4 . pPrint) callStack
+                      map (Pretty.nest 2 . pPrint) callStack
               unexpectedError -> throwIO unexpectedError
 
           catchFloatModByZero :: IO a -> IO a
@@ -538,7 +538,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     Pretty.vcat $
                       "Execution failure: float modulus by zero" :
                       "Call stack:" :
-                      map (Pretty.nest 4 . pPrint) callStack
+                      map (Pretty.nest 2 . pPrint) callStack
               unexpectedError -> throwIO unexpectedError
 
           catchFileAccessErrors :: IO a -> IO a
@@ -550,7 +550,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     "Execution failure:" :
                     show (ioeGetErrorType e) :
                     "Call stack:" :
-                    map (Pretty.nest 4 . pPrint) callStack
+                    map (Pretty.nest 2 . pPrint) callStack
 
   let entryPointName = fromMaybe mainName mName
   word [entryPointName] entryPointName mainArgs

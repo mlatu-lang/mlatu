@@ -55,5 +55,5 @@ asDefinition name signature body keyword =
   vcat
     [ hcat
         [hsep [keyword, name, signature], ":"],
-      nest 4 body
+      nest 2 body
     ]

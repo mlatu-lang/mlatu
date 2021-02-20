@@ -268,7 +268,7 @@ stripValue v = case v of
 instance Pretty (Term a) where
   pPrint term = case term of
     Coercion {} -> Pretty.empty
-    Compose _ a b -> pPrint a Pretty.$+$ pPrint b
+    Compose _ a b -> pPrint a Pretty.<+> pPrint b
     Generic name i body _ ->
       Pretty.hsep
         [ Pretty.brackets $ Pretty.hcat [pPrint name, "/*", pPrint i, "*/"],
@@ -295,17 +295,17 @@ instance Pretty (Term a) where
     Word _ _ name [] _ -> pPrint name
     Word _ _ name args _ ->
       Pretty.hcat $
-        pPrint name : "::<" : intersperse ", " (map pPrint args) ++ [">"]
+        pPrint name : "::[" : intersperse ", " (map pPrint args) ++ ["]"]
 
 instance Pretty (Case a) where
   pPrint (Case name body _) =
     Pretty.vcat
       [ Pretty.hcat ["case ", pPrint name, ":"],
-        Pretty.nest 4 $ pPrint body
+        Pretty.nest 2 $ pPrint body
       ]
 
 instance Pretty (Else a) where
-  pPrint (Else body _) = Pretty.vcat ["else:", Pretty.nest 4 $ pPrint body]
+  pPrint (Else body _) = Pretty.vcat ["else:", Pretty.nest 2 $ pPrint body]
 
 instance Pretty Permit where
   pPrint (Permit allow name) =

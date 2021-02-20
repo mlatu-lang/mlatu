@@ -31,7 +31,7 @@ instance Pretty Metadata where
   pPrint metadata =
     Pretty.vcat
       [ Pretty.hcat ["about ", pPrint $ name metadata, ":"],
-        Pretty.nest 4 $
+        Pretty.nest 2 $
           Pretty.vcat $
             map field $
               HashMap.toList $
@@ -41,5 +41,5 @@ instance Pretty Metadata where
       field (key, value) =
         Pretty.vcat
           [ Pretty.hcat [pPrint key, ":"],
-            Pretty.nest 4 $ pPrint value
+            Pretty.nest 2 $ pPrint value
           ]

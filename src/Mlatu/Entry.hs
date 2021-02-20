@@ -106,7 +106,7 @@ instance Pretty Entry where
             ++ intersperse "," (map pPrint constraints),
         Pretty.vcat
           [ "and data constructors",
-            Pretty.nest 4 $
+            Pretty.nest 2 $
               Pretty.vcat $
                 map constructor ctors
           ]

@@ -48,12 +48,14 @@ data Definition a = Definition
   deriving (Show)
 
 instance Pretty (Definition a) where
-  pPrint definition =
-    Pretty.asDefinition
-      (pPrint $ name definition)
-      (pPrint $ signature definition)
-      (pPrint $ body definition)
-      (pPrint Token.Define)
+  pPrint (Definition body _ _ _ _ name _ _ signature)
+    | name == mainName = pPrint body
+    | otherwise =
+      Pretty.asDefinition
+        (pPrint name)
+        (pPrint signature)
+        (pPrint body)
+        (pPrint Token.Define)
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.

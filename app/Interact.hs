@@ -110,7 +110,7 @@ run prelude = do
                                   [ "I can't find a word entry called",
                                     Pretty.quote name',
                                     "with a body to list"
-                                  ]
+                                  ] 
                     ("type", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
