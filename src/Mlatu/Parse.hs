@@ -830,17 +830,17 @@ withParser = (<?> "'with' expression") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.With
   permits <- groupedParser $ Parsec.many1 permitParser
   return $
-    Term.compose
-      ()
-      origin
-      [ Term.permissionCoercion permits () origin,
-        Word
+        Term.compose
           ()
-          Operator.Postfix
-          (QualifiedName (Qualified Vocabulary.intrinsic "call"))
-          []
           origin
-      ]
+          [ Term.permissionCoercion permits () origin,
+            Word
+              ()
+              Operator.Postfix
+              (QualifiedName (Qualified Vocabulary.intrinsic "call"))
+              []
+              origin
+          ]
 
 permitParser :: Parser Term.Permit
 permitParser =

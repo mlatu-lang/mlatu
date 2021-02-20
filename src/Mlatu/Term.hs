@@ -268,6 +268,14 @@ stripValue v = case v of
 instance Pretty (Term a) where
   pPrint term = case term of
     Coercion {} -> Pretty.empty
+    Compose _ (Group a) (Compose _ (Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _) _) ->
+      Pretty.vcat $
+        [ Pretty.hcat ["if ", Pretty.parens $ pPrint a, ":"],
+          Pretty.nest 2 $ pPrint trueBody
+        ]
+          ++ if Pretty.isEmpty printedFalseBody then [] else ["else:", printedFalseBody]
+      where
+        printedFalseBody = pPrint falseBody
     Compose _ a b -> pPrint a Pretty.<+> pPrint b
     Generic name i body _ ->
       Pretty.hsep
@@ -280,10 +288,17 @@ instance Pretty (Term a) where
         Pretty.<+> pPrint name
         Pretty.<> ";"
         Pretty.$+$ pPrint body
+    Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
+      Pretty.vcat
+        [ "if:",
+          Pretty.nest 2 $ pPrint trueBody,
+          "else:",
+          Pretty.nest 2 $ pPrint falseBody
+        ]
     Match _ _ cases else_ _ ->
       Pretty.vcat
         [ "match:",
-          Pretty.nest 4 $
+          Pretty.nest 2 $
             Pretty.vcat $
               map pPrint cases
                 ++ [pPrint else_]
@@ -305,6 +320,8 @@ instance Pretty (Case a) where
       ]
 
 instance Pretty (Else a) where
+  pPrint (Else (Word _ _ name _ _) _)
+    | name == "abort" = Pretty.empty
   pPrint (Else body _) = Pretty.vcat ["else:", Pretty.nest 2 $ pPrint body]
 
 instance Pretty Permit where
