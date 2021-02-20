@@ -4,7 +4,7 @@
 
 Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. 
 
-Very experimental: contributions welcome, but please don't use this in production.
+Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see the CONTRIBUTING.md for more information.
 
 ## About the name
 
