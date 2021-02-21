@@ -36,10 +36,11 @@ import Mlatu.Name
   ( Closed,
     ClosureIndex (..),
     ConstructorIndex (..),
-    GeneralName,
+    GeneralName (QualifiedName),
     LocalIndex (..),
     Qualified,
     Unqualified,
+    unqualifiedName,
   )
 import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
@@ -292,6 +293,41 @@ instance Pretty (Term a) where
           (map pPrint cases)
         $$ pPrint else_
         $$ printTerms ts
+    ( Coercion
+        ( AnyCoercion
+            ( Signature.Quantified
+                [Parameter _ r1 Kind.Stack, Parameter _ s1 Kind.Stack]
+                []
+                ( Signature.Function
+                    [ Signature.StackFunction
+                        (Signature.Variable r2 _)
+                        []
+                        (Signature.Variable s2 _)
+                        []
+                        grantNames
+                        _
+                      ]
+                    [ Signature.StackFunction
+                        (Signature.Variable r3 _)
+                        []
+                        (Signature.Variable s3 _)
+                        []
+                        revokeNames
+                        _
+                      ]
+                    []
+                    _
+                  )
+                _
+              )
+          )
+        _
+        _
+        : Word _ _ (QualifiedName name) _ _
+        : ts
+      )
+        | r1 == "R" && r2 == "R" && r3 == "R" && s1 == "S" && s2 == "S" && s3 == "S" && unqualifiedName name == "call" ->
+          "with" <+> Pretty.parens (Pretty.list (map pPrint (grantNames ++ revokeNames))) <+> printTerms ts
     ts -> printTerms ts
     where
       printTerms = Pretty.hsep . map printTerm
