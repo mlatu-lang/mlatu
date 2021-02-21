@@ -1,22 +1,18 @@
-define fizzbuzzes (Int, Int -> +IO):
-  -> c, m;
-  c fizzbuzz println (c < m) if:
-                               (c + 1) m fizzbuzzes
-
-define fizzbuzz (Int -> String):
-  -> n;
-  {n 5 divisible n 3 divisible} ((_::mlatu::call)) if:
-                                                     if:
-                                                       "FizzBuzz"
-                                                     else:
-                                                       "Fizz"
-                                                   else:
-                                                     if:
-                                                       "Buzz"
-                                                     else:
-                                                       n show
-
-1 100 fizzbuzzes
-
 define divisible (Int, Int -> Bool +Fail):
   (%) 0 (=)
+define fizzbuzz (Int -> String):
+  -> n;
+  do (with (+Fail)):
+    n 5 divisible
+    n 3 divisible
+                                                     if:
+    if: "FizzBuzz"
+    else: "Fizz"
+                                                     else:
+    if: "Buzz"
+    else: n show
+define fizzbuzzes (Int, Int -> +IO):
+  -> c, m;
+  c fizzbuzz println
+  if (c < m): (c + 1) m fizzbuzzes
+1 100 fizzbuzzes
