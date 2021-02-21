@@ -5,10 +5,10 @@ define fizzbuzz (Int -> String):
   do (with (+Fail)):
     n 5 divisible
     n 3 divisible
-                                                     if:
+  if:
     if: "FizzBuzz"
     else: "Fizz"
-                                                     else:
+  else:
     if: "Buzz"
     else: n show
 define fizzbuzzes (Int, Int -> +IO):
