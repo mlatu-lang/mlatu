@@ -15,7 +15,7 @@ import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( GeneralName (QualifiedName, UnqualifiedName),
     Qualified (Qualified),
@@ -150,7 +150,7 @@ spec = do
 
 testWord :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testWord contextSource viewpoint name expected = do
-  dictionary <- runExceptT $ runMlatu $ do
+  dictionary <- runMlatuExceptT $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
@@ -215,7 +215,7 @@ testWord contextSource viewpoint name expected = do
 
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
-  resolved <- runExceptT $ runMlatu $ do
+  resolved <- runMlatuExceptT $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0

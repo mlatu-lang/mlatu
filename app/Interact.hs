@@ -6,7 +6,7 @@ where
 import Control.Exception (catch)
 import Data.List (foldr1, partition, stripPrefix)
 import Data.Text qualified as Text
-import Mlatu (Prelude (..), compilePrelude, runMlatu)
+import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -59,10 +59,11 @@ import System.IO (hPrint, hPutStrLn)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Printf (printf)
+import Mlatu.Monad (runMlatuExceptT)
 
 run :: Prelude -> IO ()
 run prelude = do
-  commonDictionary <- runExceptT $ runMlatu $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
+  commonDictionary <- runMlatuExceptT $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
   dictionaryRef <-
     newIORef =<< case commonDictionary of
       Left reports -> do
@@ -114,7 +115,7 @@ run prelude = do
                     ("type", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
-                        runExceptT $ runMlatu $ do
+                        runMlatuExceptT $ do
                           fragment <-
                             Mlatu.fragmentFromSource
                               [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -147,7 +148,7 @@ run prelude = do
                     ("debug", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
-                        runExceptT $ runMlatu $ do
+                        runMlatuExceptT $ do
                           fragment <-
                             Mlatu.fragmentFromSource
                               [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -192,7 +193,7 @@ run prelude = do
                         (Qualifier Absolute ["interactive"])
                         $ Unqualified entryNameUnqualified
                 mResults <- liftIO $
-                  runExceptT $ runMlatu $ do
+                  runMlatuExceptT $ do
                     -- Each entry gets its own definition in the dictionary, so it can
                     -- be executed individually, and later conveniently referred to.
                     fragment <-
@@ -374,7 +375,7 @@ nameCommand ::
   InputT IO ()
 nameCommand lineNumber dictionaryRef name loop action = do
   result <-
-    runExceptT $ runMlatu $
+    runMlatuExceptT $
       Parse.generalName
         lineNumber
         "<interactive>"
@@ -385,7 +386,7 @@ nameCommand lineNumber dictionaryRef name loop action = do
       dictionary <- liftIO $ readIORef dictionaryRef
       mResolved <-
         liftIO $
-          runExceptT $ runMlatu $
+          runMlatuExceptT $
             Resolve.run $
               Resolve.generalName
                 -- TODO: Use 'WordOrTypeName' or something as the category.

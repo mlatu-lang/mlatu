@@ -22,7 +22,7 @@ import Text.PrettyPrint qualified as Pretty
 -- | Class of error-reporting monads.
 class (Monad m) => Informer m where
   -- | Halt if there are any fatal reports.
-  checkpoint :: [Level] -> m ()
+  checkpoint :: Level -> m ()
 
   -- | Halt the computation.
   halt :: m a
@@ -34,10 +34,10 @@ class (Monad m) => Informer m where
   while :: Origin -> Pretty.Doc -> m a -> m a
 
 errorCheckpoint :: (Informer m) => m ()
-errorCheckpoint = checkpoint [Error]
+errorCheckpoint = checkpoint Error
 
 warnCheckpoint :: (Informer m) => m ()
-warnCheckpoint = checkpoint [Error, Warn]
+warnCheckpoint = checkpoint Warn
 
 infoCheckpoint :: (Informer m) => m ()
-infoCheckpoint = checkpoint [Error, Warn, Info]
+infoCheckpoint = checkpoint Info

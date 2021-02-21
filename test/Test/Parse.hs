@@ -4,7 +4,7 @@ module Test.Parse
 where
 
 import Mlatu (fragmentFromSource)
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Report qualified as Report
 import Relude
 import Test.Common
@@ -51,7 +51,7 @@ spec = do
 testParse :: Sign -> Text -> Assertion
 testParse sign input = do
   result <-
-    runExceptT $ runMlatu $
+    runMlatuExceptT $
       fragmentFromSource ioPermission Nothing 1 "<test>" input
   case result of
     Left reports -> case sign of

@@ -4,13 +4,13 @@ module Test.Origin
 where
 
 import Mlatu.Located qualified as Located
-import Mlatu.Monad (runMlatu)
 import Mlatu.Origin (Origin (Origin))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Parsec.Pos (Column, Line)
+import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do
@@ -93,7 +93,7 @@ testOrigin test =
    in fmap
         (map Located.origin)
         ( runIdentity $
-            runExceptT $ runMlatu $
+            runMlatuExceptT $
               tokenize 1 "test" $
                 unlines input
         )

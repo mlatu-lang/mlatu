@@ -47,7 +47,7 @@ data Level
   = Info
   | Warn
   | Error
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 data Report = Report Level ReportKind
   deriving (Eq, Show)

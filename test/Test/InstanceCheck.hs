@@ -6,7 +6,6 @@ where
 import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatu)
 import Mlatu.Name (Qualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
@@ -18,6 +17,7 @@ import Test.HUnit (assertBool)
 import Test.Hspec (Spec, it)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do
@@ -91,7 +91,7 @@ spec = do
 
 testInstanceCheck :: Sign -> Type -> Type -> IO ()
 testInstanceCheck sign a b = do
-  result <- runExceptT $ runMlatu $ do
+  result <- runMlatuExceptT $ do
     instanceCheck "polymorphic" a "concrete" b
     errorCheckpoint
   case sign of

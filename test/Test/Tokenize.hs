@@ -9,7 +9,6 @@ import Mlatu.Base (Base (..))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
 import Mlatu.Located qualified as Located
-import Mlatu.Monad (runMlatu)
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report (Report)
@@ -19,6 +18,7 @@ import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.HUnit (assertFailure)
 import Test.Hspec (Spec, describe, it, shouldBe)
+import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do
@@ -250,5 +250,5 @@ floatLiteral v f e = Float (FloatLiteral v f e)
 
 testTokenize :: Text -> Either [Report] [Token 'Layout]
 testTokenize =
-  fmap (map Located.item) . runIdentity . runExceptT . runMlatu
+  fmap (map Located.item) . runIdentity . runMlatuExceptT
     . tokenize 1 ""

@@ -28,7 +28,7 @@ import Mlatu.Entry qualified as Entry
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Literal qualified as Literal
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( ClosureIndex (ClosureIndex),
     ConstructorIndex (..),
@@ -128,7 +128,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
             -- A regular word.
             Just (Entry.Word _ _ _ _ _ (Just body)) -> do
-              mBody' <- runExceptT $ runMlatu $ Instantiate.term TypeEnv.empty body args
+              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
               case mBody' of
                 Right body' -> term (name : callStack) body'
                 Left reports ->

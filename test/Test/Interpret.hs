@@ -11,7 +11,7 @@ import Mlatu (Prelude (..), compilePrelude, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Enter qualified as Enter
 import Mlatu.Interpret (Rep (..), interpret)
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ConstructorIndex (ConstructorIndex))
 import Mlatu.Report qualified as Report
 import Relude hiding (stderr, stdin, stdout)
@@ -25,7 +25,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    mDictionary <- runExceptT $ runMlatu $ compilePrelude Common ioPermission Nothing
+    mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
     case mDictionary of
       Left reports ->
         error $
@@ -167,7 +167,7 @@ testInterpretFull
   mExpectedStderr
   input
   expectedStack = do
-    result <- runExceptT $ runMlatu $ do
+    result <- runMlatuExceptT $ do
       fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
       Enter.fragment fragment commonDictionary
     (_stdinKnob, stdin) <- do

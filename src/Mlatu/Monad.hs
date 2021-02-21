@@ -11,6 +11,7 @@ module Mlatu.Monad
     MT,
     attempt,
     runMlatu,
+    runMlatuExceptT,
   )
 where
 
@@ -46,6 +47,9 @@ attempt action = MT $ \context reports ->
 runMlatu :: (Monad m) => MT m a -> ExceptT [Report] m a
 runMlatu (MT m) = m [] [] <&> fst
 
+runMlatuExceptT :: (Monad m) => MT m a -> m (Either [Report] a)
+runMlatuExceptT = runExceptT . runMlatu
+
 instance (Monad m) => Functor (MT m) where
   fmap f (MT ax) = MT $ flip flip (first f) . ((<&>) .) . ax
 
@@ -55,36 +59,29 @@ instance (Monad m) => Applicative (MT m) where
 
 instance (Monad m) => Monad (MT m) where
   return = pure
-  MT ax >>= f = MT $ 
-    ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unKT)
-    
+  MT ax >>= f = MT $ ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unKT)
+
 instance Monad m => MonadFail (MT m) where
   fail = error "do not use 'fail'"
 
 instance (MonadIO m) => MonadFix (MT m) where
-  mfix k = MT $ \context reports -> do
-    m <- liftIO newEmptyMVar
-    a <- liftIO $ unsafeInterleaveIO $ takeMVar m
-    mx@(x, _) <- unKT (k a) context reports
-    liftIO $ putMVar m x
-    return mx
+  mfix k = MT $ \context reports ->
+    newEmptyMVar
+      >>= ap ((>>=) . liftIO . unsafeInterleaveIO . takeMVar) 
+      ((<=< flip (flip unKT context . k) reports) . (liftIO .) . (`ap` return) . ((>>) .) . (. fst) . putMVar)
 
 instance (MonadIO m) => MonadIO (MT m) where
   liftIO m = MT $ const ((liftIO m <&>) . flip (,))
 
 instance (Monad m) => Informer (MT m) where
-  checkpoint lvls = MT $ \_ reports ->
+  checkpoint minLvl = MT $ \_ reports ->
     hoistEither $
-      if not (any (\(Report lvl _) -> lvl `elem` lvls) reports)
+      if all (\(Report lvl _) -> lvl < minLvl) reports
         then Right ((), reports)
         else Left reports
   halt = MT $ const (hoistEither . Left)
   report r = MT $ \context reports ->
     return . (,) () $
-      ( \case
-          [] -> r : reports
-          ctxt -> Report Info (Context ctxt r) : reports
-      )
+      (\ctxt -> (if null ctxt then r else Report Info (Context ctxt r)) : reports)
         context
-  while origin message action = MT $ \context reports ->
-    unKT action ((origin, message) : context) reports
+  while origin message action = MT $ unKT action . ((origin, message) :)

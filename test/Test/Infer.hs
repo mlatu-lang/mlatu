@@ -11,7 +11,6 @@ import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatu)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
@@ -25,6 +24,7 @@ import Test.HUnit (assertBool, assertFailure)
 import Test.Hspec (Spec, describe, it)
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do
@@ -251,7 +251,7 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  mDictionary <- runExceptT $ runMlatu $ compilePrelude Common ioPermission Nothing
+  mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
       error $
@@ -260,14 +260,14 @@ testTypecheck sign input expected = do
             Pretty.vcat $
               "unable to set up inference tests:" : map Report.human reports
     Right dictionary -> do
-      result <- runExceptT $ runMlatu $ do
+      result <- runMlatuExceptT $ do
         fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
         Enter.fragment fragment dictionary
       case Dictionary.toList <$> result of
         Right definitions -> case find matching definitions of
           Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
             let actual = Term.typ term
-            check <- runExceptT $ runMlatu $ do
+            check <- runMlatuExceptT $ do
               instanceCheck "inferred" actual "declared" expected
               errorCheckpoint
             case sign of
