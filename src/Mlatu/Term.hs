@@ -47,7 +47,8 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
 import Relude hiding (Compose, Type)
-import Text.PrettyPrint qualified as Pretty
+import Text.PrettyPrint (($$), ($+$), (<+>))
+import Text.PrettyPrint.HughesPJ qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | This is the core language. It permits pushing values to the stack, invoking
@@ -266,91 +267,91 @@ stripValue v = case v of
   Text a -> Text a
 
 instance Pretty (Term a) where
-  pPrint term = case term of
-    Coercion {} -> Pretty.empty
-    Compose _ (Group a) (Compose _ (Match AnyMatch _ cases else_ _) _) -> 
-      Pretty.vcat
-        [ Pretty.hcat ["match ", Pretty.parens $ Pretty.parens $ pPrint a, ":"],
-          Pretty.nest 2 $
-            Pretty.vcat $
-              map pPrint cases
-                ++ [pPrint else_]
-        ]
-    Compose _ (Group a) (Compose _ (Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _) _) ->
-      Pretty.vcat $
-        [ Pretty.hcat ["if ", Pretty.parens $ pPrint a, ":"],
-          Pretty.nest 2 $ pPrint trueBody
-        ]
-          ++ if Pretty.isEmpty printedFalseBody then [] else ["else:", printedFalseBody]
-      where
-        printedFalseBody = pPrint falseBody
-    Compose _ a b -> pPrint a Pretty.<+> pPrint b
-    Generic name i body _ ->
-      Pretty.hsep
-        [ Pretty.brackets $ Pretty.hcat [pPrint name, "/*", pPrint i, "*/"],
-          pPrint body
-        ]
-    Group a -> Pretty.parens (pPrint a)
-    Lambda _ name _ body _ ->
-      "->"
-        Pretty.<+> pPrint name
-        Pretty.<> ";"
-        Pretty.$+$ pPrint body
-    Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
-      Pretty.vcat
-        [ "if:",
-          Pretty.nest 2 $ pPrint trueBody,
-          "else:",
-          Pretty.nest 2 $ pPrint falseBody
-        ]
-    Match _ _ cases else_ _ ->
-      Pretty.vcat
-        [ "match:",
-          Pretty.nest 2 $
-            Pretty.vcat $
-              map pPrint cases
-                ++ [pPrint else_]
-        ]
-    New _ (ConstructorIndex index) _size _ -> "new." Pretty.<> Pretty.int index
-    NewClosure _ size _ -> "new.closure." Pretty.<> pPrint size
-    NewVector _ size _ _ -> "new.vec." Pretty.<> pPrint size
-    Push _ value _ -> pPrint value
-    Word _ _ name [] _ -> pPrint name
-    Word _ _ name args _ ->
-      Pretty.hcat $
-        pPrint name : "::[" : intersperse ", " (map pPrint args) ++ ["]"]
+  pPrint term = case decompose term of
+    (Group a : Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ : ts) ->
+      ("if " <> Pretty.parens (pPrint a) <> ":")
+        $$ Pretty.nest 2 (pPrint trueBody)
+        $$ printIfNotEmpty
+          "else:"
+          (Pretty.nest 2 $ pPrint falseBody)
+          ($$)
+        $$ printTerms ts
+    (Group a : Match _ _ cases else_ _ : ts) ->
+      ("match " <> Pretty.parens (pPrint a))
+        $$ Pretty.vcat
+          (map pPrint cases)
+        $$ pPrint else_
+        $$ printTerms ts
+    ts -> printTerms ts
+    where
+      printTerms = Pretty.hsep . map printTerm
+
+printTerm :: Term a -> Pretty.Doc
+printTerm term = case term of
+  Coercion {} -> Pretty.empty
+  Generic name i body _ ->
+    Pretty.brackets (pPrint name <> "/*" <> pPrint i <> "*/")
+      <+> pPrint body
+  Group a -> Pretty.parens (pPrint a)
+  Lambda _ name _ body _ ->
+    "-> "
+      <> foldl' (\acc e -> acc <> ", " <> pPrint e) (pPrint name) list
+      <> ";"
+      $+$ pPrint body
+    where
+      list =
+        unfoldr
+          ( \case
+              Lambda _ n _ b _ -> Just (n, b)
+              _ -> Nothing
+          )
+          body
+  Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
+    "if:" $$ Pretty.nest 2 (pPrint trueBody)
+      $$ printIfNotEmpty "else:" (Pretty.nest 2 (pPrint falseBody)) ($$)
+  Match _ _ cases else_ _ ->
+    "match"
+      $$ Pretty.vcat
+        (map pPrint cases)
+      $$ pPrint else_
+  New _ (ConstructorIndex index) _size _ -> "new." <> Pretty.int index
+  NewClosure _ size _ -> "new.closure." <> pPrint size
+  NewVector _ size _ _ -> "new.vec." <> pPrint size
+  Push _ value _ -> pPrint value
+  Word _ _ name [] _ -> pPrint name
+  Word _ _ name args _ ->
+    pPrint name <> "::[" <> Pretty.hcat (intersperse ", " (map pPrint args)) <> "]"
+  n -> pPrint n
+
+printIfNotEmpty :: Pretty.Doc -> Pretty.Doc -> (Pretty.Doc -> Pretty.Doc -> Pretty.Doc) -> Pretty.Doc
+printIfNotEmpty f s g = if not $ Pretty.isEmpty s then g f s else Pretty.empty
 
 instance Pretty (Case a) where
   pPrint (Case name body _) =
-    Pretty.vcat
-      [ Pretty.hcat ["case ", pPrint name, ":"],
-        Pretty.nest 2 $ pPrint body
-      ]
+    ("case " <> pPrint name <> ":")
+      $$ Pretty.nest 2 (pPrint body)
 
 instance Pretty (Else a) where
   pPrint (Else (Word _ _ name _ _) _)
     | name == "abort" = Pretty.empty
-  pPrint (Else body _) = Pretty.vcat ["else:", Pretty.nest 2 $ pPrint body]
+  pPrint (Else body _) = "else:" $$ Pretty.nest 2 (pPrint body)
 
 instance Pretty Permit where
   pPrint (Permit allow name) =
-    Pretty.hcat
-      [if allow then "+" else "-", pPrint name]
+    (if allow then "+" else "-") <> pPrint name
 
 instance Pretty (Value a) where
   pPrint value = case value of
     Capture names term ->
-      Pretty.hcat
-        [ Pretty.char '$',
-          Pretty.parens $ Pretty.list $ map pPrint names,
-          Pretty.braces $ pPrint term
-        ]
+      Pretty.char '$'
+        <> Pretty.parens (Pretty.list $ map pPrint names)
+        <> Pretty.braces (pPrint term)
     Character c -> Pretty.quotes $ Pretty.char c
-    Closed (ClosureIndex index) -> "closure." Pretty.<> Pretty.int index
+    Closed (ClosureIndex index) -> "closure." <> Pretty.int index
     Float f -> pPrint f
     Integer i -> pPrint i
-    Local (LocalIndex index) -> "local." Pretty.<> Pretty.int index
-    Name n -> Pretty.hcat ["\\", pPrint n]
+    Local (LocalIndex index) -> "local." <> Pretty.int index
+    Name n -> "\\" <> pPrint n
     Quotation body -> Pretty.braces $ pPrint body
     Text t ->
       Pretty.doubleQuotes $
