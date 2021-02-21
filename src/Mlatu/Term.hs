@@ -27,6 +27,7 @@ module Mlatu.Term
   )
 where
 
+import Data.Char (isLetter)
 import Data.List (partition)
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind qualified as Kind
@@ -40,7 +41,7 @@ import Mlatu.Name
     Qualified,
     Unqualified,
   )
-import Mlatu.Operator (Fixity)
+import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
@@ -86,7 +87,7 @@ data Term a
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
     Word !a !Fixity !GeneralName ![Type] !Origin
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | The type of coercion to perform.
 data CoercionHint
@@ -94,7 +95,7 @@ data CoercionHint
     IdentityCoercion
   | -- | A coercion to a particular type.
     AnyCoercion !Signature
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | The original source of a @match@ expression
 data MatchHint
@@ -102,22 +103,22 @@ data MatchHint
     BooleanMatch
   | -- | @match@ explicitly in the source.
     AnyMatch
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | A case branch in a @match@ expression.
 data Case a = Case !GeneralName !(Term a) !Origin
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | An @else@ branch in a @match@ (or @if@) expression.
 data Else a = Else !(Term a) !Origin
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
   { permitted :: !Bool,
     permitName :: !GeneralName
   }
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | A value, used to represent literals in a parsed program, as well as runtime
 -- values in the interpreter.
@@ -140,7 +141,7 @@ data Value a
     Quotation !(Term a)
   | -- | A text literal.
     Text !Text
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- FIXME: 'compose' should work on 'Term ()'.
 compose :: a -> Origin -> [Term a] -> Term a
@@ -267,7 +268,16 @@ stripValue v = case v of
   Text a -> Text a
 
 instance Pretty (Term a) where
-  pPrint term = case decompose term of
+  pPrint term = case filter
+    ( \case
+        Coercion IdentityCoercion _ _ -> False
+        _ -> True
+    )
+    $ decompose term of
+    (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
+      ("if " <> Pretty.parens (pPrint a) <> ":")
+        $$ Pretty.nest 2 (pPrint trueBody)
+        $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ : ts) ->
       ("if " <> Pretty.parens (pPrint a) <> ":")
         $$ Pretty.nest 2 (pPrint trueBody)
@@ -295,17 +305,13 @@ printTerm term = case term of
   Group a -> Pretty.parens (pPrint a)
   Lambda _ name _ body _ ->
     "-> "
-      <> foldl' (\acc e -> acc <> ", " <> pPrint e) (pPrint name) list
+      <> foldr (\e acc -> pPrint e <> ", " <> acc) (pPrint name) (reverse names)
       <> ";"
-      $+$ pPrint body
+      $+$ pPrint newBody
     where
-      list =
-        unfoldr
-          ( \case
-              Lambda _ n _ b _ -> Just (n, b)
-              _ -> Nothing
-          )
-          body
+      (names, newBody) = go [] body
+      go ns (Lambda _ n _ b _) = go (ns ++ [n]) b
+      go ns b = (ns, b)
   Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
     "if:" $$ Pretty.nest 2 (pPrint trueBody)
       $$ printIfNotEmpty "else:" (Pretty.nest 2 (pPrint falseBody)) ($$)
@@ -318,6 +324,10 @@ printTerm term = case term of
   NewClosure _ size _ -> "new.closure." <> pPrint size
   NewVector _ size _ _ -> "new.vec." <> pPrint size
   Push _ value _ -> pPrint value
+  Word _ Postfix name [] _
+    | not $ all isLetter (Pretty.render printedName) -> Pretty.parens printedName
+    where
+      printedName = pPrint name
   Word _ _ name [] _ -> pPrint name
   Word _ _ name args _ ->
     pPrint name <> "::[" <> Pretty.hcat (intersperse ", " (map pPrint args)) <> "]"

@@ -25,7 +25,7 @@ data Category
     Intrinsic
   | -- | @trait@, a generic function.
     Trait
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance Pretty Category where
   pPrint Intrinsic = "intrinsic"
@@ -37,7 +37,7 @@ data Declaration = Declaration
     origin :: !Origin,
     signature :: !Signature
   }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 instance Pretty Declaration where
   pPrint (Declaration category name _ signature) = pPrint category Pretty.<+> pPrint (unqualifiedName name) Pretty.<+> pPrint signature

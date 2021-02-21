@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 -- |
 -- Module      : Mlatu.Definition
 -- Description : Definitions of words, instances, and permissions
@@ -45,7 +46,7 @@ data Definition a = Definition
     parent :: !(Maybe Parent),
     signature :: !Signature
   }
-  deriving (Show)
+  deriving (Ord, Eq, Show)
 
 instance Pretty (Definition a) where
   pPrint (Definition body _ _ _ _ name _ _ signature)

@@ -19,7 +19,7 @@ data Category
   | Instance
   | Permission
   | Word
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Pretty Category where
   pPrint Constructor = "constructor"

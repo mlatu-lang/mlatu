@@ -26,7 +26,7 @@ data TypeDefinition = TypeDefinition
     origin :: !Origin,
     parameters :: !([Parameter], [Constraint])
   }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 instance Pretty TypeDefinition where
   pPrint (TypeDefinition constructors name _ parameters) =

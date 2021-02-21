@@ -20,7 +20,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A generic type parameter for a data type, like @T@ in @List[T]@.
 data Parameter = Parameter !Origin !Unqualified !Kind
-  deriving (Show)
+  deriving (Ord, Show)
 
 -- | Parameters are compared regardless of origin.
 instance Eq Parameter where

@@ -17,7 +17,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Term (Term)
 import Relude
 import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Text.PrettyPrint.HughesPJClass (Pretty (..), ($$))
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
@@ -25,21 +25,18 @@ data Metadata = Metadata
     name :: !GeneralName,
     origin :: !Origin
   }
-  deriving (Show)
+  deriving (Ord, Eq, Show)
 
 instance Pretty Metadata where
   pPrint metadata =
-    Pretty.vcat
-      [ Pretty.hcat ["about ", pPrint $ name metadata, ":"],
-        Pretty.nest 2 $
-          Pretty.vcat $
+    ("about " <> pPrint (name metadata) <> ":")
+      $$ Pretty.nest
+        2
+        ( Pretty.vcat $
             map field $
               HashMap.toList $
                 fields metadata
-      ]
+        )
     where
       field (key, value) =
-        Pretty.vcat
-          [ Pretty.hcat [pPrint key, ":"],
-            Pretty.nest 2 $ pPrint value
-          ]
+        pPrint key <> ":" $$ Pretty.nest 2 (pPrint value)

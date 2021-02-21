@@ -17,7 +17,7 @@ import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Synonym = Synonym !Qualified !GeneralName !Origin
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 instance Pretty Synonym where
   pPrint (Synonym name1 name2 _) = pPrint name1 <> "=" <> pPrint name2

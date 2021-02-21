@@ -24,7 +24,7 @@ import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Constraint = Constraint !Unqualified ![Parameter]
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Pretty Constraint where
   pPrint (Constraint name params) = Pretty.hcat [pPrint name, Pretty.brackets $ Pretty.list $ map pPrint params]
@@ -52,7 +52,7 @@ data Signature
   | -- | Produced when generating signatures for lifted quotations after
     -- typechecking.
     Type !Type
-  deriving (Show)
+  deriving (Ord, Show)
 
 -- | Signatures are compared regardless of origin.
 instance Eq Signature where

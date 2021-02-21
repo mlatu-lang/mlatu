@@ -15,7 +15,6 @@ import Mlatu.Name (Qualified)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Type (Type)
 import Relude hiding (Type)
-import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Instantiated = Instantiated
@@ -30,5 +29,4 @@ instance Hashable Instantiated where
 
 instance Pretty Instantiated where
   pPrint (Instantiated n ts) =
-    Pretty.hcat
-      [pPrint n, "::<", Pretty.list $ map pPrint ts, ">"]
+    pPrint n <> "::[" <> Pretty.list (map pPrint ts) <> "]"

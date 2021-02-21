@@ -17,4 +17,4 @@ import Relude
 -- the same name, the default 'Merge' behavior of 'Deny' raises an error, while
 -- 'Compose' composes the bodies of the two definitions.
 data Merge = Deny | Compose
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)

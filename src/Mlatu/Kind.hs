@@ -28,7 +28,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 --
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
 data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Hashable Kind where
   hashWithSalt s Value = hashWithSalt s (0 :: Int)

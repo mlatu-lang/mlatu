@@ -21,7 +21,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 data Parent
   = Trait !Qualified
   | Type !Qualified
-  deriving (Show)
+  deriving (Ord, Eq, Show)
 
 instance Pretty Parent where
   pPrint (Trait name) = Pretty.hsep ["trait", Pretty.quote name]

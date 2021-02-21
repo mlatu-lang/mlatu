@@ -25,11 +25,11 @@ data Operator = Operator
     name :: !Qualified,
     precedence :: !Precedence
   }
-  deriving (Show)
+  deriving (Ord, Eq, Show)
 
 -- | Whether a word was declared infix (@+@) or postfix (@plus@).
 data Fixity = Infix | Postfix
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | Whether an operator associates leftward:
 --
@@ -43,7 +43,7 @@ data Fixity = Infix | Postfix
 --
 -- > a + b + c  // error
 data Associativity = Nonassociative | Leftward | Rightward
-  deriving (Show)
+  deriving (Ord, Eq, Show)
 
 -- | The precedence level (from 0 to 9) of an operator; higher-precedence
 -- operators bind more tightly than lower-precedence operators.

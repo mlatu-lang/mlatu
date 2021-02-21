@@ -54,19 +54,19 @@ instance Semigroup (Fragment a) where
         types = types a <> types b
       }
 
-instance Pretty (Fragment a) where
+instance (Ord a) => Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
-        [ map pPrint $ synonyms fragment,
-          map pPrint $ types fragment,
+        [ map pPrint $ sort (synonyms fragment),
+          map pPrint $ sort (types fragment),
           map printGrouped groupedDeclarations,
-          map pPrint $ definitions fragment,
-          map pPrint $ metadata fragment
+          map pPrint $ sort (definitions fragment),
+          map pPrint $ sort (metadata fragment)
         ]
     where
       groupedDeclarations = groupBy (\a b -> (qualifierName . name) a == (qualifierName . name) b) (declarations fragment)
-      printGrouped decls = Pretty.vcat [Pretty.hsep ["vocab", pPrint commonName, "{"], Pretty.nest 2 $ Pretty.vcat (map pPrint decls), "}"]
+      printGrouped decls = Pretty.vcat [Pretty.hsep ["vocab", pPrint commonName, "{"], Pretty.nest 2 $ Pretty.vcat (map pPrint $ sort decls), "}"]
         where
           commonName = case qualifierName $ name $ decls Unsafe.!! 0 of
             (Qualifier Absolute parts) -> Qualifier Relative parts

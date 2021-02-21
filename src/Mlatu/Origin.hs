@@ -38,7 +38,7 @@ data Origin = Origin
     endLine :: !Line,
     endColumn :: !Column
   }
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | The starting 'SourcePos' of an 'Origin'.
 begin :: Origin -> SourcePos

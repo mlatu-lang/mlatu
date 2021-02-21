@@ -44,19 +44,19 @@ data Type
   | TypeConstant !Origin !Var
   | Forall !Origin !Var !Type
   | TypeValue !Origin !Int
-  deriving (Show)
+  deriving (Ord, Show)
 
 infixl 1 :@
 
 newtype Constructor = Constructor Qualified
-  deriving (Eq, Hashable, Show)
+  deriving (Ord, Eq, Hashable, Show)
 
 data Var = Var
   { varNameHint :: !Unqualified,
     varTypeId :: !TypeId,
     varKind :: !Kind
   }
-  deriving (Show)
+  deriving (Ord, Show)
 
 instance Eq Var where
   -- We ignore the name hint for equality tests.

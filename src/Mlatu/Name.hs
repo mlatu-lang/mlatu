@@ -65,7 +65,7 @@ newtype Unqualified = Unqualified Text
 data Closed
   = ClosedLocal !LocalIndex
   | ClosedClosure !ClosureIndex
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | An index into a closure.
 newtype ClosureIndex = ClosureIndex Int

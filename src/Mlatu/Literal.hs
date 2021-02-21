@@ -24,7 +24,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 data IntegerLiteral = IntegerLiteral
   { integerValue :: !Integer,
     integerBase :: !Base  }
-  deriving (Show)
+  deriving (Ord, Show)
 
 -- Integer literals compare equality regardless of base and bits.
 instance Eq IntegerLiteral where
@@ -54,7 +54,7 @@ data FloatLiteral = FloatLiteral
     floatFractional :: !Int,
     floatExponent :: !Int
   }
-  deriving (Show)
+  deriving (Ord, Show)
 
 -- Float literals compar equality regardless of bits.
 instance Eq FloatLiteral where

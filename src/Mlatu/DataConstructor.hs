@@ -24,7 +24,7 @@ data DataConstructor = DataConstructor
     name :: !Unqualified,
     origin :: !Origin
   }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 -- FIXME: Support fields.
 instance Pretty DataConstructor where
