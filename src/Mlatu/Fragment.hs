@@ -58,11 +58,11 @@ instance Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
-        [ map printGrouped groupedDeclarations,
+        [ map pPrint $ synonyms fragment,
+          map pPrint $ types fragment,
+          map printGrouped groupedDeclarations,
           map pPrint $ definitions fragment,
-          map pPrint $ metadata fragment,
-          map pPrint $ synonyms fragment,
-          map pPrint $ types fragment
+          map pPrint $ metadata fragment
         ]
     where
       groupedDeclarations = groupBy (\a b -> (qualifierName . name) a == (qualifierName . name) b) (declarations fragment)

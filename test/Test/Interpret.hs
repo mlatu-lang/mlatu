@@ -25,7 +25,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    mDictionary <- runMlatu $ compilePrelude Common ioPermission Nothing
+    mDictionary <- runExceptT $ runMlatu $ compilePrelude Common ioPermission Nothing
     case mDictionary of
       Left reports ->
         error $
@@ -167,7 +167,7 @@ testInterpretFull
   mExpectedStderr
   input
   expectedStack = do
-    result <- runMlatu $ do
+    result <- runExceptT $ runMlatu $ do
       fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
       Enter.fragment fragment commonDictionary
     (_stdinKnob, stdin) <- do

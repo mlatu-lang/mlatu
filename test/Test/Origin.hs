@@ -93,7 +93,7 @@ testOrigin test =
    in fmap
         (map Located.origin)
         ( runIdentity $
-            runMlatu $
+            runExceptT $ runMlatu $
               tokenize 1 "test" $
                 unlines input
         )

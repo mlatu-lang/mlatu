@@ -150,7 +150,7 @@ spec = do
 
 testWord :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testWord contextSource viewpoint name expected = do
-  dictionary <- runMlatu $ do
+  dictionary <- runExceptT $ runMlatu $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
@@ -215,7 +215,7 @@ testWord contextSource viewpoint name expected = do
 
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
-  resolved <- runMlatu $ do
+  resolved <- runExceptT $ runMlatu $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0

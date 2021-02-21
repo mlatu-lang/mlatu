@@ -51,7 +51,7 @@ spec = do
 testParse :: Sign -> Text -> Assertion
 testParse sign input = do
   result <-
-    runMlatu $
+    runExceptT $ runMlatu $
       fragmentFromSource ioPermission Nothing 1 "<test>" input
   case result of
     Left reports -> case sign of

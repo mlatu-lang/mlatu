@@ -11,9 +11,8 @@ import Relude
 import Report (reportAll)
 import System.Directory (makeAbsolute)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
-import Mlatu.Report (Report)
 import Text.PrettyPrint.HughesPJ qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty(pPrint))
+import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 
 main :: IO ()
 main = do
@@ -33,7 +32,7 @@ main = do
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   paths <- forM (Arguments.inputPaths arguments) makeAbsolute
-  case Arguments.compileMode arguments of 
+  case Arguments.compileMode arguments of
     Arguments.FormatMode -> forM_ paths formatMode
     Arguments.CheckMode -> checkMode (Arguments.prelude arguments) paths
     Arguments.InterpretMode -> interpretMode (Arguments.prelude arguments) paths
@@ -45,28 +44,33 @@ mainPermissions =
   ]
 
 formatMode :: FilePath -> IO ()
-formatMode path = do 
+formatMode path = do
   bs <- readFileBS path
-  result <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path (decodeUtf8 bs)
-  handleLeft result (writeFile path . Pretty.render . pPrint)
+  result <- runExceptT $ runMlatu $ fragmentFromSource mainPermissions Nothing 0 path (decodeUtf8 bs)
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right text -> writeFile path $ Pretty.render $ pPrint text
 
 checkMode :: Arguments.Prelude -> [FilePath] -> IO ()
 checkMode prelude paths = do
-  commonResult <- runMlatu $ compilePrelude prelude mainPermissions Nothing
-  handleLeft commonResult $ \commonDictionary -> do 
-      result <- runMlatu $ compile mainPermissions Nothing paths (Just commonDictionary)
-      handleLeft result $ const pass
+  result <- runExceptT $ do
+    commonDictionary <- runMlatu $ compilePrelude prelude mainPermissions Nothing
+    runMlatu $ compile mainPermissions Nothing paths (Just commonDictionary)
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right _ -> pass
 
 interpretMode :: Arguments.Prelude -> [FilePath] -> IO ()
-interpretMode prelude paths = do 
-  commonResult <- runMlatu $ compilePrelude prelude mainPermissions Nothing
-  handleLeft commonResult  $ \commonDictionary -> do 
-      result <- runMlatu $ compile mainPermissions Nothing paths (Just commonDictionary)
-      handleLeft result $ \program -> void $ interpret program Nothing [] stdin stdout stderr []
-  
-
-handleLeft :: Either [Report] r -> (r -> IO ()) -> IO ()
-handleLeft (Left reports) _ = do 
-  reportAll reports 
-  exitFailure 
-handleLeft (Right r) f = f r
+interpretMode prelude paths = do
+  result <- runExceptT $ do
+    commonDictionary <- runMlatu $ compilePrelude prelude mainPermissions Nothing
+    runMlatu $ compile mainPermissions Nothing paths (Just commonDictionary)
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right program -> void $ interpret program Nothing [] stdin stdout stderr []

@@ -251,7 +251,7 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  mDictionary <- runMlatu $ compilePrelude Common ioPermission Nothing
+  mDictionary <- runExceptT $ runMlatu $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
       error $
@@ -260,14 +260,14 @@ testTypecheck sign input expected = do
             Pretty.vcat $
               "unable to set up inference tests:" : map Report.human reports
     Right dictionary -> do
-      result <- runMlatu $ do
+      result <- runExceptT $ runMlatu $ do
         fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
         Enter.fragment fragment dictionary
       case Dictionary.toList <$> result of
         Right definitions -> case find matching definitions of
           Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
             let actual = Term.typ term
-            check <- runMlatu $ do
+            check <- runExceptT $ runMlatu $ do
               instanceCheck "inferred" actual "declared" expected
               errorCheckpoint
             case sign of

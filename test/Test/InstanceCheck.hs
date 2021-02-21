@@ -91,7 +91,7 @@ spec = do
 
 testInstanceCheck :: Sign -> Type -> Type -> IO ()
 testInstanceCheck sign a b = do
-  result <- runMlatu $ do
+  result <- runExceptT $ runMlatu $ do
     instanceCheck "polymorphic" a "concrete" b
     errorCheckpoint
   case sign of

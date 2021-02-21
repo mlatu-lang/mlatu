@@ -62,7 +62,7 @@ import Text.Printf (printf)
 
 run :: Prelude -> IO ()
 run prelude = do
-  commonDictionary <- runMlatu $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
+  commonDictionary <- runExceptT $ runMlatu $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
   dictionaryRef <-
     newIORef =<< case commonDictionary of
       Left reports -> do
@@ -114,7 +114,7 @@ run prelude = do
                     ("type", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
-                        runMlatu $ do
+                        runExceptT $ runMlatu $ do
                           fragment <-
                             Mlatu.fragmentFromSource
                               [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -147,7 +147,7 @@ run prelude = do
                     ("debug", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
-                        runMlatu $ do
+                        runExceptT $ runMlatu $ do
                           fragment <-
                             Mlatu.fragmentFromSource
                               [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -192,7 +192,7 @@ run prelude = do
                         (Qualifier Absolute ["interactive"])
                         $ Unqualified entryNameUnqualified
                 mResults <- liftIO $
-                  runMlatu $ do
+                  runExceptT $ runMlatu $ do
                     -- Each entry gets its own definition in the dictionary, so it can
                     -- be executed individually, and later conveniently referred to.
                     fragment <-
@@ -374,7 +374,7 @@ nameCommand ::
   InputT IO ()
 nameCommand lineNumber dictionaryRef name loop action = do
   result <-
-    runMlatu $
+    runExceptT $ runMlatu $
       Parse.generalName
         lineNumber
         "<interactive>"
@@ -385,7 +385,7 @@ nameCommand lineNumber dictionaryRef name loop action = do
       dictionary <- liftIO $ readIORef dictionaryRef
       mResolved <-
         liftIO $
-          runMlatu $
+          runExceptT $ runMlatu $
             Resolve.run $
               Resolve.generalName
                 -- TODO: Use 'WordOrTypeName' or something as the category.

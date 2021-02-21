@@ -250,5 +250,5 @@ floatLiteral v f e = Float (FloatLiteral v f e)
 
 testTokenize :: Text -> Either [Report] [Token 'Layout]
 testTokenize =
-  fmap (map Located.item) . runIdentity . runMlatu
+  fmap (map Located.item) . runIdentity . runExceptT . runMlatu
     . tokenize 1 ""

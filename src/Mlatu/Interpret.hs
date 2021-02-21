@@ -128,7 +128,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
             -- A regular word.
             Just (Entry.Word _ _ _ _ _ (Just body)) -> do
-              mBody' <- runMlatu $ Instantiate.term TypeEnv.empty body args
+              mBody' <- runExceptT $ runMlatu $ Instantiate.term TypeEnv.empty body args
               case mBody' of
                 Right body' -> term (name : callStack) body'
                 Left reports ->
