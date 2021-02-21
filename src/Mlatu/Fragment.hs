@@ -58,9 +58,9 @@ instance (Ord a) => Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
-        [ map pPrint $ sort (synonyms fragment),
+        [ map printGrouped groupedDeclarations,
+          map pPrint $ sort (synonyms fragment),
           map pPrint $ sort (types fragment),
-          map printGrouped groupedDeclarations,
           map pPrint $ sort (definitions fragment),
           map pPrint $ sort (metadata fragment)
         ]

@@ -275,6 +275,8 @@ instance Pretty (Term a) where
         _ -> True
     )
     $ decompose term of
+    (Push _ (Quotation body) _ : Group a : ts) ->
+      ("do " <> Pretty.parens (pPrint a) <> ":") $$ Pretty.nest 2 (pPrint body) $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
       ("if " <> Pretty.parens (pPrint a) <> ":")
         $$ Pretty.nest 2 (pPrint trueBody)
@@ -327,7 +329,11 @@ instance Pretty (Term a) where
         : ts
       )
         | r1 == "R" && r2 == "R" && r3 == "R" && s1 == "S" && s2 == "S" && s3 == "S" && unqualifiedName name == "call" ->
-          "with" <+> Pretty.parens (Pretty.list (map pPrint (grantNames ++ revokeNames))) <+> printTerms ts
+          "with"
+            <+> Pretty.parens
+              ( Pretty.list (map (\g -> "+" <> pPrint g) grantNames ++ map (\r -> "-" <> pPrint r) revokeNames)
+              )
+            <+> printTerms ts
     ts -> printTerms ts
     where
       printTerms = Pretty.hsep . map printTerm
@@ -336,7 +342,7 @@ printTerm :: Term a -> Pretty.Doc
 printTerm term = case term of
   Coercion {} -> Pretty.empty
   Generic name i body _ ->
-    Pretty.brackets (pPrint name <> "/*" <> pPrint i <> "*/")
+    Pretty.braces (pPrint name <> "/*" <> pPrint i <> "*/")
       <+> pPrint body
   Group a -> Pretty.parens (pPrint a)
   Lambda _ name _ body _ ->
