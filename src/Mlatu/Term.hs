@@ -29,6 +29,8 @@ where
 
 import Data.Char (isLetter)
 import Data.List (partition)
+import Data.Text (count)
+import Data.Text qualified as Text
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind qualified as Kind
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
@@ -36,10 +38,10 @@ import Mlatu.Name
   ( Closed,
     ClosureIndex (..),
     ConstructorIndex (..),
-    GeneralName (QualifiedName),
+    GeneralName (..),
     LocalIndex (..),
-    Qualified,
-    Unqualified,
+    Qualified (..),
+    Unqualified (..),
     unqualifiedName,
   )
 import Mlatu.Operator (Fixity (Postfix))
@@ -212,8 +214,8 @@ origin term = case term of
 quantifierCount :: Term a -> Int
 quantifierCount = countFrom 0
   where
-    countFrom !count (Generic _ _ body _) = countFrom (count + 1) body
-    countFrom count _ = count
+    countFrom !c (Generic _ _ body _) = countFrom (c + 1) body
+    countFrom c _ = c
 
 -- Deduces the explicit type of a term.
 
@@ -275,6 +277,8 @@ instance Pretty (Term a) where
         _ -> True
     )
     $ decompose term of
+    (Word _ Postfix (QualifiedName (Qualified _ name)) [] _ : ts)
+      | name == "drop" -> "-> _;" $$ printTerms ts
     (Push _ (Quotation body) _ : Group a : ts) ->
       ("do " <> Pretty.parens (pPrint a) <> ":") $$ Pretty.nest 2 (pPrint body) $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
@@ -344,6 +348,9 @@ printTerm term = case term of
   Generic name i body _ ->
     Pretty.braces (pPrint name <> "/*" <> pPrint i <> "*/")
       <+> pPrint body
+  Group (Word _ Postfix (QualifiedName name) [] _)
+    | unqualifiedName name == "drop" ->
+      "-> _;"
   Group a -> Pretty.parens (pPrint a)
   Lambda _ name _ body _ ->
     "-> "
@@ -366,10 +373,8 @@ printTerm term = case term of
   NewClosure _ size _ -> "new.closure." <> pPrint size
   NewVector _ size _ _ -> "new.vec." <> pPrint size
   Push _ value _ -> pPrint value
-  Word _ Postfix name [] _
-    | not $ all isLetter (Pretty.render printedName) -> Pretty.parens printedName
-    where
-      printedName = pPrint name
+  Word _ Postfix (UnqualifiedName (Unqualified name)) [] _
+    | not (Text.all isLetter name) -> Pretty.parens $ Pretty.text $ toString name
   Word _ _ name [] _ -> pPrint name
   Word _ _ name args _ ->
     pPrint name <> "::[" <> Pretty.hcat (intersperse ", " (map pPrint args)) <> "]"
@@ -405,12 +410,18 @@ instance Pretty (Value a) where
     Local (LocalIndex index) -> "local." <> Pretty.int index
     Name n -> "\\" <> pPrint n
     Quotation body -> Pretty.braces $ pPrint body
-    Text t ->
-      Pretty.doubleQuotes $
-        Pretty.text $
-          concatMap
-            ( \case
-                '\n' -> "\\n"
-                c -> [c]
-            )
-            $ toString t
+    Text text -> (if count "\n" text > 1 then multiline else singleline) text
+      where
+        multiline :: Text -> Pretty.Doc
+        multiline t = Pretty.text "\"\"\"" $$ Pretty.vcat (map (Pretty.text . toString) (lines t)) $$ Pretty.text "\"\"\""
+
+        singleline :: Text -> Pretty.Doc
+        singleline t =
+          Pretty.doubleQuotes $
+            Pretty.text $
+              concatMap
+                ( \case
+                    '\n' -> "\\n"
+                    c -> [c]
+                )
+                $ toString t
