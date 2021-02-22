@@ -21,6 +21,7 @@ import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
 import Relude.Unsafe qualified as Unsafe
+import Text.PrettyPrint (($$))
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -66,8 +67,11 @@ instance (Ord a) => Pretty (Fragment a) where
         ]
     where
       groupedDeclarations = groupBy (\a b -> (qualifierName . name) a == (qualifierName . name) b) (declarations fragment)
-      printGrouped decls = Pretty.vcat [Pretty.hsep ["vocab", pPrint commonName, "{"], Pretty.nest 2 $ Pretty.vcat (map pPrint $ sort decls), "}"]
+      printGrouped decls =
+        if noVocab 
+          then Pretty.vcat (map pPrint $ sort decls)
+          else ("vocab " <> pPrint commonName <> " {") $$ Pretty.nest 2 (Pretty.vcat (map pPrint $ sort decls)) $$ "}"
         where
-          commonName = case qualifierName $ name $ decls Unsafe.!! 0 of
-            (Qualifier Absolute parts) -> Qualifier Relative parts
-            n -> n
+          (commonName, noVocab) = case qualifierName $ name $ decls Unsafe.!! 0 of
+            (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
+            n -> (n, False)

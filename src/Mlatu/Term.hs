@@ -51,7 +51,7 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
 import Relude hiding (Compose, Type)
-import Text.PrettyPrint (($$), ($+$), (<+>))
+import Text.PrettyPrint (($$), (<+>))
 import Text.PrettyPrint.HughesPJ qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -271,14 +271,13 @@ stripValue v = case v of
   Text a -> Text a
 
 instance Pretty (Term a) where
-  pPrint term = case filter
-    ( \case
-        Coercion IdentityCoercion _ _ -> False
-        _ -> True
-    )
-    $ decompose term of
-    (Word _ Postfix (QualifiedName (Qualified _ name)) [] _ : ts)
-      | name == "drop" -> "-> _;" $$ printTerms ts
+  pPrint term = case decompose term of
+    [] -> Pretty.empty
+    (Word _ Postfix (QualifiedName (Qualified _ name)) [] o : ts)
+      | name == "drop" -> printTerm (Lambda () "_" () body o)
+      where
+        body :: Term ()
+        body = compose () o (map stripMetadata ts)
     (Push _ (Quotation body) _ : Group a : ts) ->
       ("do " <> Pretty.parens (pPrint a) <> ":") $$ Pretty.nest 2 (pPrint body) $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
@@ -338,9 +337,9 @@ instance Pretty (Term a) where
               ( Pretty.list (map (\g -> "+" <> pPrint g) grantNames ++ map (\r -> "-" <> pPrint r) revokeNames)
               )
             <+> printTerms ts
-    ts -> printTerms ts
+    (t : ts) -> printTerm t <+> printTerms ts
     where
-      printTerms = Pretty.hsep . map printTerm
+      printTerms = Pretty.hsep . map pPrint
 
 printTerm :: Term a -> Pretty.Doc
 printTerm term = case term of
@@ -348,15 +347,12 @@ printTerm term = case term of
   Generic name i body _ ->
     Pretty.braces (pPrint name <> "/*" <> pPrint i <> "*/")
       <+> pPrint body
-  Group (Word _ Postfix (QualifiedName name) [] _)
-    | unqualifiedName name == "drop" ->
-      "-> _;"
   Group a -> Pretty.parens (pPrint a)
   Lambda _ name _ body _ ->
-    "-> "
+    ("-> "
       <> foldr (\e acc -> pPrint e <> ", " <> acc) (pPrint name) (reverse names)
-      <> ";"
-      $+$ pPrint newBody
+      <> ";")
+      $$ pPrint newBody
     where
       (names, newBody) = go [] body
       go ns (Lambda _ n _ b _) = go (ns ++ [n]) b
@@ -409,7 +405,8 @@ instance Pretty (Value a) where
     Integer i -> pPrint i
     Local (LocalIndex index) -> "local." <> Pretty.int index
     Name n -> "\\" <> pPrint n
-    Quotation body -> Pretty.braces $ pPrint body
+    Quotation w@Word {} -> "\\" <> pPrint w
+    Quotation body -> "{ " <> pPrint body <> " }"
     Text text -> (if count "\n" text > 1 then multiline else singleline) text
       where
         multiline :: Text -> Pretty.Doc

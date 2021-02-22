@@ -592,7 +592,7 @@ definitionParser keyword category = do
         Definition.origin = origin,
         -- HACK: Should be passed in from outside?
         Definition.parent = case keyword of
-          Token.Instance -> Just $ Parent.Type name
+          Token.Instance -> Just $ Parent.Trait name
           _nonInstance -> Nothing,
         Definition.signature = sig
       }

@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+
 -- |
 -- Module      : Mlatu.Definition
 -- Description : Definitions of words, instances, and permissions
@@ -19,7 +20,7 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Entry.Parent (Parent)
+import Mlatu.Entry.Parent (Parent (Trait))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Operator (Fixity)
@@ -36,27 +37,30 @@ import Relude
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Definition a = Definition
-  { body :: !(Term a),
+  { parent :: !(Maybe Parent),
+    name :: !Qualified,
+    body :: !(Term a),
     category :: !Category,
     fixity :: !Fixity,
     inferSignature :: !Bool,
     merge :: !Merge,
-    name :: !Qualified,
     origin :: !Origin,
-    parent :: !(Maybe Parent),
     signature :: !Signature
   }
   deriving (Ord, Eq, Show)
 
 instance Pretty (Definition a) where
-  pPrint (Definition body _ _ _ _ name _ _ signature)
+  pPrint (Definition parent name body _ _ _ _ _ signature)
     | name == mainName = pPrint body
     | otherwise =
       Pretty.asDefinition
         (pPrint name)
         (pPrint signature)
         (pPrint body)
-        (pPrint Token.Define)
+        ( pPrint $ case parent of
+            Just (Trait _) -> Token.Instance
+            _ -> Token.Define
+        )
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
