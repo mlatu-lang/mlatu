@@ -50,6 +50,7 @@ import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
+import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose, Type)
 import Text.PrettyPrint (($$), (<+>))
 import Text.PrettyPrint.HughesPJ qualified as Pretty
@@ -279,24 +280,31 @@ instance Pretty (Term a) where
         body :: Term ()
         body = compose () o (map stripMetadata ts)
     (Push _ (Quotation body) _ : Group a : ts) ->
-      ("do " <> Pretty.parens (pPrint a) <> ":") $$ Pretty.nest 2 (pPrint body) $$ printTerms ts
+      Pretty.block ("do" <+> Pretty.parens (pPrint a)) (pPrint body) $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
-      ("if " <> Pretty.parens (pPrint a) <> ":")
-        $$ Pretty.nest 2 (pPrint trueBody)
+      Pretty.block ("if" <+> Pretty.parens (pPrint a)) (pPrint trueBody)
         $$ printTerms ts
     (Group a : Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ : ts) ->
-      ("if " <> Pretty.parens (pPrint a) <> ":")
-        $$ Pretty.nest 2 (pPrint trueBody)
-        $$ printIfNotEmpty
-          "else:"
-          (Pretty.nest 2 $ pPrint falseBody)
-          ($$)
+      Pretty.block ("if" <+> Pretty.parens (pPrint a)) (pPrint trueBody)
+        $$ Pretty.block "else" (pPrint falseBody)
         $$ printTerms ts
-    (Group a : Match _ _ cases else_ _ : ts) ->
-      ("match " <> Pretty.parens (pPrint a))
+    (Group a : Match _ _ cases (Else (Word _ _ name [] _) _) _ : ts)
+      | name == QualifiedName (Qualified Vocabulary.global "abort") ->
+        ("match" <+> Pretty.parens (pPrint a))
+          $$ Pretty.vcat
+            ( map
+                (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
+                cases
+            )
+          $$ printTerms ts
+    (Group a : Match _ _ cases (Else elseBody _) _ : ts) ->
+      ("match" <+> Pretty.parens (pPrint a))
         $$ Pretty.vcat
-          (map pPrint cases)
-        $$ pPrint else_
+          ( map
+              (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
+              cases
+          )
+        $$ Pretty.block "else" (pPrint elseBody)
         $$ printTerms ts
     ( Coercion
         ( AnyCoercion
@@ -349,22 +357,36 @@ printTerm term = case term of
       <+> pPrint body
   Group a -> Pretty.parens (pPrint a)
   Lambda _ name _ body _ ->
-    ("-> "
-      <> foldr (\e acc -> pPrint e <> ", " <> acc) (pPrint name) (reverse names)
-      <> ";")
+    ( "-> "
+        <> foldr (\e acc -> (pPrint e <> ",") <+> acc) (pPrint name) (reverse names)
+        <> ";"
+    )
       $$ pPrint newBody
     where
       (names, newBody) = go [] body
       go ns (Lambda _ n _ b _) = go (ns ++ [n]) b
       go ns b = (ns, b)
+  Match BooleanMatch _ [Case _ trueBody _] _ _ ->
+    Pretty.block "if" (pPrint trueBody)
   Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
-    "if:" $$ Pretty.nest 2 (pPrint trueBody)
-      $$ printIfNotEmpty "else:" (Pretty.nest 2 (pPrint falseBody)) ($$)
-  Match _ _ cases else_ _ ->
+    Pretty.block "if" (pPrint trueBody)
+      $$ Pretty.block "else" (pPrint falseBody)
+  Match _ _ cases (Else (Word _ _ name [] _) _) _
+    | name == QualifiedName (Qualified Vocabulary.global "abort") ->
+      "match"
+        $$ Pretty.vcat
+          ( map
+              (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
+              cases
+          )
+  Match _ _ cases (Else elseBody _) _ ->
     "match"
       $$ Pretty.vcat
-        (map pPrint cases)
-      $$ pPrint else_
+        ( map
+            (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
+            cases
+        )
+      $$ Pretty.block "else" (pPrint elseBody)
   New _ (ConstructorIndex index) _size _ -> "new." <> Pretty.int index
   NewClosure _ size _ -> "new.closure." <> pPrint size
   NewVector _ size _ _ -> "new.vec." <> pPrint size
@@ -375,19 +397,6 @@ printTerm term = case term of
   Word _ _ name args _ ->
     pPrint name <> "::[" <> Pretty.hcat (intersperse ", " (map pPrint args)) <> "]"
   n -> pPrint n
-
-printIfNotEmpty :: Pretty.Doc -> Pretty.Doc -> (Pretty.Doc -> Pretty.Doc -> Pretty.Doc) -> Pretty.Doc
-printIfNotEmpty f s g = if not $ Pretty.isEmpty s then g f s else Pretty.empty
-
-instance Pretty (Case a) where
-  pPrint (Case name body _) =
-    ("case " <> pPrint name <> ":")
-      $$ Pretty.nest 2 (pPrint body)
-
-instance Pretty (Else a) where
-  pPrint (Else (Word _ _ name _ _) _)
-    | name == "abort" = Pretty.empty
-  pPrint (Else body _) = "else:" $$ Pretty.nest 2 (pPrint body)
 
 instance Pretty Permit where
   pPrint (Permit allow name) =
@@ -406,7 +415,7 @@ instance Pretty (Value a) where
     Local (LocalIndex index) -> "local." <> Pretty.int index
     Name n -> "\\" <> pPrint n
     Quotation w@Word {} -> "\\" <> pPrint w
-    Quotation body -> "{ " <> pPrint body <> " }"
+    Quotation body -> "{" <+> pPrint body <+> "}"
     Text text -> (if count "\n" text > 1 then multiline else singleline) text
       where
         multiline :: Text -> Pretty.Doc

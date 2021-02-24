@@ -13,6 +13,7 @@ module Mlatu.Pretty
     oxford,
     quote,
     vsep,
+    block,
   )
 where
 
@@ -22,9 +23,12 @@ import Text.PrettyPrint
     char,
     hcat,
     hsep,
+    isEmpty,
     nest,
     quotes,
     vcat,
+    ($$),
+    (<+>),
   )
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -57,3 +61,6 @@ asDefinition name signature body keyword =
         [hsep [keyword, name, signature], ":"],
       nest 2 body
     ]
+
+block :: Doc -> Doc -> Doc
+block pre post = if isEmpty post then pre <+> "{}" else pre <> ":" $$ nest 2 post

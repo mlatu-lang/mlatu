@@ -13,8 +13,10 @@ where
 
 import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
+import Mlatu.Pretty as Pretty
 import Mlatu.Signature (Signature)
 import Relude
+import Text.PrettyPrint ((<+>))
 import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
@@ -28,6 +30,7 @@ data DataConstructor = DataConstructor
 
 -- FIXME: Support fields.
 instance Pretty DataConstructor where
-  pPrint (DataConstructor _ name _) =
+  pPrint (DataConstructor fields name _) =
     "case"
-      Pretty.<+> pPrint name
+      <+> pPrint name
+      <+> Pretty.parens (Pretty.list (map pPrint fields))

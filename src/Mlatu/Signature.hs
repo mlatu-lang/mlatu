@@ -75,9 +75,13 @@ origin signature = case signature of
   Type t -> Type.origin t
 
 instance Pretty Signature where
-  pPrint (Application a b _) =
+  pPrint (Application firstA b _) =
     Pretty.hcat
-      [pPrint a, Pretty.brackets $ pPrint b]
+      [pPrint finalA, Pretty.brackets $ Pretty.list $ map pPrint (as ++ [b])]
+    where
+      (finalA, as) = go [] firstA
+      go l (Application x y _) = go (l ++ [y]) x
+      go l x = (x, l)
   pPrint (Bottom _) = "<bottom>"
   pPrint (Function as bs es _) =
     Pretty.parens $

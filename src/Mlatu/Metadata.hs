@@ -14,10 +14,11 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
+import Mlatu.Pretty qualified as Pretty
 import Mlatu.Term (Term)
 import Relude
 import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..), ($$))
+import Text.PrettyPrint.HughesPJClass (Pretty (..), (<+>))
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
@@ -29,14 +30,12 @@ data Metadata = Metadata
 
 instance Pretty Metadata where
   pPrint metadata =
-    ("about " <> pPrint (name metadata) <> ":")
-      $$ Pretty.nest
-        2
-        ( Pretty.vcat $
-            map field $
-              HashMap.toList $
-                fields metadata
-        )
+    Pretty.block
+      ("about" <+> pPrint (name metadata))
+      ( Pretty.vcat $
+          map field $
+            HashMap.toList $
+              fields metadata
+      )
     where
-      field (key, value) =
-        pPrint key <> ":" $$ Pretty.nest 2 (pPrint value)
+      field (key, value) = Pretty.block (pPrint key) (pPrint value)

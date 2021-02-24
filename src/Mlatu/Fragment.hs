@@ -21,9 +21,8 @@ import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
 import Relude.Unsafe qualified as Unsafe
-import Text.PrettyPrint (($$))
 import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Text.PrettyPrint.HughesPJClass (Pretty (..), (<+>))
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
@@ -55,7 +54,7 @@ instance Semigroup (Fragment a) where
         types = types a <> types b
       }
 
-instance (Ord a) => Pretty (Fragment a) where
+instance (Show a, Ord a) => Pretty (Fragment a) where
   pPrint fragment =
     Pretty.vsep $
       concat
@@ -68,9 +67,9 @@ instance (Ord a) => Pretty (Fragment a) where
     where
       groupedDeclarations = groupBy (\a b -> (qualifierName . name) a == (qualifierName . name) b) (declarations fragment)
       printGrouped decls =
-        if noVocab 
+        if noVocab
           then Pretty.vcat (map pPrint $ sort decls)
-          else ("vocab " <> pPrint commonName <> " {") $$ Pretty.nest 2 (Pretty.vcat (map pPrint $ sort decls)) $$ "}"
+          else Pretty.block ("vocab" <+> pPrint commonName) (Pretty.vcat (map pPrint $ sort decls))
         where
           (commonName, noVocab) = case qualifierName $ name $ decls Unsafe.!! 0 of
             (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)

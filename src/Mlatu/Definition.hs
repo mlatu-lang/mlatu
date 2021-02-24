@@ -20,7 +20,7 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Entry.Parent (Parent (Trait))
+import Mlatu.Entry.Parent (Parent (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Operator (Fixity)
@@ -31,9 +31,10 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
-import Mlatu.Token qualified as Token
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
+import Text.PrettyPrint ((<+>))
+import Text.PrettyPrint qualified as Pretty
 import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Definition a = Definition
@@ -50,17 +51,17 @@ data Definition a = Definition
   deriving (Ord, Eq, Show)
 
 instance Pretty (Definition a) where
-  pPrint (Definition parent name body _ _ _ _ _ signature)
+  pPrint (Definition (Just (Type _)) _ _ _ _ _ _ _ _) = Pretty.empty
+  pPrint (Definition _ name body _ _ _ _ _ _)
     | name == mainName = pPrint body
-    | otherwise =
-      Pretty.asDefinition
-        (pPrint name)
-        (pPrint signature)
-        (pPrint body)
-        ( pPrint $ case parent of
-            Just (Trait _) -> Token.Instance
-            _ -> Token.Define
-        )
+  pPrint (Definition (Just (Trait _)) name body _ _ _ _ _ signature) =
+    Pretty.block
+      ("instance" <+> (pPrint name <> pPrint signature))
+      (pPrint body)
+  pPrint (Definition _ name body _ _ _ _ _ signature) =
+    Pretty.block
+      ("define" <+> (pPrint name <> pPrint signature))
+      (pPrint body)
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
