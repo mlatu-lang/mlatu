@@ -27,10 +27,7 @@ module Mlatu.Term
   )
 where
 
-import Data.Char (isLetter)
 import Data.List (partition)
-import Data.Text (count)
-import Data.Text qualified as Text
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind qualified as Kind
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
@@ -42,19 +39,13 @@ import Mlatu.Name
     LocalIndex (..),
     Qualified (..),
     Unqualified (..),
-    unqualifiedName,
   )
-import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
-import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose, Type)
-import Text.PrettyPrint (($$), (<+>))
-import Text.PrettyPrint.HughesPJ qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Mlatu.Operator (Fixity)
 
 -- | This is the core language. It permits pushing values to the stack, invoking
 -- definitions, and moving values between the stack and local variables.
@@ -193,9 +184,10 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
 
 decompose :: Term a -> [Term a]
 -- TODO: Verify that this is correct.
-decompose (Generic _name _id t _origin) = decompose t
+decompose (Generic _ _ t _) = decompose t
 decompose (Compose _ a b) = decompose a ++ decompose b
 decompose (Coercion IdentityCoercion _ _) = []
+decompose (Group (Group a)) = [Group a]
 decompose term = [term]
 
 origin :: Term a -> Origin
@@ -271,163 +263,3 @@ stripValue v = case v of
   Quotation a -> Quotation (stripMetadata a)
   Text a -> Text a
 
-instance Pretty (Term a) where
-  pPrint term = case decompose term of
-    [] -> Pretty.empty
-    (Word _ Postfix (QualifiedName (Qualified _ name)) [] o : ts)
-      | name == "drop" -> printTerm (Lambda () "_" () body o)
-      where
-        body :: Term ()
-        body = compose () o (map stripMetadata ts)
-    (Push _ (Quotation body) _ : Group a : ts) ->
-      Pretty.block ("do" <+> Pretty.parens (pPrint a)) (pPrint body) $$ printTerms ts
-    (Group a : Match BooleanMatch _ [Case _ trueBody _] _ _ : ts) ->
-      Pretty.block ("if" <+> Pretty.parens (pPrint a)) (pPrint trueBody)
-        $$ printTerms ts
-    (Group a : Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ : ts) ->
-      Pretty.block ("if" <+> Pretty.parens (pPrint a)) (pPrint trueBody)
-        $$ Pretty.block "else" (pPrint falseBody)
-        $$ printTerms ts
-    (Group a : Match _ _ cases (Else (Word _ _ name [] _) _) _ : ts)
-      | name == QualifiedName (Qualified Vocabulary.global "abort") ->
-        ("match" <+> Pretty.parens (pPrint a))
-          $$ Pretty.vcat
-            ( map
-                (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
-                cases
-            )
-          $$ printTerms ts
-    (Group a : Match _ _ cases (Else elseBody _) _ : ts) ->
-      ("match" <+> Pretty.parens (pPrint a))
-        $$ Pretty.vcat
-          ( map
-              (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
-              cases
-          )
-        $$ Pretty.block "else" (pPrint elseBody)
-        $$ printTerms ts
-    ( Coercion
-        ( AnyCoercion
-            ( Signature.Quantified
-                [Parameter _ r1 Kind.Stack, Parameter _ s1 Kind.Stack]
-                []
-                ( Signature.Function
-                    [ Signature.StackFunction
-                        (Signature.Variable r2 _)
-                        []
-                        (Signature.Variable s2 _)
-                        []
-                        grantNames
-                        _
-                      ]
-                    [ Signature.StackFunction
-                        (Signature.Variable r3 _)
-                        []
-                        (Signature.Variable s3 _)
-                        []
-                        revokeNames
-                        _
-                      ]
-                    []
-                    _
-                  )
-                _
-              )
-          )
-        _
-        _
-        : Word _ _ (QualifiedName name) _ _
-        : ts
-      )
-        | r1 == "R" && r2 == "R" && r3 == "R" && s1 == "S" && s2 == "S" && s3 == "S" && unqualifiedName name == "call" ->
-          "with"
-            <+> Pretty.parens
-              ( Pretty.list (map (\g -> "+" <> pPrint g) grantNames ++ map (\r -> "-" <> pPrint r) revokeNames)
-              )
-            <+> printTerms ts
-    (t : ts) -> printTerm t <+> printTerms ts
-    where
-      printTerms = Pretty.hsep . map pPrint
-
-printTerm :: Term a -> Pretty.Doc
-printTerm term = case term of
-  Coercion {} -> Pretty.empty
-  Generic name i body _ ->
-    Pretty.braces (pPrint name <> "/*" <> pPrint i <> "*/")
-      <+> pPrint body
-  Group a -> Pretty.parens (pPrint a)
-  Lambda _ name _ body _ ->
-    ( "-> "
-        <> foldr (\e acc -> (pPrint e <> ",") <+> acc) (pPrint name) (reverse names)
-        <> ";"
-    )
-      $$ pPrint newBody
-    where
-      (names, newBody) = go [] body
-      go ns (Lambda _ n _ b _) = go (ns ++ [n]) b
-      go ns b = (ns, b)
-  Match BooleanMatch _ [Case _ trueBody _] _ _ ->
-    Pretty.block "if" (pPrint trueBody)
-  Match BooleanMatch _ [Case _ trueBody _, Case _ falseBody _] _ _ ->
-    Pretty.block "if" (pPrint trueBody)
-      $$ Pretty.block "else" (pPrint falseBody)
-  Match _ _ cases (Else (Word _ _ name [] _) _) _
-    | name == QualifiedName (Qualified Vocabulary.global "abort") ->
-      "match"
-        $$ Pretty.vcat
-          ( map
-              (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
-              cases
-          )
-  Match _ _ cases (Else elseBody _) _ ->
-    "match"
-      $$ Pretty.vcat
-        ( map
-            (\(Case n b _) -> Pretty.block ("case" <+> pPrint n) (pPrint b))
-            cases
-        )
-      $$ Pretty.block "else" (pPrint elseBody)
-  New _ (ConstructorIndex index) _size _ -> "new." <> Pretty.int index
-  NewClosure _ size _ -> "new.closure." <> pPrint size
-  NewVector _ size _ _ -> "new.vec." <> pPrint size
-  Push _ value _ -> pPrint value
-  Word _ Postfix (UnqualifiedName (Unqualified name)) [] _
-    | not (Text.all isLetter name) -> Pretty.parens $ Pretty.text $ toString name
-  Word _ _ name [] _ -> pPrint name
-  Word _ _ name args _ ->
-    pPrint name <> "::[" <> Pretty.hcat (intersperse ", " (map pPrint args)) <> "]"
-  n -> pPrint n
-
-instance Pretty Permit where
-  pPrint (Permit allow name) =
-    (if allow then "+" else "-") <> pPrint name
-
-instance Pretty (Value a) where
-  pPrint value = case value of
-    Capture names term ->
-      Pretty.char '$'
-        <> Pretty.parens (Pretty.list $ map pPrint names)
-        <> Pretty.braces (pPrint term)
-    Character c -> Pretty.quotes $ Pretty.char c
-    Closed (ClosureIndex index) -> "closure." <> Pretty.int index
-    Float f -> pPrint f
-    Integer i -> pPrint i
-    Local (LocalIndex index) -> "local." <> Pretty.int index
-    Name n -> "\\" <> pPrint n
-    Quotation w@Word {} -> "\\" <> pPrint w
-    Quotation body -> "{" <+> pPrint body <+> "}"
-    Text text -> (if count "\n" text > 1 then multiline else singleline) text
-      where
-        multiline :: Text -> Pretty.Doc
-        multiline t = Pretty.text "\"\"\"" $$ Pretty.vcat (map (Pretty.text . toString) (lines t)) $$ Pretty.text "\"\"\""
-
-        singleline :: Text -> Pretty.Doc
-        singleline t =
-          Pretty.doubleQuotes $
-            Pretty.text $
-              concatMap
-                ( \case
-                    '\n' -> "\\n"
-                    c -> [c]
-                )
-                $ toString t

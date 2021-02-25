@@ -59,7 +59,7 @@ dependencies:
   - containers
   - hashable
   - parsec
-  - pretty
+  - prettyprinter
   - text
   - transformers
   - unordered-containers

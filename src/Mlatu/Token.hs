@@ -17,12 +17,8 @@ where
 
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
-import Mlatu.Literal qualified as Literal
 import Mlatu.Name (Unqualified)
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
-import Text.Show qualified
 import Unsafe.Coerce (unsafeCoerce)
 
 data Token (l :: Layoutness) where
@@ -154,53 +150,6 @@ instance Eq (Token l) where
   With == With = True
   Word a == Word b = a == b
   _ == _ = False
-
-instance Pretty (Token l) where
-  pPrint token = case token of
-    About -> "about"
-    AngleBegin -> "<"
-    AngleEnd -> ">"
-    Arrow -> "->"
-    As -> "as"
-    BlockBegin -> "{"
-    BlockEnd -> "}"
-    Case -> "case"
-    Character c -> Pretty.quotes $ Pretty.char c
-    Colon -> ":"
-    Comma -> ","
-    Define -> "define"
-    Do -> "do"
-    Ellipsis -> "..."
-    Elif -> "elif"
-    Else -> "else"
-    Float a -> Pretty.double $ Literal.floatValue a
-    GroupBegin -> "("
-    GroupEnd -> ")"
-    If -> "if"
-    Ignore -> "_"
-    Instance -> "instance"
-    Integer literal -> pPrint literal
-    Intrinsic -> "intrinsic"
-    Match -> "match"
-    Operator name -> pPrint name
-    Permission -> "permission"
-    Reference -> "\\"
-    Return -> "return"
-    Synonym -> "synonym"
-    Text t -> Pretty.doubleQuotes $ Pretty.text $ toString t
-    Trait -> "trait"
-    Type -> "type"
-    VectorBegin -> "["
-    VectorEnd -> "]"
-    Vocab -> "vocab"
-    VocabLookup -> "::"
-    Where -> "where"
-    With -> "with"
-    Word name -> pPrint name
-
--- Minor hack because Parsec requires 'Show'.
-instance Show (Token l) where
-  show = Pretty.render . pPrint
 
 -- Note [Angle Brackets]:
 --

@@ -30,8 +30,6 @@ import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Relude hiding (Type, empty)
 import Relude.Extra (next)
 import System.IO.Unsafe (unsafePerformIO)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- The typing environment tracks the state of inference. It answers the
 -- following questions:
@@ -74,12 +72,6 @@ freshTypeId tenv = do
   x <- liftIO $ readIORef $ currentType tenv
   liftIO $ writeIORef (currentType tenv) $ next x
   return x
-
-instance Pretty TypeEnv where
-  pPrint tenv =
-    Pretty.vcat $
-      map (\(v, t) -> Pretty.hsep [pPrint v, "~", pPrint t]) $
-        Map.toList $ tvs tenv
 
 getClosed :: TypeEnv -> Closed -> Maybe Type
 getClosed tenv name = case name of

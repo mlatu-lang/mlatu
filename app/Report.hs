@@ -3,10 +3,10 @@ module Report
   )
 where
 
-import Mlatu.Report (Level (..), Report (..), human)
+import Mlatu.Pretty (human)
+import Mlatu.Report (Level (..), Report (..))
 import Relude
 import System.IO (hPutStrLn)
-import Text.PrettyPrint qualified as Pretty
 
 reportAll :: [Report] -> IO ()
 reportAll reports = do
@@ -14,6 +14,6 @@ reportAll reports = do
   unless (null warnings) $ mapM_ (hPutStrLn stderr) $ "Warnings: " : warnings
   unless (null infos) $ mapM_ (hPutStrLn stderr) $ "Infos: " : infos
   where
-    errors = ordNub $ map (Pretty.render . human) $ filter (\(Report level _) -> level == Error) reports
-    warnings = ordNub $ map (Pretty.render . human) $ filter (\(Report level _) -> level == Warn) reports
-    infos = ordNub $ map (Pretty.render . human) $ filter (\(Report level _) -> level == Info) reports
+    errors = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Error) reports
+    warnings = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Warn) reports
+    infos = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Info) reports

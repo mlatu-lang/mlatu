@@ -22,14 +22,14 @@ import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report (..), ReportKind (..))
 import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (Doc)
 
 -- | A Mlatu action atop a 'Monad' 'm', returning a result of type 'a', which
 -- maintains a 'Context' stack and can fail with a list of 'Reports'.
 newtype MT m a = MT
   {unKT :: Context -> Reports -> ExceptT Reports m (a, Reports)}
 
-type Context = [(Origin, Pretty.Doc)]
+type Context = [(Origin, Doc ())]
 
 type Reports = [Report]
 

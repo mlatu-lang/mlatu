@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Dictionary
-  ( Dictionary,
+  ( Dictionary (..),
     empty,
     insert,
     lookup,
@@ -40,16 +40,12 @@ import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Term qualified as Term
 import Relude hiding (empty, fromList, toList)
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
   { entries :: HashMap Instantiated Entry
   }
   deriving (Show)
-
-instance Pretty Dictionary where
-  pPrint (Dictionary entries) = pPrint (HashMap.keys entries)
 
 empty :: Dictionary
 empty =

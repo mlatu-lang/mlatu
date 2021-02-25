@@ -16,8 +16,6 @@ where
 
 import Mlatu.Name (Qualified)
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | Operator metadata for infix desugaring.
 data Operator = Operator
@@ -48,21 +46,8 @@ data Associativity = Nonassociative | Leftward | Rightward
 -- | The precedence level (from 0 to 9) of an operator; higher-precedence
 -- operators bind more tightly than lower-precedence operators.
 newtype Precedence = Precedence Int
-  deriving (Enum, Eq, Ord, Show, Pretty)
+  deriving (Enum, Eq, Ord, Show)
 
 instance Bounded Precedence where
   minBound = Precedence 0
   maxBound = Precedence 9
-
-instance Pretty Operator where
-  pPrint operator =
-    Pretty.hsep $
-      ("infix" :) $
-        ( case associativity operator of
-            Nonassociative -> id
-            Leftward -> ("left" :)
-            Rightward -> ("right" :)
-        )
-          [ pPrint $ precedence operator,
-            pPrint $ name operator
-          ]

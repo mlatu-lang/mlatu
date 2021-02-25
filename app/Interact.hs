@@ -20,8 +20,9 @@ import Mlatu.Infer (typeFromSignature, typecheck)
 import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Instantiated qualified as Instantiated
-import Mlatu.Interpret (Failure, interpret)
+import Mlatu.Interpret (Failure, Rep, interpret, printRep)
 import Mlatu.Kind (Kind (..))
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( GeneralName (LocalName, QualifiedName),
     Qualified (Qualified),
@@ -32,7 +33,7 @@ import Mlatu.Name
 import Mlatu.Name qualified as Name
 import Mlatu.Origin qualified as Origin
 import Mlatu.Parse qualified as Parse
-import Mlatu.Pretty qualified as Pretty
+import Mlatu.Pretty (printEntry, printGeneralName, printQualified, printTerm, printType)
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
 import Mlatu.Signature qualified as Signature
@@ -40,6 +41,7 @@ import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
+import Prettyprinter (Pretty (..), dquotes, hsep, nest, vcat)
 import Relude
 import Relude.Extra (next)
 import Relude.Extra.Enum (prev)
@@ -55,11 +57,8 @@ import System.Console.Haskeline
     runInputT,
     setComplete,
   )
-import System.IO (hPrint, hPutStrLn)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import System.IO (hPrint)
 import Text.Printf (printf)
-import Mlatu.Monad (runMlatuExceptT)
 
 run :: Prelude -> IO ()
 run prelude = do
@@ -98,20 +97,19 @@ run prelude = do
                 | "//" `Text.isPrefixOf` line ->
                   case Text.break (== ' ') $ Text.drop 2 line of
                     ("info", name) -> nameCommand lineNumber dictionaryRef name loop $
-                      \_name' entry -> liftIO $ putStrLn $ Pretty.render $ pPrint entry
+                      \_name' entry -> liftIO $ print $ printEntry entry
                     ("list", name) -> nameCommand lineNumber dictionaryRef name loop $
                       \name' entry -> case entry of
                         Entry.Word _ _ _ _ _ (Just body) ->
-                          liftIO $ putStrLn $ Pretty.render $ pPrint body
+                          liftIO $ print $ printTerm body
                         _noBody ->
                           liftIO $
-                            hPutStrLn stderr $
-                              Pretty.render $
-                                Pretty.hsep
-                                  [ "I can't find a word entry called",
-                                    Pretty.quote name',
-                                    "with a body to list"
-                                  ] 
+                            hPrint stderr $
+                              hsep
+                                [ "I can't find a word entry called",
+                                  dquotes $ printQualified name',
+                                  "with a body to list"
+                                ]
                     ("type", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
                       mResults <- liftIO $
@@ -137,13 +135,11 @@ run prelude = do
 
                       liftIO $ case mResults of
                         Left reports -> reportAll reports
-                        Right (Just typ) -> putStrLn $ Pretty.render $ pPrint typ
+                        Right (Just typ) -> print $ printType typ
                         Right Nothing ->
-                          hPutStrLn stderr $
-                            Pretty.render $
-                              Pretty.hsep
-                                [ "That doesn't look like an expression"
-                                ]
+                          hPrint
+                            stderr
+                            ("That doesn't look like an expression" :: Text)
                       loop
                     ("debug", expression) -> do
                       dictionary <- liftIO $ readIORef dictionaryRef
@@ -168,20 +164,15 @@ run prelude = do
                         Left reports -> reportAll reports
                         Right (Just to_show) -> print $ Term.decompose to_show
                         Right Nothing ->
-                          hPutStrLn stderr $
-                            Pretty.render $
-                              Pretty.hsep
-                                [ "That doesn't look like an expression"
-                                ]
+                          hPrint stderr ("That doesn't look like an expression" :: Text)
                       loop
                     (command, _) -> do
                       liftIO $
-                        hPutStrLn stderr $
-                          Pretty.render $
-                            Pretty.hsep
-                              [ "I don't know the command",
-                                Pretty.quotes $ Pretty.text $ toString command
-                              ]
+                        hPrint stderr $
+                          hsep
+                            [ "I don't know the command",
+                              dquotes $ pretty $ toString command
+                            ]
                       loop
 
               -- Mlatu code.
@@ -212,7 +203,7 @@ run prelude = do
                         lineNumber
                         "<interactive>"
                         -- TODO: Avoid stringly typing.
-                        (toText $ Pretty.render $ pPrint entryName)
+                        (show $ printQualified entryName)
                     dictionary'' <- Enter.fragment callFragment dictionary'
                     warnCheckpoint
                     let tenv = TypeEnv.empty
@@ -350,7 +341,7 @@ renderDictionary dictionaryRef = do
   where
     -- TODO: Don't rely on name of global vocabulary.
     prettyName depth =
-      Pretty.render . Pretty.nest depth . Pretty.text
+      show . nest depth . pretty
         . toString
         . Text.intercalate "::"
         . (\x -> if x == [""] then ["_"] else x)
@@ -412,23 +403,20 @@ nameCommand lineNumber dictionaryRef name loop action = do
               loop
         Right resolved -> do
           liftIO $
-            hPutStrLn stderr $
-              Pretty.render $
-                Pretty.hsep
-                  [ "I can't find an entry in the dictionary for",
-                    Pretty.quote resolved
-                  ]
+            hPrint stderr $
+              hsep
+                [ "I can't find an entry in the dictionary for",
+                  dquotes $ printGeneralName resolved
+                ]
           loop
     Left reports -> do
       liftIO $ reportAll reports
       loop
 
-renderStack :: (Pretty a) => IORef [a] -> IO ()
+renderStack :: IORef [Rep] -> IO ()
 renderStack stackRef = do
   stack <- readIORef stackRef
-  case stack of
-    [] -> pass
-    _list -> putStrLn $ Pretty.render $ Pretty.vcat $ map pPrint stack
+  unless (null stack) $ print $ vcat $ map printRep stack
 
 showHelp :: IO ()
 showHelp =

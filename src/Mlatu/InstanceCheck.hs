@@ -27,13 +27,13 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Zonk qualified as Zonk
 import Relude hiding (Type)
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (Doc)
 
 -- | Checks whether one type is a generic instance of another, used for checking
 -- type signatures. Remember, when using this function, which way the subtyping
 -- relation goes: @∀α. α → α@ is a generic instance of @int → int@, not the
 -- other way around!
-instanceCheck :: Pretty.Doc -> Type -> Pretty.Doc -> Type -> M ()
+instanceCheck :: Doc a -> Type -> Doc a -> Type -> M ()
 instanceCheck _ aScheme _ bScheme = do
   let tenv0 = TypeEnv.empty
   let aType = aScheme

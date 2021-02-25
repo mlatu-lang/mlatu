@@ -14,10 +14,6 @@ where
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Origin (Origin)
 import Relude
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Synonym = Synonym !Qualified !GeneralName !Origin
   deriving (Eq, Ord, Show)
-
-instance Pretty Synonym where
-  pPrint (Synonym name1 name2 _) = pPrint name1 <> "=" <> pPrint name2

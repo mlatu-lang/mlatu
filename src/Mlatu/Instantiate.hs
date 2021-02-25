@@ -18,7 +18,6 @@ import Mlatu.Kind (Kind)
 import Mlatu.Monad (M)
 import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Term (..))
@@ -26,7 +25,8 @@ import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.Zonk qualified as Zonk
 import Relude hiding (Type)
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (hsep, squotes)
+import Mlatu.Pretty (printType)
 
 -- | To instantiate a type scheme, we simply replace all quantified variables
 -- with fresh ones and remove the quantifier, returning the types with which the
@@ -50,7 +50,7 @@ typ tenv0 origin name x k t = do
 -- instantiate the rank-1 quantifiers; all other quantifiers are irrelevant.
 prenex :: TypeEnv -> Type -> M (Type, [Type], TypeEnv)
 prenex tenv0 q@(Forall origin (Var name x k) t) =
-  while origin (Pretty.hsep ["instantiating", Pretty.quote q]) $ do
+  while origin (hsep ["instantiating", squotes $ printType q]) $ do
     (t', a, tenv1) <- typ tenv0 origin name x k t
     (t'', as, tenv2) <- prenex tenv1 t'
     return (t'', a : as, tenv2)

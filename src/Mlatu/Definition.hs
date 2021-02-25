@@ -26,42 +26,25 @@ import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Operator (Fixity)
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
-import Text.PrettyPrint ((<+>))
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Definition a = Definition
-  { parent :: !(Maybe Parent),
+  { category :: !Category,
     name :: !Qualified,
     body :: !(Term a),
-    category :: !Category,
     fixity :: !Fixity,
     inferSignature :: !Bool,
     merge :: !Merge,
     origin :: !Origin,
-    signature :: !Signature
+    signature :: !Signature,
+    parent :: !(Maybe Parent)
   }
   deriving (Ord, Eq, Show)
-
-instance Pretty (Definition a) where
-  pPrint (Definition (Just (Type _)) _ _ _ _ _ _ _ _) = Pretty.empty
-  pPrint (Definition _ name body _ _ _ _ _ _)
-    | name == mainName = pPrint body
-  pPrint (Definition (Just (Trait _)) name body _ _ _ _ _ signature) =
-    Pretty.block
-      ("instance" <+> (pPrint name <> pPrint signature))
-      (pPrint body)
-  pPrint (Definition _ name body _ _ _ _ _ signature) =
-    Pretty.block
-      ("define" <+> (pPrint name <> pPrint signature))
-      (pPrint body)
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.

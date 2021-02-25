@@ -12,7 +12,6 @@ module Mlatu.Entry.Category
 where
 
 import Relude
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Category
   = Constructor
@@ -20,9 +19,3 @@ data Category
   | Permission
   | Word
   deriving (Ord, Eq, Show)
-
-instance Pretty Category where
-  pPrint Constructor = "constructor"
-  pPrint Instance = "instance"
-  pPrint Permission = "permission"
-  pPrint Word = "word"

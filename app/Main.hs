@@ -6,14 +6,13 @@ import Interact qualified
 import Mlatu (compile, compilePrelude, fragmentFromSource, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
 import Report (reportAll)
 import System.Directory (makeAbsolute)
 import System.IO (hPutStrLn, hSetEncoding, utf8)
-import Text.PrettyPrint.HughesPJ qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 
 main :: IO ()
 main = do
@@ -48,7 +47,7 @@ formatMode path =
             . (formatFragment <=< fragmentFromBS)
         )
   where
-    formatFragment = writeFile path . Pretty.render . pPrint
+    formatFragment = writeFile path . show . printFragment
     fragmentFromBS = fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8
 
 checkMode :: Arguments.Prelude -> [FilePath] -> ExceptT [Report] IO ()

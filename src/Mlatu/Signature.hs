@@ -16,18 +16,13 @@ where
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Type (Type)
 import Mlatu.Type qualified as Type
 import Relude hiding (Constraint, Type)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data Constraint = Constraint !Unqualified ![Parameter]
   deriving (Ord, Eq, Show)
 
-instance Pretty Constraint where
-  pPrint (Constraint name params) = Pretty.hcat [pPrint name, Pretty.brackets $ Pretty.list $ map pPrint params]
 
 -- | A parsed type signature.
 data Signature
@@ -73,36 +68,3 @@ origin signature = case signature of
   Variable _ o -> o
   StackFunction _ _ _ _ _ o -> o
   Type t -> Type.origin t
-
-instance Pretty Signature where
-  pPrint (Application firstA b _) =
-    Pretty.hcat
-      [pPrint finalA, Pretty.brackets $ Pretty.list $ map pPrint (as ++ [b])]
-    where
-      (finalA, as) = go [] firstA
-      go l (Application x y _) = go (l ++ [y]) x
-      go l x = (x, l)
-  pPrint (Bottom _) = "<bottom>"
-  pPrint (Function as bs es _) =
-    Pretty.parens $
-      Pretty.hsep $
-        [ Pretty.list $ map pPrint as,
-          "->",
-          Pretty.list $ map pPrint bs
-        ]
-          ++ map ((Pretty.char '+' Pretty.<>) . pPrint) es
-  pPrint (Quantified names constraints typ _) =
-    Pretty.hsep $
-      [ Pretty.brackets $ Pretty.list $ map pPrint names,
-        pPrint typ
-      ]
-        ++ if not $ null constraints then Pretty.text " where " : map pPrint constraints else []
-  pPrint (Variable name _) = pPrint name
-  pPrint (StackFunction r as s bs es _) =
-    Pretty.parens $
-      Pretty.hsep $
-        (pPrint r Pretty.<> "...") :
-        map pPrint as ++ ["->"]
-          ++ ((pPrint s Pretty.<> "...") : map pPrint bs)
-          ++ map ((Pretty.char '+' Pretty.<>) . pPrint) es
-  pPrint (Type t) = pPrint t

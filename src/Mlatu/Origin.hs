@@ -26,8 +26,6 @@ import Text.Parsec.Pos
     sourceLine,
     sourceName,
   )
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A source location, in the form of an origin name (typically a file path)
 -- and source span between two ('Line', 'Column') pairs.
@@ -70,19 +68,3 @@ range a b =
       endColumn = sourceColumn b
     }
 
-instance Pretty Origin where
-  pPrint origin =
-    Pretty.hcat $
-      [ Pretty.text $ toString $ name origin,
-        ":",
-        pPrint al,
-        ".",
-        pPrint ac,
-        "-"
-      ]
-        ++ (if al == bl then [pPrint bc] else [pPrint bl, ".", pPrint bc])
-    where
-      al = beginLine origin
-      bl = endLine origin
-      ac = beginColumn origin
-      bc = endColumn origin

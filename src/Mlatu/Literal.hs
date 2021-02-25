@@ -15,11 +15,7 @@ where
 
 import Data.Ratio ((%))
 import Mlatu.Base (Base (..))
-import Numeric (showIntAtBase)
 import Relude
-import Relude.Unsafe qualified as Unsafe
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data IntegerLiteral = IntegerLiteral
   { integerValue :: !Integer,
@@ -30,24 +26,7 @@ data IntegerLiteral = IntegerLiteral
 instance Eq IntegerLiteral where
   IntegerLiteral a _baseA == IntegerLiteral b _baseB = a == b
 
-instance Pretty IntegerLiteral where
-  pPrint literal =
-    Pretty.hcat
-      [ if value < 0 then "-" else "",
-        case integerBase literal of
-          Binary -> "0b"
-          Octal -> "0o"
-          Decimal -> ""
-          Hexadecimal -> "0x",
-        Pretty.text $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
-      ]
-    where
-      value = integerValue literal
-      (base, digits) = case integerBase literal of
-        Binary -> (2, "01")
-        Octal -> (8, ['0' .. '7'])
-        Decimal -> (10, ['0' .. '9'])
-        Hexadecimal -> (16, ['0' .. '9'] ++ ['A' .. 'F'])
+
 
 data FloatLiteral = FloatLiteral
   { floatSignificand :: !Integer,
@@ -60,14 +39,6 @@ data FloatLiteral = FloatLiteral
 instance Eq FloatLiteral where
   FloatLiteral a b c == FloatLiteral d e f = (a, c - b) == (d, f - e)
 
-instance Pretty FloatLiteral where
-  pPrint literal =
-    Pretty.hcat
-      [ if value < 0 then "-" else "",
-        Pretty.double value
-      ]
-    where
-      value = floatValue literal
 
 -- Note [Float Literals]:
 --

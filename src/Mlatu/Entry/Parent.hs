@@ -12,17 +12,10 @@ module Mlatu.Entry.Parent
 where
 
 import Mlatu.Name (Qualified)
-import Mlatu.Pretty qualified as Pretty
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A parent trait (of an instance) or data type (of a constructor).
 data Parent
   = Trait !Qualified
   | Type !Qualified
   deriving (Ord, Eq, Show)
-
-instance Pretty Parent where
-  pPrint (Trait name) = Pretty.hsep ["trait", Pretty.quote name]
-  pPrint (Type name) = Pretty.hsep ["type", Pretty.quote name]

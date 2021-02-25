@@ -17,7 +17,7 @@ where
 import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report)
 import Relude
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (Doc)
 
 -- | Class of error-reporting monads.
 class (Monad m) => Informer m where
@@ -31,7 +31,7 @@ class (Monad m) => Informer m where
   report :: Report -> m ()
 
   -- | Add local context to reports.
-  while :: Origin -> Pretty.Doc -> m a -> m a
+  while :: Origin -> Doc () -> m a -> m a
 
 errorCheckpoint :: (Informer m) => m ()
 errorCheckpoint = checkpoint Error
