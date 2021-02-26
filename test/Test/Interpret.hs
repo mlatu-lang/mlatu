@@ -10,17 +10,16 @@ import Data.Knob qualified as Knob
 import Mlatu (Prelude (..), compilePrelude, fragmentFromSource)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Enter qualified as Enter
-import Mlatu.Interpret (Rep (..), interpret)
+import Mlatu.Interpret (Rep (..), interpret, printRep)
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ConstructorIndex (ConstructorIndex))
-import Mlatu.Report qualified as Report
+import Mlatu.Report (human)
+import Prettyprinter (hsep, list, vcat, viaShow)
 import Relude hiding (stderr, stdin, stdout)
 import System.IO (hClose)
 import Test.Common (ioPermission)
 import Test.HUnit (assertEqual, assertFailure)
 import Test.Hspec (Spec, describe, it, runIO)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 spec :: Spec
 spec = do
@@ -29,10 +28,9 @@ spec = do
     case mDictionary of
       Left reports ->
         error $
-          toText $
-            Pretty.render $
-              Pretty.vcat $
-                "unable to set up interpreter tests:" : map Report.human reports
+          show $
+            vcat $
+              "unable to set up interpreter tests:" : map human reports
       Right dictionary -> return $ testInterpretFull dictionary
 
   let testInterpret = testInterpretWithHandles "" Nothing Nothing
@@ -186,9 +184,9 @@ testInterpretFull
         hClose stdout
         hClose stderr
         assertEqual
-          ( Pretty.render $
-              Pretty.hsep
-                ["stack", pPrint expectedStack, "=", pPrint actualStack]
+          ( show $
+              hsep
+                ["stack", list $ map printRep expectedStack, "=", list $ map printRep actualStack]
           )
           expectedStack
           actualStack
@@ -196,12 +194,12 @@ testInterpretFull
           Just expectedStdout -> do
             actualStdout <- Knob.getContents stdoutKnob
             assertEqual
-              ( Pretty.render $
-                  Pretty.hsep
+              ( show $
+                  hsep
                     [ "stdout",
-                      Pretty.text $ show expectedStdout,
+                      viaShow expectedStdout,
                       "=",
-                      Pretty.text $ show actualStdout
+                      viaShow actualStdout
                     ]
               )
               expectedStdout
@@ -211,12 +209,12 @@ testInterpretFull
           Just expectedStderr -> do
             actualStderr <- Knob.getContents stderrKnob
             assertEqual
-              ( Pretty.render $
-                  Pretty.hsep
+              ( show $
+                  hsep
                     [ "stderr",
-                      Pretty.text $ show expectedStderr,
+                      viaShow expectedStderr,
                       "=",
-                      Pretty.text $ show actualStderr
+                      viaShow actualStderr
                     ]
               )
               expectedStderr
@@ -226,4 +224,4 @@ testInterpretFull
         assertFailure $
           toString $
             unlines $
-              map (toText . Pretty.render . Report.human) reports
+              map (show . human) reports

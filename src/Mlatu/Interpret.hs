@@ -54,6 +54,7 @@ import System.IO.Error (IOError, ioeGetErrorType)
 import Text.Show qualified
 import Prettyprinter (Doc, hsep, hcat,Pretty (pretty), list, squotes, dquotes, vcat, nest)
 import qualified Mlatu.Pretty as Pretty
+import qualified Mlatu.Report as Report
 
 -- | Representation of a runtime value.
 data Rep
@@ -137,7 +138,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                           dquotes $ Pretty.printQualified name,
                           ":"
                         ] :
-                      map Pretty.human reports
+                      map Report.human reports
             -- An intrinsic.
             Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
               Qualified v unqualified

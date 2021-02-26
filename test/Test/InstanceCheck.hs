@@ -6,18 +6,18 @@ where
 import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Kind (Kind (..))
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (Qualified (..))
 import Mlatu.Origin qualified as Origin
+import Mlatu.Pretty (printType)
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.Vocabulary qualified as Vocabulary
+import Prettyprinter (hsep)
 import Relude hiding (Type)
 import Test.Common (Sign (..))
 import Test.HUnit (assertBool)
 import Test.Hspec (Spec, it)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
-import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do
@@ -96,8 +96,8 @@ testInstanceCheck sign a b = do
     errorCheckpoint
   case sign of
     Positive ->
-      assertBool (Pretty.render $ Pretty.hsep [pPrint a, "<:", pPrint b]) $
+      assertBool (show $ hsep [printType a, "<:", printType b]) $
         isRight result
     Negative ->
-      assertBool (Pretty.render $ Pretty.hsep [pPrint a, "</:", pPrint b]) $
+      assertBool (show $ hsep [printType a, "</:", printType b]) $
         isLeft result

@@ -14,14 +14,12 @@ module Mlatu.Pretty where
 import Data.Char (isLetter)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex, groupBy)
-import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Mlatu.Base qualified as Base
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Declaration (Declaration (..))
 import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition (Definition), mainName)
-import Mlatu.Dictionary (Dictionary (..))
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
@@ -38,7 +36,6 @@ import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
-import Mlatu.Report (NameCategory (..), Report (..), ReportKind (..))
 import Mlatu.Signature (Constraint (..), Signature (..))
 import Mlatu.Signature qualified as Signature
 import Mlatu.Synonym (Synonym (Synonym))
@@ -48,22 +45,21 @@ import Mlatu.Token qualified as Token
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeDefinition (TypeDefinition (..))
-import Mlatu.TypeEnv (TypeEnv (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (showIntAtBase)
-import Prettyprinter hiding (list)
+import Prettyprinter
 import Relude hiding (Constraint, Type)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
 
-list :: [Doc a] -> Doc a
-list [] = emptyDoc
-list [a] = a
-list as = hsep $ punctuate "," as
+commaPunctuated :: [Doc a] -> Doc a
+commaPunctuated [] = emptyDoc
+commaPunctuated [a] = a
+commaPunctuated as = hsep $ punctuate "," as
 
 printIntegerLiteral :: IntegerLiteral -> Doc a
 printIntegerLiteral literal =
-  hcat
+  hsep
     [ if value < 0 then "-" else "",
       case integerBase literal of
         Base.Binary -> "0b"
@@ -122,7 +118,7 @@ printQualifier (Qualifier Relative parts) =
 
 printOrigin :: Origin.Origin -> Doc a
 printOrigin origin =
-  hcat $
+  hsep $
     [ pretty $ Origin.name origin,
       ":",
       pretty al,
@@ -192,18 +188,18 @@ printType type0 = recur type0
           hsep [recur a, "->"]
       TypeConstructor _ "Fun" -> parens "->"
       TypeConstructor _ "Prod" :@ a :@ b ->
-        hcat [recur a, ", ", recur b]
+        hsep [recur a, ", ", recur b]
       TypeConstructor _ "Prod" :@ a ->
-        parens $ hcat [recur a, ", "]
+        parens $ hsep [recur a, ", "]
       TypeConstructor _ "Prod" ->
         parens ","
       TypeConstructor _ "Sum" :@ a :@ b ->
-        hcat [recur a, " | ", recur b]
+        hsep [recur a, " | ", recur b]
       TypeConstructor _ "Join" :@ a :@ b ->
-        hcat ["+", recur a, " ", recur b]
+        hsep ["+", recur a, " ", recur b]
       TypeConstructor _ "Join" :@ a ->
-        parens $ hcat ["+", recur a]
-      a :@ b -> hcat [recur a, brackets $ recur b]
+        parens $ hsep ["+", recur a]
+      a :@ b -> hsep [recur a, brackets $ recur b]
       TypeConstructor _ constructor -> printConstructor constructor
       TypeVar _ var@(Var name i k) ->
         -- The default cases here shouldn't happen if the context was built
@@ -225,17 +221,13 @@ printType type0 = recur type0
                       (unqualified <> "_" <> show (index + 1))
                   )
                   k
-      TypeConstant o var -> hcat ["∃", recur $ TypeVar o var]
+      TypeConstant o var -> hsep ["∃", recur $ TypeVar o var]
       Forall {} -> prettyForall typ []
         where
           prettyForall (Forall _ x t) vars = prettyForall t (x : vars)
           prettyForall t vars =
-            hcat
-              [ brackets $
-                  list $
-                    map (recur . TypeVar (Type.origin t)) vars,
-                parens $ recur t
-              ]
+            list (map (recur . TypeVar (Type.origin t)) vars)
+              <> parens (recur t)
       TypeValue _ value -> pretty value
 
 type PrettyContext = HashMap Unqualified [(TypeId, Kind)]
@@ -270,18 +262,18 @@ printVar (Var (Unqualified unqualified) i k) =
     k
 
 prettyKinded :: Unqualified -> Kind -> Doc a
-prettyKinded name k = hcat $ case k of
+prettyKinded name k = hsep $ case k of
   Permission -> ["+", printUnqualified name]
   Stack -> [printUnqualified name, "..."]
   _otherKind -> [printUnqualified name]
 
 printConstraint :: Constraint -> Doc a
-printConstraint (Constraint name params) = hcat [printUnqualified name, brackets $ list $ map printParameter params]
+printConstraint (Constraint name params) = printUnqualified name <> list (map printParameter params)
 
 printSignature :: Signature -> Doc a
 printSignature (Application firstA b _) =
-  hcat
-    [printSignature finalA, brackets $ list (map printSignature (as ++ [b]))]
+  hsep
+    [printSignature finalA, list (map printSignature (as ++ [b]))]
   where
     (finalA, as) = go [] firstA
     go l (Application x y _) = go (l ++ [y]) x
@@ -290,24 +282,24 @@ printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
   parens $
     hsep $
-      [ list $ map printSignature as,
+      [ commaPunctuated $ map printSignature as,
         "->",
-        list $ map printSignature bs
+        commaPunctuated $ map printSignature bs
       ]
         ++ map (("+" <>) . printGeneralName) es
 printSignature (Quantified names constraints typ _) =
-  brackets $
-    list (map printParameter names)
-      <+> printSignature typ
-      <+> if not $ null constraints then hcat $ " where " : map printConstraint constraints else emptyDoc
+  list (map printParameter names)
+    <+> printSignature typ
+    <> if not $ null constraints then " where" <+> hsep (map printConstraint constraints) else emptyDoc
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
-    hsep $
-      (printSignature r <> "...") :
-      map printSignature as ++ ["->"]
-        ++ ((printSignature s <> "...") : map printSignature bs)
-        ++ map (("+" <>) . printGeneralName) es
+    (printSignature r <> "...")
+      <+> hsep (map printSignature as)
+      <+> "->"
+      <+> printSignature s
+      <> "..."
+      <+> hsep (map printSignature bs ++ map (("+" <>) . printGeneralName) es)
 printSignature (Type t) = printType t
 
 printToken :: Token.Token l -> Doc a
@@ -359,13 +351,13 @@ instance Show (Token.Token l) where
 
 printInstantiated :: Instantiated -> Doc a
 printInstantiated (Instantiated n ts) =
-  printQualified n <> "::[" <> list (map printType ts) <> "]"
+  printQualified n <> "::" <> list (map printType ts) <> ""
 
 printDataConstructor :: DataConstructor.DataConstructor -> Doc a
 printDataConstructor (DataConstructor.DataConstructor fields name _) =
   "case"
     <+> printUnqualified name
-    <+> parens (list (map printSignature fields))
+    <+> tupled (map printSignature fields)
 
 printDeclaration :: Declaration -> Doc a
 printDeclaration (Declaration category name _ signature) = printedCategory <+> printUnqualified (unqualifiedName name) <+> printSignature signature
@@ -378,12 +370,12 @@ printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
   if null printedConstructors
     then "type" <+> typeName <+> "{}"
-    else nest 2 $ vcat ["type" <+> typeName <> ":", vcat $ map printDataConstructor constructors]
+    else nest 2 $ vsep ["type" <+> typeName <> ":", vsep $ map printDataConstructor constructors]
   where
     typeName =
       printQualified name
         <> brackets printedParameters
-    printedParameters = list (map printParameter (fst parameters))
+    printedParameters = commaPunctuated (map printParameter (fst parameters))
     printedConstructors = map printDataConstructor constructors
 
 printTerm :: Term a -> Doc b
@@ -396,13 +388,13 @@ printTerm term =
         body :: Term ()
         body = Term.compose () o (map Term.stripMetadata ts)
     (Push _ (Quotation body) _ : Group a : ts) ->
-      vcat [printDo a body, printTerms ts]
+      vsep [printDo a body, printTerms ts]
     (Group a : NewVector _ 1 _ _ : ts) ->
       braces (printTerm a) <> printTerms ts
     (Group a : Match BooleanMatch _ cases _ _ : ts) ->
-      vcat [printIf (Just a) cases, printTerms ts]
+      vsep [printIf (Just a) cases, printTerms ts]
     (Group a : Match _ _ cases (Else elseBody _) _ : ts) ->
-      vcat [printMatch (Just a) cases (Just elseBody), printTerms ts]
+      vsep [printMatch (Just a) cases (Just elseBody), printTerms ts]
     ( Coercion
         ( AnyCoercion
             ( Signature.Quantified
@@ -439,14 +431,14 @@ printTerm term =
         | r1 == "R" && r2 == "R" && r3 == "R" && s1 == "S" && s2 == "S" && s3 == "S" && unqualifiedName name == "call" ->
           "with"
             <+> parens
-              ( list (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)
+              ( commaPunctuated (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)
               )
             <> printTerms ts
     (Coercion {} : ts) -> printTerms ts
     (Group a : ts) -> printGroup a <> printTerms ts
     (Lambda _ name _ body _ : ts) -> printLambda name body <> printTerms ts
-    (Match BooleanMatch _ cases _ _ : ts) -> vcat [printIf Nothing cases, printTerms ts]
-    (Match AnyMatch _ cases (Else elseBody _) _ : ts) -> vcat [printMatch Nothing cases (Just elseBody), printTerms ts]
+    (Match BooleanMatch _ cases _ _ : ts) -> vsep [printIf Nothing cases, printTerms ts]
+    (Match AnyMatch _ cases (Else elseBody _) _ : ts) -> vsep [printMatch Nothing cases (Just elseBody), printTerms ts]
     (Push _ value _ : ts) -> printValue value <> printTerms ts
     (Word _ fixity name args _ : ts) -> printWord fixity name args <> printTerms ts
     (New _ (ConstructorIndex i) _ _ : ts) -> printNew i <> printTerms ts
@@ -459,7 +451,7 @@ printTerm term =
     printTerms (t : ts) = space <> printTerm t <> printTerms ts
 
 printDo :: Term a -> Term a -> Doc b
-printDo a body = nest 2 $ vcat ["do" <+> printGroup a <> ":", printTerm body]
+printDo a body = nest 2 $ vsep ["do" <+> printGroup a <> ":", printTerm body]
 
 printGroup :: Term a -> Doc b
 printGroup a = parens (printTerm a)
@@ -479,20 +471,22 @@ printLambda name body =
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
 printIf cond [Case _ trueBody _] =
-  nest 2 $
-    vcat
-      [ "if" <> maybe emptyDoc (\c -> space <> printGroup c) cond <> ":",
-        printTerm trueBody
-      ]
+  nest
+    2
+    ( vsep
+        [ "if" <> maybe emptyDoc (\c -> space <> printGroup c) cond <> ":",
+          printTerm trueBody
+        ]
+    )
 printIf cond [Case _ trueBody _, Case _ falseBody _] =
-  vcat
+  vsep
     [ nest 2 $
-        vcat
+        vsep
           [ "if" <> maybe emptyDoc (\c -> space <> printGroup c) cond <> ":",
             printTerm trueBody
           ],
       nest 2 $
-        vcat
+        vsep
           [ "else:",
             printTerm falseBody
           ]
@@ -504,7 +498,7 @@ printMatch cond cases (Just (Word _ _ name _ _)) | name == abortName = printMatc
   where
     abortName = QualifiedName (Qualified Vocabulary.global "abort")
 printMatch cond cases else_ =
-  vcat
+  vsep
     [ "match"
         <> maybe
           emptyDoc
@@ -513,20 +507,20 @@ printMatch cond cases else_ =
         <> ":",
       nest
         2
-        ( vcat
+        ( vsep
             ( map
-                (\(Case n b _) -> nest 2 $ vcat ["case" <+> printGeneralName n <> ":", printTerm b])
+                (\(Case n b _) -> nest 2 $ vsep ["case" <+> printGeneralName n <> ":", printTerm b])
                 cases
             )
         ),
-      maybe emptyDoc (\b -> nest 2 $ vcat ["else:", printTerm b]) else_
+      maybe emptyDoc (\b -> nest 2 $ vsep ["else:", printTerm b]) else_
     ]
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
   | not (Text.all isLetter name) = parens $ pretty name
 printWord _ word [] = printGeneralName word
-printWord _ word args = printGeneralName word <> "::[" <> hcat (intersperse ", " (map printType args)) <> "]"
+printWord _ word args = printGeneralName word <> "::" <> list (map printType args)
 
 printNew :: Int -> Doc a
 printNew i = "new." <> pretty i
@@ -546,7 +540,7 @@ printValue :: Value a -> Doc b
 printValue value = case value of
   Capture names term ->
     "$"
-      <> parens (list $ map printClosed names)
+      <> tupled (map printClosed names)
       <> braces (printTerm term)
   Character c -> squotes (pretty c)
   Closed (ClosureIndex index) -> "closure." <> pretty index
@@ -555,11 +549,11 @@ printValue value = case value of
   Local (LocalIndex index) -> "local." <> pretty index
   Name n -> "\\" <> printQualified n
   Quotation w@Word {} -> "\\" <> printTerm w
-  Quotation body -> hcat ["{", printTerm body, "}"]
+  Quotation body -> "{" <+> printTerm body <+> "}"
   Text text -> (if Text.count "\n" text > 1 then multiline else singleline) text
     where
       multiline :: Text -> Doc a
-      multiline t = vcat ("\"\"\"" : map pretty (lines t) ++ ["\"\"\""])
+      multiline t = vsep ("\"\"\"" : map pretty (lines t) ++ ["\"\"\""])
 
       singleline :: Text -> Doc a
       singleline t =
@@ -574,232 +568,30 @@ printValue value = case value of
 
 printMetadata :: Metadata -> Doc a
 printMetadata metadata =
-  vcat
+  vsep
     [ "about" <+> printGeneralName (Metadata.name metadata) <> ":",
       nest
         2
-        ( vcat $
+        ( vsep $
             map field $
               HashMap.toList $
                 fields metadata
         )
     ]
   where
-    field (key, value) = nest 2 $ vcat [printUnqualified key <> ":", printTerm value]
-
-human :: Report -> Doc ()
-human (Report _ kind) = kindMsg kind
-  where
-    kindMsg = \case
-      (MissingTypeSignature origin name) ->
-        hsep
-          [ showOriginPrefix origin,
-            "I can't find a type signature for the word",
-            dquotes $ printQualified name
-          ]
-      (MultiplePermissionVariables origin a b) ->
-        hsep
-          [ showOriginPrefix origin,
-            "I found multiple permission variables",
-            colon,
-            dquotes $ printType a,
-            "and",
-            dquotes $ printType b,
-            "but only one is allowed per function"
-          ]
-      (CannotResolveType origin name) ->
-        hsep
-          [ showOriginPrefix origin,
-            "I can't tell which type",
-            dquotes $ printGeneralName name,
-            "refers to",
-            parens "did you mean to add it as a type parameter?"
-          ]
-      (FailedInstanceCheck a b) ->
-        hsep
-          -- TODO: Show type kind.
-          [ "I expected",
-            dquotes $ printType a,
-            "to be at least as polymorphic as",
-            dquotes $ printType b,
-            "but it isn't"
-          ]
-      (MissingPermissionLabel a b origin name) ->
-        hsep
-          [ showOriginPrefix origin,
-            "the permission label",
-            dquotes $ printConstructor name,
-            "was missing when I tried to match the permission type",
-            dquotes $ printType a,
-            "with the permission type",
-            dquotes $ printType b
-          ]
-      (TypeArgumentCountMismatch term args) ->
-        hsep
-          [ showOriginPrefix $ Term.origin term,
-            "I expected",
-            pretty $ Term.quantifierCount term,
-            "type arguments to",
-            dquotes $ printTerm term,
-            "but",
-            pretty (length args),
-            "were provided",
-            colon,
-            list $ map (dquotes . printType) args
-          ]
-      (CannotResolveName origin category name) ->
-        hsep
-          -- TODO: Suggest similar names in scope.
-          [ showOriginPrefix origin,
-            "I can't find the",
-            case category of
-              WordName -> "word"
-              TypeName -> "type",
-            "that the",
-            case category of
-              WordName -> "word"
-              TypeName -> "type",
-            "name",
-            dquotes $ printGeneralName name,
-            "refers to"
-          ]
-      (MultipleDefinitions origin name duplicates) ->
-        vcat $
-          hsep
-            [ showOriginPrefix origin,
-              "I found multiple definitions of",
-              dquotes $ printQualified name,
-              parens "did you mean to declare it as a trait?"
-            ] :
-          map
-            ( \duplicateOrigin ->
-                hsep
-                  ["also defined at", printOrigin duplicateOrigin]
-            )
-            duplicates
-      (WordRedefinition origin name originalOrigin) ->
-        vcat
-          [ hsep
-              [ showOriginPrefix origin,
-                "I can't redefine the word",
-                dquotes $ printQualified name,
-                "because it already exists",
-                parens "did you mean to declare it as a trait?"
-              ],
-            hsep
-              [ showOriginPrefix originalOrigin,
-                "it was originally defined here"
-              ]
-          ]
-      ( WordRedeclaration
-          origin
-          name
-          signature
-          originalOrigin
-          mOriginalSignature
-        ) ->
-          vcat $
-            hsep
-              [ showOriginPrefix origin,
-                "I can't redeclare the word",
-                dquotes $ printQualified name,
-                "with the signature",
-                dquotes $ printSignature signature
-              ] :
-            hsep
-              [ showOriginPrefix originalOrigin,
-                "because it was declared or defined already"
-              ] :
-              [ hsep
-                  [ "with the signature",
-                    dquotes $ printSignature originalSignature
-                  ]
-                | Just originalSignature <- [mOriginalSignature]
-              ]
-      -- TODO: Report type kind.
-      (TypeMismatch a b) ->
-        vcat
-          [ hsep
-              [ showOriginPrefix $ Type.origin a,
-                "I can't match the type",
-                dquotes $ printType a
-              ],
-            hsep
-              [ showOriginPrefix $ Type.origin b,
-                "with the type",
-                dquotes $ printType b
-              ]
-          ]
-      (RedundantCase origin) ->
-        hcat
-          [ showOriginPrefix origin,
-            "this case is redundant and will never match"
-          ]
-      (UseCommon origin instead) ->
-        hcat
-          [ showOriginPrefix origin,
-            "I think you can use ",
-            dquotes $ printQualified instead,
-            " from the common library instead of what you have here"
-          ]
-      (Chain reports) -> vsep $ map kindMsg reports
-      (OccursCheckFailure a b) ->
-        vcat
-          [ hsep
-              [ showOriginPrefix $ Type.origin a,
-                "the type",
-                dquotes $ printType a
-              ],
-            hsep
-              [ showOriginPrefix $ Type.origin b,
-                "occurs in the type",
-                dquotes $ printType b,
-                parens "which often indicates an infinite type"
-              ]
-          ]
-      (StackDepthMismatch origin) ->
-        hsep
-          [ showOriginPrefix origin,
-            "you may have a stack depth mismatch"
-          ]
-      (InvalidOperatorMetadata origin name term) ->
-        hcat
-          [ showOriginPrefix origin,
-            " invalid operator metadata for ",
-            dquotes $ printQualified name,
-            colon,
-            printTerm term
-          ]
-      (ParseError origin unexpectedThing expectedThing) ->
-        hcat $
-          (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
-      (Context context message) ->
-        vsep $
-          map
-            (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
-            context
-            ++ [human message]
-
-showOriginPrefix :: Origin.Origin -> Doc a
-showOriginPrefix origin = hcat [printOrigin origin, ":"]
-
-printTypeEnv :: TypeEnv -> Doc a
-printTypeEnv tenv =
-  vcat $
-    map (\(v, t) -> hsep [printTypeId v, "~", printType t]) $
-      Map.toList $ tvs tenv
+    field (key, value) = nest 2 $ vsep [printUnqualified key <> ":", printTerm value]
 
 printDefinition :: Definition a -> Doc b
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _ _) = emptyDoc
 printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
   nest 2 $
-    vcat
+    vsep
       [ "permission:" <+> (printQualified name <> printSignature signature <> ":"),
         printTerm body
       ]
 printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
   nest 2 $
-    vcat
+    vsep
       [ "instance" <+> (printQualified name <+> printSignature signature <> ":"),
         printTerm body
       ]
@@ -807,14 +599,14 @@ printDefinition (Definition Category.Word name body _ _ _ _ _ _)
   | name == mainName = printTerm body
 printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
   nest 2 $
-    vcat
+    vsep
       [ "define" <+> (printQualified name <> printSignature signature <> ":"),
         printTerm body
       ]
 
 printEntry :: Entry -> Doc a
 printEntry (Entry.Word category _ origin mParent mSignature _) =
-  vcat
+  vsep
     [ printCategory category,
       hsep ["defined at", printOrigin origin],
       case mSignature of
@@ -833,76 +625,88 @@ printEntry (Entry.Word category _ origin mParent mSignature _) =
         Nothing -> "with no parent"
     ]
 printEntry (Entry.Metadata origin term) =
-  vcat
+  vsep
     [ "metadata",
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
     ]
 printEntry (Entry.Synonym origin name) =
-  vcat
+  vsep
     [ "synonym",
       hsep ["defined at", printOrigin origin],
       hsep ["standing for", printQualified name]
     ]
 printEntry (Entry.Trait origin signature) =
-  vcat
+  vsep
     [ "trait",
       hsep ["defined at", printOrigin origin],
       hsep ["with signature", printSignature signature]
     ]
 printEntry (Entry.Type origin parameters constraints ctors) =
-  vcat
+  vsep
     [ "type",
       hsep ["defined at", printOrigin origin],
-      hcat $
+      hsep $
         "with parameters [" :
         intersperse ", " (map printParameter parameters)
           ++ ["] constrained so that "]
           ++ intersperse "," (map printConstraint constraints),
       nest 2 $
-        vcat
+        vsep
           [ "and data constructors",
-            vcat $
+            vsep $
               map constructor ctors
           ]
     ]
   where
     constructor ctor =
-      hcat
+      hsep
         [ printUnqualified $ DataConstructor.name ctor,
           " with fields (",
-          hcat $
+          hsep $
             intersperse ", " $
               map printSignature $ DataConstructor.fields ctor,
           ")"
         ]
 printEntry (Entry.InstantiatedType origin size) =
-  vcat
+  vsep
     [ "instantiated type",
       hsep ["defined at", printOrigin origin],
-      hcat ["with size", pretty size]
+      hsep ["with size", pretty size]
     ]
-
-printDictionary :: Dictionary -> Doc a
-printDictionary (Dictionary entries) = vcat $ map printInstantiated (HashMap.keys entries)
 
 printFragment :: (Ord a) => Fragment a -> Doc b
 printFragment fragment =
-  vsep $
-    concat
-      [ map printGrouped groupedDeclarations,
-        map printSynonym $ sort (synonyms fragment),
-        map printTypeDefinition $ sort (Fragment.types fragment),
-        map printDefinition $ sort (definitions fragment),
-        map printMetadata $ sort (metadata fragment)
-      ]
+  maybeVsep
+    [ mapMaybe printGrouped groupedDeclarations,
+      map printSynonym $ sort (synonyms fragment),
+      map printTypeDefinition $ sort (Fragment.types fragment),
+      map printDefinition $ sort (definitions fragment),
+      map printMetadata $ sort (metadata fragment)
+    ]
   where
     groupedDeclarations = groupBy (\a b -> (qualifierName . Declaration.name) a == (qualifierName . Declaration.name) b) (declarations fragment)
     printGrouped decls =
       if noVocab
-        then vcat (map printDeclaration $ sort decls)
-        else nest 2 $ vcat ["vocab" <+> printQualifier commonName <> ":", vcat (map printDeclaration $ sort decls)]
+        then ifThereVsep (map printDeclaration $ sort decls)
+        else ifThereVsep (map printDeclaration $ sort decls) <&> (\x -> nest 2 $ vsep ["vocab" <+> printQualifier commonName <> ":", x])
       where
         (commonName, noVocab) = case qualifierName $ Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
           n -> (n, False)
+
+maybeVsep :: [[Doc a]] -> Doc a
+maybeVsep l =
+  maybe
+    emptyDoc
+    vsep
+    ( guarded
+        (not . null)
+        (mapMaybe (fmap vsep . guarded (not . null)) l)
+    )
+
+ifThereVsep :: [Doc a] -> Maybe (Doc a)
+ifThereVsep = fmap vsep . guarded (not . null)
+
+ifThereHsep :: [Doc a] -> Maybe (Doc a)
+ifThereHsep = fmap hsep . guarded (not . null)

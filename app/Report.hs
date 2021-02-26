@@ -3,8 +3,7 @@ module Report
   )
 where
 
-import Mlatu.Pretty (human)
-import Mlatu.Report (Level (..), Report (..))
+import Mlatu.Report (human, Level (..), Report (..))
 import Relude
 import System.IO (hPutStrLn)
 

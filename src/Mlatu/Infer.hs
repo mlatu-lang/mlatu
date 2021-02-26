@@ -680,7 +680,7 @@ typeKind dictionary = go
                         [ "can't infer kind of constructor",
                           dquotes $ Pretty.printQualified qualified,
                           "in dictionary",
-                          Pretty.printDictionary dictionary
+                          Dictionary.printDictionary dictionary
                         ]
             -- TODO: Better error reporting.
             _noKInd ->
@@ -690,7 +690,7 @@ typeKind dictionary = go
                     [ "can't infer kind of constructor",
                       dquotes $ Pretty.printQualified qualified,
                       "in dictionary",
-                      Pretty.printDictionary dictionary
+                      Dictionary.printDictionary dictionary
                     ]
       TypeValue {} -> error "TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> return k
