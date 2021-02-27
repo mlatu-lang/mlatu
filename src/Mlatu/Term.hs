@@ -24,6 +24,7 @@ module Mlatu.Term
     stripMetadata,
     stripValue,
     typ,
+    defaultElseBody,
   )
 where
 
@@ -40,12 +41,13 @@ import Mlatu.Name
     Qualified (..),
     Unqualified (..),
   )
+import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
 import Relude hiding (Compose, Type)
-import Mlatu.Operator (Fixity)
+import qualified Mlatu.Vocabulary as Vocabulary
 
 -- | This is the core language. It permits pushing values to the stack, invoking
 -- definitions, and moving values between the stack and local variables.
@@ -101,12 +103,18 @@ data MatchHint
   deriving (Ord, Eq, Show)
 
 -- | A case branch in a @match@ expression.
-data Case a = Case !GeneralName !(Term a) !Origin
+data Case a = 
+  Case !GeneralName !(Term a) !Origin
   deriving (Ord, Eq, Show)
 
 -- | An @else@ branch in a @match@ (or @if@) expression.
-data Else a = Else !(Term a) !Origin
+data Else a
+  = DefaultElse !a !Origin
+  | Else !(Term a) !Origin
   deriving (Ord, Eq, Show)
+
+defaultElseBody :: a -> Origin -> Term a
+defaultElseBody a = Word a Postfix (QualifiedName (Qualified Vocabulary.global "abort")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
@@ -250,6 +258,7 @@ stripMetadata term = case term of
     stripElse :: Else a -> Else ()
     stripElse else_ = case else_ of
       Else a b -> Else (stripMetadata a) b
+      DefaultElse _ b -> DefaultElse () b
 
 stripValue :: Value a -> Value ()
 stripValue v = case v of
@@ -262,4 +271,3 @@ stripValue v = case v of
   Name a -> Name a
   Quotation a -> Quotation (stripMetadata a)
   Text a -> Text a
-

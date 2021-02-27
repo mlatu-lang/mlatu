@@ -50,8 +50,6 @@ data Token (l :: Layoutness) where
   Do :: Token l
   -- | @...@
   Ellipsis :: Token l
-  -- | @elif@
-  Elif :: Token l
   -- | @else@
   Else :: Token l
   -- | See note [Float Literals].
@@ -122,7 +120,6 @@ instance Eq (Token l) where
   Define == Define = True
   Do == Do = True
   Ellipsis == Ellipsis = True
-  Elif == Elif = True
   Else == Else = True
   -- See note [Float Literals].
   Float a == Float b = a == b

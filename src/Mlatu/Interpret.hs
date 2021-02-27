@@ -40,7 +40,7 @@ import Mlatu.Name
   )
 import Mlatu.Stack (Stack ((:::)))
 import Mlatu.Stack qualified as Stack
-import Mlatu.Term (Case (..), Else (..), Term (..), Value)
+import Mlatu.Term (Case (..), Else (..), Term (..), Value, defaultElseBody)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
@@ -188,6 +188,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     term callStack caseBody
               go (_ : rest) = go rest
               go [] = case else_ of
+                DefaultElse m o -> term callStack (defaultElseBody m o)
                 Else body _ -> term callStack body
           go cases
         New _ index size _ -> do

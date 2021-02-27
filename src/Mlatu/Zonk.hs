@@ -61,6 +61,7 @@ term tenv0 = go
         where
           goCase (Case name body caseOrigin) =
             Case name (go body) caseOrigin
+          goElse (DefaultElse a b) = DefaultElse a b
           goElse (Else body elseOrigin) =
             Else (go body) elseOrigin
       New tref index size origin ->

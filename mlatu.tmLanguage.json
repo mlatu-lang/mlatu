@@ -52,7 +52,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.mlatu",
-					"match": "\\b(match|case|if|elif|else)\\b"
+					"match": "\\b(match|case|if|else)\\b"
 				}
 			]
 		},

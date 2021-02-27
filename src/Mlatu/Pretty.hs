@@ -29,7 +29,6 @@ import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Kind qualified as Kind
 import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), floatValue)
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
@@ -37,9 +36,8 @@ import Mlatu.Name (Closed (..), ClosureIndex (..), ConstructorIndex (..), Genera
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Constraint (..), Signature (..))
-import Mlatu.Signature qualified as Signature
 import Mlatu.Synonym (Synonym (Synonym))
-import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Permit (..), Term (..), Value (..))
+import Mlatu.Term (Case (..), Else (..), MatchHint (..), Permit (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
@@ -48,7 +46,7 @@ import Mlatu.TypeDefinition (TypeDefinition (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (showIntAtBase)
 import Prettyprinter
-import Relude hiding (Constraint, Type)
+import Relude hiding (Compose, Constraint, Type)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
 
@@ -318,7 +316,6 @@ printToken = \case
   Token.Define -> "define"
   Token.Do -> "do"
   Token.Ellipsis -> "..."
-  Token.Elif -> "elif"
   Token.Else -> "else"
   Token.Float a -> pretty (floatValue a :: Double)
   Token.GroupBegin -> "("
@@ -370,7 +367,7 @@ printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
   if null printedConstructors
     then "type" <+> typeName <+> "{}"
-    else nest 2 $ vsep ["type" <+> typeName <> ":", vsep $ map printDataConstructor constructors]
+    else nestedMulti ("type" <+> typeName <> ":") (map printDataConstructor constructors)
   where
     typeName =
       printQualified name
@@ -379,82 +376,33 @@ printTypeDefinition (TypeDefinition constructors name _ parameters) =
     printedConstructors = map printDataConstructor constructors
 
 printTerm :: Term a -> Doc b
-printTerm term =
-  case Term.decompose term of
-    [] -> emptyDoc
-    (Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o : ts)
-      | name == "drop" -> printLambda "_" body
-      where
-        body :: Term ()
-        body = Term.compose () o (map Term.stripMetadata ts)
-    (Push _ (Quotation body) _ : Group a : ts) ->
-      vsep [printDo a body, printTerms ts]
-    (Group a : NewVector _ 1 _ _ : ts) ->
-      braces (printTerm a) <> printTerms ts
-    (Group a : Match BooleanMatch _ cases _ _ : ts) ->
-      vsep [printIf (Just a) cases, printTerms ts]
-    (Group a : Match _ _ cases (Else elseBody _) _ : ts) ->
-      vsep [printMatch (Just a) cases (Just elseBody), printTerms ts]
-    ( Coercion
-        ( AnyCoercion
-            ( Signature.Quantified
-                [Parameter _ r1 Kind.Stack, Parameter _ s1 Kind.Stack]
-                []
-                ( Signature.Function
-                    [ Signature.StackFunction
-                        (Signature.Variable r2 _)
-                        []
-                        (Signature.Variable s2 _)
-                        []
-                        grantNames
-                        _
-                      ]
-                    [ Signature.StackFunction
-                        (Signature.Variable r3 _)
-                        []
-                        (Signature.Variable s3 _)
-                        []
-                        revokeNames
-                        _
-                      ]
-                    []
-                    _
-                  )
-                _
-              )
-          )
-        _
-        _
-        : Word _ _ (QualifiedName name) _ _
-        : ts
-      )
-        | r1 == "R" && r2 == "R" && r3 == "R" && s1 == "S" && s2 == "S" && s3 == "S" && unqualifiedName name == "call" ->
-          "with"
-            <+> parens
-              ( commaPunctuated (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)
-              )
-            <> printTerms ts
-    (Coercion {} : ts) -> printTerms ts
-    (Group a : ts) -> printGroup a <> printTerms ts
-    (Lambda _ name _ body _ : ts) -> printLambda name body <> printTerms ts
-    (Match BooleanMatch _ cases _ _ : ts) -> vsep [printIf Nothing cases, printTerms ts]
-    (Match AnyMatch _ cases (Else elseBody _) _ : ts) -> vsep [printMatch Nothing cases (Just elseBody), printTerms ts]
-    (Push _ value _ : ts) -> printValue value <> printTerms ts
-    (Word _ fixity name args _ : ts) -> printWord fixity name args <> printTerms ts
-    (New _ (ConstructorIndex i) _ _ : ts) -> printNew i <> printTerms ts
-    (NewClosure _ i _ : ts) -> printClosure i <> printTerms ts
-    (NewVector _ i _ _ : ts) -> printVector i <> printTerms ts
-    _ -> error "Formatting failed"
-  where
-    printTerms [] = emptyDoc
-    printTerms [t] = space <> printTerm t
-    printTerms (t : ts) = space <> printTerm t <> printTerms ts
-
-printDo :: Term a -> Term a -> Doc b
-printDo a body = nest 2 $ vsep ["do" <+> printGroup a <> ":", printTerm body]
+printTerm = \case
+  Compose _ a b -> case (a, b) of
+    (Coercion {}, b') -> printTerm b'
+    (a', Coercion {}) -> printTerm a'
+    (Group x, Match BooleanMatch _ cases _ _) -> printIf (Just x) cases
+    (Group x, Match AnyMatch _ cases (Else elseBody _) _) -> vsep [printMatch (Just x) cases (Just elseBody)]
+    (a', b') -> printTerm a' <+> printTerm b'
+  Generic _ _ t _ -> printTerm t
+  Group (Group a) -> printGroup a
+  Group a -> printGroup a
+  Lambda _ name _ body _ -> printLambda name body
+  Match BooleanMatch _ cases _ _ -> printIf Nothing cases
+  Match AnyMatch _ cases (Else elseBody _) _ -> vsep [printMatch Nothing cases (Just elseBody)]
+  Push _ value _ -> printValue value
+  Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o
+    | name == "drop" -> printLambda "_" $ Term.compose () o []
+  Word _ fixity name args _ -> printWord fixity name args
+  New _ (ConstructorIndex i) _ _ -> printNew i
+  NewClosure _ i _ -> printClosure i
+  NewVector _ i _ _ -> printVector i
+  _ -> error "Formatting failed"
 
 printGroup :: Term a -> Doc b
-printGroup a = parens (printTerm a)
+printGroup = parens . printTerm
+
+printDo :: Term a -> Term a -> Doc b
+printDo a body = nested ("do" <+> parens (printTerm a) <> ":") (printTerm body)
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
@@ -471,25 +419,19 @@ printLambda name body =
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
 printIf cond [Case _ trueBody _] =
-  nest
-    2
-    ( vsep
-        [ "if" <> maybe emptyDoc (\c -> space <> printGroup c) cond <> ":",
-          printTerm trueBody
-        ]
-    )
+  vsep
+    [ nested
+        ("if" <> maybe ":" (\c -> space <> parens (printTerm c) <> ":") cond)
+        (printTerm trueBody)
+    ]
 printIf cond [Case _ trueBody _, Case _ falseBody _] =
   vsep
-    [ nest 2 $
-        vsep
-          [ "if" <> maybe emptyDoc (\c -> space <> printGroup c) cond <> ":",
-            printTerm trueBody
-          ],
-      nest 2 $
-        vsep
-          [ "else:",
-            printTerm falseBody
-          ]
+    [ vsep
+        [ nested
+            ("if" <> maybe ":" (\c -> space <> parens (printTerm c) <> ":") cond)
+            (printTerm trueBody),
+          nested "else:" (printTerm falseBody)
+        ]
     ]
 printIf _ _ = error "Expected one or two cases"
 
@@ -498,23 +440,18 @@ printMatch cond cases (Just (Word _ _ name _ _)) | name == abortName = printMatc
   where
     abortName = QualifiedName (Qualified Vocabulary.global "abort")
 printMatch cond cases else_ =
-  vsep
-    [ "match"
+  nestedMulti
+    ( "match"
         <> maybe
-          emptyDoc
-          (\c -> space <> printGroup c)
+          ":"
+          (\c -> space <> parens (printTerm c) <> ":")
           cond
-        <> ":",
-      nest
-        2
-        ( vsep
-            ( map
-                (\(Case n b _) -> nest 2 $ vsep ["case" <+> printGeneralName n <> ":", printTerm b])
-                cases
-            )
-        ),
-      maybe emptyDoc (\b -> nest 2 $ vsep ["else:", printTerm b]) else_
-    ]
+    )
+    ( map
+        (\(Case n b _) -> nested ("case" <+> printGeneralName n <> ":") (printTerm b))
+        cases
+        ++ maybe [] (\x -> [nested "else:" (printTerm x)]) else_
+    )
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
@@ -549,60 +486,34 @@ printValue value = case value of
   Local (LocalIndex index) -> "local." <> pretty index
   Name n -> "\\" <> printQualified n
   Quotation w@Word {} -> "\\" <> printTerm w
-  Quotation body -> "{" <+> printTerm body <+> "}"
+  Quotation body -> enclose (lbrace <> space) (space <> rbrace) (printTerm body)
   Text text -> (if Text.count "\n" text > 1 then multiline else singleline) text
     where
       multiline :: Text -> Doc a
-      multiline t = vsep ("\"\"\"" : map pretty (lines t) ++ ["\"\"\""])
+      multiline t = vsep (["\"\"\""] ++ map pretty (lines t) ++ ["\"\"\""])
 
       singleline :: Text -> Doc a
-      singleline t =
-        dquotes $
-          pretty $
-            concatMap
-              ( \case
-                  '\n' -> "\\n"
-                  c -> [c]
-              )
-              $ toString t
+      singleline t = dquotes $ pretty t
 
 printMetadata :: Metadata -> Doc a
 printMetadata metadata =
-  vsep
-    [ "about" <+> printGeneralName (Metadata.name metadata) <> ":",
-      nest
-        2
-        ( vsep $
-            map field $
-              HashMap.toList $
-                fields metadata
-        )
-    ]
-  where
-    field (key, value) = nest 2 $ vsep [printUnqualified key <> ":", printTerm value]
+  nestedMulti
+    ("about" <+> printGeneralName (Metadata.name metadata) <> ":")
+    ( map (\(key, term) -> nested (printUnqualified key <> ":") (printTerm term)) $
+        HashMap.toList $
+          fields metadata
+    )
 
-printDefinition :: Definition a -> Doc b
+printDefinition :: (Show a) => Definition a -> Doc b
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _ _) = emptyDoc
 printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
-  nest 2 $
-    vsep
-      [ "permission:" <+> (printQualified name <> printSignature signature <> ":"),
-        printTerm body
-      ]
+  nested ("permission" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
 printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
-  nest 2 $
-    vsep
-      [ "instance" <+> (printQualified name <+> printSignature signature <> ":"),
-        printTerm body
-      ]
+  nested ("instance" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
 printDefinition (Definition Category.Word name body _ _ _ _ _ _)
   | name == mainName = printTerm body
 printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
-  nest 2 $
-    vsep
-      [ "define" <+> (printQualified name <> printSignature signature <> ":"),
-        printTerm body
-      ]
+  nested ("define" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
 
 printEntry :: Entry -> Doc a
 printEntry (Entry.Word category _ origin mParent mSignature _) =
@@ -651,12 +562,7 @@ printEntry (Entry.Type origin parameters constraints ctors) =
         intersperse ", " (map printParameter parameters)
           ++ ["] constrained so that "]
           ++ intersperse "," (map printConstraint constraints),
-      nest 2 $
-        vsep
-          [ "and data constructors",
-            vsep $
-              map constructor ctors
-          ]
+      nestedMulti "and data constructors" (map constructor ctors)
     ]
   where
     constructor ctor =
@@ -675,38 +581,45 @@ printEntry (Entry.InstantiatedType origin size) =
       hsep ["with size", pretty size]
     ]
 
-printFragment :: (Ord a) => Fragment a -> Doc b
+printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
-  maybeVsep
-    [ mapMaybe printGrouped groupedDeclarations,
-      map printSynonym $ sort (synonyms fragment),
-      map printTypeDefinition $ sort (Fragment.types fragment),
-      map printDefinition $ sort (definitions fragment),
-      map printMetadata $ sort (metadata fragment)
-    ]
+  vsep
+    ( map
+        printGrouped
+        groupedDeclarations
+        ++ map
+          printSynonym
+          ( sort (synonyms fragment)
+          )
+        ++ map
+          printTypeDefinition
+          ( sort (Fragment.types fragment)
+          )
+        ++ map
+          printDefinition
+          ( sort (definitions fragment)
+          )
+        ++ map
+          printMetadata
+          ( sort (metadata fragment)
+          )
+    )
   where
     groupedDeclarations = groupBy (\a b -> (qualifierName . Declaration.name) a == (qualifierName . Declaration.name) b) (declarations fragment)
     printGrouped decls =
       if noVocab
-        then ifThereVsep (map printDeclaration $ sort decls)
-        else ifThereVsep (map printDeclaration $ sort decls) <&> (\x -> nest 2 $ vsep ["vocab" <+> printQualifier commonName <> ":", x])
+        then vsep (map printDeclaration $ sort decls)
+        else nestedMulti ("vocab" <+> printQualifier commonName <> ":") (map printDeclaration $ sort decls)
       where
         (commonName, noVocab) = case qualifierName $ Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
           n -> (n, False)
 
-maybeVsep :: [[Doc a]] -> Doc a
-maybeVsep l =
-  maybe
-    emptyDoc
-    vsep
-    ( guarded
-        (not . null)
-        (mapMaybe (fmap vsep . guarded (not . null)) l)
-    )
+nested :: Doc a -> Doc a -> Doc a
+nested x y = nestTwo (vsep [x, y])
 
-ifThereVsep :: [Doc a] -> Maybe (Doc a)
-ifThereVsep = fmap vsep . guarded (not . null)
+nestedMulti :: Doc a -> [Doc a] -> Doc a
+nestedMulti x xs = nestTwo (vsep (x : xs))
 
-ifThereHsep :: [Doc a] -> Maybe (Doc a)
-ifThereHsep = fmap hsep . guarded (not . null)
+nestTwo :: Doc a -> Doc a
+nestTwo = nest 2

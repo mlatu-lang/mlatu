@@ -77,8 +77,9 @@ instance read (String -> Optional[Char]):
 instance read (String -> Optional[Bool]):
   -> s;
   if (s = "true"): true some
-  elif (s = "false"): false some
-  else: none
+  else:
+    if (s = "false"): false some
+    else: none
 
 vocab mlatu {
   intrinsic read_int64 (String -> Optional[Int])

@@ -102,6 +102,7 @@ desugar dictionary definition = do
               Case name <$> desugarTerms' body <*> pure caseOrigin
 
             desugarElse :: Else () -> M (Else ())
+            desugarElse (DefaultElse metadata o) = return $ DefaultElse metadata o
             desugarElse (Else body elseOrigin) =
               Else <$> desugarTerms' body <*> pure elseOrigin
         New {} -> return term

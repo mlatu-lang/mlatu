@@ -68,6 +68,7 @@ term tenv x a = recur
             Case name <$> recur body <*> pure caseOrigin
 
           goElse :: Else Type -> M (Else Type)
+          goElse (DefaultElse elseType elseOrigin) = return $ DefaultElse elseType elseOrigin
           goElse (Else body elseOrigin) = Else <$> recur body <*> pure elseOrigin
       New tref index size origin ->
         New

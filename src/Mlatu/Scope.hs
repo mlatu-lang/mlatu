@@ -128,6 +128,7 @@ captureTerm term = case term of
         Case name <$> captureTerm a <*> pure caseOrigin
 
       captureElse :: Else () -> Captured (Else ())
+      captureElse (DefaultElse a b) = return $ DefaultElse a b
       captureElse (Else a elseOrigin) =
         Else <$> captureTerm a <*> pure elseOrigin
   New {} -> return term

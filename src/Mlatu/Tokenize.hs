@@ -312,7 +312,6 @@ alphanumeric =
           "case" -> Case
           "define" -> Define
           "do" -> Do
-          "elif" -> Elif
           "else" -> Else
           "if" -> If
           "instance" -> Instance

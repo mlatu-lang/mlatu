@@ -77,6 +77,7 @@ desugar dictionary qualifier term0 = do
             ([], tenv0)
             cases
         (else', tenv2) <- case else_ of
+          DefaultElse a elseOrigin -> return (DefaultElse a elseOrigin, tenv1)
           Else a elseOrigin -> do
             (a', tenv') <- go tenv1 a
             return (Else a' elseOrigin, tenv')

@@ -59,10 +59,11 @@ instance > (List[Int], List[Int] -> Bool):
       unpair -> y, ys_;
       if (x > y):
         true
-      elif (x < y):
-        false
       else:
-        xs_ > ys_
+        if (x < y):
+          false
+        else:
+          xs_ > ys_
     case none:
       true
   case none:
