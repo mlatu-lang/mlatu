@@ -9,7 +9,20 @@
 -- Maintainer  : mlatu@brightlysalty.33mail.com
 -- Stability   : experimental
 -- Portability : GHC
-module Mlatu.Pretty where
+module Mlatu.Pretty (
+  printConstructor,
+  printGeneralName,
+  printOrigin,
+  printQualified,
+  printSignature,
+  printTerm,
+  printType,
+  printInstantiated,
+  printKind,
+  printEntry,
+  printFragment,
+  printQualifier
+) where
 
 import Data.Char (isLetter)
 import Data.HashMap.Strict qualified as HashMap
@@ -87,22 +100,6 @@ printParameter (Parameter _ name Stack) = printUnqualified name <> "..."
 printParameter (Parameter _ name Label) = "+" <> printUnqualified name
 printParameter (Parameter _ name Permission) = "+" <> printUnqualified name
 printParameter (Parameter _ name (_ :-> _)) = printUnqualified name <> "[_]"
-
-printOperator :: Operator.Operator -> Doc a
-printOperator operator =
-  hsep $
-    ("infix" :) $
-      ( case Operator.associativity operator of
-          Operator.Nonassociative -> id
-          Operator.Leftward -> ("left" :)
-          Operator.Rightward -> ("right" :)
-      )
-        [ printPrecedence $ Operator.precedence operator,
-          printQualified $ Operator.name operator
-        ]
-
-printPrecedence :: Operator.Precedence -> Doc a
-printPrecedence (Operator.Precedence i) = pretty i
 
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
@@ -383,6 +380,7 @@ printTerm = \case
     (Group x, Match BooleanMatch _ cases _ _) -> printIf (Just x) cases
     (Group x, Match AnyMatch _ cases (Else elseBody _) _) -> vsep [printMatch (Just x) cases (Just elseBody)]
     (a', b') -> printTerm a' <+> printTerm b'
+  Coercion {} -> emptyDoc
   Generic _ _ t _ -> printTerm t
   Group (Group a) -> printGroup a
   Group a -> printGroup a
@@ -400,9 +398,6 @@ printTerm = \case
 
 printGroup :: Term a -> Doc b
 printGroup = parens . printTerm
-
-printDo :: Term a -> Term a -> Doc b
-printDo a body = nested ("do" <+> parens (printTerm a) <> ":") (printTerm body)
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
@@ -469,10 +464,6 @@ printVector :: Int -> Doc a
 printVector 0 = "[]"
 printVector i = "new.vec." <> pretty i
 
-printPermit :: Permit -> Doc a
-printPermit (Permit allow name) =
-  (if allow then "+" else "-") <> printGeneralName name
-
 printValue :: Value a -> Doc b
 printValue value = case value of
   Capture names term ->
@@ -511,7 +502,7 @@ printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
 printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
   nested ("instance" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
 printDefinition (Definition Category.Word name body _ _ _ _ _ _)
-  | name == mainName = printTerm body
+  | name == mainName = line <> printTerm body
 printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
   nested ("define" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
 
@@ -583,7 +574,7 @@ printEntry (Entry.InstantiatedType origin size) =
 
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
-  vsep
+  vcat
     ( map
         printGrouped
         groupedDeclarations

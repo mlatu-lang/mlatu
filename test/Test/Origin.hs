@@ -4,13 +4,13 @@ module Test.Origin
 where
 
 import Mlatu.Located qualified as Located
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Origin (Origin (Origin))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Tokenize (tokenize)
 import Relude
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Parsec.Pos (Column, Line)
-import Mlatu.Monad (runMlatuExceptT)
 
 spec :: Spec
 spec = do

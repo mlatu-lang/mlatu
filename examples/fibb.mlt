@@ -1,7 +1,8 @@
+20 fib print
+
 define fib (Int -> Int):
   -> n;
-  (n <   2) if:
+  if (n < 2):
       1
   else:
-    (n -   2) fib + (n -   1) fib
-  20 fib print
+    (n - 2) fib + (n - 1) fib
