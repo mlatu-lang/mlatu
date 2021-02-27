@@ -9,20 +9,21 @@
 -- Maintainer  : mlatu@brightlysalty.33mail.com
 -- Stability   : experimental
 -- Portability : GHC
-module Mlatu.Pretty (
-  printConstructor,
-  printGeneralName,
-  printOrigin,
-  printQualified,
-  printSignature,
-  printTerm,
-  printType,
-  printInstantiated,
-  printKind,
-  printEntry,
-  printFragment,
-  printQualifier
-) where
+module Mlatu.Pretty
+  ( printConstructor,
+    printGeneralName,
+    printOrigin,
+    printQualified,
+    printSignature,
+    printTerm,
+    printType,
+    printInstantiated,
+    printKind,
+    printEntry,
+    printFragment,
+    printQualifier,
+  )
+where
 
 import Data.Char (isLetter)
 import Data.HashMap.Strict qualified as HashMap
@@ -50,7 +51,7 @@ import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Constraint (..), Signature (..))
 import Mlatu.Synonym (Synonym (Synonym))
-import Mlatu.Term (Case (..), Else (..), MatchHint (..), Permit (..), Term (..), Value (..))
+import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
@@ -70,16 +71,18 @@ commaPunctuated as = hsep $ punctuate "," as
 
 printIntegerLiteral :: IntegerLiteral -> Doc a
 printIntegerLiteral literal =
-  hsep
-    [ if value < 0 then "-" else "",
-      case integerBase literal of
-        Base.Binary -> "0b"
-        Base.Octal -> "0o"
-        Base.Decimal -> ""
-        Base.Hexadecimal -> "0x",
-      pretty $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
-    ]
+  hsep $
+    catMaybes
+      [ sign,
+        case integerBase literal of
+          Base.Binary -> Just "0b"
+          Base.Octal -> Just "0o"
+          Base.Decimal -> Nothing
+          Base.Hexadecimal -> Just "0x",
+        Just $ pretty $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
+      ]
   where
+    sign = if value < 0 then Just "-" else Nothing
     value = integerValue literal
     (base, digits) = case integerBase literal of
       Base.Binary -> (2, "01")
@@ -373,62 +376,80 @@ printTypeDefinition (TypeDefinition constructors name _ parameters) =
     printedConstructors = map printDataConstructor constructors
 
 printTerm :: Term a -> Doc b
-printTerm = \case
-  Compose _ a b -> case (a, b) of
-    (Coercion {}, b') -> printTerm b'
-    (a', Coercion {}) -> printTerm a'
-    (Group x, Match BooleanMatch _ cases _ _) -> printIf (Just x) cases
-    (Group x, Match AnyMatch _ cases (Else elseBody _) _) -> vsep [printMatch (Just x) cases (Just elseBody)]
-    (a', b') -> printTerm a' <+> printTerm b'
-  Coercion {} -> emptyDoc
-  Generic _ _ t _ -> printTerm t
-  Group (Group a) -> printGroup a
-  Group a -> printGroup a
-  Lambda _ name _ body _ -> printLambda name body
-  Match BooleanMatch _ cases _ _ -> printIf Nothing cases
-  Match AnyMatch _ cases (Else elseBody _) _ -> vsep [printMatch Nothing cases (Just elseBody)]
-  Push _ value _ -> printValue value
-  Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o
-    | name == "drop" -> printLambda "_" $ Term.compose () o []
-  Word _ fixity name args _ -> printWord fixity name args
-  New _ (ConstructorIndex i) _ _ -> printNew i
-  NewClosure _ i _ -> printClosure i
-  NewVector _ i _ _ -> printVector i
+printTerm t = fromMaybe emptyDoc (maybePrintTerm t)
+
+maybePrintTerm :: Term a -> Maybe (Doc b)
+maybePrintTerm t = case Term.decompose t of
+  [] -> Nothing
+  (Group a : Match BooleanMatch _ cases _ _ : xs) -> printIf (Just a) cases `justWithRemainder` xs
+  (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> printMatch (Just a) cases Nothing `justWithRemainder` xs
+  (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> printMatch (Just a) cases (Just elseBody) `justWithRemainder` xs
+  (Coercion (AnyCoercion _) _ _ : xs) -> nothingWithRemainder xs
+  (Group a : xs) -> printGroup a `withRemainder` xs
+  (Lambda _ name _ body _ : xs) -> printLambda name body `withRemainder` xs
+  (Match BooleanMatch _ cases _ _ : xs) -> printIf Nothing cases `justWithRemainder` xs
+  (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> vsep [printMatch Nothing cases Nothing] `justWithRemainder` xs
+  (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> vsep [printMatch Nothing cases (Just elseBody)] `justWithRemainder` xs
+  (Push _ value _ : xs) -> printValue value `justWithRemainder` xs
+  (Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o : xs)
+    | name == "drop" -> printLambda "_" (Term.compose () o (map Term.stripMetadata xs)) `withRemainder` xs
+  (Word _ fixity name args _ : xs) -> printWord fixity name args `justWithRemainder` xs
+  (New _ (ConstructorIndex i) _ _ : xs) -> printNew i `justWithRemainder` xs
+  (NewClosure _ i _ : xs) -> printClosure i `justWithRemainder` xs
+  (NewVector _ i _ _ : xs) -> printVector i `justWithRemainder` xs
   _ -> error "Formatting failed"
-
-printGroup :: Term a -> Doc b
-printGroup = parens . printTerm
-
-printLambda :: Unqualified -> Term a -> Doc b
-printLambda name body =
-  ( "-> "
-      <> foldr (\e acc -> (printUnqualified e <> ",") <+> acc) (printUnqualified name) (reverse names)
-      <> ";"
-  )
-    <> line
-    <> printTerm newBody
   where
+    nothingWithRemainder :: [Term a] -> Maybe (Doc b)
+    nothingWithRemainder [] = Nothing
+    nothingWithRemainder (x : xs) = maybePrintTerm x `withRemainder` xs
+
+    justWithRemainder :: Doc b -> [Term a] -> Maybe (Doc b)
+    justWithRemainder a [] = Just a
+    justWithRemainder a (x : xs) =
+      ( case maybePrintTerm x of
+          Just b -> a <> space <> b
+          Nothing -> a
+      )
+        `justWithRemainder` xs
+
+    withRemainder :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
+    withRemainder Nothing l = nothingWithRemainder l
+    withRemainder (Just a) l = justWithRemainder a l
+
+printGroup :: Term a -> Maybe (Doc b)
+printGroup (Group a) = printGroup a
+printGroup a = parens <$> maybePrintTerm a
+
+printLambda :: Unqualified -> Term a -> Maybe (Doc b)
+printLambda name body =
+  fmap
+    ((lambda <> line) <>)
+    (maybePrintTerm newBody)
+  where
+    lambda =
+      printToken Token.Arrow
+        <+> foldr (\e acc -> (printUnqualified e <> comma) <+> acc) (printUnqualified name) (reverse names)
+        <> semi
     (names, newBody) = go [] body
     go ns (Lambda _ n _ b _) = go (ns ++ [n]) b
     go ns b = (ns, b)
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
-printIf cond [Case _ trueBody _] =
-  vsep
-    [ nested
-        ("if" <> maybe ":" (\c -> space <> parens (printTerm c) <> ":") cond)
-        (printTerm trueBody)
-    ]
 printIf cond [Case _ trueBody _, Case _ falseBody _] =
   vsep
-    [ vsep
-        [ nested
-            ("if" <> maybe ":" (\c -> space <> parens (printTerm c) <> ":") cond)
-            (printTerm trueBody),
-          nested "else:" (printTerm falseBody)
-        ]
+    [ blockMaybe
+        ( "if"
+            <> fromMaybe
+              ""
+              ( do
+                  x <- maybePrintTerm =<< cond
+                  return (space <> parens x)
+              )
+        )
+        (maybePrintTerm trueBody),
+      blockMaybe "else" (maybePrintTerm falseBody)
     ]
-printIf _ _ = error "Expected one or two cases"
+printIf _ _ = error "Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases (Just (Word _ _ name _ _)) | name == abortName = printMatch cond cases Nothing
@@ -437,15 +458,22 @@ printMatch cond cases (Just (Word _ _ name _ _)) | name == abortName = printMatc
 printMatch cond cases else_ =
   nestedMulti
     ( "match"
-        <> maybe
+        <> fromMaybe
           ":"
-          (\c -> space <> parens (printTerm c) <> ":")
-          cond
+          ( do
+              x <- maybePrintTerm =<< cond
+              return (space <> parens x <> ":")
+          )
     )
     ( map
-        (\(Case n b _) -> nested ("case" <+> printGeneralName n <> ":") (printTerm b))
+        (\(Case n b _) -> blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
         cases
-        ++ maybe [] (\x -> [nested "else:" (printTerm x)]) else_
+        ++ fromMaybe
+          []
+          ( do
+              x <- maybePrintTerm =<< else_
+              return [nested "else:" x]
+          )
     )
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
@@ -455,14 +483,14 @@ printWord _ word [] = printGeneralName word
 printWord _ word args = printGeneralName word <> "::" <> list (map printType args)
 
 printNew :: Int -> Doc a
-printNew i = "new." <> pretty i
+printNew i = "new" <> dot <> pretty i
 
 printClosure :: Int -> Doc a
-printClosure i = "new.closure." <> pretty i
+printClosure i = "new" <> dot <> "closure" <> dot <> pretty i
 
 printVector :: Int -> Doc a
-printVector 0 = "[]"
-printVector i = "new.vec." <> pretty i
+printVector 0 = lbracket <> rbracket
+printVector i = "new" <> dot <> "vec" <> dot <> pretty i
 
 printValue :: Value a -> Doc b
 printValue value = case value of
@@ -471,17 +499,19 @@ printValue value = case value of
       <> tupled (map printClosed names)
       <> braces (printTerm term)
   Character c -> squotes (pretty c)
-  Closed (ClosureIndex index) -> "closure." <> pretty index
+  Closed (ClosureIndex index) -> "closure" <> dot <> pretty index
   Float f -> printFloatLiteral f
   Integer i -> printIntegerLiteral i
-  Local (LocalIndex index) -> "local." <> pretty index
-  Name n -> "\\" <> printQualified n
-  Quotation w@Word {} -> "\\" <> printTerm w
-  Quotation body -> enclose (lbrace <> space) (space <> rbrace) (printTerm body)
+  Local (LocalIndex index) -> "local" <> dot <> pretty index
+  Name n -> backslash <> printQualified n
+  Quotation w@Word {} -> backslash <> printTerm w
+  Quotation body -> lbrace <+> printTerm body <+> rbrace
   Text text -> (if Text.count "\n" text > 1 then multiline else singleline) text
     where
       multiline :: Text -> Doc a
-      multiline t = vsep (["\"\"\""] ++ map pretty (lines t) ++ ["\"\"\""])
+      multiline t = vsep ([multilineQuote] ++ map pretty (lines t) ++ [multilineQuote])
+        where
+          multilineQuote = dquote <> dquote <> dquote
 
       singleline :: Text -> Doc a
       singleline t = dquotes $ pretty t
@@ -489,8 +519,8 @@ printValue value = case value of
 printMetadata :: Metadata -> Doc a
 printMetadata metadata =
   nestedMulti
-    ("about" <+> printGeneralName (Metadata.name metadata) <> ":")
-    ( map (\(key, term) -> nested (printUnqualified key <> ":") (printTerm term)) $
+    ("about" <+> printGeneralName (Metadata.name metadata) <> colon)
+    ( map (\(key, term) -> blockMaybe (printUnqualified key) (maybePrintTerm term)) $
         HashMap.toList $
           fields metadata
     )
@@ -498,13 +528,13 @@ printMetadata metadata =
 printDefinition :: (Show a) => Definition a -> Doc b
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _ _) = emptyDoc
 printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
-  nested ("permission" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
+  blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
-  nested ("instance" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
+  blockMaybe ("instance" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 printDefinition (Definition Category.Word name body _ _ _ _ _ _)
-  | name == mainName = line <> printTerm body
+  | name == mainName = printTerm body
 printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
-  nested ("define" <+> (printQualified name <+> printSignature signature <> ":")) (printTerm body)
+  blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
 printEntry :: Entry -> Doc a
 printEntry (Entry.Word category _ origin mParent mSignature _) =
@@ -614,3 +644,7 @@ nestedMulti x xs = nestTwo (vsep (x : xs))
 
 nestTwo :: Doc a -> Doc a
 nestTwo = nest 2
+
+blockMaybe :: Doc a -> Maybe (Doc a) -> Doc a
+blockMaybe d Nothing = d <+> lbrace <> rbrace
+blockMaybe d (Just b) = nested (d <> colon) b

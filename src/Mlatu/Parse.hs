@@ -57,7 +57,7 @@ import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Synonym (Synonym (Synonym))
-import Mlatu.Term (Case (..), Else (..), MatchHint (..), Term (..), Value (..), compose, defaultElseBody)
+import Mlatu.Term (Case (..), Else (..), MatchHint (..), Term (..), Value (..), compose)
 import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
 import Mlatu.Token qualified as Token
@@ -748,13 +748,12 @@ matchParser = (<?> "match") $ do
     return $
       (,) cases' $
         fromMaybe
-          (Else (defaultElseBody () matchOrigin) matchOrigin)
+          (DefaultElse () matchOrigin)
           mElse'
   let match = Match AnyMatch () cases else_ matchOrigin
   return $ case mScrutinee of
     Just scrutinee -> compose () scrutineeOrigin [scrutinee, match]
     Nothing -> match
-
 
 ifParser :: Parser (Term ())
 ifParser = (<?> "if-else expression") $ do
@@ -775,7 +774,7 @@ ifParser = (<?> "if-else expression") $ do
           [ Case "true" ifBody ifOrigin,
             Case "false" elseBody (Term.origin elseBody)
           ]
-          (Else (defaultElseBody () ifOrigin) ifOrigin)
+          (DefaultElse () ifOrigin)
           ifOrigin
       ]
 
