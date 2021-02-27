@@ -52,8 +52,10 @@ scope = scopeTerm [0]
                 )
                 cases
             )
-            ( ( \(Else a elseOrigin) ->
-                  Else (recur a) elseOrigin
+            ( ( \case
+                  (DefaultElse a elseOrigin) -> (DefaultElse a elseOrigin)
+                  (Else a elseOrigin) ->
+                    Else (recur a) elseOrigin
               )
                 else_
             )
