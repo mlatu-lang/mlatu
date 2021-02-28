@@ -342,7 +342,9 @@ printDataConstructor :: DataConstructor.DataConstructor -> Doc a
 printDataConstructor (DataConstructor.DataConstructor fields name _) =
   "case"
     <+> printUnqualified name
-    <+> tupled (map printSignature fields)
+    <> printedFields
+  where
+    printedFields = if not $ null fields then space <> tupled (map printSignature fields) else ""
 
 printDeclaration :: Declaration -> Doc a
 printDeclaration (Declaration category name _ signature) = printedCategory <+> printUnqualified (unqualifiedName name) <+> printSignature signature
@@ -353,15 +355,11 @@ printDeclaration (Declaration category name _ signature) = printedCategory <+> p
 
 printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
-  if null printedConstructors
-    then "type" <+> typeName <+> "{}"
-    else nestTwo $ vsep $ ("type" <+> typeName <> ":") : map printDataConstructor constructors
+  blockMaybeMulti ("type" <+> typeName) printDataConstructor constructors
   where
     typeName =
       printQualified name
-        <> brackets printedParameters
-    printedParameters = hsep (punctuate comma (map printParameter (fst parameters)))
-    printedConstructors = map printDataConstructor constructors
+        <> if not $ null $ fst parameters then (list . map printParameter . fst) parameters else ""
 
 printTerm :: Term a -> Doc b
 printTerm t = fromMaybe "" (maybePrintTerm t)
@@ -385,14 +383,15 @@ maybePrintTerm t = case Term.decompose t of
   (Push _ value _ : xs) -> printValue value `justHoriz` xs
   (Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o : xs)
     | name == "drop" -> do
-        let lambda = printToken Token.Arrow <+> hsep (punctuate comma (reverse (map printUnqualified (name : names)))) <> semi
-        (case maybePrintTerm newBody of
+      let lambda = printToken Token.Arrow <+> hsep (punctuate comma (reverse (map printUnqualified (name : names)))) <> semi
+      ( case maybePrintTerm newBody of
           Nothing -> Just lambda
-          Just a -> Just (vsep [lambda, a]))
+          Just a -> Just (vsep [lambda, a])
+        )
     where
-    (names, newBody) = go [] (Term.compose () o (map Term.stripMetadata xs))
-    go ns (Lambda _ n _ b _) = go (n : ns) b
-    go ns b = (ns, b)
+      (names, newBody) = go [] (Term.compose () o (map Term.stripMetadata xs))
+      go ns (Lambda _ n _ b _) = go (n : ns) b
+      go ns b = (ns, b)
   (Word _ fixity name args _ : xs) -> printWord fixity name args `justHoriz` xs
   (New _ (ConstructorIndex i) _ _ : xs) -> printNew i `justHoriz` xs
   (NewClosure _ i _ : xs) -> printClosure i `justHoriz` xs
@@ -458,13 +457,16 @@ printIf _ _ = error "Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
-  blockMaybeMulti
-    (maybe "match" ("match" <+>) (cond >>= printGroup))
-    ( map
-        (\(Case n b _) -> includeBlockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
-        cases
-        ++ maybe [] (\e -> [includeBlockMaybe "else" (maybePrintTerm e)]) else_
-    )
+  nestTwo $
+    vsep
+      ( (maybe "match" ("match" <+>) (cond >>= printGroup) <> colon) :
+        catMaybes
+          ( map
+              (\(Case n b _) -> includeBlockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
+              cases
+              ++ maybe [] (\e -> [includeBlockMaybe "else" (maybePrintTerm e)]) else_
+          )
+      )
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
@@ -635,10 +637,10 @@ blockMaybe :: Doc a -> Maybe (Doc a) -> Doc a
 blockMaybe d Nothing = d <+> lbrace <> rbrace
 blockMaybe d (Just b) = nestTwo (vsep [d <> colon, b])
 
-blockMaybeMulti :: Doc a -> [Maybe (Doc a)] -> Doc a
-blockMaybeMulti d l = case catMaybes l of
+blockMaybeMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
+blockMaybeMulti d f l = case l of
   [] -> d <+> lbrace <> rbrace
-  xs -> nestTwo (vsep ((d <> colon) : xs))
+  xs -> nestTwo (vsep ((d <> colon) : map f xs))
 
 includeBlockMaybe :: Doc a -> Maybe (Doc a) -> Maybe (Doc a)
 includeBlockMaybe _ Nothing = Nothing
