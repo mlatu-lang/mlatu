@@ -59,9 +59,12 @@ import Mlatu.Type qualified as Type
 import Mlatu.TypeDefinition (TypeDefinition (..))
 import Numeric (showIntAtBase)
 import Prettyprinter
-import Relude hiding (Compose, Constraint, Type)
+import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
+
+punctuateComma :: [Doc a] -> Doc a
+punctuateComma = hsep . punctuate comma
 
 printIntegerLiteral :: IntegerLiteral -> Doc a
 printIntegerLiteral literal =
@@ -180,11 +183,11 @@ printType type0 = recur type0
           recur a <+> "->"
       TypeConstructor _ "Fun" -> parens "->"
       TypeConstructor _ "Prod" :@ a :@ b ->
-        recur a <+> comma <+> recur b
+        punctuateComma [recur a, recur b]
       TypeConstructor _ "Prod" :@ a ->
-        parens $ recur a <+> ", "
+        parens $ recur a <> comma <> space
       TypeConstructor _ "Prod" ->
-        parens ","
+        parens comma
       TypeConstructor _ "Sum" :@ a :@ b ->
         recur a <+> "|" <+> recur b
       TypeConstructor _ "Join" :@ a :@ b ->
@@ -260,11 +263,11 @@ prettyKinded name k = case k of
   _otherKind -> printUnqualified name
 
 printConstraint :: Constraint -> Doc a
-printConstraint (Constraint name params) = printUnqualified name <> list (map printParameter params)
+printConstraint (Constraint name params) = printUnqualified name <> brackets (punctuateComma (map printParameter params))
 
 printSignature :: Signature -> Doc a
 printSignature (Application firstA b _) =
-  printSignature finalA <> list (map printSignature (as ++ [b]))
+  printSignature finalA <> brackets (punctuateComma (map printSignature (as ++ [b])))
   where
     (finalA, as) = go [] firstA
     go l (Application x y _) = go (l ++ [y]) x
@@ -272,20 +275,20 @@ printSignature (Application firstA b _) =
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
   parens $
-    maybeSpace (hsep . punctuate comma . map printSignature) as
+    mapNonEmpty "" (\sigs -> punctuateComma (map printSignature sigs) <> space) as
       <> "->"
-      <> spaceMaybe (hsep . punctuate comma . map printSignature) bs
-      <> spaceMaybe (hsep . map (("+" <>) . printGeneralName)) es
+      <> mapNonEmpty "" (\sigs -> space <> punctuateComma (map printSignature sigs)) bs
+      <> mapNonEmpty "" (\names -> space <> hsep (map (\p -> "+" <> printGeneralName p) names)) es
 printSignature (Quantified names constraints typ _) =
-  list (map printParameter names)
-    <+> printSignature typ
-    <> if not $ null constraints then " where" <+> hsep (map printConstraint constraints) else emptyDoc
+  mapNonEmpty "" (\ns -> brackets (punctuateComma (map printParameter ns)) <> flatAlt space "\n") names
+    <> printSignature typ
+    <> mapNonEmpty "" (\cs -> space <> "where" <+> hsep (map printConstraint cs)) constraints
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
-    (hsep . punctuate comma) ((printSignature r <> "...") : map printSignature as)
+    punctuateComma ((printSignature r <> "...") : map printSignature as)
       <+> "->"
-      <+> hsep (punctuate comma ((printSignature s <> "...") : map printSignature bs) ++ map (("+" <>) . printGeneralName) es)
+      <+> punctuateComma (((printSignature s <> "...") : map printSignature bs) ++ map (("+" <>) . printGeneralName) es)
 printSignature (Type t) = printType t
 
 printToken :: Token.Token l -> Doc a
@@ -383,7 +386,7 @@ maybePrintTerms = \case
   (Push _ value _ : xs) -> Just (printValue value `justHoriz` xs)
   (Word _ Operator.Postfix (QualifiedName (Qualified _ name)) [] o : xs)
     | name == "drop" -> do
-      let lambda = printToken Token.Arrow <+> hsep (punctuate comma (reverse (map printUnqualified (name : names)))) <> semi
+      let lambda = printToken Token.Arrow <+> punctuateComma (reverse (map printUnqualified (name : names))) <> semi
       ( case maybePrintTerms (Term.decompose newBody) of
           Nothing -> Just lambda
           Just a -> Just (vsep [lambda, a])
@@ -406,8 +409,8 @@ maybePrintTerms = \case
       Just a -> Just . justHoriz a
 
     justHoriz :: Doc b -> [Term a] -> Doc b
-    justHoriz a l = case printList l of 
-      Nothing -> a 
+    justHoriz a l = case printList l of
+      Nothing -> a
       Just b -> hsep [a, b]
 
     vertical :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
@@ -421,7 +424,7 @@ maybePrintTerms = \case
       Just b -> vsep [a, b]
 
 maybePrintTerm :: Term a -> Maybe (Doc b)
-maybePrintTerm = maybePrintTerms . Term.decompose 
+maybePrintTerm = maybePrintTerms . Term.decompose
 
 printDo :: Term a -> Term a -> Maybe (Doc b)
 printDo a body = includeBlockMaybe (maybe "do" ("do" <+>) (printGroup a)) (maybePrintTerm body)
@@ -431,7 +434,7 @@ printGroup a = parens <$> maybePrintTerm a
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
-  let lambda = printToken Token.Arrow <+> hsep (punctuate comma (map printUnqualified names)) <> semi
+  let lambda = printToken Token.Arrow <+> punctuateComma (map printUnqualified names) <> semi
    in case maybePrintTerm newBody of
         Nothing -> lambda
         Just a -> vsep [lambda, a]
@@ -453,13 +456,18 @@ printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
   nestTwo $
     vsep
-      ( (maybe "match" ("match" <+>) (cond >>= printGroup) <> colon) :
-        catMaybes
-          ( map
-              (\(Case n b _) -> includeBlockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
-              cases
-              ++ maybe [] (\e -> [includeBlockMaybe "else" (maybePrintTerm e)]) else_
-          )
+      ( maybe "match" ("match" <+>) (cond >>= printGroup) :
+        ( map
+            (\(Case n b _) -> blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
+            cases
+            ++ maybe
+              []
+              ( \e -> case includeBlockMaybe "else" (maybePrintTerm e) of
+                  Nothing -> []
+                  Just x -> [x]
+              )
+              else_
+        )
       )
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
@@ -521,7 +529,7 @@ printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
 printDefinition (Definition Category.Word name body _ _ _ _ _ _)
   | name == mainName = printTerm body
 printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
-  blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
+  blockMaybe ("define" <+> (printQualified name <+> group (printSignature signature))) (maybePrintTerm body)
 
 printEntry :: Entry -> Doc a
 printEntry (Entry.Word category _ origin mParent mSignature _) =
@@ -627,8 +635,7 @@ nestTwo :: Doc a -> Doc a
 nestTwo = nest 2
 
 blockMaybe :: Doc a -> Maybe (Doc a) -> Doc a
-blockMaybe d Nothing = d <+> lbrace <> rbrace
-blockMaybe d (Just b) = nestTwo (vsep [d <> colon, b])
+blockMaybe d = maybe (group (d <+> lbrace <> rbrace)) (\b -> nestTwo (vsep [d <> colon, b]))
 
 blockMaybeMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
 blockMaybeMulti d f =
@@ -639,12 +646,6 @@ blockMaybeMulti d f =
 includeBlockMaybe :: Doc a -> Maybe (Doc a) -> Maybe (Doc a)
 includeBlockMaybe _ Nothing = Nothing
 includeBlockMaybe d (Just b) = Just $ nestTwo (vsep [d <> colon, b])
-
-spaceMaybe :: ([b] -> Doc a) -> [b] -> Doc a
-spaceMaybe f = mapNonEmpty "" (\xs -> space <> f xs)
-
-maybeSpace :: ([b] -> Doc a) -> [b] -> Doc a
-maybeSpace f = mapNonEmpty "" (\xs -> f xs <> space)
 
 mapNonEmpty :: b -> ([a] -> b) -> [a] -> b
 mapNonEmpty emptyCase nonEmptyFn l = fromMaybe emptyCase (viaNonEmpty (nonEmptyFn . toList) l)
