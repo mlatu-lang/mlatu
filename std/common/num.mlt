@@ -1,261 +1,340 @@
-type Int {}
-
-about type Int:
-  size: 8
-  alignment: 8
-
-type Char {}
-
-about type Char:
-  size: 4
-  alignment: 4
-
-type Double {}
-
-about type Double:
-  size: 8
-  alignment: 8
-
-vocab mlatu {
-
-  intrinsic neg_int64 (Int -> Int)
-  intrinsic add_int64 (Int, Int -> Int)
-  intrinsic sub_int64 (Int, Int -> Int)
-  intrinsic mul_int64 (Int, Int -> Int)
-  intrinsic div_int64 (Int, Int -> Int)
-  intrinsic mod_int64 (Int, Int -> Int)
-  intrinsic not_int64 (Int -> Int)
-  intrinsic or_int64  (Int, Int -> Int)
-  intrinsic xor_int64 (Int, Int -> Int)
-  intrinsic and_int64 (Int, Int -> Int)
-  intrinsic gt_int64 (Int, Int -> Bool)
-  intrinsic eq_int64 (Int, Int -> Bool)
-
-  intrinsic gt_char (Char, Char -> Bool)
-  intrinsic eq_char (Char, Char -> Bool)
-
-  intrinsic add_float64 (Double, Double -> Double)
-  intrinsic sub_float64 (Double, Double -> Double)
-  intrinsic mul_float64 (Double, Double -> Double)
-  intrinsic div_float64 (Double, Double -> Double)
-  intrinsic mod_float64 (Double, Double -> Double)
-  intrinsic exp_float64 (Double -> Double)
-  intrinsic log_float64 (Double -> Double)
-  intrinsic sqrt_float64 (Double -> Double)
-  intrinsic sin_float64 (Double -> Double)
-  intrinsic cos_float64 (Double -> Double)
-  intrinsic tan_float64 (Double -> Double)
-  intrinsic asin_float64 (Double -> Double)
-  intrinsic acos_float64 (Double -> Double)
-  intrinsic atan_float64 (Double -> Double)
-  intrinsic atan2_float64 (Double, Double -> Double)
-  intrinsic sinh_float64 (Double -> Double)
-  intrinsic cosh_float64 (Double -> Double)
-  intrinsic tanh_float64 (Double -> Double)
-  intrinsic asinh_float64 (Double -> Double)
-  intrinsic acosh_float64 (Double -> Double)
-  intrinsic atanh_float64 (Double -> Double)
-  intrinsic trunc_float64 (Double -> Double)
-  intrinsic round_float64 (Double -> Double)
-  intrinsic ceil_float64 (Double -> Double)
-  intrinsic floor_float64 (Double -> Double)
-  intrinsic gt_float64 (Double, Double -> Bool)
-  intrinsic eq_float64 (Double, Double -> Bool)
-
-}
-
-trait neg[T] (T -> T)
-
-instance neg (Int -> Int) { zero swap (-) }
-instance neg (Double -> Double) { zero swap (-) }
-
-trait + [T] (T, T -> T)
-
-about +:
-  docs: """
-    Operation of an additive monoid with `zero` as the identity.
-    """
-  operator:
-    left 6
-
-instance + (Int, Int -> Int) { _::mlatu::add_int64 }
-instance + (Double, Double -> Double) { _::mlatu::add_float64 }
-
-trait zero[T] (-> T)
-
-instance zero (-> Int) { 0 }
-instance zero (-> Double) { 0.0 }
-
-trait - [T] (T, T -> T)
-
-about -:
-  operator:
-    left 6
-
-instance - (Int, Int -> Int) { _::mlatu::sub_int64 }
-instance - (Double, Double -> Double) { _::mlatu::sub_float64 }
+trait % [T] (T, T -> T +Fail)
 
 trait * [T] (T, T -> T)
 
-about *:
-  operator:
-    left 7
+trait + [T] (T, T -> T)
 
-instance * (Int, Int -> Int) { _::mlatu::mul_int64 }
-instance * (Double, Double -> Double) { _::mlatu::mul_float64 }
+trait - [T] (T, T -> T)
 
 trait / [T] (T, T -> T +Fail)
 
-about /:
-  operator:
-    left 7
+trait < [T] (T, T -> Bool)
 
-instance / (Int, Int -> Int +Fail) { _::mlatu::div_int64 }
-instance / (Double, Double -> Double +Fail) { _::mlatu::div_float64 }
+trait <= [T] (T, T -> Bool)
 
-trait % [T] (T, T -> T +Fail)
+trait <> [T] (T, T -> Bool)
 
-about %:
-  operator:
-    left 7
+trait = [T] (T, T -> Bool)
 
-instance % (Int, Int -> Int +Fail) { _::mlatu::mod_int64 }
-instance % (Double, Double -> Double +Fail) { _::mlatu::mod_float64 }
+trait > [T] (T, T -> Bool)
 
-define div_mod[T] (T, T -> T, T +Fail):
+trait >= [T] (T, T -> Bool)
+
+trait neg [T] (T -> T)
+
+trait zero [T] (-> T)
+
+
+vocab mlatu:
+  intrinsic acos_float64 (Double -> Double)
+  intrinsic acosh_float64 (Double -> Double)
+  intrinsic add_float64 (Double, Double -> Double)
+  intrinsic add_int64 (Int, Int -> Int)
+  intrinsic and_int64 (Int, Int -> Int)
+  intrinsic asin_float64 (Double -> Double)
+  intrinsic asinh_float64 (Double -> Double)
+  intrinsic atan2_float64 (Double, Double -> Double)
+  intrinsic atan_float64 (Double -> Double)
+  intrinsic atanh_float64 (Double -> Double)
+  intrinsic ceil_float64 (Double -> Double)
+  intrinsic cos_float64 (Double -> Double)
+  intrinsic cosh_float64 (Double -> Double)
+  intrinsic div_float64 (Double, Double -> Double)
+  intrinsic div_int64 (Int, Int -> Int)
+  intrinsic eq_char (Char, Char -> Bool)
+  intrinsic eq_float64 (Double, Double -> Bool)
+  intrinsic eq_int64 (Int, Int -> Bool)
+  intrinsic exp_float64 (Double -> Double)
+  intrinsic floor_float64 (Double -> Double)
+  intrinsic gt_char (Char, Char -> Bool)
+  intrinsic gt_float64 (Double, Double -> Bool)
+  intrinsic gt_int64 (Int, Int -> Bool)
+  intrinsic log_float64 (Double -> Double)
+  intrinsic mod_float64 (Double, Double -> Double)
+  intrinsic mod_int64 (Int, Int -> Int)
+  intrinsic mul_float64 (Double, Double -> Double)
+  intrinsic mul_int64 (Int, Int -> Int)
+  intrinsic neg_int64 (Int -> Int)
+  intrinsic not_int64 (Int -> Int)
+  intrinsic or_int64 (Int, Int -> Int)
+  intrinsic round_float64 (Double -> Double)
+  intrinsic sin_float64 (Double -> Double)
+  intrinsic sinh_float64 (Double -> Double)
+  intrinsic sqrt_float64 (Double -> Double)
+  intrinsic sub_float64 (Double, Double -> Double)
+  intrinsic sub_int64 (Int, Int -> Int)
+  intrinsic tan_float64 (Double -> Double)
+  intrinsic tanh_float64 (Double -> Double)
+  intrinsic trunc_float64 (Double -> Double)
+  intrinsic xor_int64 (Int, Int -> Int)
+
+type Char {}
+
+type Double {}
+
+type Int {}
+
+instance % (Double, Double -> Double +Fail):
+  _::mlatu::mod_float64
+
+instance % (Int, Int -> Int +Fail):
+  _::mlatu::mod_int64
+
+instance * (Double, Double -> Double):
+  _::mlatu::mul_float64
+
+instance * (Int, Int -> Int):
+  _::mlatu::mul_int64
+
+instance + (Double, Double -> Double):
+  _::mlatu::add_float64
+
+instance + (Int, Int -> Int):
+  _::mlatu::add_int64
+
+instance - (Double, Double -> Double):
+  _::mlatu::sub_float64
+
+instance - (Int, Int -> Int):
+  _::mlatu::sub_int64
+
+instance / (Double, Double -> Double +Fail):
+  _::mlatu::div_float64
+
+instance / (Int, Int -> Int +Fail):
+  _::mlatu::div_int64
+
+instance < (Int, Int -> Bool):
+  swap (>)
+
+instance < (Char, Char -> Bool):
+  swap (>)
+
+instance < (Double, Double -> Bool):
+  swap (>)
+
+instance < (Bool, Bool -> Bool):
+  swap not (&)
+
+instance <= (Int, Int -> Bool):
+  (>) not
+
+instance <= (Char, Char -> Bool):
+  (>) not
+
+instance <= (Double, Double -> Bool):
+  (>) not
+
+instance <= (Bool, Bool -> Bool):
+  (>) not
+
+instance <> (Int, Int -> Bool):
+  (=) not
+
+instance <> (Char, Char -> Bool):
+  (=) not
+
+instance <> (Double, Double -> Bool):
+  (=) not
+
+instance <> (Bool, Bool -> Bool):
+  (=) not
+
+instance = (Bool, Bool -> Bool):
+  if {}
+  else:
+    not
+
+instance = (Char, Char -> Bool):
+  _::mlatu::eq_char
+
+instance = (Double, Double -> Bool):
+  _::mlatu::eq_float64
+
+instance = (Int, Int -> Bool):
+  _::mlatu::eq_int64
+
+instance > (Char, Char -> Bool):
+  _::mlatu::gt_char
+
+instance > (Double, Double -> Bool):
+  _::mlatu::gt_float64
+
+instance > (Int, Int -> Bool):
+  _::mlatu::gt_int64
+
+instance > (Bool, Bool -> Bool):
+  (&) not
+
+instance >= (Int, Int -> Bool):
+  (<) not
+
+instance >= (Char, Char -> Bool):
+  (<) not
+
+instance >= (Double, Double -> Bool):
+  (<) not
+
+instance >= (Bool, Bool -> Bool):
+  (<) not
+
+instance neg (Int -> Int):
+  zero swap (-)
+
+instance neg (Double -> Double):
+  zero swap (-)
+
+instance zero (-> Double):
+  0.0
+
+instance zero (-> Int):
+  0
+
+define abs [T] (T -> T):
+  dup if (zero (<)):
+    neg
+
+define acos (Double -> Double):
+  _::mlatu::acos_float64
+
+define acosh (Double -> Double):
+  _::mlatu::acosh_float64
+
+define asin (Double -> Double):
+  _::mlatu::asin_float64
+
+define asinh (Double -> Double):
+  _::mlatu::asinh_float64
+
+define atan (Double -> Double):
+  _::mlatu::atan_float64
+
+define atan2 (Double, Double -> Double):
+  _::mlatu::atan2_float64
+
+define atanh (Double -> Double):
+  _::mlatu::atanh_float64
+
+define ceil (Double -> Double):
+  _::mlatu::ceil_float64
+
+define cos (Double -> Double):
+  _::mlatu::cos_float64
+
+define cosh (Double -> Double):
+  _::mlatu::cosh_float64
+
+define div_mod [T] (T, T -> T, T +Fail):
   -> x, y;
   (x / y) (x % y)
 
-define pi (-> Double) { 3.141592653589793 }
+define exp (Double -> Double):
+  _::mlatu::exp_float64
 
-define exp (Double -> Double) { _::mlatu::exp_float64 }
+define floor (Double -> Double):
+  _::mlatu::floor_float64
 
-define log (Double -> Double) { _::mlatu::log_float64 }
+define log (Double -> Double):
+  _::mlatu::log_float64
 
-define sqrt (Double -> Double) { _::mlatu::sqrt_float64 }
 
-define sin (Double -> Double) { _::mlatu::sin_float64 }
 
-define cos (Double -> Double) { _::mlatu::cos_float64 }
+define max [T] (T, T -> T):
+  (dup2) if ((<)):
+    swap drop
+  else:
+    drop
 
-define tan (Double -> Double) { _::mlatu::tan_float64 }
+define min [T] (T, T -> T):
+  (dup2) if ((<)):
+    drop
+  else:
+    swap drop
 
-define asin (Double -> Double) { _::mlatu::asin_float64 }
+define pi (-> Double):
+  3.141592653589793
 
-define acos (Double -> Double) { _::mlatu::acos_float64 }
+define round (Double -> Double):
+  _::mlatu::round_float64
 
-define atan (Double -> Double) { _::mlatu::atan_float64 }
+define sin (Double -> Double):
+  _::mlatu::sin_float64
 
-define atan2 (Double, Double -> Double) { _::mlatu::atan2_float64 }
+define sinh (Double -> Double):
+  _::mlatu::sinh_float64
 
-define sinh (Double -> Double) { _::mlatu::sinh_float64 }
+define sqrt (Double -> Double):
+  _::mlatu::sqrt_float64
 
-define cosh (Double -> Double) { _::mlatu::cosh_float64 }
+define tan (Double -> Double):
+  _::mlatu::tan_float64
 
-define tanh (Double -> Double) { _::mlatu::tanh_float64 }
+define tanh (Double -> Double):
+  _::mlatu::tanh_float64
 
-define asinh (Double -> Double) { _::mlatu::asinh_float64 }
+define trunc (Double -> Double):
+  _::mlatu::trunc_float64
 
-define acosh (Double -> Double) { _::mlatu::acosh_float64 }
-
-define atanh (Double -> Double) { _::mlatu::atanh_float64 }
-
-define trunc (Double -> Double) { _::mlatu::trunc_float64 }
-
-define round (Double -> Double) { _::mlatu::round_float64 }
-
-define ceil (Double -> Double) { _::mlatu::ceil_float64 }
-
-define floor (Double -> Double) { _::mlatu::floor_float64 }
-
-trait < [T] (T, T -> Bool)
+about +:
+  docs:
+    "Operation of an additive monoid with `zero` as the identity."
+  operator:
+    left 6
 
 about <:
   operator:
     4
 
-trait > [T] (T, T -> Bool)
-
 about >:
   operator:
     4
-
-trait <= [T] (T, T -> Bool)
 
 about <=:
   operator:
     4
 
-trait >= [T] (T, T -> Bool)
-
 about >=:
   operator:
     4
-
-trait = [T] (T, T -> Bool)
 
 about =:
   operator:
     4
 
-trait <> [T] (T, T -> Bool)
-
 about <>:
   operator:
     4
 
-instance < (Int, Int -> Bool) { swap (>) }
-instance > (Int, Int -> Bool) { _::mlatu::gt_int64 }
-instance <= (Int, Int -> Bool) { (>) not }
-instance >= (Int, Int -> Bool) { (<) not }
-instance = (Int, Int -> Bool) { _::mlatu::eq_int64 }
-instance <> (Int, Int -> Bool) { (=) not }
+about -:
+  operator:
+    left 6
 
-instance < (Char, Char -> Bool) { swap (>) }
-instance > (Char, Char -> Bool) { _::mlatu::gt_char }
-instance <= (Char, Char -> Bool) { (>) not }
-instance >= (Char, Char -> Bool) { (<) not }
-instance = (Char, Char -> Bool) { _::mlatu::eq_char }
-instance <> (Char, Char -> Bool) { (=) not }
+about *:
+  operator:
+    left 7
 
-instance < (Double, Double -> Bool) { swap (>) }
-instance > (Double, Double -> Bool) { _::mlatu::gt_float64 }
-instance <= (Double, Double -> Bool) { (>) not }
-instance >= (Double, Double -> Bool) { (<) not }
-instance = (Double, Double -> Bool) { _::mlatu::eq_float64 }
-instance <> (Double, Double -> Bool) { (=) not }
+about /:
+  operator:
+    left 7
 
-instance < (Bool, Bool -> Bool) { swap not (&) }
-instance > (Bool, Bool -> Bool) { (&) not }
-instance <= (Bool, Bool -> Bool) { (>) not }
-instance >= (Bool, Bool -> Bool) { (<) not }
-instance = (Bool, Bool -> Bool) { if {} else {not} }
-instance <> (Bool, Bool -> Bool) { (=) not }
+about %:
+  operator:
+    left 7
 
+about Char:
+  alignment:
+    4
+  size:
+    4
 
-define abs[T] (T -> T):
-  dup
-  if ((< zero)):
-    neg
+about Int:
+  alignment:
+    8
+  size:
+    8
 
-// FIXME: Requires casting.
-//
-// define even[T] (T -> Bool):
-//   (% 2) (= 0)
-//
-// define odd[T] (T -> Bool):
-//   (% 2) (<> 0)
-
-define max[T] (T, T -> T):
-  dup2
-  if ((<)):
-    swap drop
-  else:
-    drop
-
-define min[T] (T, T -> T):
-  dup2
-  if ((<)):
-    drop
-  else:
-    swap drop
+about Double:
+  alignment:
+    8
+  size:
+    8

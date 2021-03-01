@@ -1,18 +1,24 @@
 define divisible (Int, Int -> Bool +Fail):
   (%) 0 (=)
+
 define fizzbuzz (Int -> String):
   -> n;
   do (with (+Fail)):
-    n 5 divisible
-    n 3 divisible
+    n 5 divisible n 3 divisible
   if:
-    if: "FizzBuzz"
-    else: "Fizz"
+    if:
+      "FizzBuzz"
+    else:
+      "Fizz"
   else:
-    if: "Buzz"
-    else: n show
+    if:
+      "Buzz"
+    else:
+      n show
+
 define fizzbuzzes (Int, Int -> +IO):
   -> c, m;
-  c fizzbuzz println
-  if (c < m): (c + 1) m fizzbuzzes
+  c fizzbuzz println if (c < m):
+    (c + 1) m fizzbuzzes
+
 1 100 fizzbuzzes

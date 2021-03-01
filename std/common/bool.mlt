@@ -1,23 +1,25 @@
+trait & [T] (T, T -> T)
+
+trait && [T] (T, (-> T) -> T)
+
+trait --> [T] (T, T -> T)
+
+trait not [T] (T -> T)
+
+trait | [T] (T, T -> T)
+
+trait || [T] (T, (-> T) -> T)
+
+trait ~ [A] (A, A -> A)
+
+
 type Bool:
   case false
   case true
 
-trait not[T] (T -> T)
 
-instance not (Bool -> Bool):
-  if:
-    false
-  else:
-    true
 
-instance not (Int -> Int) { _::mlatu::not_int64 }
 
-// Strict intersection.
-trait & [T] (T, T -> T)
-
-about &:
-  operator:
-    right 3
 
 instance & (Bool, Bool -> Bool):
   -> x, y;
@@ -26,14 +28,8 @@ instance & (Bool, Bool -> Bool):
   else:
     false
 
-instance & (Int, Int -> Int) { _::mlatu::and_int64 }
-
-// Lazy intersection.
-trait && [T] (T, (-> T) -> T)
-
-about &&:
-  operator:
-    right 3
+instance & (Int, Int -> Int):
+  _::mlatu::and_int64
 
 instance && (Bool, (-> Bool) -> Bool):
   -> x, y;
@@ -42,12 +38,25 @@ instance && (Bool, (-> Bool) -> Bool):
   else:
     false
 
-// Strict union.
-trait | [T] (T, T -> T)
+instance --> (Bool, Bool -> Bool):
+  -> a, b;
+  if (a):
+    b
+  else:
+    true
 
-about |:
-  operator:
-    right 2
+instance --> (Int, Int -> Int):
+  -> a, b;
+  a not | b
+
+instance not (Bool -> Bool):
+  if:
+    false
+  else:
+    true
+
+instance not (Int -> Int):
+  _::mlatu::not_int64
 
 instance | (Bool, Bool -> Bool):
   -> x, y;
@@ -56,14 +65,8 @@ instance | (Bool, Bool -> Bool):
   else:
     y
 
-instance | (Int, Int -> Int) { _::mlatu::or_int64 }
-
-// Lazy union.
-trait || [T] (T, (-> T) -> T)
-
-about ||:
-  operator:
-    right 2
+instance | (Int, Int -> Int):
+  _::mlatu::or_int64
 
 instance || (Bool, (-> Bool) -> Bool):
   -> x, y;
@@ -72,49 +75,56 @@ instance || (Bool, (-> Bool) -> Bool):
   else:
     y call
 
-// Strict difference.
-trait ~ [A] (A, A -> A)
+instance ~ (Int, Int -> Int):
+  _::mlatu::xor_int64
+
+instance ~ (Bool, Bool -> Bool):
+  swap if:
+    not
+
+define ---> (Bool, (-> Bool) -> Bool):
+  -> a, b;
+  if (a):
+    b call
+  else:
+    true
+
+
+
+define until [R...] (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call not):
+    f until
+
+define while [R...] (R..., (R... -> R..., Bool) -> R...):
+  -> f;
+  if (f call):
+    f while
 
 about ~:
   operator:
     5
 
-instance ~ (Bool, Bool -> Bool):
-  swap
-  if { not }
+about &:
+  operator:
+    right 3
 
-instance ~ (Int, Int -> Int) { _::mlatu::xor_int64 }
+about &&:
+  operator:
+    right 3
 
-// Strict implication.
-trait --> [T] (T, T -> T)
+about |:
+  operator:
+    right 2
+
+about ||:
+  operator:
+    right 2
 
 about -->:
   operator:
     right 1
 
-instance --> (Bool, Bool -> Bool):
-  -> a, b;
-  if (a) { b } else { true }
-
-instance --> (Int, Int -> Int) { -> a, b; a not | b }
-
-// Lazy implication.
-define ---> (Bool, (-> Bool) -> Bool):
-  -> a, b;
-  if (a) { b call } else { true }
-
 about --->:
   operator:
     right 1
-
-define until[R...] (R..., (R... -> R..., Bool) -> R...):
-  -> f;
-  if (f call not):
-    f until
-
-// do (while) { ... }
-define while[R...] (R..., (R... -> R..., Bool) -> R...):
-  -> f;
-  if (f call):
-    f while
-
