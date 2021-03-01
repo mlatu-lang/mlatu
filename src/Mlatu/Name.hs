@@ -25,8 +25,6 @@ where
 import Data.Char (isLetter)
 import Data.Text qualified as Text
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
 data GeneralName
@@ -65,7 +63,7 @@ newtype Unqualified = Unqualified Text
 data Closed
   = ClosedLocal !LocalIndex
   | ClosedClosure !ClosureIndex
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | An index into a closure.
 newtype ClosureIndex = ClosureIndex Int
@@ -113,34 +111,3 @@ instance Hashable Unqualified where
 
 instance IsString Unqualified where
   fromString = Unqualified . toText
-
-instance Pretty Qualified where
-  pPrint (Qualified (Qualifier Absolute []) unqualifiedName) = pPrint unqualifiedName
-  pPrint (Qualified qualifier unqualifiedName) =
-    pPrint qualifier
-      Pretty.<> "::"
-      Pretty.<> pPrint unqualifiedName
-
-instance Pretty Qualifier where
-  pPrint (Qualifier Absolute parts) = pPrint $ Qualifier Relative parts
-  pPrint (Qualifier Relative parts) =
-    Pretty.text $
-      toString $ Text.intercalate "::" parts
-
-instance Pretty Unqualified where
-  pPrint (Unqualified unqualified) = Pretty.text $ toString unqualified
-
-instance Pretty GeneralName where
-  pPrint (QualifiedName qualified) = pPrint qualified
-  pPrint (UnqualifiedName unqualified) = pPrint unqualified
-  pPrint (LocalName index) = pPrint index
-
-instance Pretty LocalIndex where
-  pPrint (LocalIndex i) = "local." Pretty.<> Pretty.int i
-
-instance Pretty ClosureIndex where
-  pPrint (ClosureIndex i) = "closure." Pretty.<> Pretty.int i
-
-instance Pretty Closed where
-  pPrint (ClosedLocal index) = pPrint index
-  pPrint (ClosedClosure (ClosureIndex index)) = pPrint index

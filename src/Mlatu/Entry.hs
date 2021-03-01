@@ -12,20 +12,16 @@ module Mlatu.Entry
 where
 
 import Mlatu.DataConstructor (DataConstructor)
-import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Entry.Category (Category)
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Entry.Parent (Parent)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Constraint, Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
 import Relude hiding (Constraint, Type)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | An entry in the dictionary.
 --
@@ -60,70 +56,3 @@ data Entry
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show)
-
-instance Pretty Entry where
-  pPrint (Word category _ origin mParent mSignature _) =
-    Pretty.vcat
-      [ pPrint category,
-        Pretty.hsep ["defined at", pPrint origin],
-        case mSignature of
-          Just signature ->
-            Pretty.hsep
-              ["with signature", Pretty.quote signature]
-          Nothing -> "with no signature",
-        case mParent of
-          Just parent ->
-            Pretty.hsep
-              ["with parent", pPrint parent]
-          Nothing -> "with no parent"
-      ]
-  pPrint (Metadata origin term) =
-    Pretty.vcat
-      [ "metadata",
-        Pretty.hsep ["defined at", pPrint origin],
-        Pretty.hsep ["with contents", pPrint term]
-      ]
-  pPrint (Synonym origin name) =
-    Pretty.vcat
-      [ "synonym",
-        Pretty.hsep ["defined at", pPrint origin],
-        Pretty.hsep ["standing for", pPrint name]
-      ]
-  pPrint (Trait origin signature) =
-    Pretty.vcat
-      [ "trait",
-        Pretty.hsep ["defined at", pPrint origin],
-        Pretty.hsep ["with signature", pPrint signature]
-      ]
-  pPrint (Type origin parameters constraints ctors) =
-    Pretty.vcat
-      [ "type",
-        Pretty.hsep ["defined at", pPrint origin],
-        Pretty.hcat $
-          "with parameters [" :
-          intersperse ", " (map pPrint parameters)
-            ++ ["] constrained so that "]
-            ++ intersperse "," (map pPrint constraints),
-        Pretty.vcat
-          [ "and data constructors",
-            Pretty.nest 4 $
-              Pretty.vcat $
-                map constructor ctors
-          ]
-      ]
-    where
-      constructor ctor =
-        Pretty.hcat
-          [ pPrint $ DataConstructor.name ctor,
-            " with fields (",
-            Pretty.hcat $
-              intersperse ", " $
-                map pPrint $ DataConstructor.fields ctor,
-            ")"
-          ]
-  pPrint (InstantiatedType origin size) =
-    Pretty.vcat
-      [ "instantiated type",
-        Pretty.hsep ["defined at", pPrint origin],
-        Pretty.hcat ["with size", pPrint size]
-      ]

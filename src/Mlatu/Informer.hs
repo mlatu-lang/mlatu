@@ -17,12 +17,12 @@ where
 import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report)
 import Relude
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (Doc)
 
 -- | Class of error-reporting monads.
 class (Monad m) => Informer m where
   -- | Halt if there are any fatal reports.
-  checkpoint :: [Level] -> m ()
+  checkpoint :: Level -> m ()
 
   -- | Halt the computation.
   halt :: m a
@@ -31,13 +31,13 @@ class (Monad m) => Informer m where
   report :: Report -> m ()
 
   -- | Add local context to reports.
-  while :: Origin -> Pretty.Doc -> m a -> m a
+  while :: Origin -> Doc () -> m a -> m a
 
 errorCheckpoint :: (Informer m) => m ()
-errorCheckpoint = checkpoint [Error]
+errorCheckpoint = checkpoint Error
 
 warnCheckpoint :: (Informer m) => m ()
-warnCheckpoint = checkpoint [Error, Warn]
+warnCheckpoint = checkpoint Warn
 
 infoCheckpoint :: (Informer m) => m ()
-infoCheckpoint = checkpoint [Error, Warn, Info]
+infoCheckpoint = checkpoint Info

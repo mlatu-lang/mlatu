@@ -23,4 +23,4 @@ data Base
     Decimal
   | -- | @0x@
     Hexadecimal
-  deriving (Show)
+  deriving (Ord, Eq, Show)

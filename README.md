@@ -24,8 +24,7 @@ define fib (Int -> Int):
   if (n < 2):
     1
   else:
-    (n - 2) fib + 
-    (n - 1) fib
+    (n - 2) fib + (n - 1) fib
 
 20 fib print
 ```

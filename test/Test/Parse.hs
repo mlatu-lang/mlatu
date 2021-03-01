@@ -4,14 +4,13 @@ module Test.Parse
 where
 
 import Mlatu (fragmentFromSource)
-import Mlatu.Monad (runMlatu)
-import Mlatu.Report qualified as Report
+import Mlatu.Monad (runMlatuExceptT)
+import Mlatu.Pretty (printFragment)
+import Mlatu.Report (human)
 import Relude
 import Test.Common
 import Test.HUnit (Assertion, assertFailure)
 import Test.Hspec (Spec, describe, it)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 spec :: Spec
 spec = do
@@ -51,7 +50,7 @@ spec = do
 testParse :: Sign -> Text -> Assertion
 testParse sign input = do
   result <-
-    runMlatu $
+    runMlatuExceptT $
       fragmentFromSource ioPermission Nothing 1 "<test>" input
   case result of
     Left reports -> case sign of
@@ -59,9 +58,9 @@ testParse sign input = do
         assertFailure $
           toString $
             unlines $
-              map (toText . Pretty.render . Report.human) reports
+              map (show . human) reports
       -- TODO: Test error messages for negative tests.
       Negative -> pass
     Right fragment -> case sign of
       Positive -> pass
-      Negative -> assertFailure $ Pretty.render $ pPrint fragment
+      Negative -> assertFailure $ show $ printFragment fragment

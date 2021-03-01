@@ -2,58 +2,64 @@ type Optional[T]:
   case none
   case some (T)
 
-define from_optional[T] (Optional[T], T -> T):
+
+
+
+
+define from_optional [T] (Optional[T], T -> T):
   -> default;
   match
-  case some {}
-  else:
-    default
+    case some {}
+    else:
+      default
 
-define from_some[T] (Optional[T], String -> T +Fail):
+define from_some [T] (Optional[T], String -> T +Fail):
   -> message;
-  match case some {}
-  else:
-    message fail
-
-define is_none[T] (Optional[T] -> Bool):
   match
-  case none:
-    true
-  else:
-    false
+    case some {}
+    else:
+      message fail
 
-define is_some[T] (Optional[T] -> Bool):
+define is_none [T] (Optional[T] -> Bool):
   match
-  case some:
-    drop true
-  else:
-    false
+    case none:
+      true
+    else:
+      false
 
-define optional[R..., S..., A]
-(R..., Optional[A], (R..., A -> S...), (R... -> S...) -> S...):
-  -> f, g;
+define is_some [T] (Optional[T] -> Bool):
   match
-  case some:
-    f call
-  case none:
-    g call
+    case some:
+      drop true
+    else:
+      false
 
-define lift_optional_2[A, B, C] (Optional[A], Optional[B], (A, B -> C) -> Optional[C]):
+define lift_optional_2 [A, B, C] (Optional[A], Optional[B], (A, B -> C) -> Optional[C]):
   -> mx, my, f;
   match (mx)
-  case some -> x:
-    match (my)
-    case some -> y:
-      x y f call some
+    case some -> x:
+      match (my)
+        case some -> y:
+          x y f call some
+        else:
+          none
     else:
       none
-  else:
-    none
 
-define map_optional[A, B] (Optional[A], (A -> B) -> Optional[B]):
+
+
+define map_optional [A, B] (Optional[A], (A -> B) -> Optional[B]):
   -> opt, f;
   match (opt)
-  case some -> x:
-    x f call some 
-  else:
-    none
+    case some -> x:
+      x f call some
+    else:
+      none
+
+define optional [R..., S..., A] (R..., Optional[A], (R..., A -> S...), (R... -> S...) -> S...):
+  -> f, g;
+  match
+    case some:
+      f call
+    case none:
+      g call

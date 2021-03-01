@@ -1,16 +1,32 @@
-vocab mlatu {
+vocab mlatu:
+  intrinsic call [R..., S...] (R..., (R... -> S...) -> S...)
+  intrinsic drop [A] (A ->)
+  intrinsic swap [A, B] (A, B -> B, A)
 
-  intrinsic call[R..., S...] (R..., (R... -> S...) -> S...)
-  intrinsic drop[A] (A ->)
-  intrinsic swap[A, B] (A, B -> B, A)
+permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
+  with (+Exit)
 
-}
+permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
+  with (+Fail)
 
-define call[R..., S...] (R..., (R... -> S...) -> S...):
+permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
+  with (+IO)
+
+define call [R..., S...] (R..., (R... -> S...) -> S...):
   _::mlatu::call
 
+define drop [T] (T ->):
+  -> drop;
+
+
+
+define swap [A, B] (A, B -> B, A):
+  -> x, y;
+  y x
+
 about call:
-  docs: """
+  docs:
+    """
     Applies a closure to the stack.
 
     This denotes modus ponens: if we have a program state 'R...', a permission
@@ -18,19 +34,3 @@ about call:
     'R...' to 'S...' given '+P', then we can invoke the closure to produce the
     new state 'S...'.
     """
-
-define drop[T] (T ->):
-  -> _;
-
-define swap[A, B] (A, B -> B, A):
-  -> x, y;
-  y x
-
-permission IO[R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
-  with (+IO)
-
-permission Fail[R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
-  with (+Fail)
-
-permission Exit[R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
-  with (+Exit)

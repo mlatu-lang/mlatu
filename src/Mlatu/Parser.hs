@@ -29,6 +29,7 @@ import Relude
 import Text.Parsec (ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
+import Mlatu.Pretty ()
 
 type Bracketer a = GeneralParser 'Layout a
 

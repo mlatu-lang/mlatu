@@ -44,7 +44,7 @@ import Mlatu.Regeneralize (regeneralize)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Case (..), Else (..), Term (..), Value (..), defaultElseBody)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor (..), Type (..), Var (..))
 import Mlatu.Type qualified as Type
@@ -53,15 +53,15 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
 import Mlatu.Zonk qualified as Zonk
+import Prettyprinter (Doc, dquotes, hsep)
 import Relude hiding (Compose, Type)
 import Relude.Unsafe qualified as Unsafe
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | Type inference takes a program fragment and produces a program with every
 -- term annotated with its inferred type. It's polymorphic in the annotation
 -- type of its input so that it can't depend on those annotations.
 typecheck ::
+  (Show a) =>
   -- | Current dictionary, for context.
   Dictionary ->
   -- | Optional signature to check inferred type against.
@@ -103,6 +103,7 @@ mangleInstance dictionary name instanceSignature traitSignature = do
 -- inferred in an empty environment so that it can be trivially generalized. It
 -- is then regeneralized to increase stack polymorphism.
 inferType0 ::
+  (Show a) =>
   -- | Current dictionary, for context.
   Dictionary ->
   -- | Current typing environment.
@@ -128,6 +129,7 @@ inferType0 dictionary tenv mDeclared term = do
 -- implementation of an existing definition.
 
 inferType ::
+  (Show a) =>
   Dictionary ->
   TypeEnv ->
   TypeEnv ->
@@ -234,6 +236,28 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     -- Checkpoint to halt after redundant cases are reported.
     errorCheckpoint
     (else', elseType, tenv2) <- case else_ of
+      DefaultElse elseMetadata elseOrigin -> do
+        (body', bodyType, tenv') <- inferType' tenv1 (defaultElseBody elseMetadata elseOrigin)
+        -- The type of a match is the union of the types of the cases, and
+        -- since the cases consume the scrutinee, the 'else' branch must have
+        -- a dummy (fully polymorphic) type for the scrutinee. This may be
+        -- easier to see when considering the type of an expression like:
+        --
+        --     match { else { ... } }
+        --
+        -- Which consumes a value of any type and always executes the 'else'
+        -- branch.
+        --
+        -- TODO: This should be considered a drop.
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        (a, b, e, tenv'') <- Unify.function tenv' bodyType
+        let elseType =
+              Type.fun
+                elseOrigin
+                (Type.prod elseOrigin a unusedScrutinee)
+                b
+                e
+        return (Else body' elseOrigin, elseType, tenv'')
       Else body elseOrigin -> do
         (body', bodyType, tenv') <- inferType' tenv1 body
         -- The type of a match is the union of the types of the cases, and
@@ -385,8 +409,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         (\(name, k) ts -> (: ts) <$> TypeEnv.freshTv tenv0 name origin k)
         []
 
-    context :: Pretty.Doc
-    context = Pretty.hsep ["inferring the type of", Pretty.quote term0]
+    context :: Doc ()
+    context = hsep ["inferring the type of", dquotes $ Pretty.printTerm term0]
 
 -- A case in a 'match' expression is simply the inverse of a constructor:
 -- whereas a constructor takes some fields from the stack and produces
@@ -394,6 +418,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 -- and produces the fields on the stack for the body of the case to consume.
 
 inferCase ::
+  (Show a) =>
   Dictionary ->
   TypeEnv ->
   TypeEnv ->
@@ -431,6 +456,7 @@ inferCase
 inferCase _ _ _ _ _ = error "case of non-qualified name after name resolution"
 
 inferValue ::
+  (Show a) =>
   Dictionary ->
   TypeEnv ->
   TypeEnv ->
@@ -461,13 +487,12 @@ inferValue dictionary tenvFinal tenv0 origin = \case
       return (Name name, typ, tenv0)
     _noBinding ->
       error $
-        toText $
-          Pretty.render $
-            Pretty.hsep
-              [ "unbound word name",
-                Pretty.quote name,
-                "found during type inference"
-              ]
+        show $
+          hsep
+            [ "unbound word name",
+              dquotes $ Pretty.printQualified name,
+              "found during type inference"
+            ]
   Text x ->
     return
       ( Text x,
@@ -508,10 +533,9 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
 inferCall _dictionary _tenvFinal _tenv0 name _ =
   -- FIXME: Use proper reporting. (Internal error?)
   error $
-    toText $
-      Pretty.render $
-        Pretty.hsep
-          ["cannot infer type of non-qualified name", Pretty.quote name]
+    show $
+      hsep
+        ["cannot infer type of non-qualified name", dquotes $ Pretty.printGeneralName name]
 
 -- | Desugars a parsed signature into an actual type. We resolve whether names
 -- refer to quantified type variables or data definitions, and make stack
@@ -678,25 +702,23 @@ typeKind dictionary = go
                 "List" -> return $ Value :-> Value
                 _noKind ->
                   error $
-                    toText $
-                      Pretty.render $
-                        Pretty.hsep
-                          [ "can't infer kind of constructor",
-                            Pretty.quote qualified,
-                            "in dictionary",
-                            pPrint dictionary
-                          ]
+                    show $
+                      hsep
+                        [ "can't infer kind of constructor",
+                          dquotes $ Pretty.printQualified qualified,
+                          "in dictionary",
+                          Dictionary.printDictionary dictionary
+                        ]
             -- TODO: Better error reporting.
             _noKInd ->
               error $
-                toText $
-                  Pretty.render $
-                    Pretty.hsep
-                      [ "can't infer kind of constructor",
-                        Pretty.quote qualified,
-                        "in dictionary",
-                        pPrint dictionary
-                      ]
+                show $
+                  hsep
+                    [ "can't infer kind of constructor",
+                      dquotes $ Pretty.printQualified qualified,
+                      "in dictionary",
+                      Dictionary.printDictionary dictionary
+                    ]
       TypeValue {} -> error "TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> return k
       TypeConstant _origin (Var _name _ k) -> return k
@@ -708,16 +730,15 @@ typeKind dictionary = go
           -- TODO: Better error reporting.
           _nonConstructor ->
             error $
-              toText $
-                Pretty.render $
-                  Pretty.hsep
-                    [ "applying type",
-                      Pretty.quote a,
-                      "of non-constructor kind",
-                      Pretty.quote ka,
-                      "to type",
-                      Pretty.quote b
-                    ]
+              show $
+                hsep
+                  [ "applying type",
+                    dquotes $ Pretty.printType a,
+                    "of non-constructor kind",
+                    dquotes $ Pretty.printKind ka,
+                    "to type",
+                    dquotes $ Pretty.printType b
+                  ]
 
 capitalize :: Text -> Text
 capitalize x

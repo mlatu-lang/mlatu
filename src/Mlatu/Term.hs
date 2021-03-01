@@ -24,6 +24,7 @@ module Mlatu.Term
     stripMetadata,
     stripValue,
     typ,
+    defaultElseBody,
   )
 where
 
@@ -35,20 +36,18 @@ import Mlatu.Name
   ( Closed,
     ClosureIndex (..),
     ConstructorIndex (..),
-    GeneralName,
+    GeneralName (..),
     LocalIndex (..),
-    Qualified,
-    Unqualified,
+    Qualified (..),
+    Unqualified (..),
   )
-import Mlatu.Operator (Fixity)
+import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
 import Relude hiding (Compose, Type)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import qualified Mlatu.Vocabulary as Vocabulary
 
 -- | This is the core language. It permits pushing values to the stack, invoking
 -- definitions, and moving values between the stack and local variables.
@@ -85,7 +84,7 @@ data Term a
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
     Word !a !Fixity !GeneralName ![Type] !Origin
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | The type of coercion to perform.
 data CoercionHint
@@ -93,7 +92,7 @@ data CoercionHint
     IdentityCoercion
   | -- | A coercion to a particular type.
     AnyCoercion !Signature
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | The original source of a @match@ expression
 data MatchHint
@@ -101,22 +100,28 @@ data MatchHint
     BooleanMatch
   | -- | @match@ explicitly in the source.
     AnyMatch
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | A case branch in a @match@ expression.
-data Case a = Case !GeneralName !(Term a) !Origin
-  deriving (Eq, Show)
+data Case a = 
+  Case !GeneralName !(Term a) !Origin
+  deriving (Ord, Eq, Show)
 
 -- | An @else@ branch in a @match@ (or @if@) expression.
-data Else a = Else !(Term a) !Origin
-  deriving (Eq, Show)
+data Else a
+  = DefaultElse !a !Origin
+  | Else !(Term a) !Origin
+  deriving (Ord, Eq, Show)
+
+defaultElseBody :: a -> Origin -> Term a
+defaultElseBody a = Word a Postfix (QualifiedName (Qualified Vocabulary.global "abort")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
   { permitted :: !Bool,
     permitName :: !GeneralName
   }
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- | A value, used to represent literals in a parsed program, as well as runtime
 -- values in the interpreter.
@@ -139,7 +144,7 @@ data Value a
     Quotation !(Term a)
   | -- | A text literal.
     Text !Text
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 -- FIXME: 'compose' should work on 'Term ()'.
 compose :: a -> Origin -> [Term a] -> Term a
@@ -187,9 +192,10 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
 
 decompose :: Term a -> [Term a]
 -- TODO: Verify that this is correct.
-decompose (Generic _name _id t _origin) = decompose t
+decompose (Generic _ _ t _) = decompose t
 decompose (Compose _ a b) = decompose a ++ decompose b
 decompose (Coercion IdentityCoercion _ _) = []
+decompose (Group (Group a)) = [Group a]
 decompose term = [term]
 
 origin :: Term a -> Origin
@@ -209,8 +215,8 @@ origin term = case term of
 quantifierCount :: Term a -> Int
 quantifierCount = countFrom 0
   where
-    countFrom !count (Generic _ _ body _) = countFrom (count + 1) body
-    countFrom count _ = count
+    countFrom !c (Generic _ _ body _) = countFrom (c + 1) body
+    countFrom c _ = c
 
 -- Deduces the explicit type of a term.
 
@@ -252,6 +258,7 @@ stripMetadata term = case term of
     stripElse :: Else a -> Else ()
     stripElse else_ = case else_ of
       Else a b -> Else (stripMetadata a) b
+      DefaultElse _ b -> DefaultElse () b
 
 stripValue :: Value a -> Value ()
 stripValue v = case v of
@@ -264,67 +271,3 @@ stripValue v = case v of
   Name a -> Name a
   Quotation a -> Quotation (stripMetadata a)
   Text a -> Text a
-
-instance Pretty (Term a) where
-  pPrint term = case term of
-    Coercion {} -> Pretty.empty
-    Compose _ a b -> pPrint a Pretty.$+$ pPrint b
-    Generic name i body _ ->
-      Pretty.hsep
-        [ Pretty.brackets $ Pretty.hcat [pPrint name, "/*", pPrint i, "*/"],
-          pPrint body
-        ]
-    Group a -> Pretty.parens (pPrint a)
-    Lambda _ name _ body _ ->
-      "->"
-        Pretty.<+> pPrint name
-        Pretty.<> ";"
-        Pretty.$+$ pPrint body
-    Match _ _ cases else_ _ ->
-      Pretty.vcat
-        [ "match:",
-          Pretty.nest 4 $
-            Pretty.vcat $
-              map pPrint cases
-                ++ [pPrint else_]
-        ]
-    New _ (ConstructorIndex index) _size _ -> "new." Pretty.<> Pretty.int index
-    NewClosure _ size _ -> "new.closure." Pretty.<> pPrint size
-    NewVector _ size _ _ -> "new.vec." Pretty.<> pPrint size
-    Push _ value _ -> pPrint value
-    Word _ _ name [] _ -> pPrint name
-    Word _ _ name args _ ->
-      Pretty.hcat $
-        pPrint name : "::<" : intersperse ", " (map pPrint args) ++ [">"]
-
-instance Pretty (Case a) where
-  pPrint (Case name body _) =
-    Pretty.vcat
-      [ Pretty.hcat ["case ", pPrint name, ":"],
-        Pretty.nest 4 $ pPrint body
-      ]
-
-instance Pretty (Else a) where
-  pPrint (Else body _) = Pretty.vcat ["else:", Pretty.nest 4 $ pPrint body]
-
-instance Pretty Permit where
-  pPrint (Permit allow name) =
-    Pretty.hcat
-      [if allow then "+" else "-", pPrint name]
-
-instance Pretty (Value a) where
-  pPrint value = case value of
-    Capture names term ->
-      Pretty.hcat
-        [ Pretty.char '$',
-          Pretty.parens $ Pretty.list $ map pPrint names,
-          Pretty.braces $ pPrint term
-        ]
-    Character c -> Pretty.quotes $ Pretty.char c
-    Closed (ClosureIndex index) -> "closure." Pretty.<> Pretty.int index
-    Float f -> pPrint f
-    Integer i -> pPrint i
-    Local (LocalIndex index) -> "local." Pretty.<> Pretty.int index
-    Name n -> Pretty.hcat ["\\", pPrint n]
-    Quotation body -> Pretty.braces $ pPrint body
-    Text t -> Pretty.doubleQuotes $ Pretty.text $ toString t

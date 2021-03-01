@@ -12,7 +12,7 @@ module Mlatu.Declaration
   )
 where
 
-import Mlatu.Name (Qualified)
+import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Relude
@@ -23,7 +23,7 @@ data Category
     Intrinsic
   | -- | @trait@, a generic function.
     Trait
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data Declaration = Declaration
   { category :: !Category,
@@ -31,4 +31,4 @@ data Declaration = Declaration
     origin :: !Origin,
     signature :: !Signature
   }
-  deriving (Show)
+  deriving (Eq, Ord, Show)

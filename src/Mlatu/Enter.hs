@@ -42,7 +42,6 @@ import Mlatu.Name
     qualifierFromName,
   )
 import Mlatu.Parse qualified as Parse
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Quantify qualified as Quantify
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
@@ -54,7 +53,8 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Relude
-import Text.PrettyPrint qualified as Pretty
+import Prettyprinter (hsep, dquotes)
+import Mlatu.Pretty (printQualified)
 
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
@@ -137,11 +137,10 @@ declareType dictionary typ =
         -- Already declared or defined differently.
         Just {} ->
           error $
-            toText $
-              Pretty.render $
-                Pretty.hsep
+            show $
+                hsep
                   [ "type",
-                    Pretty.quote name,
+                    dquotes $ printQualified name,
                     "already declared or defined differently"
                   ]
 
@@ -208,11 +207,10 @@ declareWord dictionary definition =
         -- Already declared or defined with a different signature.
         Just {} ->
           error $
-            toText $
-              Pretty.render $
-                Pretty.hsep
+            show $
+                hsep
                   [ "word",
-                    Pretty.quote name,
+                    dquotes $ printQualified name,
                     "already declared or defined without signature or as a non-word"
                   ]
 
@@ -373,11 +371,10 @@ defineWord dictionary definition = do
     -- Not previously declared as word.
     _nonDeclared ->
       error $
-        toText $
-          Pretty.render $
-            Pretty.hsep
+        show $
+            hsep
               [ "defining word",
-                Pretty.quote name,
+                dquotes $ printQualified name,
                 "not previously declared"
               ]
 

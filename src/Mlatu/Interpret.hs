@@ -10,6 +10,7 @@ module Mlatu.Interpret
   ( Failure,
     Rep (..),
     interpret,
+    printRep
   )
 where
 
@@ -28,7 +29,7 @@ import Mlatu.Entry qualified as Entry
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Literal qualified as Literal
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( ClosureIndex (ClosureIndex),
     ConstructorIndex (..),
@@ -37,11 +38,9 @@ import Mlatu.Name
     Qualified (Qualified),
     Unqualified,
   )
-import Mlatu.Pretty qualified as Pretty
-import Mlatu.Report qualified as Report
 import Mlatu.Stack (Stack ((:::)))
 import Mlatu.Stack qualified as Stack
-import Mlatu.Term (Case (..), Else (..), Term (..), Value)
+import Mlatu.Term (Case (..), Else (..), Term (..), Value, defaultElseBody)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
@@ -50,11 +49,12 @@ import Numeric (log)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
 import System.Exit (ExitCode (..))
-import System.IO (hFlush, hGetLine, hPutStr, hPutStrLn, readIO)
+import System.IO (hFlush, hGetLine, hPutStr, readIO, hPrint)
 import System.IO.Error (IOError, ioeGetErrorType)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 import Text.Show qualified
+import Prettyprinter (Doc, hsep, hcat,Pretty (pretty), list, squotes, dquotes, vcat, nest)
+import qualified Mlatu.Pretty as Pretty
+import qualified Mlatu.Report as Report
 
 -- | Representation of a runtime value.
 data Rep
@@ -78,22 +78,21 @@ valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
 valueRep value = error $ toText ("cannot convert value to rep: " ++ show value)
 
-instance Pretty Rep where
-  pPrint (Algebraic (ConstructorIndex index) values) =
-    Pretty.hsep $
-      map pPrint values ++ [Pretty.hcat ["#", Pretty.int index]]
-  pPrint (Array values) =
-    Pretty.brackets $
-      Pretty.list $
-        Vector.toList $ fmap pPrint values
-  pPrint (Character c) = Pretty.quotes $ Pretty.char c
-  pPrint (Closure name closure) =
-    Pretty.hsep $
-      map pPrint closure ++ [Pretty.hcat ["#", pPrint name]]
-  pPrint (Float64 f) = pPrint f
-  pPrint (Int64 i) = Pretty.int $ fromIntegral i
-  pPrint (Name n) = Pretty.hcat ["\\", pPrint n]
-  pPrint (Text t) = Pretty.doubleQuotes $ Pretty.text $ toString t
+printRep :: Rep -> Doc a
+printRep (Algebraic (ConstructorIndex index) values) =
+  hsep $
+    map printRep values ++ [hcat ["#", pretty index]]
+printRep (Array values) =
+  list $
+      Vector.toList $ fmap printRep values
+printRep (Character c) = squotes $ pretty c
+printRep (Closure name closure) =
+  hsep $
+    map printRep closure ++ [hcat ["#", Pretty.printQualified name]]
+printRep (Float64 f) = pretty f
+printRep (Int64 i) = pretty i
+printRep (Name n) = hcat ["\\", Pretty.printQualified n]
+printRep (Text t) = dquotes $ pretty t
 
 -- | Interprets a program dictionary.
 interpret ::
@@ -128,19 +127,18 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
             -- A regular word.
             Just (Entry.Word _ _ _ _ _ (Just body)) -> do
-              mBody' <- runMlatu $ Instantiate.term TypeEnv.empty body args
+              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
               case mBody' of
                 Right body' -> term (name : callStack) body'
                 Left reports ->
-                  hPutStrLn stdout' $
-                    Pretty.render $
-                      Pretty.vcat $
-                        Pretty.hcat
-                          [ "Could not instantiate generic word ",
-                            Pretty.quote name,
-                            ":"
-                          ] :
-                        map Report.human reports
+                  hPrint stdout' $
+                    vcat $
+                      hcat
+                        [ "Could not instantiate generic word ",
+                          dquotes $ Pretty.printQualified name,
+                          ":"
+                        ] :
+                      map Report.human reports
             -- An intrinsic.
             Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
               Qualified v unqualified
@@ -150,11 +148,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             _noInstantiation ->
               throwIO $
                 Failure $
-                  Pretty.hcat
+                  hcat
                     [ "I can't find an instantiation of ",
-                      Pretty.quote name,
+                      dquotes $ Pretty.printQualified name,
                       ": ",
-                      Pretty.quote mangled
+                      dquotes $ Pretty.printInstantiated mangled
                     ]
 
       term :: [Qualified] -> Term Type -> IO ()
@@ -190,6 +188,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     term callStack caseBody
               go (_ : rest) = go rest
               go [] = case else_ of
+                DefaultElse m o -> term callStack (defaultElseBody m o)
                 Else body _ -> term callStack body
           go cases
         New _ index size _ -> do
@@ -211,10 +210,9 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         -- FIXME: Use proper reporting. (Internal error?)
         Word _ _ name _ _ ->
           error $
-            toText $
-              Pretty.render $
-                Pretty.hsep
-                  ["unresolved word name", pPrint name]
+            show $
+                hsep
+                  ["unresolved word name", Pretty.printGeneralName name]
 
       call :: [Qualified] -> IO ()
       call callStack = do
@@ -246,13 +244,13 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           writeIORef stackRef r
           throwIO $
             Failure $
-              Pretty.vcat $
-                Pretty.hsep
+              vcat $
+                hsep
                   [ "Execution failure:",
-                    Pretty.text $ toString txt
+                    pretty txt
                   ] :
                 "Call stack:" :
-                map (Pretty.nest 4 . pPrint) callStack
+                map (nest 2 . Pretty.printQualified) callStack
         "exit" -> do
           Int64 i ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -523,10 +521,10 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               DivideByZero ->
                 throwIO $
                   Failure $
-                    Pretty.vcat $
+                    vcat $
                       "Execution failure: integer division by zero" :
                       "Call stack:" :
-                      map (Pretty.nest 4 . pPrint) callStack
+                      map (nest 2 . Pretty.printQualified) callStack
               unexpectedError -> throwIO unexpectedError
 
           catchFloatModByZero :: IO a -> IO a
@@ -535,10 +533,10 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               RatioZeroDenominator ->
                 throwIO $
                   Failure $
-                    Pretty.vcat $
+                    vcat $
                       "Execution failure: float modulus by zero" :
                       "Call stack:" :
-                      map (Pretty.nest 4 . pPrint) callStack
+                      map (nest 2 . Pretty.printQualified) callStack
               unexpectedError -> throwIO unexpectedError
 
           catchFileAccessErrors :: IO a -> IO a
@@ -546,20 +544,20 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             action `catch` \e ->
               throwIO $
                 Failure $
-                  Pretty.vcat $
+                  vcat $
                     "Execution failure:" :
                     show (ioeGetErrorType e) :
                     "Call stack:" :
-                    map (Pretty.nest 4 . pPrint) callStack
+                    map (nest 2 . Pretty.printQualified) callStack
 
   let entryPointName = fromMaybe mainName mName
   word [entryPointName] entryPointName mainArgs
   toList <$> readIORef stackRef
 
-newtype Failure = Failure Pretty.Doc
+newtype Failure = Failure (Doc ())
   deriving (Typeable)
 
 instance Exception Failure
 
 instance Show Failure where
-  show (Failure message) = Pretty.render message
+  show (Failure message) = show message

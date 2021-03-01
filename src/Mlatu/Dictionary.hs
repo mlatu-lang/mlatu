@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Dictionary
-  ( Dictionary,
+  ( Dictionary (..),
     empty,
     insert,
     lookup,
@@ -17,6 +17,7 @@ module Mlatu.Dictionary
     toList,
     typeNames,
     wordNames,
+    printDictionary
   )
 where
 
@@ -40,16 +41,14 @@ import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Term qualified as Term
 import Relude hiding (empty, fromList, toList)
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
+import Prettyprinter (Doc, vsep)
+import Mlatu.Pretty (printInstantiated)
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
   { entries :: HashMap Instantiated Entry
   }
   deriving (Show)
-
-instance Pretty Dictionary where
-  pPrint (Dictionary entries) = pPrint (HashMap.keys entries)
 
 empty :: Dictionary
 empty =
@@ -169,3 +168,6 @@ wordNames = mapMaybe wordName . HashMap.toList . entries
     -- TODO: Figure out how to get mangled names out of this...
     wordName (Instantiated name _, Entry.Trait {}) = Just name
     wordName _ = Nothing
+
+printDictionary :: Dictionary -> Doc a
+printDictionary (Dictionary entries) = vsep $ map printInstantiated (HashMap.keys entries)

@@ -27,12 +27,13 @@ import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
 import Numeric (readHex, readOct)
+import Prettyprinter (dquotes)
+import Prettyprinter.Internal (Pretty (pretty))
 import Relude
 import Relude.Unsafe qualified as Unsafe
 import Text.Parsec (Column, ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos qualified as Parsec
-import Text.PrettyPrint qualified as Pretty
 
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.
@@ -311,7 +312,6 @@ alphanumeric =
           "case" -> Case
           "define" -> Define
           "do" -> Do
-          "elif" -> Elif
           "else" -> Else
           "if" -> If
           "instance" -> Instance
@@ -410,7 +410,7 @@ paragraph =
         Nothing | Text.null line -> return ""
         _prefix ->
           Parsec.unexpected
-            (Pretty.render $ Pretty.doubleQuotes $ Pretty.text $ toString line)
+            (show $ dquotes $ pretty line)
             -- HACK: Relies on formatting of messages to include "expected ...".
             <?> concat
               [ "all lines to be empty or begin with ",

@@ -592,7 +592,7 @@ definitionParser keyword category = do
         Definition.origin = origin,
         -- HACK: Should be passed in from outside?
         Definition.parent = case keyword of
-          Token.Instance -> Just $ Parent.Type name
+          Token.Instance -> Just $ Parent.Trait name
           _nonInstance -> Nothing,
         Definition.signature = sig
       }
@@ -748,53 +748,35 @@ matchParser = (<?> "match") $ do
     return $
       (,) cases' $
         fromMaybe
-          (Else (defaultMatchElse matchOrigin) matchOrigin)
+          (DefaultElse () matchOrigin)
           mElse'
   let match = Match AnyMatch () cases else_ matchOrigin
   return $ case mScrutinee of
     Just scrutinee -> compose () scrutineeOrigin [scrutinee, match]
     Nothing -> match
 
-defaultMatchElse :: Origin -> Term ()
-defaultMatchElse =
-  Word
-    ()
-    Operator.Postfix
-    (QualifiedName (Qualified Vocabulary.global "abort"))
-    []
-
 ifParser :: Parser (Term ())
 ifParser = (<?> "if-else expression") $ do
   ifOrigin <- getTokenOrigin <* parserMatch Token.If
   mCondition <- Parsec.optionMaybe groupParser <?> "condition"
   ifBody <- blockParser
-  elifs <- many $ do
-    origin <- getTokenOrigin <* parserMatch Token.Elif
-    condition <- groupParser <?> "condition"
-    body <- blockParser
-    return (condition, body, origin)
   elseBody <-
     Parsec.option (Term.identityCoercion () ifOrigin) $
       parserMatch Token.Else *> blockParser
-  let desugarCondition :: (Term (), Term (), Origin) -> Term () -> Term ()
-      desugarCondition (condition, body, origin) acc =
-        let match =
-              Match
-                BooleanMatch
-                ()
-                [ Case "true" body origin,
-                  Case "false" acc (Term.origin acc)
-                ]
-                (Else (defaultMatchElse ifOrigin) ifOrigin)
-                origin
-         in compose () ifOrigin [condition, match]
   return $
-    foldr desugarCondition elseBody $
-      ( fromMaybe (Term.identityCoercion () ifOrigin) mCondition,
-        ifBody,
-        ifOrigin
-      ) :
-      elifs
+    compose
+      ()
+      ifOrigin
+      [ fromMaybe (Term.identityCoercion () ifOrigin) mCondition,
+        Match
+          BooleanMatch
+          ()
+          [ Case "true" ifBody ifOrigin,
+            Case "false" elseBody (Term.origin elseBody)
+          ]
+          (DefaultElse () ifOrigin)
+          ifOrigin
+      ]
 
 doParser :: Parser (Term ())
 doParser = (<?> "do expression") $ do

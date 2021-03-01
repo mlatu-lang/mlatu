@@ -3,7 +3,7 @@ module Test.Infer
   )
 where
 
-import Mlatu (compilePrelude, Prelude(..), fragmentFromSource)
+import Mlatu (Prelude (..), compilePrelude, fragmentFromSource)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
@@ -11,20 +11,20 @@ import Mlatu.Informer (errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Origin qualified as Origin
-import Mlatu.Report qualified as Report
+import Mlatu.Pretty (printEntry, printInstantiated, printType)
+import Mlatu.Report (human)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.Vocabulary qualified as Vocabulary
+import Prettyprinter (Pretty (pretty), hsep, list, tupled, vcat)
 import Relude hiding (Type)
 import Test.Common (Sign (..))
 import Test.HUnit (assertBool, assertFailure)
 import Test.Hspec (Spec, describe, it)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 spec :: Spec
 spec = do
@@ -251,39 +251,35 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  mDictionary <- runMlatu $ compilePrelude Common ioPermission Nothing
+  mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
-      error $
-        toText $
-          Pretty.render $
-            Pretty.vcat $
-              "unable to set up inference tests:" : map Report.human reports
+      error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : map human reports
     Right dictionary -> do
-      result <- runMlatu $ do
+      result <- runMlatuExceptT $ do
         fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
         Enter.fragment fragment dictionary
       case Dictionary.toList <$> result of
         Right definitions -> case find matching definitions of
           Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
             let actual = Term.typ term
-            check <- runMlatu $ do
+            check <- runMlatuExceptT $ do
               instanceCheck "inferred" actual "declared" expected
               errorCheckpoint
             case sign of
               Positive ->
                 assertBool
-                  (Pretty.render $ Pretty.hsep [pPrint actual, "<:", pPrint expected])
+                  (show $ hsep [printType actual, "<:", printType expected])
                   $ isRight check
               Negative ->
                 assertBool
-                  (Pretty.render $ Pretty.hsep [pPrint actual, "</:", pPrint expected])
+                  (show $ hsep [printType actual, "</:", printType expected])
                   $ isLeft check
           _ ->
             assertFailure $
-              Pretty.render $
-                Pretty.hsep
-                  ["missing main word definition:", pPrint definitions]
+              show $
+                hsep
+                  ["missing main word definition:", list $ map (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
           where
             matching (Instantiated (Qualified v "test") _, _)
               | v == Vocabulary.global =
@@ -294,7 +290,7 @@ testTypecheck sign input expected = do
             assertFailure $
               toString $
                 unlines $
-                  map (toText . Pretty.render . Report.human) reports
+                  map (show . human) reports
           -- FIXME: This might accept a negative test for the wrong
           -- reason.
           Negative -> pass

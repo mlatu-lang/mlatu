@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 -- |
 -- Module      : Mlatu.Report
 -- Description : Error reports
@@ -11,43 +13,36 @@ module Mlatu.Report
     Report (..),
     Level (..),
     ReportKind (..),
-    human,
     parseError,
     makeError,
     makeWarning,
+    human,
   )
 where
 
-import Data.List (nub)
 import GHC.List (span)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
-import Mlatu.Pretty qualified as Pretty
+import Mlatu.Pretty (printConstructor, printGeneralName, printOrigin, printQualified, printSignature, printTerm, printType)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor, Type)
 import Mlatu.Type qualified as Type
+import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>), colon)
 import Relude hiding (Type)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 data NameCategory = WordName | TypeName
   deriving (Eq, Show)
-
-instance Pretty NameCategory where
-  pPrint = \case
-    WordName -> "word"
-    TypeName -> "type"
 
 data Level
   = Info
   | Warn
   | Error
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 data Report = Report Level ReportKind
   deriving (Eq, Show)
@@ -75,73 +70,72 @@ data ReportKind
   | OccursCheckFailure !Type !Type
   | StackDepthMismatch !Origin
   | InvalidOperatorMetadata !Origin !Qualified !(Term ())
-  | ParseError !Origin ![Pretty.Doc] !Pretty.Doc
+  | ParseError !Origin ![Doc ()] !(Doc ())
   | UseCommon !Origin !Qualified
-  | Context ![(Origin, Pretty.Doc)] !Report
+  | Context ![(Origin, Doc ())] !Report
   deriving (Eq, Show)
 
-human :: Report -> Pretty.Doc
+instance Eq (Doc ()) where
+  d1 == d2 = (show d1 :: Text) == (show d2 :: Text)
+
+human :: Report -> Doc ()
 human (Report _ kind) = kindMsg kind
   where
     kindMsg = \case
       (MissingTypeSignature origin name) ->
-        Pretty.hsep
-          [ showOriginPrefix origin,
-            "I can't find a type signature for the word",
-            Pretty.quote name
-          ]
+        showOriginPrefix origin
+          <+> "I can't find a type signature for the word"
+          <+> dquotes (printQualified name)
       (MultiplePermissionVariables origin a b) ->
-        Pretty.hsep
+        hsep
           [ showOriginPrefix origin,
-            "I found multiple permission variables",
-            Pretty.colon,
-            Pretty.quote a,
+            "I found multiple permission variables:",
+            dquotes $ printType a,
             "and",
-            Pretty.quote b,
+            dquotes $ printType b,
             "but only one is allowed per function"
           ]
       (CannotResolveType origin name) ->
-        Pretty.hsep
+        hsep
           [ showOriginPrefix origin,
             "I can't tell which type",
-            Pretty.quote name,
+            dquotes $ printGeneralName name,
             "refers to",
-            Pretty.parens "did you mean to add it as a type parameter?"
+            parens "did you mean to add it as a type parameter?"
           ]
       (FailedInstanceCheck a b) ->
-        Pretty.hsep
+        hsep
           -- TODO: Show type kind.
           [ "I expected",
-            Pretty.quote a,
+            dquotes $ printType a,
             "to be at least as polymorphic as",
-            Pretty.quote b,
+            dquotes $ printType b,
             "but it isn't"
           ]
       (MissingPermissionLabel a b origin name) ->
-        Pretty.hsep
+        hsep
           [ showOriginPrefix origin,
             "the permission label",
-            Pretty.quote name,
+            dquotes $ printConstructor name,
             "was missing when I tried to match the permission type",
-            Pretty.quote a,
+            dquotes $ printType a,
             "with the permission type",
-            Pretty.quote b
+            dquotes $ printType b
           ]
       (TypeArgumentCountMismatch term args) ->
-        Pretty.hsep
+        hsep
           [ showOriginPrefix $ Term.origin term,
             "I expected",
-            Pretty.int $ Term.quantifierCount term,
+            pretty $ Term.quantifierCount term,
             "type arguments to",
-            Pretty.quote term,
+            dquotes $ printTerm term,
             "but",
-            Pretty.int (length args),
-            "were provided",
-            Pretty.colon,
-            Pretty.oxford "and" $ map Pretty.quote args
+            pretty (length args),
+            "were provided:",
+            list $ map (dquotes . printType) args
           ]
       (CannotResolveName origin category name) ->
-        Pretty.hsep
+        hsep
           -- TODO: Suggest similar names in scope.
           [ showOriginPrefix origin,
             "I can't find the",
@@ -149,35 +143,37 @@ human (Report _ kind) = kindMsg kind
               WordName -> "word"
               TypeName -> "type",
             "that the",
-            pPrint category,
+            case category of
+              WordName -> "word"
+              TypeName -> "type",
             "name",
-            Pretty.quote name,
+            dquotes $ printGeneralName name,
             "refers to"
           ]
       (MultipleDefinitions origin name duplicates) ->
-        Pretty.vcat $
-          Pretty.hsep
+        vsep $
+          hsep
             [ showOriginPrefix origin,
               "I found multiple definitions of",
-              Pretty.quote name,
-              Pretty.parens "did you mean to declare it as a trait?"
+              dquotes $ printQualified name,
+              parens "did you mean to declare it as a trait?"
             ] :
           map
             ( \duplicateOrigin ->
-                Pretty.hsep
-                  ["also defined at", pPrint duplicateOrigin]
+                hsep
+                  ["also defined at", printOrigin duplicateOrigin]
             )
             duplicates
       (WordRedefinition origin name originalOrigin) ->
-        Pretty.vcat
-          [ Pretty.hsep
+        vsep
+          [ hsep
               [ showOriginPrefix origin,
                 "I can't redefine the word",
-                Pretty.quote name,
+                dquotes $ printQualified name,
                 "because it already exists",
-                Pretty.parens "did you mean to declare it as a trait?"
+                parens "did you mean to declare it as a trait?"
               ],
-            Pretty.hsep
+            hsep
               [ showOriginPrefix originalOrigin,
                 "it was originally defined here"
               ]
@@ -189,90 +185,90 @@ human (Report _ kind) = kindMsg kind
           originalOrigin
           mOriginalSignature
         ) ->
-          Pretty.vcat $
-            Pretty.hsep
+          vsep $
+            hsep
               [ showOriginPrefix origin,
                 "I can't redeclare the word",
-                Pretty.quote name,
+                dquotes $ printQualified name,
                 "with the signature",
-                Pretty.quote signature
+                dquotes $ printSignature signature
               ] :
-            Pretty.hsep
+            hsep
               [ showOriginPrefix originalOrigin,
                 "because it was declared or defined already"
               ] :
-              [ Pretty.hsep
+              [ hsep
                   [ "with the signature",
-                    Pretty.quote originalSignature
+                    dquotes $ printSignature originalSignature
                   ]
                 | Just originalSignature <- [mOriginalSignature]
               ]
       -- TODO: Report type kind.
       (TypeMismatch a b) ->
-        Pretty.vcat
-          [ Pretty.hsep
+        vsep
+          [ hsep
               [ showOriginPrefix $ Type.origin a,
                 "I can't match the type",
-                Pretty.quote a
+                dquotes $ printType a
               ],
-            Pretty.hsep
+            hsep
               [ showOriginPrefix $ Type.origin b,
                 "with the type",
-                Pretty.quote b
+                dquotes $ printType b
               ]
           ]
       (RedundantCase origin) ->
-        Pretty.hcat
+        hsep
           [ showOriginPrefix origin,
             "this case is redundant and will never match"
           ]
       (UseCommon origin instead) ->
-        Pretty.hcat
+        hsep
           [ showOriginPrefix origin,
             "I think you can use ",
-            Pretty.quote instead,
+            dquotes $ printQualified instead,
             " from the common library instead of what you have here"
           ]
-      (Chain reports) -> Pretty.vsep $ map kindMsg reports
+      (Chain reports) -> vsep $ map kindMsg reports
       (OccursCheckFailure a b) ->
-        Pretty.vcat
-          [ Pretty.hsep
+        vsep
+          [ hsep
               [ showOriginPrefix $ Type.origin a,
                 "the type",
-                Pretty.quote a
+                dquotes $ printType a
               ],
-            Pretty.hsep
+            hsep
               [ showOriginPrefix $ Type.origin b,
                 "occurs in the type",
-                Pretty.quote b,
-                Pretty.parens "which often indicates an infinite type"
+                dquotes $ printType b,
+                parens "which often indicates an infinite type"
               ]
           ]
       (StackDepthMismatch origin) ->
-        Pretty.hsep
+        hsep
           [ showOriginPrefix origin,
             "you may have a stack depth mismatch"
           ]
       (InvalidOperatorMetadata origin name term) ->
-        Pretty.hcat
+        hsep
           [ showOriginPrefix origin,
             " invalid operator metadata for ",
-            Pretty.quote name,
-            Pretty.colon,
-            pPrint term
+            dquotes $ printQualified name,
+            ":",
+            printTerm term
           ]
       (ParseError origin unexpectedThing expectedThing) ->
-        Pretty.hcat $
+        hsep $
           (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
       (Context context message) ->
-        Pretty.vsep $
+        vsep $
           map
-            (\(origin, doc) -> Pretty.hsep [showOriginPrefix origin, "while", doc])
+            (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
             context
             ++ [human message]
 
-showOriginPrefix :: Origin -> Pretty.Doc
-showOriginPrefix origin = Pretty.hcat [pPrint origin, ":"]
+showOriginPrefix :: Origin.Origin -> Doc a
+showOriginPrefix origin = printOrigin origin <> colon
 
 parseError :: Parsec.ParseError -> Report
 parseError parsecError = Report Error (ParseError origin unexpected' expected')
@@ -288,29 +284,31 @@ parseError parsecError = Report Error (ParseError origin unexpected' expected')
             <*> state (span (Parsec.UnExpect "" ==))
             <*> state (span (Parsec.Expect "" ==))
 
-    unexpected' :: [Pretty.Doc]
+    unexpected' :: [Doc ()]
     unexpected' = ((++) `on` unexpectedMessages) sysUnexpected unexpected
 
-    expected' :: Pretty.Doc
+    expected' :: Doc ()
     expected' =
-      Pretty.hsep
-        [ "expected",
-          Pretty.oxford "or" $
-            map Pretty.text $
-              ordNub $
-                filter (not . null) $ -- TODO: Replace with "end of input"
-                  map Parsec.messageString expected
-        ]
+      hsep
+        ( "expected" :
+          punctuate
+            comma
+            ( map pretty $
+                ordNub $
+                  filter (not . null) $ -- TODO: Replace with "end of input"
+                    map Parsec.messageString expected
+            )
+        )
 
-unexpectedMessages :: [Parsec.Message] -> [Pretty.Doc]
-unexpectedMessages = nub . map unexpectedMessage
+unexpectedMessages :: [Parsec.Message] -> [Doc ()]
+unexpectedMessages = map unexpectedMessage . ordNub
 
-unexpectedMessage :: Parsec.Message -> Pretty.Doc
+unexpectedMessage :: Parsec.Message -> Doc ()
 unexpectedMessage message =
   let string = Parsec.messageString message
-   in Pretty.hsep
+   in hsep
         [ "unexpected",
           if null string
             then "end of input"
-            else Pretty.text string
+            else pretty string
         ]

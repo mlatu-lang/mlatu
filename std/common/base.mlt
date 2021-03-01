@@ -1,46 +1,63 @@
-define drop2[A, B] (A, B ->):
-  -> _, _;
-
-define dup[T] (T -> T, T):
-  -> x;
-  x x
-
-define dup2[A, B] (A, B -> A, B, A, B):
-  -> x, y;
-  x y x y
-
-define swapped[R..., S..., A, B]
-((R..., A, B -> S...) -> (R..., B, A -> S...)):
-  \swap swap compose
-
-define dip[R..., S..., T] (R..., T, (R... -> S...) -> S..., T):
-  -> x, f;
-  f call x
-
-define compose[R..., S..., T...]
-((R... -> S...), (S... -> T...) -> (R... -> T...)):
-  -> f, g;
-  { f call g call }
-
-define function[T] (T -> (-> T)):
-  -> x;
-  { x }
-
-define apply[R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)):
+define apply [R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)):
   -> x, f;
   { x f call }
 
-about apply:
-  docs: """
-    Partially applies the topmost argument of a function.
-    """
+define both [A, B, C, D] (A, B, (A -> C), (B -> D) -> C, D):
+  -> x, y, f, g;
+  x f call -> a;
+  y g call -> b;
+  a b
 
-define fix[R..., S...] (R..., (R..., (R... -> S...) -> S...) -> S...):
+define both_to [A, B, C] (A, (A -> B), (A -> C) -> B, C):
+  -> x, f, g;
+  x f call -> a;
+  x g call -> b;
+  a b
+
+define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T...)):
+  -> f, g;
+  { f call g call }
+
+define dip [R..., S..., T] (R..., T, (R... -> S...) -> S..., T):
+  -> x, f;
+  f call x
+
+define drop2 [A, B] (A, B ->):
+  -> drop;
+  -> drop;
+
+define dup [T] (T -> T, T):
+  -> x;
+  x x
+
+define dup2 [A, B] (A, B -> A, B, A, B):
+  -> x, y;
+  x y x y
+
+define fix [R..., S...] (R..., (R..., (R... -> S...) -> S...) -> S...):
   -> f;
   { f fix } f call
 
+define function [T] (T -> (-> T)):
+  -> x;
+  { x }
+
+define id [T] (T -> T) {}
+
+
+
+define swapped [R..., S..., A, B] ((R..., A, B -> S...) -> (R..., B, A -> S...)):
+  \swap swap compose
+
+define to_both [A, B] (A, A, (A -> B) -> B, B):
+  -> x, y, f;
+  x f call -> a;
+  y f call -> b;
+  a b
+
 about fix:
-  docs: """
+  docs:
+    """
     Computes the least fixed point of a function. Can be used to write recursive
     definitions without explicit recursion, e.g.:
 
@@ -54,22 +71,6 @@ about fix:
         } fix
     """
 
-define both[A, B, C, D] (A, B, (A -> C), (B -> D) -> C, D):
-  -> x, y, f, g;
-  x f call -> a;
-  y g call -> b;
-  a b
-
-define both_to[A, B, C] (A, (A -> B), (A -> C) -> B, C):
-  -> x, f, g;
-  x f call -> a;
-  x g call -> b;
-  a b
-
-define to_both[A, B] (A, A, (A -> B) -> B, B):
-  -> x, y, f;
-  x f call -> a;
-  y f call -> b;
-  a b
-
-define id[T] (T -> T) {}
+about apply:
+  docs:
+    "Partially applies the topmost argument of a function."

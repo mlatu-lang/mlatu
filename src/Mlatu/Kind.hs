@@ -12,8 +12,6 @@ module Mlatu.Kind
 where
 
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A kind (κ) is the type of a type. Types with the \"value\" kind (@*@) are
 -- inhabited by values; all other types are used only to enforce program
@@ -28,7 +26,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty (..))
 --
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
 data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Hashable Kind where
   hashWithSalt s Value = hashWithSalt s (0 :: Int)
@@ -36,13 +34,3 @@ instance Hashable Kind where
   hashWithSalt s Label = hashWithSalt s (2 :: Int)
   hashWithSalt s Permission = hashWithSalt s (3 :: Int)
   hashWithSalt s (a :-> b) = hashWithSalt s (4 :: Int, a, b)
-
-instance Pretty Kind where
-  pPrint Value = "value"
-  pPrint Stack = "stack"
-  pPrint Label = "label"
-  pPrint Permission = "permission"
-  pPrint (a :-> b) =
-    Pretty.parens $
-      Pretty.hsep
-        [pPrint a, "->", pPrint b]

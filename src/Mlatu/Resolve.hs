@@ -83,6 +83,7 @@ term dictionary vocabulary = recur
           Case resolved <$> recur t <*> pure caseOrigin
 
         resolveElse :: Else () -> Resolved (Else ())
+        resolveElse (DefaultElse a b) = return $ DefaultElse a b
         resolveElse (Else t elseOrigin) =
           Else <$> recur t <*> pure elseOrigin
     recur unresolved@New {} = return unresolved

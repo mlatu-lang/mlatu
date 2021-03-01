@@ -15,8 +15,6 @@ import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Relude
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A single data constructor case, e.g., @case some (T)@.
 data DataConstructor = DataConstructor
@@ -24,10 +22,4 @@ data DataConstructor = DataConstructor
     name :: !Unqualified,
     origin :: !Origin
   }
-  deriving (Show)
-
--- FIXME: Support fields.
-instance Pretty DataConstructor where
-  pPrint (DataConstructor _ name _) =
-    "case"
-      Pretty.<+> pPrint name
+  deriving (Eq, Ord, Show)

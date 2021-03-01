@@ -3,11 +3,11 @@ module Main where
 import Arguments (Arguments, parseArguments)
 import Arguments qualified
 import Interact qualified
-import Mlatu (compile, compilePrelude, runMlatu)
-import Mlatu.Dictionary (Dictionary)
+import Mlatu (compile, compilePrelude, fragmentFromSource, runMlatu)
 import Mlatu.Interpret (interpret)
-import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Pretty (printFragment)
+import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
 import Report (reportAll)
@@ -20,35 +20,48 @@ main = do
   arguments <- parseArguments
   case Arguments.inputPaths arguments of
     [] -> case Arguments.compileMode arguments of
-      Arguments.CheckMode -> do
-        hPutStrLn stderr "Cannot run interactively in check mode."
-        exitFailure
+      Arguments.CheckMode -> hPutStrLn stderr "Cannot run interactively in check mode." >> exitFailure
+      Arguments.FormatMode -> hPutStrLn stderr "Cannot run interactively in format mode." >> exitFailure
       Arguments.InterpretMode -> Interact.run (Arguments.prelude arguments)
     (_ : _) -> runBatch arguments
 
 runBatch :: Arguments -> IO ()
 runBatch arguments = do
   paths <- forM (Arguments.inputPaths arguments) makeAbsolute
-  ((runDictionary `handleResult`) . compile mainPermissions Nothing paths . Just)
-    `handleResult` compilePrelude (Arguments.prelude arguments) mainPermissions Nothing
-  where
-    mainPermissions =
-      [ QualifiedName $ Qualified Vocabulary.global "IO",
-        QualifiedName $ Qualified Vocabulary.global "Fail"
-      ]
-    runDictionary :: Dictionary -> IO ()
-    runDictionary program =
-      case Arguments.compileMode arguments of
-        Arguments.CheckMode -> pass
-        Arguments.InterpretMode ->
-          void $ interpret program Nothing [] stdin stdout stderr []
+  result <- runExceptT $ case Arguments.compileMode arguments of
+    Arguments.FormatMode -> forM_ paths formatMode
+    Arguments.CheckMode -> checkMode (Arguments.prelude arguments) paths
+    Arguments.InterpretMode -> interpretMode (Arguments.prelude arguments) paths
+  bifor_ result ((>> exitFailure) . reportAll) (const pass)
 
-handleResult :: (Dictionary -> IO ()) -> M Dictionary -> IO ()
-handleResult dictionaryHandler dictionaryProducer = do
-  do
-    e <- runMlatu dictionaryProducer
-    bifor_
-      e
-      ( reportAll >=> const exitFailure
-      )
-      dictionaryHandler
+mainPermissions :: [GeneralName]
+mainPermissions =
+  [ QualifiedName $ Qualified Vocabulary.global "IO",
+    QualifiedName $ Qualified Vocabulary.global "Fail"
+  ]
+
+formatMode :: FilePath -> ExceptT [Report] IO ()
+formatMode path =
+  readFileBS path
+    >>= ( runMlatu
+            . (formatFragment <=< fragmentFromBS)
+        )
+  where
+    formatFragment = writeFile path . show . printFragment
+    fragmentFromBS = fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8
+
+checkMode :: Arguments.Prelude -> [FilePath] -> ExceptT [Report] IO ()
+checkMode prelude paths = do
+  runMlatu
+    ( do
+        commonDictionary <- compilePrelude prelude mainPermissions Nothing
+        compile mainPermissions Nothing paths (Just commonDictionary)
+    )
+    >> pass
+
+interpretMode :: Arguments.Prelude -> [FilePath] -> ExceptT [Report] IO ()
+interpretMode prelude paths = do
+  program <- runMlatu $ do
+    commonDictionary <- compilePrelude prelude mainPermissions Nothing
+    compile mainPermissions Nothing paths (Just commonDictionary)
+  return $ pass (interpret program Nothing [] stdin stdout stderr [])

@@ -4,7 +4,7 @@ module Test.Origin
 where
 
 import Mlatu.Located qualified as Located
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Origin (Origin (Origin))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Tokenize (tokenize)
@@ -93,7 +93,7 @@ testOrigin test =
    in fmap
         (map Located.origin)
         ( runIdentity $
-            runMlatu $
+            runMlatuExceptT $
               tokenize 1 "test" $
                 unlines input
         )

@@ -15,7 +15,7 @@ import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( GeneralName (QualifiedName, UnqualifiedName),
     Qualified (Qualified),
@@ -24,17 +24,16 @@ import Mlatu.Name
   )
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
-import Mlatu.Pretty qualified as Pretty
-import Mlatu.Report qualified as Report
+import Mlatu.Pretty (printEntry, printGeneralName, printInstantiated, printQualified, printQualifier, printSignature)
+import Mlatu.Report (human)
 import Mlatu.Resolve qualified as Resolve
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
+import Prettyprinter (dquotes, hsep, list, tupled)
 import Relude
 import Test.HUnit (assertEqual, assertFailure)
 import Test.Hspec (Spec, it)
-import Text.PrettyPrint qualified as Pretty
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 spec :: Spec
 spec = do
@@ -150,7 +149,7 @@ spec = do
 
 testWord :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testWord contextSource viewpoint name expected = do
-  dictionary <- runMlatu $ do
+  dictionary <- runMlatuExceptT $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
@@ -178,7 +177,7 @@ testWord contextSource viewpoint name expected = do
                               []
                               []
                               origin
-                          ) 
+                          )
                           origin
                     }
             }
@@ -188,20 +187,20 @@ testWord contextSource viewpoint name expected = do
       Just (_, Entry.Word _ _ _ _ _ (Just term))
         | [Term.Word _ _ name' _ _] <- Term.decompose term ->
           let message =
-                Pretty.render $
-                  Pretty.hsep
-                    [ pPrint name,
+                show $
+                  hsep
+                    [ printGeneralName name,
                       "resolves to",
-                      pPrint expected,
+                      printQualified expected,
                       "within",
-                      pPrint viewpoint
+                      printQualifier viewpoint
                     ]
            in assertEqual message (QualifiedName expected) name'
       _ ->
         assertFailure $
-          Pretty.render $
-            Pretty.hsep
-              ["missing test word definition:", pPrint definitions]
+          show $
+            hsep
+              ["missing test word definition:", list $ map (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
       where
         matching (Instantiated (Qualified v "test") _, _)
           | v == viewpoint =
@@ -211,11 +210,11 @@ testWord contextSource viewpoint name expected = do
       assertFailure $
         toString $
           unlines $
-            map (toText . Pretty.render . Report.human) reports
+            map (show . human) reports
 
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
-  resolved <- runMlatu $ do
+  resolved <- runMlatuExceptT $ do
     context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
@@ -227,26 +226,26 @@ testType contextSource viewpoint name expected = do
   case resolved of
     Right (Signature.Variable name' _) ->
       let message =
-            Pretty.render $
-              Pretty.hsep
-                [ pPrint name,
+            show $
+              hsep
+                [ printGeneralName name,
                   "resolves to",
-                  pPrint expected,
+                  printQualified expected,
                   "within",
-                  pPrint viewpoint
+                  printQualifier viewpoint
                 ]
        in assertEqual message (QualifiedName expected) name'
     Right result ->
       assertFailure $
-        Pretty.render $
-          Pretty.hsep
+        show $
+          hsep
             [ "signature variable",
-              Pretty.quote name,
+              dquotes $ printGeneralName name,
               "resolved to non-variable",
-              pPrint result
+              printSignature result
             ]
     Left reports ->
       assertFailure $
         toString $
           unlines $
-            map (toText . Pretty.render . Report.human) reports
+            map (show . human) reports

@@ -11,14 +11,12 @@ module Mlatu.Fragment
   )
 where
 
-import Mlatu.Declaration (Declaration)
+import Mlatu.Declaration (Declaration (..))
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
-import Text.PrettyPrint.HughesPJClass (Pretty (..))
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
@@ -49,13 +47,3 @@ instance Semigroup (Fragment a) where
         synonyms = synonyms a <> synonyms b,
         types = types a <> types b
       }
-
-instance Pretty (Fragment a) where
-  pPrint fragment =
-    Pretty.vsep $
-      concat
-        [ map pPrint $ definitions fragment,
-          map pPrint $ metadata fragment,
-          map pPrint $ synonyms fragment,
-          map pPrint $ types fragment
-        ]

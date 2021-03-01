@@ -9,9 +9,10 @@ import Mlatu.Base (Base (..))
 import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
 import Mlatu.Located qualified as Located
-import Mlatu.Monad (runMlatu)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
+import Mlatu.Pretty ()
 import Mlatu.Report (Report)
 import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
@@ -62,10 +63,11 @@ spec = do
       let origin = Origin.point "" 1 3
       testTokenize "/*"
         `shouldBe` Left
-          [ Report.makeError $ Report.ParseError
-              origin
-              ["unexpected end of input"]
-              "expected \"/*\" or \"*/\""
+          [ Report.makeError $
+              Report.ParseError
+                origin
+                ["unexpected end of input"]
+                "expected \"/*\", \"*/\""
           ]
 
   describe "with single tokens" $ do
@@ -132,31 +134,34 @@ spec = do
       let origin = Origin.point "" 1 2
       testTokenize "\""
         `shouldBe` Left
-          [ Report.makeError $ Report.ParseError
-              origin
-              ["unexpected end of input"]
-              "expected character, escape, or closing double quote"
+          [ Report.makeError $
+              Report.ParseError
+                origin
+                ["unexpected end of input"]
+                "expected character, escape, closing double quote"
           ]
     it "fails on unterminated nested text" $ do
       let origin = Origin.point "" 1 2
       testTokenize "\x201C"
         `shouldBe` Left
-          [ Report.makeError $ Report.ParseError
-              origin
-              ["unexpected end of input"]
-              "expected character, nested opening quote, \
-              \escape, or closing right double quote"
+          [ Report.makeError $
+              Report.ParseError
+                origin
+                ["unexpected end of input"]
+                "expected character, nested opening quote, \
+                \escape, closing right double quote"
           ]
     it "fails on multi-line text" $ do
       let origin = Origin.point "" 2 1
       testTokenize "\"\n\""
         `shouldBe` Left
-          [ Report.makeError $ Report.ParseError
-              origin
-              [ "unexpected newline in text literal; \
-                \use an escape, gap, or paragraph instead"
-              ]
-              "expected character or escape"
+          [ Report.makeError $
+              Report.ParseError
+                origin
+                [ "unexpected newline in text literal; \
+                  \use an escape, gap, or paragraph instead"
+                ]
+                "expected character or escape"
           ]
 
   describe "with paragraph literals" $ do
@@ -202,10 +207,11 @@ spec = do
         \ bar\n\
         \  \"\"\""
         `shouldBe` Left
-          [ Report.makeError $ Report.ParseError
-              origin
-              ["unexpected \" bar\""]
-              "expected all lines to be empty or begin with 2 spaces"
+          [ Report.makeError $
+              Report.ParseError
+                origin
+                ["unexpected \" bar\""]
+                "expected all lines to be empty or begin with 2 spaces"
           ]
   -- TODO: Add more negative tests for paragraph literals.
 
@@ -228,19 +234,19 @@ spec = do
 
   describe "with floating-point literals" $ do
     it "parses normal float literals" $ do
-      testTokenize "1.0" `shouldBe` Right [floatLiteral 10 1 0 ]
-      testTokenize "1." `shouldBe` Right [floatLiteral 1 0 0 ]
+      testTokenize "1.0" `shouldBe` Right [floatLiteral 10 1 0]
+      testTokenize "1." `shouldBe` Right [floatLiteral 1 0 0]
     it "parses float literals with sign characters" $ do
-      testTokenize "+1.0" `shouldBe` Right [floatLiteral 10 1 0 ]
-      testTokenize "-1.0" `shouldBe` Right [floatLiteral (-10) 1 0 ]
-      testTokenize "\x2212\&1.0" `shouldBe` Right [floatLiteral (-10) 1 0 ]
+      testTokenize "+1.0" `shouldBe` Right [floatLiteral 10 1 0]
+      testTokenize "-1.0" `shouldBe` Right [floatLiteral (-10) 1 0]
+      testTokenize "\x2212\&1.0" `shouldBe` Right [floatLiteral (-10) 1 0]
     it "parses float literals in scientific notation" $ do
-      testTokenize "1.0e1" `shouldBe` Right [floatLiteral 10 1 1 ]
-      testTokenize "1.e1" `shouldBe` Right [floatLiteral 1 0 1 ]
-      testTokenize "1e1" `shouldBe` Right [floatLiteral 1 0 1 ]
-      testTokenize "1e+1" `shouldBe` Right [floatLiteral 1 0 1 ]
-      testTokenize "1e-1" `shouldBe` Right [floatLiteral 1 0 (-1) ]
-      testTokenize "1e\x2212\&1" `shouldBe` Right [floatLiteral 1 0 (-1) ]
+      testTokenize "1.0e1" `shouldBe` Right [floatLiteral 10 1 1]
+      testTokenize "1.e1" `shouldBe` Right [floatLiteral 1 0 1]
+      testTokenize "1e1" `shouldBe` Right [floatLiteral 1 0 1]
+      testTokenize "1e+1" `shouldBe` Right [floatLiteral 1 0 1]
+      testTokenize "1e-1" `shouldBe` Right [floatLiteral 1 0 (-1)]
+      testTokenize "1e\x2212\&1" `shouldBe` Right [floatLiteral 1 0 (-1)]
 
 integerLiteral :: Integer -> Base -> Token l
 integerLiteral v base = Integer (IntegerLiteral v base)
@@ -250,5 +256,5 @@ floatLiteral v f e = Float (FloatLiteral v f e)
 
 testTokenize :: Text -> Either [Report] [Token 'Layout]
 testTokenize =
-  fmap (map Located.item) . runIdentity . runMlatu
+  fmap (map Located.item) . runIdentity . runMlatuExceptT
     . tokenize 1 ""
