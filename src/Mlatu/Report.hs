@@ -30,7 +30,7 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor, Type)
 import Mlatu.Type qualified as Type
-import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>))
+import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>), colon)
 import Relude hiding (Type)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
@@ -268,7 +268,7 @@ human (Report _ kind) = kindMsg kind
             ++ [human message]
 
 showOriginPrefix :: Origin.Origin -> Doc a
-showOriginPrefix origin = hsep [printOrigin origin, ":"]
+showOriginPrefix origin = printOrigin origin <> colon
 
 parseError :: Parsec.ParseError -> Report
 parseError parsecError = Report Error (ParseError origin unexpected' expected')

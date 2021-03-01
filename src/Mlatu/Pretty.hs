@@ -46,7 +46,7 @@ import Mlatu.Kind (Kind (..))
 import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), floatValue)
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Name (Closed (..), ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
+import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Constraint (..), Signature (..))
@@ -113,15 +113,12 @@ printQualifier (Qualifier Relative parts) =
 
 printOrigin :: Origin.Origin -> Doc a
 printOrigin origin =
-  hsep $
-    [ pretty $ Origin.name origin,
-      ":",
-      pretty al,
-      ".",
-      pretty ac,
-      "-"
-    ]
-      ++ (if al == bl then [pretty bc] else [pretty bl, ".", pretty bc])
+  pretty (Origin.name origin) <> colon
+    <> pretty al
+    <> dot
+    <> pretty ac
+    <> "-"
+    <> (if al == bl then pretty bc else pretty bl <> dot <> pretty bc)
   where
     al = Origin.beginLine origin
     bl = Origin.endLine origin
@@ -288,7 +285,8 @@ printSignature (StackFunction r as s bs es _) =
   parens $
     punctuateComma ((printSignature r <> "...") : map printSignature as)
       <+> "->"
-      <+> punctuateComma (((printSignature s <> "...") : map printSignature bs) ++ map (("+" <>) . printGeneralName) es)
+      <+> punctuateComma ((printSignature s <> "...") : map printSignature bs)
+      <> mapNonEmpty "" (\xs -> space <> hsep (map (("+" <>) . printGeneralName) xs)) es
 printSignature (Type t) = printType t
 
 printToken :: Token.Token l -> Doc a
@@ -373,11 +371,13 @@ maybePrintTerms = \case
   (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
+  (Group a : NewVector _ 1 _ _ : xs) -> (brackets <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation body) _ : Group a : xs) -> printDo a body `vertical` xs
   (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack, Parameter _ s1 Stack] [] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
+  (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
   (Lambda _ name _ body _ : xs) -> Just (printLambda name body `justHoriz` xs)
   (Match BooleanMatch _ cases _ _ : xs) -> Just (printIf Nothing cases `justVertical` xs)
@@ -396,10 +396,8 @@ maybePrintTerms = \case
       go ns (Lambda _ n _ b _) = go (n : ns) b
       go ns b = (ns, b)
   (Word _ fixity name args _ : xs) -> Just (printWord fixity name args `justHoriz` xs)
-  (New _ (ConstructorIndex i) _ _ : xs) -> Just (printNew i `justHoriz` xs)
-  (NewClosure _ i _ : xs) -> Just (printClosure i `justHoriz` xs)
-  (NewVector _ i _ _ : xs) -> Just (printVector i `justHoriz` xs)
-  _ -> error "Formatting failed"
+  (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
+  (t : _) -> error $ "Formatting failed: " <> show (Term.stripMetadata t)
   where
     printList l = maybePrintTerms (concatMap Term.decompose l)
 
@@ -458,32 +456,30 @@ printMatch cond cases else_ =
     vsep
       ( maybe "match" ("match" <+>) (cond >>= printGroup) :
         ( map
-            (\(Case n b _) -> blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b))
+            (\(Case n b _) -> printCase n b)
             cases
             ++ maybe
               []
-              ( \e -> case includeBlockMaybe "else" (maybePrintTerm e) of
-                  Nothing -> []
-                  Just x -> [x]
-              )
+              (\e -> [blockMaybe "else" (maybePrintTerm e)])
               else_
         )
       )
+
+printCase :: GeneralName -> Term a -> Doc b
+printCase n (Lambda _ name _ body _) =
+  blockMaybe
+    ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (map printUnqualified names))
+    (maybePrintTerm newBody)
+  where
+    (names, newBody) = go [name] body
+    go ns (Lambda _ ln _ b _) = go (ln : ns) b
+    go ns b = (ns, b)
+printCase n b = blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
   | not (Text.all isLetter name) = parens $ pretty name
 printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (map printType xs)) args
-
-printNew :: Int -> Doc a
-printNew i = "new" <> dot <> pretty i
-
-printClosure :: Int -> Doc a
-printClosure i = "new" <> dot <> "closure" <> dot <> pretty i
-
-printVector :: Int -> Doc a
-printVector 0 = lbracket <> rbracket
-printVector i = "new" <> dot <> "vec" <> dot <> pretty i
 
 printValue :: Value a -> Doc b
 printValue value = case value of
@@ -507,7 +503,16 @@ printValue value = case value of
           multilineQuote = dquote <> dquote <> dquote
 
       singleline :: Text -> Doc a
-      singleline t = dquotes $ pretty t
+      singleline t =
+        dquotes $
+          pretty
+            ( concatMap
+                ( \case
+                    '\n' -> "\\n"
+                    c -> [c]
+                )
+                (toString t)
+            )
 
 printMetadata :: Metadata -> Doc a
 printMetadata metadata =
