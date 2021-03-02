@@ -377,7 +377,6 @@ maybePrintTerms = \case
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
-  (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
   (Lambda _ name _ body _ : xs) -> Just (printLambda name body `justHoriz` xs)
   (Match BooleanMatch _ cases _ _ : xs) -> Just (printIf Nothing cases `justVertical` xs)
@@ -428,6 +427,7 @@ printDo :: Term a -> Term a -> Maybe (Doc b)
 printDo a body = includeBlockMaybe (maybe "do" ("do" <+>) (printGroup a)) (maybePrintTerm body)
 
 printGroup :: Term a -> Maybe (Doc b)
+printGroup (Group a) = parens <$> maybePrintTerm a
 printGroup a = parens <$> maybePrintTerm a
 
 printLambda :: Unqualified -> Term a -> Doc b
