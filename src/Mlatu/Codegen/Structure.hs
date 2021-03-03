@@ -5,8 +5,10 @@ module Mlatu.Codegen.Structure where
 import Relude
 
 data BitSize = BS32 | BS64
+  deriving (Show, Eq)
 
 data IUnOp = IClz | ICtz | IPopcnt
+  deriving (Show, Eq)
 
 data IBinOp
   = IAdd
@@ -24,6 +26,7 @@ data IBinOp
   | IShrS
   | IRotl
   | IRotr
+  deriving (Show, Eq)
 
 data IRelOp
   = IEq
@@ -36,6 +39,7 @@ data IRelOp
   | ILeS
   | IGeU
   | IGeS
+  deriving (Show, Eq)
 
 data FUnOp
   = FAbs
@@ -45,6 +49,7 @@ data FUnOp
   | FTrunc
   | FNearest
   | FSqrt
+  deriving (Show, Eq)
 
 data FBinOp
   = FAdd
@@ -54,6 +59,7 @@ data FBinOp
   | FMin
   | FMax
   | FCopySign
+  deriving (Show, Eq)
 
 data FRelOp
   = FEq
@@ -62,72 +68,91 @@ data FRelOp
   | FGt
   | FLe
   | FGe
+  deriving (Show, Eq)
 
 data MemArg = MemArg
-  { offset :: Natural,
-    align :: Natural
+  { offset :: Word32,
+    align :: Word32
   }
+  deriving (Show, Eq)
 
-type LabelIndex = Natural
+newtype LabelIndex = LabelIndex Word32
+  deriving (Show, Eq)
 
-type FuncIndex = Natural
+newtype FuncIndex = FuncIndex Word32
+  deriving (Show, Eq)
 
-type TypeIndex = Natural
+newtype TypeIndex = TypeIndex Word32
+  deriving (Show, Eq)
 
-type LocalIndex = Natural
+newtype LocalIndex = LocalIndex Word32
+  deriving (Show, Eq)
 
-type GlobalIndex = Natural
+newtype GlobalIndex = GlobalIndex Word32
+  deriving (Show, Eq)
 
-type MemoryIndex = Natural
+newtype MemoryIndex = MemoryIndex Word32
+  deriving (Show, Eq)
 
-type TableIndex = Natural
+newtype TableIndex = TableIndex Word32
+  deriving (Show, Eq)
 
 data ValueType
   = I32
   | I64
   | F32
   | F64
+  deriving (Show, Eq)
 
-type ResultType = [ValueType]
+newtype ResultType = ResultType [ValueType]
+  deriving (Show, Eq)
 
-type ParamsType = [ValueType]
+newtype ParamsType = Params [ValueType]
+  deriving (Show, Eq)
 
-type LocalsType = [ValueType]
+newtype LocalsType = LocalsType [ValueType]
+  deriving (Show, Eq)
 
 data FuncType = FuncType
   { params :: ParamsType,
     results :: ResultType
   }
+  deriving (Show, Eq)
 
-data Instruction index
+data BlockType
+  = IndexBlock TypeIndex
+  | ValueBlock (Maybe ValueType)
+  deriving (Show, Eq)
+
+data Instruction
   = Unreachable
   | Nop
   | Block
-      { resultType :: ResultType,
+      { typ :: BlockType,
         body :: Expression
       }
   | Loop
-      { resultType :: ResultType,
+      { typ :: BlockType,
         body :: Expression
       }
   | If
-      { resultType :: ResultType,
+      { typ :: BlockType,
         true :: Expression,
-        false :: Expression
+        false :: Maybe Expression
       }
-  | Br index
-  | BrIf index
-  | BrTable [index] index
+  | Br LabelIndex
+  | BrIf LabelIndex
+  | BrTable [LabelIndex] LabelIndex
   | Return
-  | Call index
-  | CallIndirect index
+  | Call FuncIndex
+  | CallIndirect TypeIndex
   | Drop
   | Select
-  | GetLocal index
-  | SetLocal index
-  | TeeLocal index
-  | GetGlobal index
-  | SetGlobal index
+  | GetLocal LocalIndex
+  | SetLocal LocalIndex
+  | TeeLocal LocalIndex
+  | GetGlobal GlobalIndex
+  | SetGlobal GlobalIndex
   | I32Load MemArg
   | I64Load MemArg
   | F32Load MemArg
@@ -176,70 +201,87 @@ data Instruction index
   | F64PromoteF32
   | IReinterpretF BitSize
   | FReinterpretI BitSize
+  deriving (Show, Eq)
 
-type Expression = [Instruction Natural]
+newtype Expression = Expression [Instruction]
+  deriving (Show, Eq)
 
 data Function = Function
   { funcType :: TypeIndex,
     localTypes :: LocalsType,
-    body :: Expression
+    functionBody :: Expression
   }
+  deriving (Show, Eq)
 
-data Limit = Limit Natural (Maybe Natural)
+data Limit = Limit Word32 (Maybe Word32)
+  deriving (Show, Eq)
 
 data ElemType = AnyFunc
+  deriving (Show, Eq)
 
 data TableType = TableType Limit ElemType
+  deriving (Show, Eq)
 
 newtype Table = Table TableType
+  deriving (Show, Eq)
 
 newtype Memory = Memory Limit
+  deriving (Show, Eq)
 
 data GlobalType
   = Const ValueType
   | Mut ValueType
+  deriving (Show, Eq)
 
 data Global = Global
   { globalType :: GlobalType,
     initializer :: Expression
   }
+  deriving (Show, Eq)
 
 data ElemSegment = ElemSegment
   { tableIndex :: TableIndex,
-    offset :: Expression,
+    elemOffset :: Expression,
     funcIndexes :: [FuncIndex]
   }
+  deriving (Show, Eq)
 
 data DataSegment = DataSegment
   { memIndex :: MemoryIndex,
-    offset :: Expression,
+    dataOffset :: Expression,
     chunck :: ByteString
   }
+  deriving (Show, Eq)
 
 newtype StartFunction = StartFunction FuncIndex
+  deriving (Show, Eq)
 
 data ExportDesc
   = ExportFunc FuncIndex
   | ExportTable TableIndex
   | ExportMemory MemoryIndex
   | ExportGlobal GlobalIndex
+  deriving (Show, Eq)
 
 data Export = Export
   { name :: Text,
     desc :: ExportDesc
   }
+  deriving (Show, Eq)
 
 data ImportDesc
   = ImportFunc TypeIndex
   | ImportTable TableType
   | ImportMemory Limit
   | ImportGlobal GlobalType
+  deriving (Show, Eq)
 
 data Import = Import
   { sourceModule :: Text,
     name :: Text,
     desc :: ImportDesc
   }
+  deriving (Show, Eq)
 
 data Module = Module
   { types :: [FuncType],
@@ -253,3 +295,19 @@ data Module = Module
     imports :: [Import],
     exports :: [Export]
   }
+  deriving (Show, Eq)
+
+emptyModule :: Module
+emptyModule =
+  Module
+    { types = [],
+      functions = [],
+      tables = [],
+      mems = [],
+      globals = [],
+      elems = [],
+      datas = [],
+      start = Nothing,
+      imports = [],
+      exports = []
+    }
