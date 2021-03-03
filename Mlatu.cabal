@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 68ecff42a575dbaf160af7a4f0a138a95e7da34edc955461016bb503e94fac5f
+-- hash: 497d094ffb464bcb1a25076f02c37f3a9bd8ec178202745f29702f693a442f5d
 
 name:           Mlatu
 version:        0.1.0.0
@@ -27,6 +27,8 @@ library
       Mlatu
       Mlatu.Base
       Mlatu.Bracket
+      Mlatu.Codegen
+      Mlatu.Codegen.Structure
       Mlatu.DataConstructor
       Mlatu.Declaration
       Mlatu.Definition
