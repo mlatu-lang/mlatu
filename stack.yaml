@@ -64,3 +64,4 @@ extra-deps:
 
 ghc-options:
   "$locals": -fwrite-ide-info
+  "$everything": -split-sections
