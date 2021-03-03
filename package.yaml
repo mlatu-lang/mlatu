@@ -66,6 +66,7 @@ dependencies:
   - vector
   - relude
   - file-embed
+  - wasm
 
 library:
   source-dirs: src
