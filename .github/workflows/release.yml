@@ -29,33 +29,18 @@ jobs:
           GHC_VER: ${{ matrix.ghc }}
         run: |
           echo "EXE_EXT=.exe" >> $GITHUB_ENV
-          GHC_VER=$(echo $GHC_VER | sed 's/8.10.2.2/8.10.2/g')
-          echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
-      - name: Set some Linux-specific things
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          GHC_VER: ${{ matrix.ghc }}
-        run: |
-          echo "LINUX_CABAL_ARGS=--datadir=$HOME/.mlatu" >> $GITHUB_ENV
-          echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
-      - name: Set some macOs-specific things
-        if: matrix.os == 'macOS-latest'
-        env:
-          GHC_VER: ${{ matrix.ghc }}
-        run: |
-          echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
       - name:
           Build
           # Try building it twice in case of flakey builds on Windows
         run: |
-          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS || \
-          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS -j1
+          cabal build exe:mlatu -O2 || \
+          cabal build exe:mlatu -O2 -j1
       - name: Compress binary
         id: compress_binary
         run: |
           # We normalize windows+choco ghc version 8.10.2.2
           MLATU_BUILD=$(find dist-newstyle \( -name 'mlatu' -o -name 'mlatu.exe' \) -type f)
-          MLATU=mlatu-${{env.GHC_VERSION}}
+          MLATU=mlatu
           mv $MLATU_BUILD $MLATU${{env.EXE_EXT}}
           if [[ "$OSTYPE" == "msys" ]]; then
             7z a $MLATU.zip $MLATU${{env.EXE_EXT}}
@@ -68,6 +53,7 @@ jobs:
             echo ::set-output name=content_type::application/gzip
             echo ::set-output name=extension::gz
           fi
+      
       - name: Upload Server Binary
         uses: actions/upload-release-asset@v1.0.2
         env:
@@ -75,5 +61,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ steps.compress_binary.outputs.path }}
-          asset_name: mlatu-${{ runner.OS }}-${{ env.GHC_VERSION }}${{env.EXE_EXT}}.${{ steps.compress_binary.outputs.extension }}
+          asset_name: mlatu-${{ runner.OS }}${{env.EXE_EXT}}.${{ steps.compress_binary.outputs.extension }}
           asset_content_type: ${{ steps.compress_binary.outputs.content_type }}

@@ -107,7 +107,7 @@ data ValueType
 newtype ResultType = ResultType [ValueType]
   deriving (Show, Eq)
 
-newtype ParamsType = Params [ValueType]
+newtype ParamsType = ParamsType [ValueType]
   deriving (Show, Eq)
 
 newtype LocalsType = LocalsType [ValueType]
@@ -178,8 +178,8 @@ data Instruction
   | I64Store32 MemArg
   | CurrentMemory
   | GrowMemory
-  | I32Const Word32
-  | I64Const Word64
+  | I32Const Int32
+  | I64Const Int64
   | F32Const Float
   | F64Const Double
   | IUnOp BitSize IUnOp
@@ -201,13 +201,20 @@ data Instruction
   | F64PromoteF32
   | IReinterpretF BitSize
   | FReinterpretI BitSize
+  | I32Extend8S
+  | I32Extend16S
+  | I64Extend8S
+  | I64Extend16S
+  | I64Extend32S
+  | ITruncSatS BitSize BitSize
+  | ITruncSatU BitSize BitSize
   deriving (Show, Eq)
 
 newtype Expression = Expression [Instruction]
   deriving (Show, Eq)
 
 data Function = Function
-  { funcType :: TypeIndex,
+  { functionType :: TypeIndex,
     localTypes :: LocalsType,
     functionBody :: Expression
   }
@@ -234,13 +241,13 @@ data GlobalType
   deriving (Show, Eq)
 
 data Global = Global
-  { globalType :: GlobalType,
+  { mutability :: GlobalType,
     initializer :: Expression
   }
   deriving (Show, Eq)
 
 data ElemSegment = ElemSegment
-  { tableIndex :: TableIndex,
+  { tableIdx :: TableIndex,
     elemOffset :: Expression,
     funcIndexes :: [FuncIndex]
   }
@@ -264,7 +271,7 @@ data ExportDesc
   deriving (Show, Eq)
 
 data Export = Export
-  { name :: Text,
+  { exportName :: Text,
     desc :: ExportDesc
   }
   deriving (Show, Eq)
@@ -272,13 +279,13 @@ data Export = Export
 data ImportDesc
   = ImportFunc TypeIndex
   | ImportTable TableType
-  | ImportMemory Limit
+  | ImportMemory Memory
   | ImportGlobal GlobalType
   deriving (Show, Eq)
 
 data Import = Import
   { sourceModule :: Text,
-    name :: Text,
+    importName :: Text,
     desc :: ImportDesc
   }
   deriving (Show, Eq)
@@ -291,7 +298,7 @@ data Module = Module
     globals :: [Global],
     elems :: [ElemSegment],
     datas :: [DataSegment],
-    start :: Maybe StartFunction,
+    startFun :: Maybe StartFunction,
     imports :: [Import],
     exports :: [Export]
   }
@@ -307,7 +314,7 @@ emptyModule =
       globals = [],
       elems = [],
       datas = [],
-      start = Nothing,
+      startFun = Nothing,
       imports = [],
       exports = []
     }
