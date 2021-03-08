@@ -372,11 +372,13 @@ maybePrintTerms = \case
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
   (Group a : NewVector _ 1 _ _ : xs) -> (brackets <$> maybePrintTerm a) `horiz` xs
+  (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> printDo a body `vertical` xs
   (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack, Parameter _ s1 Stack] [] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
+  (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
   (Lambda _ name _ body _ : xs) -> Just (printLambda name body `justHoriz` xs)
   (Match BooleanMatch _ cases _ _ : xs) -> Just (printIf Nothing cases `justVertical` xs)
@@ -443,11 +445,12 @@ printLambda name body =
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
 printIf cond [Case _ trueBody _, Case _ falseBody _] =
-  vsep $
-    blockMaybe
-      (maybe "if" ("if" <+>) (cond >>= printGroup))
-      (maybePrintTerm trueBody) :
-    maybeToList (includeBlockMaybe "else" (maybePrintTerms (Term.decompose falseBody)))
+  vsep
+    [ blockMaybe
+        (maybe "if" ("if" <+>) (cond >>= printGroup))
+        (maybePrintTerm trueBody),
+      blockMaybe "else" (maybePrintTerms (Term.decompose falseBody))
+    ]
 printIf _ _ = error "Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
