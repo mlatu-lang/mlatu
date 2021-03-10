@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 68ecff42a575dbaf160af7a4f0a138a95e7da34edc955461016bb503e94fac5f
+-- hash: 5a5b73522fdf6ced7770997ce3549c6768c8223c0d64fb7734eb4862942e4aa2
 
 name:           Mlatu
 version:        0.1.0.0
@@ -95,8 +95,8 @@ library
       base >=4.8
     , bytestring
     , containers
+    , exceptions
     , file-embed
-    , hashable
     , parsec
     , prettyprinter
     , relude
@@ -124,8 +124,8 @@ executable mlatu
     , cmdargs
     , containers
     , directory
+    , exceptions
     , file-embed
-    , hashable
     , haskeline
     , parsec
     , prettyprinter
@@ -160,8 +160,8 @@ test-suite test
     , base >=4.8
     , bytestring
     , containers
+    , exceptions
     , file-embed
-    , hashable
     , hspec
     , knob
     , parsec

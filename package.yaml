@@ -57,7 +57,6 @@ dependencies:
   - base >=4.8
   - bytestring
   - containers
-  - hashable
   - parsec
   - prettyprinter
   - text
@@ -66,6 +65,7 @@ dependencies:
   - vector
   - relude
   - file-embed
+  - exceptions
 
 library:
   source-dirs: src
