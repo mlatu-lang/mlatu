@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5a5b73522fdf6ced7770997ce3549c6768c8223c0d64fb7734eb4862942e4aa2
+-- hash: b493a9533ba32559260356495b9e8daa782b10f7ea21c39297894430086b2078
 
 name:           Mlatu
 version:        0.1.0.0
@@ -109,7 +109,6 @@ library
 executable mlatu
   main-is: Main.hs
   other-modules:
-      Arguments
       Interact
       Report
       Paths_Mlatu
@@ -121,7 +120,6 @@ executable mlatu
       Mlatu
     , base >=4.8
     , bytestring
-    , cmdargs
     , containers
     , directory
     , exceptions
@@ -130,6 +128,7 @@ executable mlatu
     , parsec
     , prettyprinter
     , relude
+    , simple-cmd-args
     , text
     , transformers
     , unordered-containers

@@ -81,9 +81,9 @@ executables:
       - -O2
     dependencies:
       - Mlatu
-      - cmdargs
       - haskeline
       - directory
+      - simple-cmd-args
 
 tests:
   test:
