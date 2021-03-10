@@ -23,8 +23,7 @@ define dip [R..., S..., T] (R..., T, (R... -> S...) -> S..., T):
   f call x
 
 define drop2 [A, B] (A, B ->):
-  -> drop;
-  -> drop;
+  -> _, _;
 
 define dup [T] (T -> T, T):
   -> x;

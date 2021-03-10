@@ -16,7 +16,7 @@ define call [R..., S...] (R..., (R... -> S...) -> S...):
   _::mlatu::call
 
 define drop [T] (T ->):
-  -> drop;
+  -> _;
 
 
 
