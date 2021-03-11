@@ -9,8 +9,7 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Parser
-  ( Bracketer,
-    Parser,
+  ( Parser,
     getTokenOrigin,
     parserMatch,
     parserMatch_,
@@ -18,33 +17,30 @@ module Mlatu.Parser
   )
 where
 
-import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
 import Mlatu.Name (Qualifier)
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
+import Mlatu.Pretty ()
 import Mlatu.Token (Token)
 import Relude
 import Text.Parsec (ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
-import Mlatu.Pretty ()
 
-type Bracketer a = GeneralParser 'Layout a
+type Parser a = GeneralParser a
 
-type Parser a = GeneralParser 'Nonlayout a
+type GeneralParser a = ParsecT [Located Token] Qualifier Identity a
 
-type GeneralParser l a = ParsecT [Located (Token l)] Qualifier Identity a
-
-getTokenOrigin :: GeneralParser l Origin
+getTokenOrigin :: GeneralParser Origin
 getTokenOrigin =
   Located.origin
     <$> Parsec.lookAhead (tokenSatisfy (const True))
 
 tokenSatisfy ::
-  (Located (Token l) -> Bool) ->
-  GeneralParser l (Located (Token l))
+  (Located Token -> Bool) ->
+  GeneralParser (Located Token)
 tokenSatisfy predicate =
   Parsec.tokenPrim
     show
@@ -53,14 +49,14 @@ tokenSatisfy predicate =
   where
     advance ::
       SourcePos ->
-      Located (Token l) ->
-      [Located (Token l)] ->
+      Located Token ->
+      [Located Token] ->
       SourcePos
     advance _ _ (token : _) = Origin.begin (Located.origin token)
     advance sourcePos _ _ = sourcePos
 
-parserMatch :: Token l -> GeneralParser l (Located (Token l))
+parserMatch :: Token -> GeneralParser (Located Token)
 parserMatch token = tokenSatisfy ((== token) . Located.item) <?> show token
 
-parserMatch_ :: Token l -> GeneralParser l ()
+parserMatch_ :: Token -> GeneralParser ()
 parserMatch_ = void . parserMatch

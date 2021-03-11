@@ -1,108 +1,141 @@
-vocab mlatu:
-  intrinsic read_float64 (String -> Optional[Double])
-  intrinsic read_int64 (String -> Optional[Int])
-
-trait read [T] (String -> Optional[T])
-
-
-vocab mlatu:
-  intrinsic show_float64 (Double -> String)
-  intrinsic show_int64 (Int -> String)
-
-trait show [T] (T -> String)
-
-
-vocab mlatu:
+vocab mlatu {
   intrinsic eq_string (String, String -> Bool)
   intrinsic gt_string (String, String -> Bool)
   intrinsic string_concat (String, String -> String)
   intrinsic string_from_list (List[Char] -> String)
   intrinsic string_to_list (String -> List[Char])
+}
+
+trait show [T] (T -> String)
+
+
+vocab mlatu {
+  intrinsic show_float64 (Double -> String)
+  intrinsic show_int64 (Int -> String)
+}
+
+trait read [T] (String -> Optional[T])
+
+
+vocab mlatu {
+  intrinsic read_float64 (String -> Optional[Double])
+  intrinsic read_int64 (String -> Optional[Int])
+}
 
 type String {}
 
-instance + (String, String -> String):
+instance + (String, String -> String) {
   _::mlatu::string_concat
+}
 
-instance < (String, String -> Bool):
+instance < (String, String -> Bool) {
   swap (>)
+}
 
-instance <= (String, String -> Bool):
+instance <= (String, String -> Bool) {
   (>) not
+}
 
-instance <> (String, String -> Bool):
+instance <> (String, String -> Bool) {
   (=) not
+}
 
-instance = (String, String -> Bool):
+instance = (String, String -> Bool) {
   _::mlatu::eq_string
+}
 
-instance > (String, String -> Bool):
+instance > (String, String -> Bool) {
   _::mlatu::gt_string
+}
 
-instance >= (String, String -> Bool):
+instance >= (String, String -> Bool) {
   (<) not
+}
 
-instance read (String -> Optional[Bool]):
+instance read (String -> Optional[Bool]) {
   -> s;
-  if (s = "true"):
+  if (s = "true") {
     true some
-  else:
-    if (s = "false"):
+  }
+  else {
+    if (s = "false") {
       false some
-    else:
+    }
+    else {
       none
+    }
+  }
+}
 
-instance read (String -> Optional[Double]):
+instance read (String -> Optional[Double]) {
   _::mlatu::read_float64
+}
 
-instance read (String -> Optional[Int]):
+instance read (String -> Optional[Int]) {
   _::mlatu::read_int64
+}
 
-instance read (String -> Optional[Char]):
+instance read (String -> Optional[Char]) {
   chars -> cs;
-  if (cs length = 1):
+  if (cs length = 1) {
     cs head
-  else:
+  }
+  else {
     none
+  }
+}
 
-instance read (String -> Optional[String]):
+instance read (String -> Optional[String]) {
   some
+}
 
 instance show (String -> String) {}
 
-instance show (Bool -> String):
-  if:
+instance show (Bool -> String) {
+  if {
     "true"
-  else:
+  }
+  else {
     "false"
+  }
+}
 
-instance show [A, B] (Either[A, B] -> String):
+instance show [A, B] (Either[A, B] -> String) {
   match
-    case left:
-      show
-    case right:
-      show
+  case left {
+    show
+  }
+  case right {
+    show
+  }
+}
 
-instance show [T] (Optional[T] -> String):
+instance show [T] (Optional[T] -> String) {
   match
-    case some -> x:
-      "some " + x show
-    case none:
-      "none"
+  case some -> x {
+    "some " + x show
+  }
+  case none {
+    "none"
+  }
+}
 
-instance show (Double -> String):
+instance show (Double -> String) {
   _::mlatu::show_float64
+}
 
-instance show (Int -> String):
+instance show (Int -> String) {
   _::mlatu::show_int64
+}
 
-instance show (Char -> String):
-  once (from_chars)
+instance show (Char -> String) {
+  once ((((((from_chars))))))
+}
 
-define chars (String -> List[Char]):
+define chars (String -> List[Char]) {
   _::mlatu::string_to_list
+}
 
-define from_chars (List[Char] -> String):
+define from_chars (List[Char] -> String) {
   _::mlatu::string_from_list
-
-
+}

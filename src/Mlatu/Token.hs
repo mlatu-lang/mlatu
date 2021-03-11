@@ -11,101 +11,94 @@
 -- Portability : GHC
 module Mlatu.Token
   ( Token (..),
-    fromLayout,
   )
 where
 
-import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Name (Unqualified)
 import Relude
-import Unsafe.Coerce (unsafeCoerce)
 
-data Token (l :: Layoutness) where
-  -- | @about@
-  About :: Token l
-  -- | @<@ See note [Angle Brackets].
-  AngleBegin :: Token l
-  -- | @>@ See note [Angle Brackets].
-  AngleEnd :: Token l
-  -- | @->@
-  Arrow :: Token l
-  -- | @as@
-  As :: Token l
-  -- | @{@, @:@
-  BlockBegin :: Token l
-  -- | @}@
-  BlockEnd :: Token l
-  -- | @case@
-  Case :: Token l
-  -- | @'x'@
-  Character :: !Char -> Token l
-  -- | @:@
-  Colon :: Token 'Layout
-  -- | @,@
-  Comma :: Token l
-  -- | @define@
-  Define :: Token l
-  -- | @do@
-  Do :: Token l
-  -- | @...@
-  Ellipsis :: Token l
-  -- | @else@
-  Else :: Token l
-  -- | See note [Float Literals].
-  Float :: !FloatLiteral -> Token l
-  -- | @(@
-  GroupBegin :: Token l
-  -- | @)@
-  GroupEnd :: Token l
-  -- | @if@
-  If :: Token l
-  -- | @_@
-  Ignore :: Token l
-  -- | @instance@
-  Instance :: Token l
-  -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
-  Integer :: !IntegerLiteral -> Token l
-  -- | @intrinsic@
-  Intrinsic :: Token l
-  -- | @match@
-  Match :: Token l
-  -- | @+@
-  Operator :: !Unqualified -> Token l
-  -- | @permission@
-  Permission :: Token l
-  -- | @\@
-  Reference :: Token l
-  -- | @return@
-  Return :: Token l
-  -- | @synonym@
-  Synonym :: Token l
-  -- | @"..."@
-  Text :: !Text -> Token l
-  -- | @trait@
-  Trait :: Token l
-  -- | @type@
-  Type :: Token l
-  -- | @[@
-  VectorBegin :: Token l
-  -- | @]@
-  VectorEnd :: Token l
-  -- | @vocab@
-  Vocab :: Token l
-  -- | @::@
-  VocabLookup :: Token l
-  -- | @where@
-  Where :: Token l
-  -- | @with@
-  With :: Token l
-  -- | @word@
-  Word :: !Unqualified -> Token l
+data Token
+  = -- | @about@
+    About
+  | -- | @<@ See note [Angle Brackets].
+    AngleBegin
+  | -- | @>@ See note [Angle Brackets].
+    AngleEnd
+  | -- | @->@
+    Arrow
+  | -- | @as@
+    As
+  | -- | @{@, @:@
+    BlockBegin
+  | -- | @}@
+    BlockEnd
+  | -- | @case@
+    Case
+  | -- | @'x'@
+    Character !Char
+  | -- | @:@
+    Colon
+  | -- | @,@
+    Comma
+  | -- | @define@
+    Define
+  | -- | @do@
+    Do
+  | -- | @...@
+    Ellipsis
+  | -- | @else@
+    Else
+  | -- | See note [Float Literals].
+    Float !FloatLiteral
+  | -- | @(@
+    GroupBegin
+  | -- | @)@
+    GroupEnd
+  | -- | @if@
+    If
+  | -- | @_@
+    Ignore
+  | -- | @instance@
+    Instance
+  | -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
+    Integer !IntegerLiteral
+  | -- | @intrinsic@
+    Intrinsic
+  | -- | @match@
+    Match
+  | -- | @+@
+    Operator !Unqualified
+  | -- | @permission@
+    Permission
+  | -- | @\@
+    Reference
+  | -- | @return@
+    Return
+  | -- | @synonym@
+    Synonym
+  | -- | @"..."@
+    Text !Text
+  | -- | @trait@
+    Trait
+  | -- | @type@
+    Type
+  | -- | @[@
+    VectorBegin
+  | -- | @]@
+    VectorEnd
+  | -- | @vocab@
+    Vocab
+  | -- | @::@
+    VocabLookup
+  | -- | @where@
+    Where
+  | -- | @with@
+    With
+  | -- | @word@
+    Word !Unqualified
 
-fromLayout :: Token l -> Maybe (Token 'Nonlayout)
-fromLayout Colon = Nothing
-fromLayout x = Just (unsafeCoerce x)
-
-instance Eq (Token l) where
+instance Eq Token where
   About == About = True
   AngleBegin == AngleBegin = True
   AngleEnd == AngleEnd = True

@@ -17,7 +17,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
 import Data.Text qualified as Text
-import Mlatu.Bracket (bracket)
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Declaration (Declaration (Declaration))
@@ -36,7 +35,6 @@ import Mlatu.Fragment (Fragment (Fragment))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.Kind (Kind (..))
-import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
 import Mlatu.Metadata (Metadata (Metadata))
@@ -82,7 +80,7 @@ fragment ::
   -- | Override name of @main@.
   Maybe Qualified ->
   -- | Input tokens.
-  [Located (Token 'Nonlayout)] ->
+  [Located Token] ->
   -- | Parsed program fragment.
   M (Fragment ())
 fragment line path mainPermissions mainName tokens =
@@ -116,8 +114,7 @@ generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
 generalName line path text = do
   tokens <- tokenize line path text
   errorCheckpoint
-  bracketed <- bracket path tokens
-  let parsed = Parsec.runParser nameParser Vocabulary.global path bracketed
+  let parsed = Parsec.runParser nameParser Vocabulary.global path tokens
   case parsed of
     Left parseError -> do
       report $ Report.parseError parseError
@@ -307,10 +304,10 @@ operatorNameParser = (<?> "operator name") $ do
     _nonUnqualifiedOperator -> Nothing
   return $ Unqualified $ Text.concat $ angles ++ [rest]
 
-parseOne :: (Located (Token 'Nonlayout) -> Maybe a) -> Parser a
+parseOne :: (Located Token -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
   where
-    advance :: SourcePos -> t -> [Located (Token 'Nonlayout)] -> SourcePos
+    advance :: SourcePos -> t -> [Located Token] -> SourcePos
     advance _ _ (token : _) = Origin.begin $ Located.origin token
     advance sourcePos _ _ = sourcePos
 
@@ -524,7 +521,7 @@ intrinsicParser =
     declarationParser Token.Intrinsic Declaration.Intrinsic
 
 declarationParser ::
-  Token 'Nonlayout ->
+  Token ->
   Declaration.Category ->
   Parser Declaration
 declarationParser keyword category = do
@@ -575,7 +572,7 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
     LocalName _ -> error "name parser should only return qualified or unqualified name"
   pure (name, fixity)
 
-definitionParser :: Token 'Nonlayout -> Category -> Parser (Definition ())
+definitionParser :: Token -> Category -> Parser (Definition ())
 definitionParser keyword category = do
   origin <- getTokenOrigin <* parserMatch keyword
   (name, fixity) <- qualifiedNameParser <?> "definition name"
@@ -648,7 +645,7 @@ termParser = (<?> "expression") $ do
       asParser
     ]
 
-toLiteral :: Located (Token 'Nonlayout) -> Maybe (Value (), Origin)
+toLiteral :: Located Token -> Maybe (Value (), Origin)
 toLiteral token = case Located.item token of
   Token.Character x -> Just (Character x, origin)
   Token.Float x -> Just (Float x, origin)
@@ -833,7 +830,7 @@ permitParser =
       ]
     <*> (UnqualifiedName <$> wordNameParser)
 
-parserMatchOperator :: Text -> Parser (Located (Token 'Nonlayout))
+parserMatchOperator :: Text -> Parser (Located Token)
 parserMatchOperator = parserMatch . Token.Operator . Unqualified
 
 lambdaNamesParser :: Parser [(Maybe Unqualified, Origin)]

@@ -13,118 +13,160 @@ trait || [T] (T, (-> T) -> T)
 trait ~ [A] (A, A -> A)
 
 
-type Bool:
+type Bool {
   case false
   case true
+}
 
-
-
-
-
-instance & (Bool, Bool -> Bool):
+instance & (Bool, Bool -> Bool) {
   -> x, y;
-  if (x):
+  if (x) {
     y
-  else:
+  }
+  else {
     false
+  }
+}
 
-instance & (Int, Int -> Int):
+instance & (Int, Int -> Int) {
   _::mlatu::and_int64
+}
 
-instance && (Bool, (-> Bool) -> Bool):
+instance && (Bool, (-> Bool) -> Bool) {
   -> x, y;
-  if (x):
+  if (x) {
     y call
-  else:
+  }
+  else {
     false
+  }
+}
 
-instance --> (Bool, Bool -> Bool):
+instance --> (Bool, Bool -> Bool) {
   -> a, b;
-  if (a):
+  if (a) {
     b
-  else:
+  }
+  else {
     true
+  }
+}
 
-instance --> (Int, Int -> Int):
+instance --> (Int, Int -> Int) {
   -> a, b;
   a not | b
+}
 
-instance not (Bool -> Bool):
-  if:
+instance not (Bool -> Bool) {
+  if {
     false
-  else:
+  }
+  else {
     true
+  }
+}
 
-instance not (Int -> Int):
+instance not (Int -> Int) {
   _::mlatu::not_int64
+}
 
-instance | (Bool, Bool -> Bool):
+instance | (Bool, Bool -> Bool) {
   -> x, y;
-  if (x):
+  if (x) {
     true
-  else:
+  }
+  else {
     y
+  }
+}
 
-instance | (Int, Int -> Int):
+instance | (Int, Int -> Int) {
   _::mlatu::or_int64
+}
 
-instance || (Bool, (-> Bool) -> Bool):
+instance || (Bool, (-> Bool) -> Bool) {
   -> x, y;
-  if (x):
+  if (x) {
     true
-  else:
+  }
+  else {
     y call
+  }
+}
 
-instance ~ (Int, Int -> Int):
+instance ~ (Int, Int -> Int) {
   _::mlatu::xor_int64
+}
 
-instance ~ (Bool, Bool -> Bool):
-  swap if:
+instance ~ (Bool, Bool -> Bool) {
+  swap if {
     not
+  }
+  else {}
+}
 
-define ---> (Bool, (-> Bool) -> Bool):
+define ---> (Bool, (-> Bool) -> Bool) {
   -> a, b;
-  if (a):
+  if (a) {
     b call
-  else:
+  }
+  else {
     true
+  }
+}
 
+define until [R...] (R..., (R... -> R..., Bool) -> R...) {
+  dup call not if {
+    until
+  }
+  else {}
+}
 
+define while [R...] (R..., (R... -> R..., Bool) -> R...) {
+  dup call if {
+    while
+  }
+  else {}
+}
 
-define until [R...] (R..., (R... -> R..., Bool) -> R...):
-  -> f;
-  if (f call not):
-    f until
-
-define while [R...] (R..., (R... -> R..., Bool) -> R...):
-  -> f;
-  if (f call):
-    f while
-
-about ~:
-  operator:
+about ~ {
+  operator {
     5
+  }
+}
 
-about &:
-  operator:
+about & {
+  operator {
     right 3
+  }
+}
 
-about &&:
-  operator:
+about && {
+  operator {
     right 3
+  }
+}
 
-about |:
-  operator:
+about | {
+  operator {
     right 2
+  }
+}
 
-about ||:
-  operator:
+about || {
+  operator {
     right 2
+  }
+}
 
-about -->:
-  operator:
+about --> {
+  operator {
     right 1
+  }
+}
 
-about --->:
-  operator:
+about ---> {
+  operator {
     right 1
+  }
+}

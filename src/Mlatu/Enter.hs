@@ -14,7 +14,6 @@ module Mlatu.Enter
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Mlatu.Bracket (bracket)
 import Mlatu.Declaration (Declaration)
 import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition)
@@ -397,17 +396,12 @@ fragmentFromSource mainPermissions mainName line path source = do
 
   tokenized <- tokenize line path source
   errorCheckpoint
-  -- The layout rule is applied to desugar indentation-based syntax, so that the
-  -- parser can find the ends of blocks without checking the indentation of
-  -- tokens.
-
-  bracketed <- bracket path tokenized
 
   -- We then parse the token stream as a series of top-level program elements.
   -- Datatype definitions are desugared into regular definitions, so that name
   -- resolution can find their names.
 
-  parsed <- Parse.fragment line path mainPermissions mainName bracketed
+  parsed <- Parse.fragment line path mainPermissions mainName tokenized
 
   errorCheckpoint
 

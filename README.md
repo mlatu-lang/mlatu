@@ -13,12 +13,15 @@ I make announcements, discuss the languaage, and am available to answer question
 Here's a naive recursive fibonacci function:
 
 ```
-define fib (Int -> Int):
+define fib (Int -> Int) {
   -> n;
-  if (n < 2):
+  if (n < 2) {
     1
-  else:
+  }
+  else {
     (n - 2) fib + (n - 1) fib
+  }
+}
 
 20 fib print
 ```
@@ -26,8 +29,9 @@ define fib (Int -> Int):
 Here's the definition of `or` in common/list.mlt, which demonstrates a more functional style, as well as some of the functions available out of the gate in the prelude.
 
 ```
-define or (List[Bool] -> Bool):
+define or (List[Bool] -> Bool) {
   true \(|) (fold_left)
+}
 ```
 
 See the /examples folder for more examples.

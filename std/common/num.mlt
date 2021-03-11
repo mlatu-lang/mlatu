@@ -25,7 +25,7 @@ trait neg [T] (T -> T)
 trait zero [T] (-> T)
 
 
-vocab mlatu:
+vocab mlatu {
   intrinsic acos_float64 (Double -> Double)
   intrinsic acosh_float64 (Double -> Double)
   intrinsic add_float64 (Double, Double -> Double)
@@ -67,6 +67,7 @@ vocab mlatu:
   intrinsic tanh_float64 (Double -> Double)
   intrinsic trunc_float64 (Double -> Double)
   intrinsic xor_int64 (Int, Int -> Int)
+}
 
 type Char {}
 
@@ -74,23 +75,29 @@ type Double {}
 
 type Int {}
 
-instance % (Double, Double -> Double +Fail):
+instance % (Double, Double -> Double +Fail) {
   _::mlatu::mod_float64
+}
 
-instance % (Int, Int -> Int +Fail):
+instance % (Int, Int -> Int +Fail) {
   _::mlatu::mod_int64
+}
 
-instance * (Double, Double -> Double):
+instance * (Double, Double -> Double) {
   _::mlatu::mul_float64
+}
 
-instance * (Int, Int -> Int):
+instance * (Int, Int -> Int) {
   _::mlatu::mul_int64
+}
 
-instance + (Double, Double -> Double):
+instance + (Double, Double -> Double) {
   _::mlatu::add_float64
+}
 
-instance + (Int, Int -> Int):
+instance + (Int, Int -> Int) {
   _::mlatu::add_int64
+}
 
 instance - (Double, Double -> Double):
   _::mlatu::sub_float64

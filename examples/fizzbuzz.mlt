@@ -1,24 +1,37 @@
-define divisible (Int, Int -> Bool +Fail):
+define divisible (Int, Int -> Bool +Fail) {
   (%) 0 (=)
+}
 
-define fizzbuzz (Int -> String):
+define fizzbuzz (Int -> String) {
   -> n;
-  do (with (+Fail)):
+  do (with (+Fail)) {
     n 5 divisible n 3 divisible
-  if:
-    if:
+  }
+  if {
+    if {
       "FizzBuzz"
-    else:
+    }
+    else {
       "Fizz"
-  else:
-    if:
+    }
+  }
+  else {
+    if {
       "Buzz"
-    else:
+    }
+    else {
       n show
+    }
+  }
+}
 
-define fizzbuzzes (Int, Int -> +IO):
+define fizzbuzzes (Int, Int -> +IO) {
   -> c, m;
-  c fizzbuzz println if (c < m):
+  c fizzbuzz println (c < m)
+  if {
     (c + 1) m fizzbuzzes
+  }
+  else {}
+}
 
 1 100 fizzbuzzes

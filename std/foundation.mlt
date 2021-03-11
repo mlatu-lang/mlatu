@@ -1,31 +1,36 @@
-vocab mlatu:
+vocab mlatu {
   intrinsic call [R..., S...] (R..., (R... -> S...) -> S...)
   intrinsic drop [A] (A ->)
   intrinsic swap [A, B] (A, B -> B, A)
+}
 
-permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P):
+permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P) {
   with (+Exit)
+}
 
-permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P):
+permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P) {
   with (+Fail)
+}
 
-permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P):
+permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P) {
   with (+IO)
+}
 
-define call [R..., S...] (R..., (R... -> S...) -> S...):
+define call [R..., S...] (R..., (R... -> S...) -> S...) {
   _::mlatu::call
+}
 
-define drop [T] (T ->):
+define drop [T] (T ->) {
   -> _;
+}
 
-
-
-define swap [A, B] (A, B -> B, A):
+define swap [A, B] (A, B -> B, A) {
   -> x, y;
   y x
+}
 
-about call:
-  docs:
+about call {
+  docs {
     """
     Applies a closure to the stack.
 
@@ -34,3 +39,5 @@ about call:
     'R...' to 'S...' given '+P', then we can invoke the closure to produce the
     new state 'S...'.
     """
+  }
+}

@@ -19,7 +19,6 @@ import Data.Text qualified as Text
 import Mlatu.Base (Base (..))
 import Mlatu.Indent (Indent (..))
 import Mlatu.Informer (Informer (..))
-import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
 import Mlatu.Located (Located (..))
 import Mlatu.Name (Unqualified (..))
@@ -46,7 +45,7 @@ tokenize ::
   -- | Source text.
   Text ->
   -- | Lexed tokens.
-  m [Located (Token 'Layout)]
+  m [Located Token]
 tokenize line path txt = case Parsec.runParser
   (setPos *> fileTokenizer)
   1
@@ -61,7 +60,7 @@ tokenize line path txt = case Parsec.runParser
 
 type Tokenizer a = ParsecT Text Column Identity a
 
-fileTokenizer :: Tokenizer [Located (Token 'Layout)]
+fileTokenizer :: Tokenizer [Located Token]
 fileTokenizer = silenceTokenizer *> tokensTokenizer <* Parsec.eof
 
 silenceTokenizer :: Tokenizer ()
@@ -94,10 +93,10 @@ silenceTokenizer = Parsec.skipMany (comment <|> whitespace)
     skipManyTill :: ParsecT s u m a -> ParsecT s u m b -> ParsecT s u m ()
     a `skipManyTill` b = void (Parsec.try b) <|> a *> (a `skipManyTill` b)
 
-tokensTokenizer :: Tokenizer [Located (Token 'Layout)]
+tokensTokenizer :: Tokenizer [Located Token]
 tokensTokenizer = tokenTokenizer `Parsec.sepEndBy` silenceTokenizer
 
-rangedTokenizer :: Tokenizer (Token 'Layout) -> Tokenizer (Located (Token 'Layout))
+rangedTokenizer :: Tokenizer Token -> Tokenizer (Located Token)
 rangedTokenizer parser = do
   column <- Parsec.getState
   begin <- Parsec.getPosition
@@ -105,29 +104,29 @@ rangedTokenizer parser = do
   end <- Parsec.getPosition
   return $ At (Origin.range begin end) (Indent column) result
 
-blockBegin :: Tokenizer (Token l)
+blockBegin :: Tokenizer Token
 blockBegin = BlockBegin <$ Parsec.char '{'
 
-blockEnd :: Tokenizer (Token l)
+blockEnd :: Tokenizer Token
 blockEnd = BlockEnd <$ Parsec.char '}'
 
-groupBegin :: Tokenizer (Token l)
+groupBegin :: Tokenizer Token
 groupBegin = GroupBegin <$ Parsec.char '('
 
-groupEnd :: Tokenizer (Token l)
+groupEnd :: Tokenizer Token
 groupEnd = GroupEnd <$ Parsec.char ')'
 
 singleQuote :: Tokenizer Char
 singleQuote = Parsec.char '\''
 
-singleQuoteCharacterLiteral :: Tokenizer (Token l)
+singleQuoteCharacterLiteral :: Tokenizer Token
 singleQuoteCharacterLiteral = do
   mc <- Parsec.between singleQuote singleQuote $ character '\''
   case mc of
     Just c -> return (Character c)
     Nothing -> Parsec.unexpected "empty character literal"
 
-smartQuoteCharacterLiteral :: Tokenizer (Token l)
+smartQuoteCharacterLiteral :: Tokenizer Token
 smartQuoteCharacterLiteral = do
   mc <-
     Parsec.between (Parsec.char '\x2018') (Parsec.char '\x2019') $
@@ -137,7 +136,7 @@ smartQuoteCharacterLiteral = do
     [] -> Parsec.unexpected "empty character literal"
     _multiLit -> Parsec.unexpected "multi-character literal"
 
-characterLiteral :: Tokenizer (Token l)
+characterLiteral :: Tokenizer Token
 characterLiteral = singleQuoteCharacterLiteral <|> smartQuoteCharacterLiteral
 
 character :: Char -> Tokenizer (Maybe Char)
@@ -177,37 +176,37 @@ symbol =
 special :: Tokenizer Char
 special = Parsec.oneOf "\"'(),:[\\]_{}"
 
-comma :: Tokenizer (Token l)
+comma :: Tokenizer Token
 comma = Comma <$ Parsec.char ','
 
-ellipsis :: Tokenizer (Token l)
+ellipsis :: Tokenizer Token
 ellipsis =
   Parsec.try $
     Ellipsis
       <$ Parsec.choice (map Parsec.string ["...", "\x2026"])
 
-ignore :: Tokenizer (Token l)
+ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
 
-vocabLookup :: Tokenizer (Token l)
+vocabLookup :: Tokenizer Token
 vocabLookup =
   Parsec.try $
     VocabLookup
       <$ Parsec.choice (map Parsec.string ["::", "\x2237"])
 
-colon :: Tokenizer (Token 'Layout)
+colon :: Tokenizer Token
 colon = Colon <$ Parsec.char ':'
 
-vectorBegin :: Tokenizer (Token l)
+vectorBegin :: Tokenizer Token
 vectorBegin = VectorBegin <$ Parsec.char '['
 
-vectorEnd :: Tokenizer (Token l)
+vectorEnd :: Tokenizer Token
 vectorEnd = VectorEnd <$ Parsec.char ']'
 
-reference :: Tokenizer (Token l)
+reference :: Tokenizer Token
 reference = Reference <$ Parsec.char '\\'
 
-num :: Tokenizer (Token l)
+num :: Tokenizer Token
 num = Parsec.try $ do
   sign <- Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
   let applySign :: (Num a) => Maybe Char -> a -> a
@@ -265,7 +264,7 @@ num = Parsec.try $ do
     ]
     <* Parsec.notFollowedBy Parsec.digit
 
-doubleQuoteStringLiteral :: Tokenizer (Token l)
+doubleQuoteStringLiteral :: Tokenizer Token
 doubleQuoteStringLiteral =
   Text
     <$> Parsec.between
@@ -273,7 +272,7 @@ doubleQuoteStringLiteral =
       (Parsec.char '"' <?> "closing double quote")
       text
 
-smartQuoteStringLiteral :: Tokenizer (Token l)
+smartQuoteStringLiteral :: Tokenizer Token
 smartQuoteStringLiteral =
   Text
     <$> Parsec.between
@@ -281,23 +280,23 @@ smartQuoteStringLiteral =
       (Parsec.char '\x201D' <?> "closing right double quote")
       (nestableText '\x201C' '\x201D')
 
-stringLiteral :: Tokenizer (Token l)
+stringLiteral :: Tokenizer Token
 stringLiteral = doubleQuoteStringLiteral <|> smartQuoteStringLiteral
 
-arrow :: Tokenizer (Token l)
+arrow :: Tokenizer Token
 arrow =
   Parsec.try $
     Arrow
       <$ Parsec.choice (map Parsec.string ["->", "\x2192"])
       <* Parsec.notFollowedBy symbol
 
-angleBegin :: Tokenizer (Token l)
+angleBegin :: Tokenizer Token
 angleBegin = AngleBegin <$ Parsec.char '<'
 
-angleEnd :: Tokenizer (Token l)
+angleEnd :: Tokenizer Token
 angleEnd = AngleEnd <$ Parsec.char '>'
 
-alphanumeric :: Tokenizer (Token 'Layout)
+alphanumeric :: Tokenizer Token
 alphanumeric =
   Parsec.choice
     [ do
@@ -337,10 +336,10 @@ alphanumeric =
       operator
     ]
 
-operator :: Tokenizer (Token l)
+operator :: Tokenizer Token
 operator = Operator . Unqualified . toText <$> Parsec.many1 symbol
 
-tokenTokenizer :: Tokenizer (Located (Token 'Layout))
+tokenTokenizer :: Tokenizer (Located Token)
 tokenTokenizer =
   rangedTokenizer $
     Parsec.choice
@@ -398,7 +397,7 @@ nestableText open close =
   toText . concat
     <$> many (nestableCharacter open close)
 
-paragraph :: Tokenizer (Token l)
+paragraph :: Tokenizer Token
 paragraph =
   (<?> "paragraph") $
     Text <$> do
