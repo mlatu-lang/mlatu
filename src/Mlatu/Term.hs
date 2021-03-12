@@ -153,7 +153,7 @@ compose x o = foldr (Compose x) (identityCoercion x o)
 asCoercion :: a -> Origin -> [Signature] -> Term a
 asCoercion x o ts = Coercion (AnyCoercion signature) x o
   where
-    signature = Signature.Quantified [] [] (Signature.Function ts ts [] o) o
+    signature = Signature.Quantified [] (Signature.Function ts ts [] o) o
 
 identityCoercion :: a -> Origin -> Term a
 identityCoercion = Coercion IdentityCoercion
@@ -163,10 +163,9 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
   where
     signature =
       Signature.Quantified
-        [ Parameter o "R" Kind.Stack,
-          Parameter o "S" Kind.Stack
+        [ Parameter o "R" Kind.Stack Nothing,
+          Parameter o "S" Kind.Stack Nothing
         ]
-        []
         ( Signature.Function
             [ Signature.StackFunction
                 (Signature.Variable "R" o)

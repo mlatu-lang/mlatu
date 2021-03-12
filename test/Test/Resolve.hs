@@ -168,8 +168,7 @@ testWord contextSource viewpoint name expected = do
                       Definition.parent = Nothing,
                       Definition.signature =
                         Signature.Quantified
-                          [Parameter origin "R" Stack]
-                          []
+                          [Parameter origin "R" Stack Nothing]
                           ( Signature.StackFunction
                               (Signature.Variable "R" origin)
                               []

@@ -124,9 +124,9 @@ signature dictionary vocabulary = go
         <*> mapM go bs
         <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
-    go (Signature.Quantified vars b a origin) =
-      Signature.Quantified vars b
-        <$> foldr (withLocal . (\(Parameter _ name _) -> name)) (go a) vars
+    go (Signature.Quantified vars a origin) =
+      Signature.Quantified vars
+        <$> foldr (withLocal . (\(Parameter _ name _ _) -> name)) (go a) vars
         <*> pure origin
     go (Signature.Variable name origin) =
       Signature.Variable

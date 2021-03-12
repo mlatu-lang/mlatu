@@ -113,10 +113,18 @@ interpret ::
   [Rep] ->
   -- | Final stack state.
   IO [Rep]
-interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
-  let entryPointName = fromMaybe mainName mName
-  ((_, s), _) <- runInterp (word [entryPointName] entryPointName mainArgs) dictionary (Stack.fromList initialStack) [] [] stdin' stdout'
-  return $ toList s
+interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack =
+  runInterp
+    (word [entryPointName] entryPointName mainArgs)
+    dictionary
+    (Stack.fromList initialStack)
+    []
+    []
+    stdin'
+    stdout'
+    <&> (toList . snd . fst . fst)
+  where
+    entryPointName = fromMaybe mainName mName
 
 type Interp = ReaderT Dictionary (StateT (Stack Rep) (StateT [Rep] (StateT [[Rep]] (ReaderT Handle (ReaderT Handle IO)))))
 

@@ -49,7 +49,7 @@ import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
-import Mlatu.Signature (Constraint (..), Signature (..))
+import Mlatu.Signature ( Signature (..))
 import Mlatu.Synonym (Synonym (Synonym))
 import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
@@ -95,11 +95,11 @@ printFloatLiteral literal =
     value = floatValue literal
 
 printParameter :: Parameter -> Doc a
-printParameter (Parameter _ name Value) = printUnqualified name
-printParameter (Parameter _ name Stack) = printUnqualified name <> "..."
-printParameter (Parameter _ name Label) = "+" <> printUnqualified name
-printParameter (Parameter _ name Permission) = "+" <> printUnqualified name
-printParameter (Parameter _ name (_ :-> _)) = printUnqualified name <> "[_]"
+printParameter (Parameter _ name Value _) = printUnqualified name
+printParameter (Parameter _ name Stack _) = printUnqualified name <> "..."
+printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
+printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
+printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
 
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
@@ -259,9 +259,6 @@ prettyKinded name k = case k of
   Stack -> printUnqualified name <> "..."
   _otherKind -> printUnqualified name
 
-printConstraint :: Constraint -> Doc a
-printConstraint (Constraint name params) = printUnqualified name <> brackets (punctuateComma (map printParameter params))
-
 printSignature :: Signature -> Doc a
 printSignature (Application firstA b _) =
   printSignature finalA <> brackets (punctuateComma (map printSignature (as ++ [b])))
@@ -276,10 +273,9 @@ printSignature (Function as bs es _) =
       <> "->"
       <> mapNonEmpty "" (\sigs -> space <> punctuateComma (map printSignature sigs)) bs
       <> mapNonEmpty "" (\names -> space <> hsep (map (\p -> "+" <> printGeneralName p) names)) es
-printSignature (Quantified names constraints typ _) =
+printSignature (Quantified names typ _) =
   mapNonEmpty "" (\ns -> brackets (punctuateComma (map printParameter ns)) <> flatAlt space "\n") names
     <> printSignature typ
-    <> mapNonEmpty "" (\cs -> space <> "where" <+> hsep (map printConstraint cs)) constraints
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
@@ -360,7 +356,7 @@ printTypeDefinition (TypeDefinition constructors name _ parameters) =
   where
     typeName =
       printQualified name
-        <> if not $ null $ fst parameters then (list . map printParameter . fst) parameters else ""
+        <> if not $ null parameters then (list . map printParameter) parameters else ""
 
 printTerm :: Term a -> Doc b
 printTerm t = fromMaybe "" (maybePrintTerms (decompose t))
@@ -381,7 +377,7 @@ maybePrintTerms = \case
   (Group a : NewVector _ 1 _ _ : xs) -> (brackets <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack, Parameter _ s1 Stack] [] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
+  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
@@ -580,15 +576,13 @@ printEntry (Entry.Trait origin signature) =
       hsep ["defined at", printOrigin origin],
       hsep ["with signature", printSignature signature]
     ]
-printEntry (Entry.Type origin parameters constraints ctors) =
+printEntry (Entry.Type origin parameters ctors) =
   vsep
     [ "type",
       hsep ["defined at", printOrigin origin],
       hsep $
         "with parameters [" :
-        intersperse ", " (map printParameter parameters)
-          ++ ["] constrained so that "]
-          ++ intersperse "," (map printConstraint constraints),
+        intersperse ", " (map printParameter parameters),
       nestTwo $ vsep $ "and data constructors" : map constructor ctors
     ]
   where

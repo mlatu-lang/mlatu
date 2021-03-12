@@ -375,7 +375,7 @@ typeDefinitionParser = (<?> "type definition") $ do
   case fixity of
     Operator.Infix -> Parsec.unexpected "type-level operator"
     Operator.Postfix -> pass
-  parameters <- Parsec.option ([], []) quantifierParser
+  parameters <- Parsec.option [] quantifierParser
   constructors <- blockedParser $ many constructorParser
   return
     TypeDefinition
@@ -479,25 +479,20 @@ basicTypeParser = (<?> "basic type") $ do
     Just suffix -> foldl' apply prefix suffix
     Nothing -> prefix
 
-quantifierParser :: Parser ([Parameter], [Signature.Constraint])
-quantifierParser = (,) <$> typeListParser parameter <*> constraintsParser
+quantifierParser :: Parser [Parameter]
+quantifierParser = typeListParser parameter
 
 parameter :: Parser Parameter
 parameter = do
   origin <- getTokenOrigin
   Parsec.choice
-    [ (\unqualified -> Parameter origin unqualified Permission)
+    [ (\unqualified -> Parameter origin unqualified Permission Nothing)
         <$> (parserMatchOperator "+" *> wordNameParser),
       do
         name <- wordNameParser
         Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <* constraintsParser
+          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <*> pure Nothing
     ]
-
-constraintsParser :: Parser [Signature.Constraint]
-constraintsParser = Parsec.option [] (parserMatch Token.Where *> (constraintParser `Parsec.sepEndBy1` commaParser))
-  where
-    constraintParser = Signature.Constraint <$> wordNameParser <*> typeListParser parameter
 
 typeListParser :: Parser a -> Parser [a]
 typeListParser element =
@@ -507,8 +502,8 @@ typeListParser element =
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
   origin <- getTokenOrigin
-  (params, sigs) <- quantifierParser
-  Signature.Quantified params sigs <$> thing <*> pure origin
+  params <- quantifierParser
+  Signature.Quantified params <$> thing <*> pure origin
 
 traitParser :: Parser Declaration
 traitParser =

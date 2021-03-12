@@ -8,21 +8,16 @@
 -- Portability : GHC
 module Mlatu.Signature
   ( Signature (..),
-    Constraint (..),
     origin,
   )
 where
 
 import Mlatu.Entry.Parameter (Parameter)
-import Mlatu.Name (GeneralName, Unqualified)
+import Mlatu.Name (GeneralName)
 import Mlatu.Origin (Origin)
 import Mlatu.Type (Type)
 import Mlatu.Type qualified as Type
 import Relude hiding (Constraint, Type)
-
-data Constraint = Constraint !Unqualified ![Parameter]
-  deriving (Ord, Eq, Show)
-
 
 -- | A parsed type signature.
 data Signature
@@ -33,7 +28,7 @@ data Signature
   | -- | @A, B -> C, D +P +Q@
     Function ![Signature] ![Signature] ![GeneralName] !Origin
   | -- | @\<R..., T, +P\> (...)@
-    Quantified ![Parameter] ![Constraint] !Signature !Origin
+    Quantified ![Parameter] !Signature !Origin
   | -- | @T@
     Variable !GeneralName !Origin
   | -- | @R..., A, B -> S..., C, D +P +Q@
@@ -53,7 +48,7 @@ data Signature
 instance Eq Signature where
   Application a b _ == Application c d _ = (a, b) == (c, d)
   Function a b c _ == Function d e f _ = (a, b, c) == (d, e, f)
-  Quantified a b c _ == Quantified d e f _ = (a, b, c) == (d, e, f)
+  Quantified a b _ == Quantified c d _ = (a, b) == (c, d)
   Variable a _ == Variable b _ = a == b
   StackFunction a b c d e _ == StackFunction f g h i j _ =
     (a, b, c, d, e) == (f, g, h, i, j)
@@ -64,7 +59,7 @@ origin signature = case signature of
   Application _ _ o -> o
   Bottom o -> o
   Function _ _ _ o -> o
-  Quantified _ _ _ o -> o
+  Quantified _ _ o -> o
   Variable _ o -> o
   StackFunction _ _ _ _ _ o -> o
   Type t -> Type.origin t

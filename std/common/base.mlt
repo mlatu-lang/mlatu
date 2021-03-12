@@ -23,8 +23,8 @@ define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T.
 }
 
 define dip [R..., S..., T] (R..., T, (R... -> S...) -> S..., T) {
-  -> x;
-  call x
+  -> x, f;
+  f call x
 }
 
 define drop2 [A, B] (A, B ->) {

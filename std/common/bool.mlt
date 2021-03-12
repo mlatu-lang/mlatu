@@ -117,17 +117,17 @@ define ---> (Bool, (-> Bool) -> Bool) {
 }
 
 define until [R...] (R..., (R... -> R..., Bool) -> R...) {
-  dup call not
-  if {
-    until
+  -> f;
+  if (f call not) {
+    f until
   }
   else {}
 }
 
 define while [R...] (R..., (R... -> R..., Bool) -> R...) {
-  dup call
-  if {
-    while
+  -> f;
+  if (f call) {
+    f while
   }
   else {}
 }

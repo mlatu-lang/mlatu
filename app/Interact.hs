@@ -216,10 +216,9 @@ run prelude = do
                     stackScheme <-
                       typeFromSignature tenv $
                         Signature.Quantified
-                          [ Parameter currentOrigin "R" Stack,
-                            Parameter currentOrigin "E" Permission
+                          [ Parameter currentOrigin "R" Stack Nothing,
+                            Parameter currentOrigin "E" Permission Nothing
                           ]
-                          []
                           ( Signature.StackFunction
                               (Signature.Bottom currentOrigin)
                               []

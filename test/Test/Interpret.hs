@@ -141,12 +141,9 @@ spec = do
   describe "with functional combinators" $ do
     it "computes fixed points" $ do
       testInterpret
-        "5 {\n\
-        \  -> n, rec;\n\
-        \  if (n <= 0):\n\
-        \    1\n\
-        \  else:\n\
-        \    (n - 1) rec call * n\n\
+        "5 { -> n, rec;\
+        \  if (n <= 0) { 1 }\
+        \  else {(n - 1) rec call * n}\
         \} fix"
         [Int64 120]
 

@@ -41,6 +41,7 @@ import Mlatu.Name
     qualifierFromName,
   )
 import Mlatu.Parse qualified as Parse
+import Mlatu.Pretty (printQualified)
 import Mlatu.Quantify qualified as Quantify
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
@@ -51,9 +52,8 @@ import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
+import Prettyprinter (dquotes, hsep)
 import Relude
-import Prettyprinter (hsep, dquotes)
-import Mlatu.Pretty (printQualified)
 
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
@@ -124,24 +124,24 @@ declareType dictionary typ =
         -- Not previously declared.
         Nothing -> do
           let entry =
-                uncurry
-                  (Entry.Type (TypeDefinition.origin typ))
+                Entry.Type
+                  (TypeDefinition.origin typ)
                   (TypeDefinition.parameters typ)
                   (TypeDefinition.constructors typ)
           return $ Dictionary.insert (Instantiated name []) entry dictionary
         -- Previously declared with the same parameters.
-        Just (Entry.Type _origin parameters _ _ctors)
-          | parameters == fst (TypeDefinition.parameters typ) ->
+        Just (Entry.Type _origin parameters _ctors)
+          | parameters == TypeDefinition.parameters typ ->
             return dictionary
         -- Already declared or defined differently.
         Just {} ->
           error $
             show $
-                hsep
-                  [ "type",
-                    dquotes $ printQualified name,
-                    "already declared or defined differently"
-                  ]
+              hsep
+                [ "type",
+                  dquotes $ printQualified name,
+                  "already declared or defined differently"
+                ]
 
 declareWord ::
   Dictionary -> Definition () -> M Dictionary
@@ -207,11 +207,11 @@ declareWord dictionary definition =
         Just {} ->
           error $
             show $
-                hsep
-                  [ "word",
-                    dquotes $ printQualified name,
-                    "already declared or defined without signature or as a non-word"
-                  ]
+              hsep
+                [ "word",
+                  dquotes $ printQualified name,
+                  "already declared or defined without signature or as a non-word"
+                ]
 
 addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
@@ -371,11 +371,11 @@ defineWord dictionary definition = do
     _nonDeclared ->
       error $
         show $
-            hsep
-              [ "defining word",
-                dquotes $ printQualified name,
-                "not previously declared"
-              ]
+          hsep
+            [ "defining word",
+              dquotes $ printQualified name,
+              "not previously declared"
+            ]
 
 -- | Parses a source file into a program fragment.
 fragmentFromSource ::

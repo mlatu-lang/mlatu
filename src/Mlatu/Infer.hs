@@ -224,7 +224,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             case Dictionary.lookup (Instantiated ctorName []) dictionary of
               Just (Entry.Word _ _ _ (Just (Parent.Type typeName)) _ _) ->
                 case Dictionary.lookup (Instantiated typeName []) dictionary of
-                  Just (Entry.Type _ _ _ ctors) -> ctors
+                  Just (Entry.Type _ _ ctors) -> ctors
                   -- TODO: Check whether this can happen if a non-constructor
                   -- word is erroneously used in a case; if this is possible, we
                   -- should generate a report rather than an error.
@@ -568,7 +568,7 @@ typeFromSignature tenv signature0 = do
         es' <- mapM (fromVar origin) es
         (me, es'') <- lift $ permissionVar origin es'
         Forall origin var <$> makeFunction origin typeVar as typeVar bs es'' me
-      Signature.Quantified vars _ a origin -> do
+      Signature.Quantified vars a origin -> do
         original <- get
         (envVars, vars') <-
           foldrM
@@ -585,7 +585,7 @@ typeFromSignature tenv signature0 = do
             Parameter ->
             (Map Unqualified (Var, Origin), [Var]) ->
             M (Map Unqualified (Var, Origin), [Var])
-          declare (Parameter varOrigin name kind) (envVars, freshVars) = do
+          declare (Parameter varOrigin name kind _) (envVars, freshVars) = do
             x <- freshTypeId tenv
             let var = Var name x kind
             return (Map.insert name (var, varOrigin) envVars, var : freshVars)
@@ -679,12 +679,12 @@ typeKind dictionary = go
     go t = case t of
       TypeConstructor _origin (Constructor qualified) ->
         case Dictionary.lookup (Instantiated qualified []) dictionary of
-          Just (Entry.Type _origin parameters _ _ctors) -> case parameters of
+          Just (Entry.Type _origin parameters _ctors) -> case parameters of
             [] -> return Value
             _list ->
               return $
                 foldr
-                  ((:->) . (\(Parameter _ _ k) -> k))
+                  ((:->) . (\(Parameter _ _ k _) -> k))
                   Value
                   parameters
           _noParameters -> case qualified of

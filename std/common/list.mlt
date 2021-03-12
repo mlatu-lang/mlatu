@@ -153,20 +153,8 @@ define each [T, +P] (List[T], (T -> +P) -> +P) {
 }
 
 define elem [T] (T, List[T] -> Bool) {
-  -> x;
-  match (head_tail)
-  case some {
-    unpair -> h, t;
-    if (x = h) {
-      true
-    }
-    else {
-      x t elem
-    }
-  }
-  case none {
-    false
-  }
+  -> x, list;
+  list { x (=) } any 
 }
 
 define empty [T] (List[T] -> Bool) {
@@ -256,8 +244,8 @@ define get [T] (List[T], Int -> Optional[T]) {
 }
 
 define get_all [T] (List[T], List[Int] -> List[Optional[T]]) {
-  -> list;
-  { list swap get } map
+  -> list, indices;
+  indices { list swap get } map
 }
 
 define head [T] (List[T] -> Optional[T]) {
@@ -352,20 +340,7 @@ define modify [T] (List[T], (T -> T), Int -> Optional[List[T]]) {
 }
 
 define not_elem [T] (T, List[T] -> Bool) {
-  -> x;
-  match (head_tail)
-  case some {
-    unpair -> h, t;
-    if (x = h) {
-      false
-    }
-    else {
-      x t not_elem
-    }
-  }
-  case none {
-    true
-  }
+  elem not
 }
 
 define once [T] (T -> List[T]) {
@@ -395,8 +370,8 @@ define replicate [T] (T, Int -> List[T]) {
 define reverse [T] (List[T] -> List[T]) {
   match (head_tail)
   case some {
-    unpair -> h;
-    reverse h append
+    unpair -> h, t;
+    t reverse h append
   }
   case none {
     []
