@@ -1,12 +1,9 @@
 vocab mlatu {
-  intrinsic eq_string (String, String -> Bool)
-  intrinsic gt_string (String, String -> Bool)
-  intrinsic string_concat (String, String -> String)
-  intrinsic string_from_list (List[Char] -> String)
-  intrinsic string_to_list (String -> List[Char])
+  intrinsic read_float64 (String -> Optional[Double])
+  intrinsic read_int64 (String -> Optional[Int])
 }
 
-trait show [T] (T -> String)
+trait read [T] (String -> Optional[T])
 
 
 vocab mlatu {
@@ -14,12 +11,15 @@ vocab mlatu {
   intrinsic show_int64 (Int -> String)
 }
 
-trait read [T] (String -> Optional[T])
+trait show [T] (T -> String)
 
 
 vocab mlatu {
-  intrinsic read_float64 (String -> Optional[Double])
-  intrinsic read_int64 (String -> Optional[Int])
+  intrinsic eq_string (String, String -> Bool)
+  intrinsic gt_string (String, String -> Bool)
+  intrinsic string_concat (String, String -> String)
+  intrinsic string_from_list (List[Char] -> String)
+  intrinsic string_to_list (String -> List[Char])
 }
 
 type String {}
@@ -129,7 +129,7 @@ instance show (Int -> String) {
 }
 
 instance show (Char -> String) {
-  once ((((((from_chars))))))
+  once from_chars
 }
 
 define chars (String -> List[Char]) {

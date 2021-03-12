@@ -12,7 +12,7 @@ define append_file (String, String -> +IO) {
 }
 
 define ask (String -> String +IO) {
-  print _::mlatu::flush_stdout (((get_line)))
+  print _::mlatu::flush_stdout get_line
 }
 
 define get_line (-> String +IO) {

@@ -15,13 +15,12 @@ import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
-import Mlatu.Signature (Constraint)
 import Relude hiding (Constraint)
 
 data TypeDefinition = TypeDefinition
   { constructors :: ![DataConstructor],
     name :: !Qualified,
     origin :: !Origin,
-    parameters :: !([Parameter], [Constraint])
+    parameters :: ![Parameter]
   }
   deriving (Eq, Ord, Show)

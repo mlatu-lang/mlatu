@@ -99,7 +99,8 @@ instance ~ (Int, Int -> Int) {
 }
 
 instance ~ (Bool, Bool -> Bool) {
-  swap if {
+  swap
+  if {
     not
   }
   else {}
@@ -116,14 +117,16 @@ define ---> (Bool, (-> Bool) -> Bool) {
 }
 
 define until [R...] (R..., (R... -> R..., Bool) -> R...) {
-  dup call not if {
+  dup call not
+  if {
     until
   }
   else {}
 }
 
 define while [R...] (R..., (R... -> R..., Bool) -> R...) {
-  dup call if {
+  dup call
+  if {
     while
   }
   else {}

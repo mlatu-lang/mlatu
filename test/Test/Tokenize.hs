@@ -6,7 +6,6 @@ module Test.Tokenize
 where
 
 import Mlatu.Base (Base (..))
-import Mlatu.Layoutness (Layoutness (..))
 import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
 import Mlatu.Located qualified as Located
 import Mlatu.Monad (runMlatuExceptT)
@@ -248,13 +247,13 @@ spec = do
       testTokenize "1e-1" `shouldBe` Right [floatLiteral 1 0 (-1)]
       testTokenize "1e\x2212\&1" `shouldBe` Right [floatLiteral 1 0 (-1)]
 
-integerLiteral :: Integer -> Base -> Token l
+integerLiteral :: Integer -> Base -> Token 
 integerLiteral v base = Integer (IntegerLiteral v base)
 
-floatLiteral :: Integer -> Int -> Int -> Token l
+floatLiteral :: Integer -> Int -> Int -> Token 
 floatLiteral v f e = Float (FloatLiteral v f e)
 
-testTokenize :: Text -> Either [Report] [Token 'Layout]
+testTokenize :: Text -> Either [Report] [Token]
 testTokenize =
   fmap (map Located.item) . runIdentity . runMlatuExceptT
     . tokenize 1 ""

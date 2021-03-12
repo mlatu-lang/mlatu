@@ -31,17 +31,17 @@ instance = (List[Int], List[Int] -> Bool) {
     false
   }
   else {
-    match (xs ((head_tail)))
+    match (xs head_tail)
     case some {
       unpair -> x, xs_;
-      match (ys ((head_tail)))
+      match (ys head_tail)
       case some {
         unpair -> y, ys_;
         if (x <> y) {
           false
         }
         else {
-          ((xs_)) = ((ys_))
+          xs_ = ys_
         }
       }
       case none {
@@ -56,10 +56,10 @@ instance = (List[Int], List[Int] -> Bool) {
 
 instance > (List[Int], List[Int] -> Bool) {
   -> xs, ys;
-  match (xs ((head_tail)))
+  match (xs head_tail)
   case some {
     unpair -> x, xs_;
-    match (ys ((head_tail)))
+    match (ys head_tail)
     case some {
       unpair -> y, ys_;
       if (x > y) {
@@ -70,7 +70,7 @@ instance > (List[Int], List[Int] -> Bool) {
           false
         }
         else {
-          ((xs_)) > ((ys_))
+          xs_ > ys_
         }
       }
     }
@@ -89,16 +89,20 @@ instance >= (List[Int], List[Int] -> Bool) {
 
 define all [T] (List[T], (T -> Bool) -> Bool) {
   -> f;
-  true { f call (&) } (fold_left)
+  true do (fold_left) {
+    f call (&)
+  }
 }
 
 define and (List[Bool] -> Bool) {
-  true \(&) (fold_left)
+  true \(&) fold_left
 }
 
 define any [T] (List[T], (T -> Bool) -> Bool) {
   -> f;
-  true { f call (|) } (fold_left)
+  true do (fold_left) {
+    f call (|)
+  }
 }
 
 define append [T] (List[T], T -> List[T]) {
@@ -106,12 +110,12 @@ define append [T] (List[T], T -> List[T]) {
 }
 
 define cartesian [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
-  \pair (cartesian_with)
+  \pair cartesian_with
 }
 
 define cartesian_with [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
   -> ys, f;
-  do ((map_concat)) {
+  do (map_concat) {
     -> x;
     ys do (map) {
       -> y;
@@ -125,20 +129,22 @@ define cat [T] (List[T], List[T] -> List[T]) {
 }
 
 define concat [T] (List[List[T]] -> List[T]) {
-  [] \cat (fold_left)
+  [] \cat fold_left
 }
 
 define concat_optionals [T] (List[Optional[T]] -> List[T]) {
-  [] { match
-  case some {
-    append
+  [] do (fold_left) {
+    match
+    case some {
+      append
+    }
+    else {}
   }
-  else {} } (fold_left)
 }
 
 define each [T, +P] (List[T], (T -> +P) -> +P) {
   -> f;
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> h, t;
     h f call t f each
@@ -148,7 +154,7 @@ define each [T, +P] (List[T], (T -> +P) -> +P) {
 
 define elem [T] (T, List[T] -> Bool) {
   -> x;
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> h, t;
     if (x = h) {
@@ -169,15 +175,15 @@ define empty [T] (List[T] -> Bool) {
 
 define filter [T] (List[T], (T -> Bool) -> List[T]) {
   -> f;
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> h, t;
     t f filter -> filtered_tail;
     if (h f call) {
-      h (filtered_tail) prepend
+      h filtered_tail prepend
     }
     else {
-      (filtered_tail)
+      filtered_tail
     }
   }
   case none {
@@ -194,9 +200,9 @@ define fold_left [A, B] (List[B], A, (A, B -> A) -> A) {
   match (xs head)
   case some -> x {
     do (with (+Fail)) {
-      xs tail "fold_left: tail should not be none if head is some" ((from_some))
+      xs tail "fold_left: tail should not be none if head is some" from_some
     }
-    (z x k call) k (fold_left)
+    (z x k call) k fold_left
   }
   case none {
     z
@@ -208,9 +214,9 @@ define fold_left_non_empty [T] (List[T], (T, T -> T) -> Optional[T]) {
   match (xs head)
   case some -> x {
     do (with (+Fail)) {
-      xs tail "fold_left_non_empty: tail should not be none if head is some" ((from_some))
+      xs tail "fold_left_non_empty: tail should not be none if head is some" from_some
     }
-    x f (fold_left) some
+    x f fold_left some
   }
   else {
     none
@@ -222,9 +228,9 @@ define fold_right [A, B] (List[A], B, (A, B -> B) -> B) {
   match (xs last)
   case some -> x {
     do (with (+Fail)) {
-      xs init "fold_right: init should not be none if last is some" ((from_some))
+      xs init "fold_right: init should not be none if last is some" from_some
     }
-    (x z k call) k (fold_right)
+    (x z k call) k fold_right
   }
   else {
     z
@@ -236,9 +242,9 @@ define fold_right_non_empty [A] (List[A], (A, A -> A) -> Optional[A]) {
   match (xs last)
   case some -> x {
     do (with (+Fail)) {
-      xs init "fold_right_non_empty: init should not be none if last is some" (from_some)
+      xs init "fold_right_non_empty: init should not be none if last is some" from_some
     }
-    x f (fold_right) some
+    x f fold_right some
   }
   else {
     none
@@ -260,7 +266,8 @@ define head [T] (List[T] -> Optional[T]) {
 
 define head_tail [T] (List[T] -> Optional[Pair[T, List[T]]]) {
   -> xs;
-  none match (xs head)
+  none (xs head)
+  match
   case some -> y {
     match (xs tail)
     case some -> ys {
@@ -277,7 +284,8 @@ define init [T] (List[T] -> Optional[List[T]]) {
 
 define init_last [T] (List[T] -> Optional[Pair[List[T], T]]) {
   -> xs;
-  none match (xs init)
+  none (xs init)
+  match
   case some -> ys {
     match (xs last)
     case some -> y {
@@ -304,7 +312,7 @@ define length [T] (List[T] -> Int) {
 
 define map [A, B, +P] (List[A], (A -> B +P) -> List[B] +P) {
   -> xs, f;
-  match (xs ((head_tail)))
+  match (xs head_tail)
   case none {
     []
   }
@@ -325,11 +333,11 @@ define map_index [A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P) {
 }
 
 define maximum [T] (List[T] -> Optional[T]) {
-  \max (fold_left_non_empty)
+  \max fold_left_non_empty
 }
 
 define minimum [T] (List[T] -> Optional[T]) {
-  \min (fold_left_non_empty)
+  \min fold_left_non_empty
 }
 
 define modify [T] (List[T], (T -> T), Int -> Optional[List[T]]) {
@@ -345,14 +353,14 @@ define modify [T] (List[T], (T -> T), Int -> Optional[List[T]]) {
 
 define not_elem [T] (T, List[T] -> Bool) {
   -> x;
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> h, t;
     if (x = h) {
       false
     }
     else {
-      x t (not_elem)
+      x t not_elem
     }
   }
   case none {
@@ -366,7 +374,7 @@ define once [T] (T -> List[T]) {
 }
 
 define or (List[Bool] -> Bool) {
-  true \(|) (fold_left)
+  true \(|) fold_left
 }
 
 define prepend [T] (T, List[T] -> List[T]) {
@@ -385,7 +393,7 @@ define replicate [T] (T, Int -> List[T]) {
 }
 
 define reverse [T] (List[T] -> List[T]) {
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> h;
     reverse h append
@@ -404,7 +412,7 @@ define tail [T] (List[T] -> Optional[List[T]]) {
 }
 
 define unzip [A, B] (List[Pair[A, B]] -> List[A], List[B]) {
-  match ((head_tail))
+  match (head_tail)
   case some {
     unpair -> x, xs;
     x unpair -> m, n;
@@ -418,10 +426,10 @@ define unzip [A, B] (List[Pair[A, B]] -> List[A], List[B]) {
 
 define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
   -> a, b;
-  match (a ((head_tail)))
+  match (a head_tail)
   case some {
     unpair -> x, xs;
-    match (b ((head_tail)))
+    match (b head_tail)
     case some {
       unpair -> y, ys;
       x y pair -> z;
@@ -439,7 +447,7 @@ define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
 
 define _::map_index::helper [A, B, +P] (List[A], (A, Int -> B +P), Int -> List[B] +P) {
   -> xs, f, i;
-  match (xs ((head_tail)))
+  match (xs head_tail)
   case none {
     []
   }

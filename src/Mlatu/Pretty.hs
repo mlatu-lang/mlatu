@@ -484,7 +484,7 @@ printCase n b = blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
 
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
-  | not (Text.all isLetter name) = parens $ pretty name
+  | not (Text.any isLetter name) = parens $ pretty name
 printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (map printType xs)) args
 
 printValue :: Value a -> Doc b
