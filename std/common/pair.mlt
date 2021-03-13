@@ -1,14 +1,8 @@
-type Pair[A, B] {
-  case pair (A, B)
-}
+type Pair[A, B] {   case pair (A, B) }
 
-define first [A, B] (Pair[A, B] -> A) {
-  unpair drop
-}
+define first [A, B] (Pair[A, B] -> A) { unpair drop }
 
-define flip [A, B] (Pair[A, B] -> Pair[B, A]) {
-  unpair swap pair
-}
+define flip [A, B] (Pair[A, B] -> Pair[B, A]) { unpair swap pair }
 
 define map_pair [A, B, C, D] (Pair[A, B], (A -> C), (B -> D) -> Pair[C, D]) {
   -> p, f, g;
@@ -16,11 +10,6 @@ define map_pair [A, B, C, D] (Pair[A, B], (A -> C), (B -> D) -> Pair[C, D]) {
   (a f call) (b g call) pair
 }
 
-define second [A, B] (Pair[A, B] -> B) {
-  unpair swap drop
-}
+define second [A, B] (Pair[A, B] -> B) { unpair swap drop }
 
-define unpair [A, B] (Pair[A, B] -> A, B) {
-  match
-  case pair {}
-}
+define unpair [A, B] (Pair[A, B] -> A, B) { match case pair {} }

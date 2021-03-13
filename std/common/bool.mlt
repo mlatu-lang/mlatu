@@ -13,122 +13,47 @@ trait || [T] (T, (-> T) -> T)
 trait ~ [A] (A, A -> A)
 
 
-type Bool {
-  case false
-  case true
-}
+type Bool {   case false case true }
 
-instance & (Bool, Bool -> Bool) {
-  -> x, y;
-  if (x) {
-    y
-  }
-  else {
-    false
-  }
-}
+instance & (Int, Int -> Int) { _::mlatu::and_int64 }
 
-instance & (Int, Int -> Int) {
-  _::mlatu::and_int64
-}
+instance & (Bool, Bool -> Bool) { swap (not) if { drop false } else {} }
 
-instance && (Bool, (-> Bool) -> Bool) {
-  -> x, y;
-  if (x) {
-    y call
-  }
-  else {
-    false
-  }
-}
+instance && (Bool, (-> Bool) -> Bool) { swap if { call } else { drop false } }
 
-instance --> (Bool, Bool -> Bool) {
-  -> a, b;
-  if (a) {
-    b
-  }
-  else {
-    true
-  }
-}
+instance --> (Bool, Bool -> Bool) { swap (not) if { drop true } else {} }
 
-instance --> (Int, Int -> Int) {
-  -> a, b;
-  a not | b
-}
+instance --> (Int, Int -> Int) { swap not (|) }
 
-instance not (Bool -> Bool) {
-  if {
-    false
-  }
-  else {
-    true
-  }
-}
+instance not (Bool -> Bool) { if { false } else { true } }
 
-instance not (Int -> Int) {
-  _::mlatu::not_int64
-}
+instance not (Int -> Int) { _::mlatu::not_int64 }
 
-instance | (Bool, Bool -> Bool) {
-  -> x, y;
-  if (x) {
-    true
-  }
-  else {
-    y
-  }
-}
+instance | (Int, Int -> Int) { _::mlatu::or_int64 }
 
-instance | (Int, Int -> Int) {
-  _::mlatu::or_int64
-}
+instance | (Bool, Bool -> Bool) { swap if { drop true } else {} }
 
-instance || (Bool, (-> Bool) -> Bool) {
-  -> x, y;
-  if (x) {
-    true
-  }
-  else {
-    y call
-  }
-}
+instance || (Bool, (-> Bool) -> Bool) { swap if { drop true } else { call } }
 
-instance ~ (Int, Int -> Int) {
-  _::mlatu::xor_int64
-}
+instance ~ (Int, Int -> Int) { _::mlatu::xor_int64 }
 
-instance ~ (Bool, Bool -> Bool) {
-  swap
-  if {
-    not
-  }
-  else {}
-}
+instance ~ (Bool, Bool -> Bool) { swap if { not } else {} }
 
 define ---> (Bool, (-> Bool) -> Bool) {
-  -> a, b;
-  if (a) {
-    b call
-  }
-  else {
-    true
-  }
+  swap (not)
+  if { drop true }
+  else { call }
 }
 
 define until [R...] (R..., (R... -> R..., Bool) -> R...) {
   -> f;
-  if (f call not) {
-    f until
-  }
+  if (f call not) { f until }
   else {}
 }
 
 define while [R...] (R..., (R... -> R..., Bool) -> R...) {
   -> f;
-  if (f call) {
-    f while
-  }
+  if (f call) { f while }
   else {}
 }
 

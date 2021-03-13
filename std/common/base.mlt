@@ -1,20 +1,16 @@
-define apply [R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)) {
-  -> x, f;
-  { x f call }
-}
-
-define both [A, B, C, D] (A, B, (A -> C), (B -> D) -> C, D) {
-  -> x, y, f, g;
-  x f call -> a;
-  y g call -> b;
-  a b
-}
-
-define both_to [A, B, C] (A, (A -> B), (A -> C) -> B, C) {
+define bi [A, B, C] (A, (A -> B), (A -> C) -> B, C) {
   -> x, f, g;
-  x f call -> a;
-  x g call -> b;
-  a b
+  (x f call) (x g call)
+}
+
+define bi2 [A, B, C, D] (A, B, (A, B -> C), (A, B -> D) -> C, D) {
+  -> x, y, f, g;
+  (x y f call) (x y g call)
+}
+
+define bi3 [A, B, C, D, E, F] (A, B, C, (A, B, C -> D), (A, B, C -> E), (A, B, C -> F) -> D, E, F) {
+  -> x, y, z, f, g, h;
+  (x y z f call) (x y z g call) (x y z h call)
 }
 
 define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T...)) {
@@ -22,47 +18,82 @@ define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T.
   { f call g call }
 }
 
+define curry [R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)) {
+  -> x, f;
+  { x f call }
+}
+
+define curry2 [R..., S..., A, B, +P] (A, B, (R..., A, B -> S... +P) -> (R... -> S... +P)) {
+  -> x, y, f;
+  { x y f call }
+}
+
 define dip [R..., S..., T] (R..., T, (R... -> S...) -> S..., T) {
   -> x, f;
   f call x
 }
 
-define drop2 [A, B] (A, B ->) {
-  -> _;
-  -> _;
-}
+define drop2 [A, B] (A, B ->) { drop drop }
 
-define dup [T] (T -> T, T) {
-  -> x;
-  x x
-}
+define drop3 [A, B, C] (A, B, C ->) { drop drop drop }
 
-define dup2 [A, B] (A, B -> A, B, A, B) {
-  -> x, y;
-  x y x y
-}
+define dup [T] (T -> T, T) { -> x; x x }
+
+define dup2 [A, B] (A, B -> A, B, A, B) { -> x, y; x y x y }
+
+define dup3 [A, B, C] (A, B, C -> A, B, C, A, B, C) { -> x, y, z; x y z x y z }
 
 define fix [R..., S...] (R..., (R..., (R... -> S...) -> S...) -> S...) {
   -> f;
   { f fix } f call
 }
 
-define function [T] (T -> (-> T)) {
-  -> x;
-  { x }
+define function [T] (T -> (-> T)) { -> x; { x } }
+
+define id [R...] (R... -> R...) {}
+
+define keep [R..., S..., T] (R..., T, (R..., T -> S...) -> S..., T) {
+  -> x, f;
+  x f call x
 }
 
-define id [T] (T -> T) {}
+define keep2 [R..., S..., A, B] (R..., A, B, (R..., A, B -> S...) -> S..., A, B) {
+  -> x, y, f;
+  x y f call x y
+}
+
+define keep3 [R..., S..., A, B, C] (R..., A, B, C, (R..., A, B, C -> S...) -> S..., A, B, C) {
+  -> x, y, z, f;
+  x y z f call x y z
+}
+
+define nip [A, B] (A, B -> B) { -> x; drop x }
+
+define nip2 [A, B, C] (A, B, C -> C) { -> x; drop2 x }
+
+define over [A, B] (A, B -> A, B, A) { -> x, y; x y x }
+
+define over2 [A, B, C] (A, B, C -> A, B, C, A, B) { -> x, y, z; x y z x y }
+
+define pick [A, B, C] (A, B, C -> A, B, C, A) { -> x, y, z; x y z x }
 
 define swapped [R..., S..., A, B] ((R..., A, B -> S...) -> (R..., B, A -> S...)) {
   \swap swap compose
 }
 
-define to_both [A, B] (A, A, (A -> B) -> B, B) {
-  -> x, y, f;
-  x f call -> a;
-  y f call -> b;
-  a b
+define tri [A, B, C, D] (A, (A -> B), (A -> C), (A -> D) -> B, C, D) {
+  -> x, f, g, h;
+  (x f call) (x g call) (x h call)
+}
+
+define tri2 [A, B, C, D, E] (A, B, (A, B -> C), (A, B -> D), (A, B -> E) -> C, D, E) {
+  -> x, y, f, g, h;
+  (x y f call) (x y g call) (x y h call)
+}
+
+define tri3 [A, B, C, D, E, F] (A, B, C, (A, B, C -> D), (A, B, C -> E), (A, B, C -> F) -> D, E, F) {
+  -> x, y, z, f, g, h;
+  (x y z f call) (x y z g call) (x y z h call)
 }
 
 about fix {
@@ -83,7 +114,7 @@ about fix {
   }
 }
 
-about apply {
+about curry {
   docs {
     "Partially applies the topmost argument of a function."
   }
