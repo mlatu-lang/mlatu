@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Declaration
 -- Description : Declarations of intrinsics and traits
@@ -9,12 +11,19 @@
 module Mlatu.Declaration
   ( Category (..),
     Declaration (..),
+    category,
+    name,
+    origin,
+    signature,
+    _Intrinsic,
+    _Trait,
   )
 where
 
 import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
+import Optics.TH (makeLenses, makePrisms)
 import Relude
 
 -- | The type of declaration.
@@ -25,10 +34,14 @@ data Category
     Trait
   deriving (Eq, Ord, Show)
 
+makePrisms ''Category
+
 data Declaration = Declaration
-  { category :: !Category,
-    name :: !Qualified,
-    origin :: !Origin,
-    signature :: !Signature
+  { _category :: !Category,
+    _name :: !Qualified,
+    _origin :: !Origin,
+    _signature :: !Signature
   }
   deriving (Eq, Ord, Show)
+
+makeLenses ''Declaration

@@ -31,6 +31,7 @@ import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Relude hiding (Compose, Type)
 import Relude.Extra (next)
+import Optics
 
 newtype LambdaIndex = LambdaIndex Int
 
@@ -62,10 +63,10 @@ desugar dictionary qualifier term0 = do
         return (Generic name typ a' origin, tenv1)
       Group {} -> error "group should not appear after infix desugaring"
       Lambda typ name varType a origin -> do
-        let oldLocals = TypeEnv.vs tenv0
-            localEnv = tenv0 {TypeEnv.vs = varType : TypeEnv.vs tenv0}
+        let oldLocals = view TypeEnv.vs tenv0
+            localEnv = over TypeEnv.vs (varType :) tenv0
         (a', tenv1) <- go localEnv a
-        let tenv2 = tenv1 {TypeEnv.vs = oldLocals}
+        let tenv2 = set TypeEnv.vs oldLocals tenv1 
         return (Lambda typ name varType a' origin, tenv2)
       Match hint typ cases else_ origin -> do
         (cases', tenv1) <-
@@ -87,10 +88,10 @@ desugar dictionary qualifier term0 = do
       NewVector {} -> done
       Push _type (Capture closed a) origin -> do
         let types = mapMaybe (TypeEnv.getClosed tenv0) closed
-            oldClosure = TypeEnv.closure tenv0
-            localEnv = tenv0 {TypeEnv.closure = types}
+            oldClosure = view TypeEnv.closure tenv0
+            localEnv = set TypeEnv.closure types tenv0
         (a', tenv1) <- go localEnv a
-        let tenv2 = tenv1 {TypeEnv.closure = oldClosure}
+        let tenv2 = set TypeEnv.closure oldClosure tenv1
         LambdaIndex index <- gets fst
         let name =
               Qualified qualifier $

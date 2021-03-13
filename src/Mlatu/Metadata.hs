@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Metadata
 -- Description : Metadata about identifiers in the dictionary
@@ -8,6 +10,9 @@
 -- Portability : GHC
 module Mlatu.Metadata
   ( Metadata (..),
+  fields,
+  name,
+  origin
   )
 where
 
@@ -15,11 +20,14 @@ import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Term (Term)
 import Relude
+import Optics.TH
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
-  { fields :: !(HashMap Unqualified (Term ())),
-    name :: !GeneralName,
-    origin :: !Origin
+  { _fields :: !(HashMap Unqualified (Term ())),
+    _name :: !GeneralName,
+    _origin :: !Origin
   }
   deriving (Ord, Eq, Show)
+
+makeLenses ''Metadata

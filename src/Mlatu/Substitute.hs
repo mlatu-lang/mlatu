@@ -89,5 +89,7 @@ term tenv x a = recur
           <*> pure name
           <*> mapM go args
           <*> pure origin
+    {-# INLINEABLE recur #-}
 
     go = typ tenv x a
+{-# INLINEABLE term #-}

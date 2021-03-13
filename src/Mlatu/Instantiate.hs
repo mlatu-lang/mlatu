@@ -18,15 +18,15 @@ import Mlatu.Kind (Kind)
 import Mlatu.Monad (M)
 import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
+import Mlatu.Pretty (printType)
 import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.Zonk qualified as Zonk
-import Relude hiding (Type)
 import Prettyprinter (hsep, squotes)
-import Mlatu.Pretty (printType)
+import Relude hiding (Type)
 
 -- | To instantiate a type scheme, we simply replace all quantified variables
 -- with fresh ones and remove the quantifier, returning the types with which the
@@ -64,3 +64,5 @@ term tenv t args = foldlM go t args
     go _ _ = do
       report $ Report.makeError $ Report.TypeArgumentCountMismatch t $ map (Zonk.typ tenv) args
       halt
+    {-# INLINEABLE go #-}
+{-# INLINEABLE term #-}

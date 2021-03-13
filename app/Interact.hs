@@ -59,6 +59,7 @@ import System.Console.Haskeline
   )
 import System.IO (hPrint)
 import Text.Printf (printf)
+import Optics
 
 run :: Prelude -> IO ()
 run prelude = do
@@ -82,22 +83,16 @@ run prelude = do
           case mLine of
             Nothing -> liftIO $ putStrLn "" >> bye
             Just (line, lineNumber') -> case line of
-              "//dict" -> do
-                liftIO $ renderDictionary dictionaryRef
-                loop
-              "//help" -> do
-                liftIO showHelp
-                loop
-              "//stack" -> do
-                liftIO $ renderStack stackRef
-                loop
+              "//dict" -> (liftIO $ renderDictionary dictionaryRef) >> loop
+              "//help" -> (liftIO showHelp) >> loop
+              "//stack" -> (liftIO $ renderStack stackRef) >> loop
               "//quit" -> liftIO bye
               -- Commands with arguments.
               _
                 | "//" `Text.isPrefixOf` line ->
                   case Text.break (== ' ') $ Text.drop 2 line of
-                    ("info", name) -> nameCommand lineNumber dictionaryRef name loop $
-                      \_name' entry -> liftIO $ print $ printEntry entry
+                    ("info", name) -> nameCommand lineNumber dictionaryRef name loop $ const
+                      (liftIO . print . printEntry)
                     ("list", name) -> nameCommand lineNumber dictionaryRef name loop $
                       \name' entry -> case entry of
                         Entry.Word _ _ _ _ _ (Just body) ->
@@ -122,13 +117,13 @@ run prelude = do
                               "<interactive>"
                               expression
                           errorCheckpoint
-                          case Fragment.definitions fragment of
-                            [main] | Definition.name main == Definition.mainName -> do
+                          case view Fragment.definitions fragment of
+                            [main] | view Definition.name main == Definition.mainName -> do
                               resolved <- Enter.resolveAndDesugar dictionary main
                               errorCheckpoint
                               (_, typ) <-
                                 typecheck dictionary Nothing $
-                                  Definition.body resolved
+                                  view Definition.body resolved
                               errorCheckpoint
                               return (Just typ)
                             _otherDefinition -> return Nothing
@@ -140,31 +135,6 @@ run prelude = do
                           hPrint
                             stderr
                             ("That doesn't look like an expression" :: Text)
-                      loop
-                    ("debug", expression) -> do
-                      dictionary <- liftIO $ readIORef dictionaryRef
-                      mResults <- liftIO $
-                        runMlatuExceptT $ do
-                          fragment <-
-                            Mlatu.fragmentFromSource
-                              [QualifiedName $ Qualified Vocabulary.global "IO"]
-                              Nothing
-                              lineNumber
-                              "<interactive>"
-                              expression
-                          errorCheckpoint
-                          case Fragment.definitions fragment of
-                            [main] | Definition.name main == Definition.mainName -> do
-                              resolved <- Enter.resolveAndDesugar dictionary main
-                              errorCheckpoint
-                              return $ Just $ Definition.body resolved
-                            _otherDefinition -> return Nothing
-
-                      liftIO $ case mResults of
-                        Left reports -> reportAll reports
-                        Right (Just to_show) -> print $ Term.decompose to_show
-                        Right Nothing ->
-                          hPrint stderr ("That doesn't look like an expression" :: Text)
                       loop
                     (command, _) -> do
                       liftIO $
@@ -287,24 +257,24 @@ completePrefix :: IORef Dictionary -> String -> IO [Completion]
 completePrefix dictionaryRef prefix
   | Just rest <- Text.stripPrefix "//" (toText prefix) =
     let -- TODO: Factor out commands to a central location.
-        matching =
+        filterFn =
           filter
             (rest `Text.isPrefixOf`)
             ["dict", "help", "info", "list", "quit", "stack", "type"]
         hasParams = [["info"], ["list"], ["type"]]
      in return $
           map
-            ( toCompletion (small matching && matching `elem` hasParams)
+            ( toCompletion (small filterFn && filterFn `elem` hasParams)
                 . toString
                 . ("//" <>)
             )
-            matching
+            filterFn
   | otherwise = do
     dictionary <- readIORef dictionaryRef
-    let matching =
+    let filterFn =
           filter (prefix `isPrefixOf`) $
             map (completionFromName . fst) $ Dictionary.toList dictionary
-    return $ map (toCompletion (small matching)) matching
+    return $ map (toCompletion (small filterFn)) filterFn
   where
     completionFromName
       (Instantiated (Qualified (Qualifier _ parts) (Unqualified name)) _) =

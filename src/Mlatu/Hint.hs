@@ -13,14 +13,15 @@ import Mlatu.Term
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose)
+import Optics
 
 fragment :: Fragment.Fragment () -> M ()
 fragment f = do
-  forM_ (Fragment.declarations f) declaration
-  forM_ (Fragment.definitions f) definition
-  forM_ (Fragment.metadata f) metadata
-  forM_ (Fragment.synonyms f) synonym
-  forM_ (Fragment.types f) typeDefinition
+  forM_ (view Fragment.declarations f) declaration
+  forM_ (view Fragment.definitions f) definition
+  forM_ (view Fragment.metadata f) metadata
+  forM_ (view Fragment.synonyms f) synonym
+  forM_ (view Fragment.types f) typeDefinition
   pass
 
 declaration :: Declaration.Declaration -> M ()
@@ -28,7 +29,7 @@ declaration _ = pass
 
 definition :: Definition.Definition () -> M ()
 definition d = do
-  term (Definition.body d)
+  term (view Definition.body d)
   pass
 
 term :: Term () -> M ()

@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Kind
 -- Description : The kinds of types
@@ -12,6 +14,7 @@ module Mlatu.Kind
 where
 
 import Relude
+import Optics.TH (makePrisms)
 
 -- | A kind (κ) is the type of a type. Types with the \"value\" kind (@*@) are
 -- inhabited by values; all other types are used only to enforce program
@@ -27,6 +30,8 @@ import Relude
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
 data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
   deriving (Ord, Eq, Show)
+
+makePrisms ''Kind
 
 instance Hashable Kind where
   hashWithSalt s Value = hashWithSalt s (0 :: Int)

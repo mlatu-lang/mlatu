@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Dictionary
 -- Description : Program database
@@ -17,7 +19,7 @@ module Mlatu.Dictionary
     toList,
     typeNames,
     wordNames,
-    printDictionary
+    printDictionary,
   )
 where
 
@@ -37,39 +39,40 @@ import Mlatu.Name
   )
 import Mlatu.Operator (Operator (Operator))
 import Mlatu.Operator qualified as Operator
+import Mlatu.Pretty (printInstantiated)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Term qualified as Term
-import Relude hiding (empty, fromList, toList)
 import Prettyprinter (Doc, vsep)
-import Mlatu.Pretty (printInstantiated)
+import Relude hiding (empty, fromList, toList)
+import Optics
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
-  { entries :: HashMap Instantiated Entry
+  { _entries :: HashMap Instantiated Entry
   }
   deriving (Show)
+
+makeLenses ''Dictionary
 
 empty :: Dictionary
 empty =
   Dictionary
-    { entries = HashMap.empty
+    { _entries = HashMap.empty
     }
 
 -- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
 -- lead to an invalid dictionary state.
 insert :: Instantiated -> Entry -> Dictionary -> Dictionary
-insert name entry dictionary =
-  dictionary
-    { entries = HashMap.insert name entry $ entries dictionary
-    }
+insert name entry = over entries (HashMap.insert name entry)
 
 lookup :: Instantiated -> Dictionary -> Maybe Entry
-lookup = (. entries) . HashMap.lookup
+lookup = (. view entries) . HashMap.lookup
+{-# INLINEABLE lookup #-}
 
 -- | Whether a name is present in the dictionary.
 member :: Instantiated -> Dictionary -> Bool
-member = (. entries) . HashMap.member
+member = (. view entries) . HashMap.member
 
 -- | Compiles all operator metadata for infix desugaring.
 operatorMetadata ::
@@ -83,7 +86,7 @@ operatorMetadata dictionary =
     getMetadata :: (Informer m) => Qualified -> m (Qualified, Operator)
     getMetadata name =
       let key = Qualified (qualifierFromName name) (Unqualified "operator")
-       in case HashMap.lookup (Instantiated key []) $ entries dictionary of
+       in case lookup (Instantiated key []) dictionary of
             -- TODO: Report invalid metadata.
             -- TODO: Avoid redundant decomposition.
             Just (Entry.Metadata _ term)
@@ -139,7 +142,7 @@ operatorMetadata dictionary =
 
 -- | All type signatures (for words or traits) in the dictionary.
 signatures :: Dictionary -> [(Qualified, Signature)]
-signatures = mapMaybe getSignature . HashMap.toList . entries
+signatures = mapMaybe getSignature . toList
   where
     getSignature :: (Instantiated, Entry) -> Maybe (Qualified, Signature)
     getSignature (Instantiated name [], Entry.Word _ _ _ _ (Just signature) _) =
@@ -149,11 +152,11 @@ signatures = mapMaybe getSignature . HashMap.toList . entries
     getSignature _ = Nothing
 
 toList :: Dictionary -> [(Instantiated, Entry)]
-toList = HashMap.toList . entries
+toList = HashMap.toList . view entries
 
 -- | All type names (for data types or permissions) in the dictionary.
 typeNames :: Dictionary -> [Qualified]
-typeNames = mapMaybe typeName . HashMap.toList . entries
+typeNames = mapMaybe typeName . toList
   where
     typeName (Instantiated name _, Entry.Word Category.Permission _ _ _ _ _) =
       Just name
@@ -162,7 +165,7 @@ typeNames = mapMaybe typeName . HashMap.toList . entries
 
 -- | All word names (for words or traits) in the dictionary.
 wordNames :: Dictionary -> [Qualified]
-wordNames = mapMaybe wordName . HashMap.toList . entries
+wordNames = mapMaybe wordName . toList
   where
     wordName (Instantiated name [], Entry.Word {}) = Just name
     -- TODO: Figure out how to get mangled names out of this...
@@ -170,4 +173,4 @@ wordNames = mapMaybe wordName . HashMap.toList . entries
     wordName _ = Nothing
 
 printDictionary :: Dictionary -> Doc a
-printDictionary (Dictionary entries) = vsep $ map printInstantiated (HashMap.keys entries)
+printDictionary = vsep . map printInstantiated . HashMap.keys . view entries

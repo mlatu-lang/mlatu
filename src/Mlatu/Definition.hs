@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies, TemplateHaskell #-}
 
 -- |
 -- Module      : Mlatu.Definition
@@ -12,6 +12,15 @@ module Mlatu.Definition
   ( Definition (..),
     main,
     mainName,
+    category,
+    name,
+    body,
+    fixity,
+    inferSignature,
+    merge,
+    origin,
+    signature,
+    parent
   )
 where
 
@@ -32,19 +41,22 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
+import Optics 
 
 data Definition a = Definition
-  { category :: !Category,
-    name :: !Qualified,
-    body :: !(Term a),
-    fixity :: !Fixity,
-    inferSignature :: !Bool,
-    merge :: !Merge,
-    origin :: !Origin,
-    signature :: !Signature,
-    parent :: !(Maybe Parent)
+  { _category :: !Category,
+    _name :: !Qualified,
+    _body :: !(Term a),
+    _fixity :: !Fixity,
+    _inferSignature :: !Bool,
+    _merge :: !Merge,
+    _origin :: !Origin,
+    _signature :: !Signature,
+    _parent :: !(Maybe Parent)
   }
   deriving (Ord, Eq, Show)
+
+makeLenses ''Definition
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
@@ -58,15 +70,15 @@ main ::
   Definition a
 main permissions mName term =
   Definition
-    { body = term,
-      category = Category.Word,
-      fixity = Operator.Postfix,
-      inferSignature = True,
-      merge = Merge.Compose,
-      name = fromMaybe mainName mName,
-      origin = o,
-      parent = Nothing,
-      signature =
+    { _body = term,
+      _category = Category.Word,
+      _fixity = Operator.Postfix,
+      _inferSignature = True,
+      _merge = Merge.Compose,
+      _name = fromMaybe mainName mName,
+      _origin = o,
+      _parent = Nothing,
+      _signature =
         Signature.Quantified
           [Parameter o "R" Stack Nothing]
           ( Signature.StackFunction

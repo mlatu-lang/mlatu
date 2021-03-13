@@ -8,4 +8,4 @@ define fib (Int -> Int) {
   }
 }
 
-20 fib print
+25 fib print

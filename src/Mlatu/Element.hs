@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Element
 -- Description : Top-level program elements
@@ -8,6 +10,12 @@
 -- Portability : GHC
 module Mlatu.Element
   ( Element (..),
+  _Declaration,
+  _Definition,
+  _Metadata,
+  _Synonym,
+  _Term,
+  _TypeDefinition
   )
 where
 
@@ -17,6 +25,7 @@ import Mlatu.Metadata (Metadata)
 import Mlatu.Synonym (Synonym)
 import Mlatu.Term (Term)
 import Mlatu.TypeDefinition (TypeDefinition)
+import Optics.TH (makePrisms)
 
 -- | A top-level program element.
 data Element a
@@ -32,3 +41,5 @@ data Element a
     Term !(Term a)
   | -- | @type@
     TypeDefinition !TypeDefinition
+
+makePrisms ''Element

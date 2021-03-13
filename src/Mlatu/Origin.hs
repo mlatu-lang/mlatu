@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Origin
 -- Description : Source locations
@@ -12,6 +14,11 @@ module Mlatu.Origin
     point,
     pos,
     range,
+    name,
+    beginLine,
+    beginColumn,
+    endLine,
+    endColumn
   )
 where
 
@@ -26,31 +33,34 @@ import Text.Parsec.Pos
     sourceLine,
     sourceName,
   )
+import Optics
 
 -- | A source location, in the form of an origin name (typically a file path)
 -- and source span between two ('Line', 'Column') pairs.
 data Origin = Origin
-  { name :: !Text,
-    beginLine :: !Line,
-    beginColumn :: !Column,
-    endLine :: !Line,
-    endColumn :: !Column
+  { _name :: !Text,
+    _beginLine :: !Line,
+    _beginColumn :: !Column,
+    _endLine :: !Line,
+    _endColumn :: !Column
   }
   deriving (Ord, Eq, Show)
 
+makeLenses ''Origin
+
 -- | The starting 'SourcePos' of an 'Origin'.
 begin :: Origin -> SourcePos
-begin = newPos <$> toString . name <*> beginLine <*> beginColumn
+begin = newPos <$> toString . view name <*> view beginLine <*> view beginColumn
 
 -- | A zero-width 'Origin' at the given 'Line' and 'Column'.
 point :: SourceName -> Line -> Column -> Origin
 point path line column =
   Origin
-    { name = toText path,
-      beginLine = line,
-      beginColumn = column,
-      endLine = line,
-      endColumn = column
+    { _name = toText path,
+      _beginLine = line,
+      _beginColumn = column,
+      _endLine = line,
+      _endColumn = column
     }
 
 -- | Makes a zero-width 'Origin' from a 'SourcePos'.
@@ -61,10 +71,10 @@ pos = point <$> sourceName <*> sourceLine <*> sourceColumn
 range :: SourcePos -> SourcePos -> Origin
 range a b =
   Origin
-    { name = toText $ sourceName a,
-      beginLine = sourceLine a,
-      beginColumn = sourceColumn a,
-      endLine = sourceLine b,
-      endColumn = sourceColumn b
+    { _name = toText $ sourceName a,
+      _beginLine = sourceLine a,
+      _beginColumn = sourceColumn a,
+      _endLine = sourceLine b,
+      _endColumn = sourceColumn b
     }
 

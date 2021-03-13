@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Stack
 -- Description : Strict stack
@@ -8,6 +10,8 @@
 -- Portability : GHC
 module Mlatu.Stack
   ( Stack (..),
+  _Bottom,
+  (.:::),
     fromList,
     popNote,
     pops,
@@ -16,12 +20,15 @@ module Mlatu.Stack
 where
 
 import Relude hiding (fromList)
+import Optics
 
 -- | A stack with strictly evaluated elements and spine.
 data Stack a = Bottom | !a ::: !(Stack a)
   deriving (Functor, Foldable)
 
 infixr 5 :::
+
+makePrisms ''Stack
 
 fromList :: [a] -> Stack a
 fromList = foldr (:::) Bottom

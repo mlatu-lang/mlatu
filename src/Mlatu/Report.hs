@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- |
 -- Module      : Mlatu.Report
@@ -17,6 +18,25 @@ module Mlatu.Report
     makeError,
     makeWarning,
     human,
+    _MissingTypeSignature,
+    _MultiplePermissionVariables,
+    _CannotResolveType,
+    _FailedInstanceCheck,
+    _MissingPermissionLabel,
+    _TypeArgumentCountMismatch,
+    _CannotResolveName,
+    _MultipleDefinitions,
+    _WordRedefinition,
+    _WordRedeclaration,
+    _TypeMismatch,
+    _RedundantCase,
+    _Chain,
+    _OccursCheckFailure,
+    _StackDepthMismatch,
+    _InvalidOperatorMetadata,
+    _ParseError,
+    _UseCommon,
+    _Context
   )
 where
 
@@ -34,6 +54,7 @@ import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, 
 import Relude hiding (Type)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
+import Optics.TH (makePrisms)
 
 data NameCategory = WordName | TypeName
   deriving (Eq, Show)
@@ -52,6 +73,9 @@ makeError = Report Error
 
 makeWarning :: ReportKind -> Report
 makeWarning = Report Warn
+
+instance Eq (Doc ()) where
+  d1 == d2 = (show d1 :: Text) == (show d2 :: Text)
 
 data ReportKind
   = MissingTypeSignature !Origin !Qualified
@@ -75,8 +99,7 @@ data ReportKind
   | Context ![(Origin, Doc ())] !Report
   deriving (Eq, Show)
 
-instance Eq (Doc ()) where
-  d1 == d2 = (show d1 :: Text) == (show d2 :: Text)
+makePrisms ''ReportKind
 
 human :: Report -> Doc ()
 human (Report _ kind) = kindMsg kind

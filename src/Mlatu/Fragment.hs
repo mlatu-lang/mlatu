@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Fragment
 -- Description : Program fragments
@@ -8,6 +10,11 @@
 -- Portability : GHC
 module Mlatu.Fragment
   ( Fragment (..),
+  declarations,
+  definitions,
+  metadata,
+  synonyms,
+  types
   )
 where
 
@@ -17,33 +24,33 @@ import Mlatu.Metadata (Metadata)
 import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
+import Optics
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
-  { declarations :: ![Declaration],
-    definitions :: ![Definition a],
-    metadata :: ![Metadata],
-    synonyms :: ![Synonym],
-    types :: ![TypeDefinition]
+  { _declarations :: ![Declaration],
+    _definitions :: ![Definition a],
+    _metadata :: ![Metadata],
+    _synonyms :: ![Synonym],
+    _types :: ![TypeDefinition]
   }
   deriving (Show)
+
+makeLenses ''Fragment
 
 instance Monoid (Fragment a) where
   mempty =
     Fragment
-      { declarations = mempty,
-        definitions = mempty,
-        metadata = mempty,
-        synonyms = mempty,
-        types = mempty
+      { _declarations = mempty,
+        _definitions = mempty,
+        _metadata = mempty,
+        _synonyms = mempty,
+        _types = mempty
       }
 
 instance Semigroup (Fragment a) where
-  (<>) a b =
-    Fragment
-      { declarations = declarations a <> declarations b,
-        definitions = definitions a <> definitions b,
-        metadata = metadata a <> metadata b,
-        synonyms = synonyms a <> synonyms b,
-        types = types a <> types b
-      }
+  a <> b = over declarations (<> view declarations b) 
+            (over definitions (<> view definitions b)
+            (over metadata (<> view metadata b) 
+            (over synonyms (<> view synonyms b) 
+            (over types (<> view types b) a))))

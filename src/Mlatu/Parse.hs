@@ -68,6 +68,7 @@ import Relude.Unsafe qualified as Unsafe
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
+import Optics
 
 -- | Parses a program fragment.
 fragment ::
@@ -96,18 +97,14 @@ fragment line path mainPermissions mainName tokens =
           halt
         Right result -> return (Data.desugar (insertMain result))
   where
-    isMain = (fromMaybe Definition.mainName mainName ==) . Definition.name
-    insertMain f = case find isMain $ Fragment.definitions f of
+    isMain = (fromMaybe Definition.mainName mainName ==) . view Definition.name
+    insertMain f = case find isMain $  view Fragment.definitions f of
       Just {} -> f
       Nothing ->
-        f
-          { Fragment.definitions =
-              Definition.main
+        over Fragment.definitions ( Definition.main
                 mainPermissions
                 mainName
-                (Term.identityCoercion () (Origin.point path line 1)) :
-              Fragment.definitions f
-          }
+                (Term.identityCoercion () (Origin.point path line 1)) :) f 
 
 -- | Parses only a name.
 generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
@@ -138,56 +135,29 @@ partitionElements ::
 partitionElements mainPermissions mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
-    rev f =
-      Fragment
-        { Fragment.declarations = reverse $ Fragment.declarations f,
-          Fragment.definitions = reverse $ Fragment.definitions f,
-          Fragment.metadata = reverse $ Fragment.metadata f,
-          Fragment.synonyms = reverse $ Fragment.synonyms f,
-          Fragment.types = reverse $ Fragment.types f
-        }
+    rev f = over Fragment.declarations reverse $ over Fragment.definitions reverse $ over Fragment.metadata reverse $ over Fragment.synonyms reverse $ over Fragment.types reverse f
 
     go :: Element () -> Fragment () -> Fragment ()
-    go element acc = case element of
-      Element.Declaration x ->
-        acc
-          { Fragment.declarations = x : Fragment.declarations acc
-          }
-      Element.Definition x ->
-        acc
-          { Fragment.definitions = x : Fragment.definitions acc
-          }
-      Element.Metadata x ->
-        acc
-          { Fragment.metadata = x : Fragment.metadata acc
-          }
-      Element.Synonym x ->
-        acc
-          { Fragment.synonyms = x : Fragment.synonyms acc
-          }
-      Element.TypeDefinition x ->
-        acc
-          { Fragment.types = x : Fragment.types acc
-          }
+    go e acc = case e of
+      Element.Declaration x -> over Fragment.declarations (x:) acc
+      Element.Definition x -> over Fragment.definitions (x:) acc
+      Element.Metadata x -> over Fragment.metadata (x:) acc
+      Element.Synonym x -> over Fragment.synonyms (x:) acc
+      Element.TypeDefinition x -> over Fragment.types (x:) acc
       Element.Term x ->
-        acc
-          { Fragment.definitions =
+        over Fragment.definitions
+          (\defs ->
               case findIndex
-                ((== fromMaybe Definition.mainName mainName) . Definition.name)
-                $ Fragment.definitions acc of
-                Just index -> case splitAt index $ Fragment.definitions acc of
+                ((== fromMaybe Definition.mainName mainName) . view Definition.name) defs of
+                Just index -> case splitAt index defs of
                   (a, existing : b) ->
                     a
-                      ++ existing
-                        { Definition.body =
-                            composeUnderLambda (Definition.body existing) x
-                        } :
+                      ++ over Definition.body (\prev -> composeUnderLambda prev x) existing :
                     b
                   _nonMain -> error "cannot find main definition"
                 Nothing ->
-                  Definition.main mainPermissions mainName x :
-                  Fragment.definitions acc
-          }
+                  Definition.main mainPermissions mainName x : defs
+          ) acc
         where
           -- In top-level code, we want local parameteriable bindings to remain in scope even
           -- when separated by other top-level program elements, e.g.:
@@ -208,7 +178,7 @@ vocabularyParser :: Parser [Element ()]
 vocabularyParser = (<?> "vocabulary definition") $ do
   parserMatch_ Token.Vocab
   original@(Qualifier _ outer) <- Parsec.getState
-  (vocabularyName, _) <- nameParser
+  (vocabularyName, _) <- nameParser <?> "vocabulary name"
   let (inner, name) = case vocabularyName of
         QualifiedName
           (Qualified (Qualifier _root qualifier) (Unqualified unqualified)) ->
@@ -219,9 +189,9 @@ vocabularyParser = (<?> "vocabulary definition") $ do
   Parsec.choice
     [ [] <$ parserMatchOperator ";",
       do
-        elements <- blockedParser elementsParser
+        es <- blockedParser elementsParser
         Parsec.putState original
-        return elements
+        return es
     ]
 
 blockedParser :: Parser a -> Parser a
@@ -337,11 +307,11 @@ elementParser =
 synonymParser :: Parser Synonym
 synonymParser = (<?> "synonym definition") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.Synonym
-  from <-
+  f <-
     Qualified <$> Parsec.getState
       <*> unqualifiedNameParser
-  (to, _) <- nameParser
-  return $ Synonym from to origin
+  (t, _) <- nameParser
+  return $ Synonym f t origin
 
 metadataParser :: Parser Metadata
 metadataParser = (<?> "metadata block") $ do
@@ -363,9 +333,9 @@ metadataParser = (<?> "metadata block") $ do
           <*> (blockParser <?> "metadata value block")
   return
     Metadata
-      { Metadata.fields = HashMap.fromList fields,
-        Metadata.name = QualifiedName name,
-        Metadata.origin = origin
+      { Metadata._fields = HashMap.fromList fields,
+        Metadata._name = QualifiedName name,
+        Metadata._origin = origin
       }
 
 typeDefinitionParser :: Parser TypeDefinition
@@ -379,10 +349,10 @@ typeDefinitionParser = (<?> "type definition") $ do
   constructors <- blockedParser $ many constructorParser
   return
     TypeDefinition
-      { TypeDefinition.constructors = constructors,
-        TypeDefinition.name = name,
-        TypeDefinition.origin = origin,
-        TypeDefinition.parameters = parameters
+      { TypeDefinition._constructors = constructors,
+        TypeDefinition._name = name,
+        TypeDefinition._origin = origin,
+        TypeDefinition._parameters = parameters
       }
 
 constructorParser :: Parser DataConstructor
@@ -395,9 +365,9 @@ constructorParser = (<?> "constructor definition") $ do
         groupedParser constructorFieldsParser
   return
     DataConstructor
-      { DataConstructor.fields = fields,
-        DataConstructor.name = name,
-        DataConstructor.origin = origin
+      { DataConstructor._fields = fields,
+        DataConstructor._name = name,
+        DataConstructor._origin = origin
       }
 
 constructorFieldsParser :: Parser [Signature]
@@ -495,9 +465,9 @@ parameter = do
     ]
 
 typeListParser :: Parser a -> Parser [a]
-typeListParser element =
+typeListParser e =
   bracketedParser
-    (element `Parsec.sepEndBy1` commaParser)
+    (e `Parsec.sepEndBy1` commaParser)
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
@@ -523,13 +493,13 @@ declarationParser keyword category = do
   origin <- getTokenOrigin <* parserMatch keyword
   suffix <- unqualifiedNameParser <?> "declaration name"
   name <- Qualified <$> Parsec.getState <*> pure suffix
-  sig <- signatureParser
+  sig <- signatureParser <?> "declaration signature"
   return
     Declaration
-      { Declaration.category = category,
-        Declaration.name = name,
-        Declaration.origin = origin,
-        Declaration.signature = sig
+      { Declaration._category = category,
+        Declaration._name = name,
+        Declaration._origin = origin,
+        Declaration._signature = sig
       }
 
 basicDefinitionParser :: Parser (Definition ())
@@ -575,18 +545,18 @@ definitionParser keyword category = do
   body <- blockLikeParser <?> "definition body"
   return
     Definition
-      { Definition.body = body,
-        Definition.category = category,
-        Definition.fixity = fixity,
-        Definition.inferSignature = False,
-        Definition.merge = Merge.Deny,
-        Definition.name = name,
-        Definition.origin = origin,
+      { Definition._body = body,
+        Definition._category = category,
+        Definition._fixity = fixity,
+        Definition._inferSignature = False,
+        Definition._merge = Merge.Deny,
+        Definition._name = name,
+        Definition._origin = origin,
         -- HACK: Should be passed in from outside?
-        Definition.parent = case keyword of
+        Definition._parent = case keyword of
           Token.Instance -> Just $ Parent.Trait name
           _nonInstance -> Nothing,
-        Definition.signature = sig
+        Definition._signature = sig
       }
 
 signatureParser :: Parser Signature
@@ -696,14 +666,14 @@ sectionParser =
 vectorParser :: Parser (Term ())
 vectorParser = (<?> "vector literal") $ do
   vectorOrigin <- getTokenOrigin
-  elements <-
+  es <-
     bracketedParser $
       (compose () vectorOrigin <$> Parsec.many1 termParser)
         `Parsec.sepEndBy` commaParser
   return $
     compose () vectorOrigin $
-      map Group elements
-        ++ [NewVector () (length elements) () vectorOrigin]
+      map Group es
+        ++ [NewVector () (length es) () vectorOrigin]
 
 lambdaParser :: Parser (Term ())
 lambdaParser = (<?> "parameteriable introduction") $ do

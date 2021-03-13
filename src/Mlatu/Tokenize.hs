@@ -16,10 +16,8 @@ where
 import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
-import Mlatu.Base (Base (..))
-import Mlatu.Indent (Indent (..))
 import Mlatu.Informer (Informer (..))
-import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
+import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), Base(..))
 import Mlatu.Located (Located (..))
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
@@ -102,7 +100,7 @@ rangedTokenizer parser = do
   begin <- Parsec.getPosition
   result <- parser
   end <- Parsec.getPosition
-  return $ At (Origin.range begin end) (Indent column) result
+  return $ At (Origin.range begin end) result
 
 blockBegin :: Tokenizer Token
 blockBegin = BlockBegin <$ Parsec.char '{'

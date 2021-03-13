@@ -56,6 +56,7 @@ import Mlatu.Zonk qualified as Zonk
 import Prettyprinter (Doc, dquotes, hsep)
 import Relude hiding (Compose, Type)
 import Relude.Unsafe qualified as Unsafe
+import Optics
 
 -- | Type inference takes a program fragment and produces a program with every
 -- term annotated with its inferred type. It's polymorphic in the annotation
@@ -77,12 +78,7 @@ typecheck dictionary mDeclaredSignature term = do
     mapM
       (\(name, signature) -> (,) name <$> typeFromSignature tenv0 signature)
       $ Dictionary.signatures dictionary
-  let tenv1 =
-        tenv0
-          { TypeEnv.sigs =
-              Map.union (Map.fromList declaredTypes) $
-                TypeEnv.sigs tenv0
-          }
+  let tenv1 = over TypeEnv.sigs (Map.union (Map.fromList declaredTypes)) tenv0
   inferType0 dictionary tenv1 declaredType term
 
 -- | Mangles an instance name according to its trait signature.
@@ -193,10 +189,10 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   Lambda _ name@(Unqualified unqualified) _ term origin -> do
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
     a <- TypeEnv.freshTv tenv0 varTypeName origin Value
-    let oldLocals = TypeEnv.vs tenv0
-    let localEnv = tenv0 {TypeEnv.vs = a : TypeEnv.vs tenv0}
+    let oldLocals = view TypeEnv.vs tenv0
+    let localEnv = over TypeEnv.vs (a:) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
-    let tenv2 = tenv1 {TypeEnv.vs = oldLocals}
+    let tenv2 = set TypeEnv.vs oldLocals tenv1
     (b, c, e, tenv3) <- Unify.function tenv2 t1
     let typ = Type.fun origin (Type.prod origin b a) c e
         type' = Zonk.typ tenvFinal typ
@@ -433,7 +429,7 @@ inferCase
   (Case qualified@(QualifiedName name) body origin) = do
     (body', bodyType, tenv1) <- inferType dictionary tenvFinal tenv0 body
     (a1, b1, e1, tenv2) <- Unify.function tenv1 bodyType
-    case Map.lookup name $ TypeEnv.sigs tenv2 of
+    case Map.lookup name $ view TypeEnv.sigs tenv2 of
       Just signature -> do
         (a2, b2, e2, tenv3) <- Unify.function tenv2 signature
         -- Note that we swap the consumption and production of the constructor
@@ -443,8 +439,7 @@ inferCase
         let typ = Type.fun origin b2 b1 e1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
-        let matching ctor = DataConstructor.name ctor == unqualifiedName name
-        dataConstructors' <- case partition matching dataConstructors of
+        dataConstructors' <- case partition (\ctor -> view DataConstructor.name ctor == unqualifiedName name) dataConstructors of
           ([], remaining) -> do
             report $ Report.makeError $ Report.RedundantCase origin
             return remaining
@@ -466,20 +461,20 @@ inferValue ::
 inferValue dictionary tenvFinal tenv0 origin = \case
   Capture names term -> do
     let types = mapMaybe (TypeEnv.getClosed tenv0) names
-    let oldClosure = TypeEnv.closure tenv0
-    let localEnv = tenv0 {TypeEnv.closure = types}
+    let oldClosure = view TypeEnv.closure tenv0
+    let localEnv = set TypeEnv.closure types tenv0
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
-    let tenv2 = tenv1 {TypeEnv.closure = oldClosure}
+    let tenv2 = set TypeEnv.closure oldClosure tenv1
     return (Capture names term', t1, tenv2)
   Character x -> return (Character x, TypeConstructor origin "Char", tenv0)
   Closed (ClosureIndex index) ->
     return
-      (Closed $ ClosureIndex index, Unsafe.fromJust (TypeEnv.closure tenv0 !!? index), tenv0)
+      (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
   Float x -> return (Float x, TypeConstructor origin "Double", tenv0)
   Integer x -> return (Integer x, TypeConstructor origin "Int", tenv0)
   Local (LocalIndex index) ->
     return
-      (Local $ LocalIndex index, Unsafe.fromJust (TypeEnv.vs tenv0 !!? index), tenv0)
+      (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
   Quotation {} -> error "quotation should not appear during type inference"
   Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
     Just (Entry.Word _ _ _ _ (Just signature) _) -> do
@@ -508,7 +503,7 @@ inferCall ::
   Origin ->
   M (Term Type, Type, TypeEnv)
 inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
-  case Map.lookup name $ TypeEnv.sigs tenv0 of
+  case Map.lookup name $ view TypeEnv.sigs tenv0 of
     Just t@Forall {} -> do
       (typ, params, tenv1) <- Instantiate.prenex tenv0 t
       let type' = Type.setOrigin origin typ

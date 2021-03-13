@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Entry
 -- Description : Dictionary entries
@@ -8,6 +10,12 @@
 -- Portability : GHC
 module Mlatu.Entry
   ( Entry (..),
+  _Word,
+  _Metadata, 
+  _Synonym, 
+  _Trait,
+  _Type, 
+  _InstantiatedType
   )
 where
 
@@ -22,6 +30,7 @@ import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
 import Relude hiding (Constraint, Type)
+import Optics.TH (makePrisms)
 
 -- | An entry in the dictionary.
 --
@@ -56,3 +65,5 @@ data Entry
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show)
+
+makePrisms ''Entry

@@ -26,6 +26,7 @@ import Mlatu.TypeEnv (TypeEnv, freshTv)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Zonk qualified as Zonk
 import Relude hiding (Type)
+import Optics
 
 -- | There are two kinds of unification going on here: basic logical unification
 -- for value types, and row unification for permission types.
@@ -44,9 +45,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     case ms of
       Just (s', substitution, tenv1) ->
         case substitution of
-          Just (x, t) ->
-            let tenv2 = tenv1 {TypeEnv.tvs = Map.insert x t $ TypeEnv.tvs tenv1}
-             in typ tenv2 r s'
+          Just (x, t) -> typ (over TypeEnv.tvs (Map.insert x t) tenv1) r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
         report $ Report.makeError $ Report.TypeMismatch t1' t2'
@@ -105,7 +104,7 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
               halt
       else declare
   where
-    declare = return tenv0 {TypeEnv.tvs = Map.insert x t $ TypeEnv.tvs tenv0}
+    declare = return $ over TypeEnv.tvs (Map.insert x t) tenv0
 
 -- | A convenience function for unifying a type with a function type.
 function :: TypeEnv -> Type -> M (Type, Type, Type, TypeEnv)

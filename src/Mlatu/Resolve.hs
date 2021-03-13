@@ -33,6 +33,7 @@ import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
+import Optics
 
 type Resolved a = StateT [Unqualified] M a
 
@@ -44,14 +45,11 @@ run = flip evalStateT []
 definition :: Dictionary -> Definition () -> Resolved (Definition ())
 definition dictionary def = do
   -- FIXME: reportDuplicate dictionary def
-  let vocabulary = qualifierName $ Definition.name def
-  body <- term dictionary vocabulary $ Definition.body def
-  sig <- signature dictionary vocabulary $ Definition.signature def
+  let vocabulary = qualifierName $ view Definition.name def
+  body <- term dictionary vocabulary $ view Definition.body def
+  sig <- signature dictionary vocabulary $ view Definition.signature def
   return
-    def
-      { Definition.body = body,
-        Definition.signature = sig
-      }
+    (set Definition.body body (set Definition.signature sig def))
 
 term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
 term dictionary vocabulary = recur

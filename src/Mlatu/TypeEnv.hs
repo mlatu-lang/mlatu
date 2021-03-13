@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.TypeEnv
 -- Description : Type inference environment
@@ -12,6 +14,11 @@ module Mlatu.TypeEnv
     freshTv,
     freshTypeId,
     getClosed,
+    tvs,
+    vs,
+    closure,
+    sigs,
+    currentType
   )
 where
 
@@ -30,6 +37,7 @@ import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Relude hiding (Type, empty)
 import Relude.Extra (next)
 import System.IO.Unsafe (unsafePerformIO)
+import Optics
 
 -- The typing environment tracks the state of inference. It answers the
 -- following questions:
@@ -42,21 +50,23 @@ import System.IO.Unsafe (unsafePerformIO)
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { tvs :: !(Map TypeId Type),
-    vs :: ![Type],
-    closure :: ![Type],
-    sigs :: !(Map Qualified Type),
-    currentType :: !(IORef TypeId)
+  { _tvs :: !(Map TypeId Type),
+    _vs :: ![Type],
+    _closure :: ![Type],
+    _sigs :: !(Map Qualified Type),
+    _currentType :: !(IORef TypeId)
   }
+
+makeLenses ''TypeEnv
 
 empty :: TypeEnv
 empty =
   TypeEnv
-    { tvs = Map.empty,
-      vs = [],
-      closure = [],
-      sigs = Map.empty,
-      currentType = currentTypeId
+    { _tvs = Map.empty,
+      _vs = [],
+      _closure = [],
+      _sigs = Map.empty,
+      _currentType = currentTypeId
     }
 
 currentTypeId :: IORef TypeId
@@ -68,12 +78,12 @@ freshTv tenv name origin k =
   TypeVar origin <$> (Var name <$> freshTypeId tenv <*> pure k)
 
 freshTypeId :: TypeEnv -> M TypeId
-freshTypeId tenv = do
-  x <- liftIO $ readIORef $ currentType tenv
-  liftIO $ writeIORef (currentType tenv) $ next x
+freshTypeId tenv = liftIO $ do
+  x <- readIORef $ view currentType tenv
+  writeIORef (view currentType tenv) $ next x
   return x
 
 getClosed :: TypeEnv -> Closed -> Maybe Type
 getClosed tenv name = case name of
-  ClosedLocal (LocalIndex index) -> vs tenv !!? index
-  ClosedClosure (ClosureIndex index) -> closure tenv !!? index
+  ClosedLocal (LocalIndex index) -> view vs tenv !!? index
+  ClosedClosure (ClosureIndex index) -> view closure tenv !!? index

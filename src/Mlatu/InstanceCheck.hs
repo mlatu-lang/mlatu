@@ -28,6 +28,7 @@ import Mlatu.Unify qualified as Unify
 import Mlatu.Zonk qualified as Zonk
 import Relude hiding (Type)
 import Prettyprinter (Doc)
+import Optics
 
 -- | Checks whether one type is a generic instance of another, used for checking
 -- type signatures. Remember, when using this function, which way the subtyping
@@ -38,7 +39,7 @@ instanceCheck _ aScheme _ bScheme = do
   let tenv0 = TypeEnv.empty
   let aType = aScheme
   (ids, bType) <- skolemize tenv0 bScheme
-  let envTypes = Map.elems (TypeEnv.tvs tenv0)
+  let envTypes = Map.elems (view TypeEnv.tvs tenv0)
   success <- attempt $ subsumptionCheck tenv0 aType bType
   unless success failure
   let escaped = Set.unions $ map (Free.tvs tenv0) (aScheme : bScheme : envTypes)

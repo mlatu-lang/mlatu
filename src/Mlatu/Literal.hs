@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Literal
 -- Description : Representations of literal values
@@ -8,37 +10,61 @@
 -- Portability : GHC
 module Mlatu.Literal
   ( FloatLiteral (..),
-    IntegerLiteral (..),
+    IntegerLiteral (..), Base(..),
+    integerValue,
+    integerBase,
     floatValue,
+    floatSignificand,
+    floatFractional,
+    floatExponent
   )
 where
 
 import Data.Ratio ((%))
-import Mlatu.Base (Base (..))
 import Relude
+import Optics.TH
+
+-- | The radix of an integer literal.
+data Base
+  = -- | @0b@
+    Binary
+  | -- | @0o@
+    Octal
+  | -- | No prefix.
+    Decimal
+  | -- | @0x@
+    Hexadecimal
+  deriving (Ord, Eq, Show)
+
+makePrisms ''Base
 
 data IntegerLiteral = IntegerLiteral
-  { integerValue :: !Integer,
-    integerBase :: !Base  }
-  deriving (Ord, Show)
+  { _integerValue :: !Integer,
+    _integerBase :: !Base  }
+  deriving (Show)
+
+makeLenses ''IntegerLiteral
 
 -- Integer literals compare equality regardless of base and bits.
 instance Eq IntegerLiteral where
   IntegerLiteral a _baseA == IntegerLiteral b _baseB = a == b
 
-
+deriving instance Ord IntegerLiteral
 
 data FloatLiteral = FloatLiteral
-  { floatSignificand :: !Integer,
-    floatFractional :: !Int,
-    floatExponent :: !Int
+  { _floatSignificand :: !Integer,
+    _floatFractional :: !Int,
+    _floatExponent :: !Int
   }
-  deriving (Ord, Show)
+  deriving (Show)
+
+makeLenses ''FloatLiteral
 
 -- Float literals compar equality regardless of bits.
 instance Eq FloatLiteral where
   FloatLiteral a b c == FloatLiteral d e f = (a, c - b) == (d, f - e)
 
+deriving instance Ord FloatLiteral
 
 -- Note [Float Literals]:
 --

@@ -1,73 +1,36 @@
 module Main where
 
-import Data.Version (makeVersion)
+import Arguments (Arguments, parseArguments)
+import Arguments qualified
 import Interact qualified
-import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource, runMlatu)
+import Mlatu (compile, compilePrelude, fragmentFromSource, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
-import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude
 import Report (reportAll)
-import SimpleCmdArgs
 import System.Directory (makeAbsolute)
-import System.IO (hSetEncoding, utf8)
+import System.IO (hPutStrLn, hSetEncoding, utf8)
 
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
-  simpleCmdArgs (Just (makeVersion [0, 1])) "mlatu" "The Mlatu programming language" $
-    subcommands
-      [ Subcommand "fmt" "Formats Mlatu files prettily" $
-          ( \ps -> do
-              paths <- absolutizePaths ps
-              forM_ paths (handleErrors . formatFile)
-          )
-            <$> some (strArg "FILE..."),
-        Subcommand "check" "Checks Mlatu files for errors" $
-          ( \foundationOnly ps -> do
-              paths <- absolutizePaths ps
-              handleErrors
-                ( checkFiles
-                    ( if foundationOnly
-                        then Foundation
-                        else Common
-                    )
-                    paths
-                )
-          )
-            <$> preludeOpts
-            <*> some (strArg "FILE..."),
-        Subcommand "run" "Interprets Mlatu files" $
-          ( \foundationOnly ps -> do
-              paths <- absolutizePaths ps
-              handleErrors
-                ( runFiles
-                    ( if foundationOnly
-                        then Foundation
-                        else Common
-                    )
-                    paths
-                )
-          )
-            <$> preludeOpts
-            <*> some (strArg "FILE..."),
-        Subcommand "repl" "Starts the Mlatu REPL" $
-          ( \foundationOnly ->
-              Interact.run
-                ( if foundationOnly
-                    then Foundation
-                    else Common
-                )
-          )
-            <$> preludeOpts
-      ]
-  where
-    preludeOpts = switchWith 'f' "foundation" "Use only foundation"
+  arguments <- parseArguments
+  if null $ Arguments.inputPaths arguments
+    then case Arguments.compileMode arguments of
+      Arguments.CheckMode -> hPutStrLn stderr "Cannot run interactively in check mode." >> exitFailure
+      Arguments.FormatMode -> hPutStrLn stderr "Cannot run interactively in format mode." >> exitFailure
+      Arguments.InterpretMode -> Interact.run (Arguments.prelude arguments)
+    else runBatch arguments
 
-    absolutizePaths :: [FilePath] -> IO [FilePath]
-    absolutizePaths paths = forM paths makeAbsolute
+runBatch :: Arguments -> IO ()
+runBatch arguments = do
+  paths <- forM (Arguments.inputPaths arguments) makeAbsolute
+  case Arguments.compileMode arguments of
+    Arguments.FormatMode -> forM_ paths formatMode
+    Arguments.CheckMode -> checkMode (Arguments.prelude arguments) paths
+    Arguments.InterpretMode -> interpretMode (Arguments.prelude arguments) paths
 
 mainPermissions :: [GeneralName]
 mainPermissions =
@@ -75,33 +38,47 @@ mainPermissions =
     QualifiedName $ Qualified Vocabulary.global "Fail"
   ]
 
-handleErrors :: ExceptT [Report] IO () -> IO ()
-handleErrors x = do
-  result <- runExceptT x
-  bifor_ result ((>> exitFailure) . reportAll) (const pass)
+formatMode :: FilePath -> IO ()
+formatMode path = do
+  bs <- readFileBS path
+  let text = decodeUtf8 bs
+  result <- runExceptT $ runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right fragment -> do
+      let newText = show $ printFragment fragment
+      writeFile path newText
+      if newText /= toString text
+        then print $ "Formatted " <> path <> " successfully"
+        else print $ path <> "was already formatted"
 
-formatFile :: FilePath -> ExceptT [Report] IO ()
-formatFile path =
-  readFileBS path
-    >>= ( runMlatu
-            . (formatFragment <=< fragmentFromBS)
+checkMode :: Arguments.Prelude -> [FilePath] -> IO ()
+checkMode prelude paths = do
+  result <-
+    runExceptT $
+      runMlatu
+        ( do
+            commonDictionary <- compilePrelude prelude mainPermissions Nothing
+            compile mainPermissions Nothing paths (Just commonDictionary)
         )
-  where
-    formatFragment = writeFile path . show . printFragment
-    fragmentFromBS = fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right _ -> pass
 
-checkFiles :: Prelude -> [FilePath] -> ExceptT [Report] IO ()
-checkFiles prelude paths = do
-  runMlatu
-    ( do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
-    )
-    >> pass
-
-runFiles :: Prelude -> [FilePath] -> ExceptT [Report] IO ()
-runFiles prelude paths = do
-  program <- runMlatu $ do
-    commonDictionary <- compilePrelude prelude mainPermissions Nothing
-    compile mainPermissions Nothing paths (Just commonDictionary)
-  return $ pass (interpret program Nothing [] stdin stdout stderr [])
+interpretMode :: Arguments.Prelude -> [FilePath] -> IO ()
+interpretMode prelude paths = do
+  result <- runExceptT $
+    runMlatu $ do
+      commonDictionary <- compilePrelude prelude mainPermissions Nothing
+      compile mainPermissions Nothing paths (Just commonDictionary)
+  case result of
+    Left reports -> do
+      reportAll reports
+      exitFailure
+    Right program -> do
+      _ <- interpret program Nothing [] stdin stdout stderr []
+      pass

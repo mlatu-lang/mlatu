@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e0d230f3c05c24677e21e6e268d1b0334833ab3065b556cd5be2d73a61a22e54
+-- hash: 6169fc4a3b2c243e9e664c38170da958eb41b72667ecd46327b2aafff0a2c01b
 
 name:           Mlatu
 version:        0.1.0.0
@@ -25,7 +25,6 @@ source-repository head
 library
   exposed-modules:
       Mlatu
-      Mlatu.Base
       Mlatu.DataConstructor
       Mlatu.Declaration
       Mlatu.Definition
@@ -45,7 +44,6 @@ library
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Hint
-      Mlatu.Indent
       Mlatu.Infer
       Mlatu.Informer
       Mlatu.InstanceCheck
@@ -93,8 +91,8 @@ library
       base >=4.8
     , bytestring
     , containers
-    , exceptions
     , file-embed
+    , optics
     , parsec
     , prettyprinter
     , relude
@@ -107,6 +105,7 @@ library
 executable mlatu
   main-is: Main.hs
   other-modules:
+      Arguments
       Interact
       Report
       Paths_Mlatu
@@ -118,15 +117,15 @@ executable mlatu
       Mlatu
     , base >=4.8
     , bytestring
+    , cmdargs
     , containers
     , directory
-    , exceptions
     , file-embed
     , haskeline
+    , optics
     , parsec
     , prettyprinter
     , relude
-    , simple-cmd-args
     , text
     , transformers
     , unordered-containers
@@ -157,10 +156,10 @@ test-suite test
     , base >=4.8
     , bytestring
     , containers
-    , exceptions
     , file-embed
     , hspec
     , knob
+    , optics
     , parsec
     , prettyprinter
     , relude

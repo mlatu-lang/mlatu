@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.TypeDefinition
 -- Description : Definitions of types
@@ -8,6 +10,10 @@
 -- Portability : GHC
 module Mlatu.TypeDefinition
   ( TypeDefinition (..),
+  constructors,
+  name,
+  origin,
+  parameters
   )
 where
 
@@ -16,11 +22,14 @@ import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
 import Relude hiding (Constraint)
+import Optics.TH (makeLenses)
 
 data TypeDefinition = TypeDefinition
-  { constructors :: ![DataConstructor],
-    name :: !Qualified,
-    origin :: !Origin,
-    parameters :: ![Parameter]
+  { _constructors :: ![DataConstructor],
+    _name :: !Qualified,
+    _origin :: !Origin,
+    _parameters :: ![Parameter]
   }
   deriving (Eq, Ord, Show)
+
+makeLenses ''TypeDefinition

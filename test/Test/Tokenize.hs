@@ -5,8 +5,7 @@ module Test.Tokenize
   )
 where
 
-import Mlatu.Base (Base (..))
-import Mlatu.Literal (FloatLiteral (FloatLiteral), IntegerLiteral (IntegerLiteral))
+import Mlatu.Literal (FloatLiteral (FloatLiteral), Base(..), IntegerLiteral (IntegerLiteral))
 import Mlatu.Located qualified as Located
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (Unqualified (..))

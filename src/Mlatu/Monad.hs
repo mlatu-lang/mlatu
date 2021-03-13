@@ -20,9 +20,9 @@ import Control.Monad.Fix (MonadFix (..))
 import Mlatu.Informer (Informer (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report (..), ReportKind (..))
+import Prettyprinter (Doc)
 import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
-import Prettyprinter (Doc)
 
 -- | A Mlatu action atop a 'Monad' 'm', returning a result of type 'a', which
 -- maintains a 'Context' stack and can fail with a list of 'Reports'.
@@ -52,14 +52,17 @@ runMlatuExceptT = runExceptT . runMlatu
 
 instance (Monad m) => Functor (MT m) where
   fmap f (MT ax) = MT $ flip flip (first f) . ((<&>) .) . ax
+  {-# INLINEABLE fmap #-}
 
 instance (Monad m) => Applicative (MT m) where
   pure x = MT $ const (return . (x,))
   MT af <*> MT ax = MT $ ap (flip . ((>>=) .) . af) (uncurry . (. first) . flip . ((<&>) .) . ax)
+  {-# INLINEABLE (<*>) #-}
 
 instance (Monad m) => Monad (MT m) where
   return = pure
   MT ax >>= f = MT $ ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unKT)
+  {-# INLINEABLE (>>=) #-}
 
 instance Monad m => MonadFail (MT m) where
   fail = error "do not use 'fail'"
@@ -67,8 +70,9 @@ instance Monad m => MonadFail (MT m) where
 instance (MonadIO m) => MonadFix (MT m) where
   mfix k = MT $ \context reports ->
     newEmptyMVar
-      >>= ap ((>>=) . liftIO . unsafeInterleaveIO . takeMVar) 
-      ((<=< flip (flip unKT context . k) reports) . (liftIO .) . (`ap` return) . ((>>) .) . (. fst) . putMVar)
+      >>= ap
+        ((>>=) . liftIO . unsafeInterleaveIO . takeMVar)
+        ((<=< flip (flip unKT context . k) reports) . (liftIO .) . (`ap` return) . ((>>) .) . (. fst) . putMVar)
 
 instance (MonadIO m) => MonadIO (MT m) where
   liftIO m = MT $ const ((liftIO m <&>) . flip (,))

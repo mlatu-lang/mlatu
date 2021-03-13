@@ -29,7 +29,6 @@ import Data.Char (isLetter)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex, groupBy)
 import Data.Text qualified as Text
-import Mlatu.Base qualified as Base
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Declaration (Declaration (..))
 import Mlatu.Declaration qualified as Declaration
@@ -43,7 +42,7 @@ import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), floatValue)
+import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), Base(..), floatValue, integerBase, integerValue)
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
@@ -62,6 +61,7 @@ import Prettyprinter
 import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
+import Optics
 
 punctuateComma :: [Doc a] -> Doc a
 punctuateComma = hsep . punctuate comma
@@ -71,21 +71,21 @@ printIntegerLiteral literal =
   hsep $
     catMaybes
       [ sign,
-        case integerBase literal of
-          Base.Binary -> Just "0b"
-          Base.Octal -> Just "0o"
-          Base.Decimal -> Nothing
-          Base.Hexadecimal -> Just "0x",
+        case view integerBase literal of
+          Binary -> Just "0b"
+          Octal -> Just "0o"
+          Decimal -> Nothing
+          Hexadecimal -> Just "0x",
         Just $ pretty $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
       ]
   where
     sign = if value < 0 then Just "-" else Nothing
-    value = integerValue literal
-    (base, digits) = case integerBase literal of
-      Base.Binary -> (2, "01")
-      Base.Octal -> (8, ['0' .. '7'])
-      Base.Decimal -> (10, ['0' .. '9'])
-      Base.Hexadecimal -> (16, ['0' .. '9'] ++ ['A' .. 'F'])
+    value = view integerValue literal
+    (base, digits) = case view integerBase literal of
+      Binary -> (2, "01")
+      Octal -> (8, ['0' .. '7'])
+      Decimal -> (10, ['0' .. '9'])
+      Hexadecimal -> (16, ['0' .. '9'] ++ ['A' .. 'F'])
 
 printFloatLiteral :: FloatLiteral -> Doc a
 printFloatLiteral literal =
@@ -113,17 +113,17 @@ printQualifier (Qualifier Relative parts) =
 
 printOrigin :: Origin.Origin -> Doc a
 printOrigin origin =
-  pretty (Origin.name origin) <> colon
+  pretty (view Origin.name origin) <> colon
     <> pretty al
     <> dot
     <> pretty ac
     <> "-"
     <> (if al == bl then pretty bc else pretty bl <> dot <> pretty bc)
   where
-    al = Origin.beginLine origin
-    bl = Origin.endLine origin
-    ac = Origin.beginColumn origin
-    bc = Origin.endColumn origin
+    al = view Origin.beginLine origin
+    bl = view Origin.endLine origin
+    ac = view Origin.beginColumn origin
+    bc = view Origin.endColumn origin
 
 printCategory :: Category.Category -> Doc a
 printCategory Category.Constructor = "constructor"
@@ -511,11 +511,11 @@ printValue value = case value of
 printMetadata :: Metadata -> Doc a
 printMetadata metadata =
   vsep $
-    ("about" <+> printGeneralName (Metadata.name metadata) <+> lbrace) :
+    ("about" <+> printGeneralName (view Metadata.name metadata) <+> lbrace) :
     map
       (\(key, term) -> indent 2 $ blockMaybe (printUnqualified key) (maybePrintTerm term))
       ( HashMap.toList $
-          fields metadata
+          view Metadata.fields metadata
       )
       ++ [rbrace]
 
@@ -580,11 +580,11 @@ printEntry (Entry.Type origin parameters ctors) =
   where
     constructor ctor =
       hsep
-        [ printUnqualified $ DataConstructor.name ctor,
+        [ printUnqualified $ view DataConstructor.name ctor,
           " with fields (",
           hsep $
             intersperse ", " $
-              map printSignature $ DataConstructor.fields ctor,
+              map printSignature $ view DataConstructor.fields ctor,
           ")"
         ]
 printEntry (Entry.InstantiatedType origin size) =
@@ -602,29 +602,29 @@ printFragment fragment =
         groupedDeclarations
         ++ map
           (\s -> printSynonym s <> line)
-          ( sort (synonyms fragment)
+          ( sort (view Fragment.synonyms fragment)
           )
         ++ map
           (\t -> printTypeDefinition t <> line)
-          ( sort (Fragment.types fragment)
+          ( sort (view Fragment.types fragment)
           )
         ++ mapMaybe
           (fmap (<> line) . printDefinition)
-          ( sort (definitions fragment)
+          ( sort (view Fragment.definitions fragment)
           )
         ++ map
           (\m -> printMetadata m <> line)
-          ( sort (metadata fragment)
+          ( sort (view Fragment.metadata fragment)
           )
     )
   where
-    groupedDeclarations = groupBy (\a b -> (qualifierName . Declaration.name) a == (qualifierName . Declaration.name) b) (declarations fragment)
+    groupedDeclarations = groupBy (\a b -> (qualifierName . view Declaration.name) a == (qualifierName . view Declaration.name) b) (view Fragment.declarations fragment)
     printGrouped decls =
       if noVocab
         then vsep (map (\d -> printDeclaration d <> line) $ sort decls)
         else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : map (indent 2 . printDeclaration) (sort decls) ++ [rbrace]
       where
-        (commonName, noVocab) = case qualifierName $ Declaration.name $ decls Unsafe.!! 0 of
+        (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
           n -> (n, False)
 
@@ -632,24 +632,24 @@ nestTwo :: Doc a -> Doc a
 nestTwo = nest 2
 
 block :: Doc a -> Doc a -> Doc a
-block pre inner = flatAlt (vsep [pre <+> lbrace, indent 2 inner, rbrace]) (pre <+> lbrace <+> inner <+> rbrace)
+block before inner = flatAlt (vsep [before <+> lbrace, indent 2 inner, rbrace]) (before <+> lbrace <+> inner <+> rbrace)
 
 maybeBlock :: Maybe (Doc a) -> Doc a -> Doc a
 maybeBlock Nothing inner = flatAlt (vsep [lbrace, indent 2 inner, rbrace]) (lbrace <+> inner <+> rbrace)
-maybeBlock (Just pre) inner = block pre inner
+maybeBlock (Just before) inner = block before inner
 
 blockMaybe :: Doc a -> Maybe (Doc a) -> Doc a
-blockMaybe pre Nothing = pre <+> (lbrace <> rbrace)
-blockMaybe pre (Just inner) = block pre inner
+blockMaybe before Nothing = before <+> (lbrace <> rbrace)
+blockMaybe before (Just inner) = block before inner
 
 maybeBlockMaybe :: Maybe (Doc a) -> Maybe (Doc a) -> Doc a
-maybeBlockMaybe (Just pre) (Just inner) = block pre inner
-maybeBlockMaybe pre (Just inner) = maybeBlock pre inner
-maybeBlockMaybe (Just pre) inner = blockMaybe pre inner
+maybeBlockMaybe (Just before) (Just inner) = block before inner
+maybeBlockMaybe before (Just inner) = maybeBlock before inner
+maybeBlockMaybe (Just before) inner = blockMaybe before inner
 maybeBlockMaybe Nothing Nothing = lbrace <> rbrace
 
 blockMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
-blockMulti pre f = mapNonEmpty (blockMaybe pre Nothing) (\xs -> vsep [pre <+> lbrace, indent 2 (vsep (map f xs)), rbrace])
+blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> vsep [before <+> lbrace, indent 2 (vsep (map f xs)), rbrace])
 
 mapNonEmpty :: b -> ([a] -> b) -> [a] -> b
 mapNonEmpty emptyCase nonEmptyFn l = fromMaybe emptyCase (viaNonEmpty (nonEmptyFn . toList) l)

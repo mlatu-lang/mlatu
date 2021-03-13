@@ -31,6 +31,7 @@ import Relude.Extra (universe)
 import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
+import Optics
 
 type Rewriter a = Parsec [Term ()] () a
 
@@ -71,14 +72,14 @@ desugar dictionary definition = do
               desugaredTerms <- many $ expression <|> lambda
               let origin = case desugaredTerms of
                     term : _ -> Term.origin term
-                    _noTerms -> Definition.origin definition
+                    _noTerms -> view Definition.origin definition
               return $ Term.compose () origin desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
             report $ Report.parseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
-                  _noTerms -> Definition.origin definition
+                  _noTerms -> view Definition.origin definition
             return $ Term.compose () origin terms
           Right result -> return result
 
@@ -126,8 +127,8 @@ desugar dictionary definition = do
         Quotation body -> Quotation <$> desugarTerms' body
         Text {} -> return value
 
-  desugared <- desugarTerms' $ Definition.body definition
-  return definition {Definition.body = desugared}
+  desugared <- desugarTerms' $ view Definition.body definition
+  return $ set Definition.body desugared definition
 
 toOperator :: Operator -> Expr.Operator [Term ()] () Identity (Term ())
 toOperator operator = Expr.Infix

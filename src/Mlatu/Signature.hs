@@ -1,3 +1,5 @@
+ {-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Mlatu.Signature
 -- Description : Type signatures
@@ -8,6 +10,13 @@
 -- Portability : GHC
 module Mlatu.Signature
   ( Signature (..),
+  _Application,
+  _Bottom,
+  _Function,
+  _Quantified,
+  _Variable,
+  _StackFunction,
+  _Type,
     origin,
   )
 where
@@ -18,6 +27,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Type (Type)
 import Mlatu.Type qualified as Type
 import Relude hiding (Constraint, Type)
+import Optics.TH (makePrisms)
 
 -- | A parsed type signature.
 data Signature
@@ -42,7 +52,9 @@ data Signature
   | -- | Produced when generating signatures for lifted quotations after
     -- typechecking.
     Type !Type
-  deriving (Ord, Show)
+  deriving (Show)
+
+makePrisms ''Signature
 
 -- | Signatures are compared regardless of origin.
 instance Eq Signature where
@@ -53,6 +65,8 @@ instance Eq Signature where
   StackFunction a b c d e _ == StackFunction f g h i j _ =
     (a, b, c, d, e) == (f, g, h, i, j)
   _ == _ = False
+
+deriving instance Ord Signature
 
 origin :: Signature -> Origin
 origin signature = case signature of
