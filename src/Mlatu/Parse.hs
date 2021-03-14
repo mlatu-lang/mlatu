@@ -31,7 +31,7 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
-import Mlatu.Fragment (Fragment (Fragment))
+import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.Kind (Kind (..))

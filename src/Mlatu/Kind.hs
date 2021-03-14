@@ -10,6 +10,11 @@
 -- Portability : GHC
 module Mlatu.Kind
   ( Kind (..),
+  _Value,
+  _Stack,
+  _Label,
+  _Permission,
+  (.:->)
   )
 where
 

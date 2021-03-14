@@ -1,11 +1,7 @@
 define fib (Int -> Int) {
   -> n;
-  if (n < 2) {
-    1
-  }
-  else {
-    (n - 2) fib + (n - 1) fib
-  }
+  if (n < 2) { 1 }
+  else { (n - 2) fib + (n - 1) fib }
 }
 
 25 fib print

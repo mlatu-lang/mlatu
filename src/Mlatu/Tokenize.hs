@@ -96,7 +96,6 @@ tokensTokenizer = tokenTokenizer `Parsec.sepEndBy` silenceTokenizer
 
 rangedTokenizer :: Tokenizer Token -> Tokenizer (Located Token)
 rangedTokenizer parser = do
-  column <- Parsec.getState
   begin <- Parsec.getPosition
   result <- parser
   end <- Parsec.getPosition

@@ -1,101 +1,38 @@
 module Arguments
-  ( Arguments (..),
-    CompileMode (..),
-    Prelude (..),
-    parseArguments,
+  ( Options (..),
+    options
   )
 where
 
 import Mlatu (Prelude (..))
 import Relude
-import System.Console.CmdArgs.Explicit
-  ( Arg,
-    Flag,
-    HelpFormat (HelpFormatDefault),
-    Mode,
-    flagArg,
-    flagReq,
-    flagBool,
-    flagHelpSimple,
-    flagVersion,
-    helpText,
-    mode,
-    processArgs,
-  )
+import Options.Applicative
 
-data Arguments = Arguments
-  { compileMode :: !CompileMode,
-    inputPaths :: ![FilePath],
-    showHelp :: !Bool,
-    showVersion :: !Bool,
-    prelude :: !Prelude
-  }
 
-data CompileMode
-  = CheckMode
-  | InterpretMode
-  | FormatMode
 
-parseArguments :: IO Arguments
-parseArguments = do
-  arguments <- processArgs argumentsMode
-  when (showVersion arguments) $ do
-    putStrLn "Mlatu version 0.1"
-    exitSuccess
-  when (showHelp arguments) $ do
-    print $ helpText [] HelpFormatDefault argumentsMode
-    exitSuccess
-  return arguments
+data Options
+  = CheckFiles !Prelude ![FilePath]
+  | Repl !Prelude
+  | FormatFiles ![FilePath]
+  | RunFiles !Prelude ![FilePath]
 
-argumentsMode :: Mode Arguments
-argumentsMode =
-  mode
-    "mlatu"
-    defaultArguments
-    "Interprets Mlatu code."
-    bareArgument
-    options
+options :: Parser Options 
+options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> runFilesCommand)
 
-defaultArguments :: Arguments
-defaultArguments =
-  Arguments
-    { compileMode = InterpretMode,
-      inputPaths = [],
-      showHelp = False,
-      showVersion = False,
-      prelude = Common
-    }
+preludeFlag :: Parser Prelude 
+preludeFlag =(\b -> if b then Foundation else Common) <$> switch ( long "foundation-only" <> short 'f' <> help "Whether to only include foundation as the prelude")
 
-bareArgument :: Arg Arguments
-bareArgument = flagArg inputPathArgument "input-paths"
+filesArgument :: Parser [FilePath]
+filesArgument = some (argument str (metavar "FILES..."))
 
-inputPathArgument ::
-  FilePath -> Arguments -> Either e Arguments
-inputPathArgument path acc =
-  Right $
-    acc {inputPaths = path : inputPaths acc}
+replCommand :: Mod CommandFields Options 
+replCommand = command "repl" (info (Repl <$> preludeFlag) ( progDesc "Start the interactive REPL"))
 
-options :: [Flag Arguments]
-options =
-  [ flagBool
-      ["no-common", "foundation-only"]
-      ( \flag acc ->
-          if flag
-            then acc {prelude = Foundation}
-            else acc
-      )
-      "Compiles with the bare minimum prelude.",
-    flagReq
-      ["mode", "m"]
-      ( \flag acc ->
-          case flag of
-            "check" -> Right $ acc {compileMode = CheckMode}
-            "fmt" -> Right $ acc {compileMode = FormatMode}
-            "interpret" -> Right $ acc {compileMode = InterpretMode}
-            _ -> Left "Mode not recognized"
-      )
-      "check"
-      "Check syntax and types without compiling or running.",
-    flagHelpSimple $ \acc -> acc {showHelp = True},
-    flagVersion $ \acc -> acc {showVersion = True}
-  ]
+formatFilesCommand :: Mod CommandFields Options
+formatFilesCommand = command "fmt" (info (FormatFiles <$> filesArgument) (progDesc "Formats Mlatu files prettily"))
+
+checkFilesCommand :: Mod CommandFields Options 
+checkFilesCommand = command "check" (info (CheckFiles <$> preludeFlag <*> filesArgument) (progDesc "Checks Mlatu files for correctness without running them"))
+
+runFilesCommand :: Mod CommandFields Options 
+runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> filesArgument) (progDesc "Runs Mlatu files"))

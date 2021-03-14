@@ -57,15 +57,15 @@ dependencies:
   - base >=4.8
   - bytestring
   - containers
+  - file-embed
+  - optics
   - parsec
   - prettyprinter
+  - relude
   - text
   - transformers
   - unordered-containers
   - vector
-  - relude
-  - file-embed
-  - optics
 
 library:
   source-dirs: src
@@ -81,9 +81,9 @@ executables:
       - -O2
     dependencies:
       - Mlatu
-      - cmdargs
-      - haskeline
       - directory
+      - haskeline
+      - optparse-applicative
 
 tests:
   test:

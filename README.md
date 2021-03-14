@@ -55,17 +55,22 @@ Note: `cabal install` should also work.
 ### Usage
 
 ```
-mlatu [OPTIONS] input-paths
-  Interprets Mlatu code.
+The Mlatu programming language
 
-     --no-common --foundation-only  Compiles with the bare minimum prelude.
-     --check                        Check syntax and types without compiling
-                                    or running.
-  -? --help                         Display help message
-  -V --version                      Print version information
+Usage: mlatu COMMAND
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  repl                     Start the interactive REPL
+  check                    Checks Mlatu files for correctness without running
+                           them
+  fmt                      Formats Mlatu files prettily
+  run                      Runs Mlatu files
 ```
 
-If `mlatu` is called without any input paths, an interactive REPL will be started. Type `//help` in the REPL for command options in the REPL.
+Type `//help` in the interactive REPL for command options.
 
 ## Miscellany
 
