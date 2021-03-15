@@ -61,7 +61,7 @@ dependencies:
   - optics
   - parsec
   - prettyprinter
-  - relude
+  - relude >= 0.7
   - text
   - transformers
   - unordered-containers
