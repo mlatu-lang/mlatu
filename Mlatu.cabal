@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9321ed1075e7a03a55d244b747d9ee38f523884cdcc83f43098acd91ad91ec59
+-- hash: 957c73d8ae36b8de330c01888cfef34e598621fc3f4ae8537187b44132ea151a
 
 name:           Mlatu
 version:        0.1.0.0
@@ -95,7 +95,7 @@ library
     , optics
     , parsec
     , prettyprinter
-    , relude >=0.7
+    , relude ==0.7.0.0
     , text
     , transformers
     , unordered-containers
@@ -125,7 +125,7 @@ executable mlatu
     , optparse-applicative
     , parsec
     , prettyprinter
-    , relude >=0.7
+    , relude ==0.7.0.0
     , text
     , transformers
     , unordered-containers
@@ -162,7 +162,7 @@ test-suite test
     , optics
     , parsec
     , prettyprinter
-    , relude >=0.7
+    , relude ==0.7.0.0
     , text
     , transformers
     , unordered-containers
