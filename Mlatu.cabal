@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 957c73d8ae36b8de330c01888cfef34e598621fc3f4ae8537187b44132ea151a
+-- hash: c8e6aab687e540791b52d3516ae8ed17b87cad1ff7da6b2cec58963b685cd4ad
 
 name:           Mlatu
 version:        0.1.0.0
@@ -112,7 +112,7 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -O2 -O2
+  ghc-options: -Wall -O2
   build-depends:
       Mlatu
     , base >=4.8
@@ -123,6 +123,31 @@ executable mlatu
     , haskeline
     , optics
     , optparse-applicative
+    , parsec
+    , prettyprinter
+    , relude ==0.7.0.0
+    , text
+    , transformers
+    , unordered-containers
+    , vector
+  default-language: Haskell2010
+
+executable mlatu-lsp
+  main-is: Main.hs
+  other-modules:
+      Paths_Mlatu
+  hs-source-dirs:
+      lsp
+  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  ghc-options: -Wall -O2
+  build-depends:
+      Mlatu
+    , base >=4.8
+    , bytestring
+    , containers
+    , file-embed
+    , lsp
+    , optics
     , parsec
     , prettyprinter
     , relude ==0.7.0.0

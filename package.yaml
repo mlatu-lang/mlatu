@@ -77,13 +77,18 @@ executables:
   mlatu:
     main: Main.hs
     source-dirs: app
-    ghc-options:
-      - -O2
     dependencies:
       - Mlatu
       - directory
       - haskeline
       - optparse-applicative
+  
+  mlatu-lsp:
+    main: Main.hs 
+    source-dirs: lsp 
+    dependencies: 
+      - Mlatu 
+      - lsp
 
 tests:
   test:
