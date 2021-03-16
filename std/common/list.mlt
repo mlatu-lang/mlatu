@@ -161,27 +161,18 @@ define insert_nth [T] (List[T], T, Int -> List[T]) {
   { -> x, i; if (i = index) { [element, x] } else { [x] } } map_index concat
 }
 
-define pad_head [T] (List[T], Int, T -> List[T]) {
-  -> list, min_length, elt;
-  if (list length < min_length) {
-    list (elt (min_length - list length) replicate) prepend
-  } else { list }
+define join [T] (List[List[T]], List[T] -> List[T]) {
+  -> g;
+  [] { g glue } fold_left
 }
-
-define pad_tail [T] (List[T], Int, T -> List[T]) {
-  -> list, min_length, elt;
-  if (list length < min_length) {
-    (elt (min_length - list length) replicate) list prepend
-  } else { list }
-}
-
-define join [T] (List[List[T]], List[T] -> List[T]) { -> g; [] { g glue } fold_left }
 
 define last [T] (List[T] -> Optional[T]) { _::mlatu::last }
 
 define last_init [T] (List[T] -> Optional[Pair[T, List[T]]]) {
   \last \init bi \pair lift_optional_2
 }
+
+define lefts [A, B] (List[Either[A, B]] -> List[A]) { \get_left map_optionally }
 
 define length [T] (List[T] -> Int) { 0 { drop 1 (+) } fold_left }
 
@@ -201,6 +192,18 @@ define map_concat [A, B] (List[A], (A -> List[B]) -> List[B]) { map concat }
 
 define map_index [A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P) {
   0 map_index::helper
+}
+
+define map_optionally [A, B] (List[A], (A -> Optional[B]) -> List[B]) {
+  -> f;
+  match (head_tail)
+  case some {
+    unpair -> h, t;
+    match (h f call)
+    case some -> x { (t f map_optionally) x prefix }
+    case none { t f map_optionally }
+  }
+  case none { [] }
 }
 
 define map_reduce_left [A, B] (List[A], (A -> B), (B, B -> B) -> Optional[B]) {
@@ -240,12 +243,33 @@ define once [T] (T -> List[T]) { -> x; [x] }
 
 define or (List[Bool] -> Bool) { true \(|) fold_left }
 
+define pad_head [T] (List[T], Int, T -> List[T]) {
+  -> list, min_length, elt;
+  if (list length < min_length) {
+    list (elt (min_length - list length) replicate) prepend
+  }
+  else { list }
+}
+
+define pad_tail [T] (List[T], Int, T -> List[T]) {
+  -> list, min_length, elt;
+  if (list length < min_length) {
+    (elt (min_length - list length) replicate) list prepend
+  }
+  else { list }
+}
+
 define partition [T] (List[T], (T -> Bool) -> List[T], List[T]) {
   -> f;
   { f filter_in } { f filter_out } bi
 }
 
-define prefix [T] (List[T], T -> List[T]) { once swap append }
+define partition_eithers [A, B] (List[Either[A, B]] -> List[A], List[B]) {
+  -> xs;
+  (xs lefts) (xs rights)
+}
+
+define prefix [T] (List[T], T -> List[T]) { once prepend }
 
 define prepend [T] (List[T], List[T] -> List[T]) { swap append }
 
@@ -276,6 +300,10 @@ define reverse [T] (List[T] -> List[T]) {
   match (head_tail)
   case some { unpair reverse swap suffix }
   case none { [] }
+}
+
+define rights [A, B] (List[Either[A, B]] -> List[B]) {
+  \get_right map_optionally
 }
 
 define set [T] (List[T], T, Int -> List[T]) {
