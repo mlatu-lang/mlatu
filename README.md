@@ -80,6 +80,8 @@ Type `//help` in the interactive REPL for command options.
 
 The source is based with gratitude off of [the source of Kitten][Kitten GitHub] by Jon Purdy.
 
+Mlatu is licensed under the Peace Public License v0.0+ available [here](LICENSE.md). The canonical version is located at https://github.com/brightly-salty/peace-license
+
 [Kitten GitHub]: https://github.com/evincarofautumn/kitten
 
 [Kitten Site]: https://kittenlang.org/
