@@ -69,6 +69,7 @@ import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
 import Optics
+import Mlatu.Ice (ice)
 
 -- | Parses a program fragment.
 fragment ::
@@ -154,7 +155,7 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
                     a
                       ++ over Definition.body (\prev -> composeUnderLambda prev x) existing :
                     b
-                  _nonMain -> error "cannot find main definition"
+                  _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
                 Nothing ->
                   Definition.main mainPermissions mainName x : defs
           ) acc
@@ -184,7 +185,7 @@ vocabularyParser = (<?> "vocabulary definition") $ do
           (Qualified (Qualifier _root qualifier) (Unqualified unqualified)) ->
             (qualifier, unqualified)
         UnqualifiedName (Unqualified unqualified) -> ([], unqualified)
-        LocalName {} -> error "local name should not appear as vocabulary name"
+        LocalName {} -> ice "Mlatu.Parse.vocabularyParser - local name should not appear as vocabulary name"
   Parsec.putState (Qualifier Absolute (outer ++ inner ++ [name]))
   Parsec.choice
     [ [] <$ parserMatchOperator ";",
@@ -534,7 +535,7 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
     -- Unqualified name: use current vocab prefix as qualifier.
     UnqualifiedName unqualified ->
       Qualified <$> Parsec.getState <*> pure unqualified
-    LocalName _ -> error "name parser should only return qualified or unqualified name"
+    LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only return qualified or unqualified name"
   pure (name, fixity)
 
 definitionParser :: Token -> Category -> Parser (Definition ())

@@ -34,6 +34,7 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
 import Optics
+import Mlatu.Ice (ice)
 
 type Resolved a = StateT [Unqualified] M a
 
@@ -63,8 +64,8 @@ term dictionary vocabulary = recur
     recur unresolved@Coercion {} = return unresolved
     recur (Compose _ a b) = Compose () <$> recur a <*> recur b
     recur Generic {} =
-      error
-        "generic expression should not appear before name resolution"
+      ice
+        "Mlatu.Resolve.term - generic expression should not appear before name resolution"
     recur (Group a) = Group <$> recur a
     recur (Lambda _ name _ t origin) =
       withLocal name $
@@ -97,12 +98,12 @@ term dictionary vocabulary = recur
         <*> pure origin
 
 value :: Dictionary -> Qualifier -> Value () -> Resolved (Value ())
-value _ _ Capture {} = error "closure should not appear before name resolution"
+value _ _ Capture {} = ice "Mlatu.Resolve.value - closure should not appear before name resolution"
 value _ _ v@Character {} = return v
-value _ _ Closed {} = error "closed name should not appear before name resolution"
+value _ _ Closed {} = ice "Mlatu.Resolve.value - closed name should not appear before name resolution"
 value _ _ v@Float {} = return v
 value _ _ v@Integer {} = return v
-value _ _ Local {} = error "local name should not appear before name resolution"
+value _ _ Local {} = ice "Mlatu.Resolve.value - local name should not appear before name resolution"
 -- FIXME: Maybe should be a GeneralName and require resolution.
 value _ _ v@Name {} = return v
 value dictionary vocabulary (Quotation t) = Quotation <$> term dictionary vocabulary t
@@ -198,7 +199,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
             else do
               lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
               return name
-    LocalName {} -> error "local name should not appear before name resolution"
+    LocalName {} -> ice "Mlatu.Resolve.generalName - local name should not appear before name resolution"
 
 withLocal :: Unqualified -> Resolved a -> Resolved a
 withLocal name action = do

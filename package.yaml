@@ -84,6 +84,7 @@ executables:
       - directory
       - haskeline
       - optparse-applicative
+      - time
 
 tests:
   test:

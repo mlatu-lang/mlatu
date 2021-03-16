@@ -60,6 +60,7 @@ import System.Console.Haskeline
 import System.IO (hPrint)
 import Text.Printf (printf)
 import Optics
+import Mlatu.Ice (ice)
 
 run :: Prelude -> IO ()
 run prelude = do
@@ -182,7 +183,7 @@ run prelude = do
                           dictionary'' of
                           Just (Entry.Word _ _ _ _ _ (Just body)) ->
                             body
-                          _noEntryPoint -> error "cannot get entry point"
+                          _noEntryPoint -> ice "Interact.run - cannot get entry point"
                     stackScheme <-
                       typeFromSignature tenv $
                         Signature.Quantified

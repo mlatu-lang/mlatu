@@ -16,6 +16,7 @@ import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex 
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Relude hiding (Compose)
 import Relude.Extra (next)
+import Mlatu.Ice (ice)
 
 -- | Whereas name resolution is concerned with resolving references to
 -- definitions, scope resolution resolves local names to relative (De Bruijn)
@@ -30,11 +31,11 @@ scope = scopeTerm [0]
         recur term@Coercion {} = term
         recur (Compose _ a b) = Compose () (recur a) (recur b)
         recur Generic {} =
-          error
-            "generic expression should not appear before scope resolution"
+          ice
+            "Mlatu.Scope.scope - generic expression should not appear before scope resolution"
         recur Group {} =
-          error
-            "group expression should not appear after infix desugaring"
+          ice
+            "Mlatu.Scope.scope - group expression should not appear after infix desugaring"
         recur (Lambda _ name _ a origin) =
           Lambda
             ()
@@ -69,9 +70,9 @@ scope = scopeTerm [0]
         recur term@Word {} = term
 
     scopeValue :: [Int] -> Value () -> Value ()
-    scopeValue _ Capture {} = error "capture should not appear before scope resolution"
+    scopeValue _ Capture {} = ice "Mlatu.Scope.scope - capture should not appear before scope resolution"
     scopeValue _ value@Character {} = value
-    scopeValue _ Closed {} = error "closed name should not appear before scope resolution"
+    scopeValue _ Closed {} = ice "Mlatu.Scope.scope - closed name should not appear before scope resolution"
     scopeValue _ value@Float {} = value
     scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
@@ -108,11 +109,11 @@ captureTerm term = case term of
   Coercion {} -> return term
   Compose _ a b -> Compose () <$> captureTerm a <*> captureTerm b
   Generic {} ->
-    error
-      "generic expression should not appear before scope resolution"
+    ice
+      "Mlatu.Scope.captureTerm - generic expression should not appear before scope resolution"
   Group {} ->
-    error
-      "group expression should not appear after infix desugaring"
+    ice
+      "Mlatu.Scope.captureTerm - group expression should not appear after infix desugaring"
   Lambda _ name _ a origin ->
     let inside env =
           env

@@ -62,6 +62,7 @@ import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
 import Optics
+import Mlatu.Ice (ice)
 
 punctuateComma :: [Doc a] -> Doc a
 punctuateComma = hsep . punctuate comma
@@ -389,7 +390,7 @@ maybePrintTerms = \case
     Just (printLambda "_" (Term.compose () o (map Term.stripMetadata xs)))
   (Word _ fixity name args _ : xs) -> Just (printWord fixity name args `justHoriz` xs)
   (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
-  (t : _) -> error $ "Formatting failed: " <> show (Term.stripMetadata t)
+  (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
   where
     horiz :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
     horiz = \case
@@ -442,7 +443,7 @@ printIf cond [Case _ trueBody _, Case _ falseBody _] =
     [ group $ blockMaybe (maybe "if" ("if" <+>) (cond >>= printGroup)) (maybePrintTerm trueBody),
       group $ blockMaybe "else" (maybePrintTerm falseBody)
     ]
-printIf _ _ = error "Expected a true and false case"
+printIf _ _ = ice "Mlatu.Pretty.printIf - Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =

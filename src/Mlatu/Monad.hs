@@ -23,6 +23,7 @@ import Mlatu.Report (Level (..), Report (..), ReportKind (..))
 import Prettyprinter (Doc)
 import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
+import Mlatu.Ice (ice)
 
 -- | A Mlatu action atop a 'Monad' 'm', returning a result of type 'a', which
 -- maintains a 'Context' stack and can fail with a list of 'Reports'.
@@ -65,7 +66,7 @@ instance (Monad m) => Monad (MT m) where
   {-# INLINEABLE (>>=) #-}
 
 instance Monad m => MonadFail (MT m) where
-  fail = error "do not use 'fail'"
+  fail = ice "Mlatu.Monad.fail - 'fail' was used in code"
 
 instance (MonadIO m) => MonadFix (MT m) where
   mfix k = MT $ \context reports ->

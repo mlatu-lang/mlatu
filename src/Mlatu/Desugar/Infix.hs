@@ -32,6 +32,7 @@ import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
 import Optics
+import Mlatu.Ice (ice)
 
 type Rewriter a = Parsec [Term ()] () a
 
@@ -88,8 +89,8 @@ desugar dictionary definition = do
         Coercion {} -> return term
         Compose _ a b -> desugarTerms (Term.decompose a ++ Term.decompose b)
         Generic {} ->
-          error
-            "generic expression should not appear before infix desugaring"
+          ice
+            "Mlatu.Desugar.Infix.desugar - generic expression should not appear before infix desugaring"
         Group a -> desugarTerms' a
         Lambda _ name _ body origin ->
           Lambda () name ()

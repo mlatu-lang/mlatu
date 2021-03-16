@@ -58,6 +58,7 @@ import System.IO (hFlush, hGetLine, hPrint, hPutStr, readIO)
 import System.IO.Error (IOError, ioeGetErrorType)
 import Text.Show qualified
 import Optics
+import Mlatu.Ice (ice)
 
 -- | Representation of a runtime value.
 data Rep
@@ -81,7 +82,7 @@ valueRep (Term.Integer literal) = rep $ view Literal.integerValue literal
     rep = Int64 . fromInteger
 valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
-valueRep value = error $ toText ("cannot convert value to rep: " ++ show value)
+valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: " ++ show value
 
 printRep :: Rep -> Doc a
 printRep (Algebraic (ConstructorIndex index) values) =
@@ -149,7 +150,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               Qualified v unqualified
                 | v == Vocabulary.intrinsic ->
                   intrinsic (name : callStack) unqualified
-              _nonIntrinsic -> error "no such intrinsic"
+              _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
             _noInstantiation ->
               throwIO $
                 Failure $
@@ -212,12 +213,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         Push _ value _ -> push value
         Word _ _ (QualifiedName name) args _ ->
           word callStack name args
-        -- FIXME: Use proper reporting. (Internal error?)
         Word _ _ name _ _ ->
-          error $
+          ice $
             show $
               hsep
-                ["unresolved word name", Pretty.printGeneralName name]
+                ["Mlatu.Interpret.interpret - unresolved word name", Pretty.printGeneralName name]
 
       call :: [Qualified] -> IO ()
       call callStack = do
@@ -428,7 +428,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               writeIORef stackRef $ Array xs' ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
-        _nonIntrinsic -> error "no such intrinsic"
+        _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
         where
           unaryInt64 :: (Int64 -> Int64) -> IO ()
           unaryInt64 f = do
@@ -478,23 +478,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
             let !result = fromEnum $ f x y
             writeIORef stackRef $ Algebraic (ConstructorIndex result) [] ::: r
 
-          showInteger :: Num a => (a -> Text) -> IO ()
-          showInteger f = do
-            rep ::: r <- readIORef stackRef
-            let x = case rep of
-                  Int64 n -> toInteger n
-                  _nonInt -> error "the typechecker has failed us (show integer)"
-            writeIORef stackRef $
-              Text (f $ fromInteger x) ::: r
+          showInteger :: (Int64 -> Text) -> IO ()
+          showInteger f = modifyIORef' stackRef (\(Int64 n ::: r) -> Text (f n) ::: r)
 
-          showFloat :: Fractional a => (a -> Text) -> IO ()
-          showFloat f = do
-            rep ::: r <- readIORef stackRef
-            let x = case rep of
-                  Float64 n -> realToFrac n
-                  _nonFloat -> error "the typechecker has failed us (show float)"
-            writeIORef stackRef $
-              Text (f x) ::: r
+          showFloat :: (Double -> Text) -> IO ()
+          showFloat f = modifyIORef' stackRef (\(Float64 n ::: r) -> Text (f n) ::: r)
 
           readInteger :: Integral a => (Text -> IO a) -> (a -> Rep) -> IO ()
           readInteger f rep = do

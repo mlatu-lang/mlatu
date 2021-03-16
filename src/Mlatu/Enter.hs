@@ -55,6 +55,7 @@ import Mlatu.TypeDefinition qualified as TypeDefinition
 import Prettyprinter (dquotes, hsep)
 import Relude
 import Optics
+import Mlatu.Ice (ice)
 
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
@@ -136,10 +137,10 @@ declareType dictionary typ =
             return dictionary
         -- Already declared or defined differently.
         Just {} ->
-          error $
+          ice $
             show $
               hsep
-                [ "type",
+                [ "Mlatu.Enter.declareType - type",
                   dquotes $ printQualified name,
                   "already declared or defined differently"
                 ]
@@ -206,10 +207,10 @@ declareWord dictionary definition =
               return $ Dictionary.insert mangledName entry dictionary
         -- Already declared or defined with a different signature.
         Just {} ->
-          error $
+          ice $
             show $
               hsep
-                [ "word",
+                [ "Mlatu.Enter.declareWord - word",
                   dquotes $ printQualified name,
                   "already declared or defined without signature or as a non-word"
                 ]
@@ -370,10 +371,10 @@ defineWord dictionary definition = do
       return dictionary
     -- Not previously declared as word.
     _nonDeclared ->
-      error $
+      ice $
         show $
           hsep
-            [ "defining word",
+            [ "Mlatu.Enter.defineWord - defining word",
               dquotes $ printQualified name,
               "not previously declared"
             ]

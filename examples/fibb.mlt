@@ -4,4 +4,4 @@ define fib (Int -> Int) {
   else { (n - 2) fib + (n - 1) fib }
 }
 
-25 fib print
+15 fib print

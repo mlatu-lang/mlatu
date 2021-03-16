@@ -3,8 +3,6 @@ cabal-version: 1.12
 -- This file has been generated from package.yaml by hpack version 0.34.3.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 957c73d8ae36b8de330c01888cfef34e598621fc3f4ae8537187b44132ea151a
 
 name:           Mlatu
 version:        0.1.0.0
@@ -44,6 +42,7 @@ library
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Hint
+      Mlatu.Ice
       Mlatu.Infer
       Mlatu.Informer
       Mlatu.InstanceCheck
@@ -127,6 +126,7 @@ executable mlatu
     , prettyprinter
     , relude ==0.7.0.0
     , text
+    , time
     , transformers
     , unordered-containers
     , vector

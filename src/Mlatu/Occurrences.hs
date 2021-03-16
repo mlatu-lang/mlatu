@@ -18,6 +18,7 @@ import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Relude hiding (Type)
 import Optics
+import Mlatu.Ice (ice)
 
 -- | We need to be able to count occurrences of a type variable in a type, not
 -- just check for its presence. This is for two reasons: to prevent infinite
@@ -28,7 +29,7 @@ occurrences tenv0 x = recur
   where
     recur t = case t of
       TypeConstructor {} -> 0
-      TypeValue {} -> error "TODO: occurrences type value"
+      TypeValue {} -> ice "Mlatu.Occurrences.occurrences - TODO: occurrences type value"
       TypeVar _ (Var _name y _) -> case Map.lookup y (view TypeEnv.tvs tenv0) of
         Nothing -> if x == y then 1 else 0
         Just t' -> recur t'

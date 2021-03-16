@@ -57,6 +57,7 @@ import Prettyprinter (Doc, dquotes, hsep)
 import Relude hiding (Compose, Type)
 import Relude.Unsafe qualified as Unsafe
 import Optics
+import Mlatu.Ice (ice)
 
 -- | Type inference takes a program fragment and produces a program with every
 -- term annotated with its inferred type. It's polymorphic in the annotation
@@ -179,8 +180,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- TODO: Verify that this is correct.
   Generic _name _ t _ -> inferType' tenv0 t
   Group {} ->
-    error
-      "group expression should not appear during type inference"
+    ice $
+      "Mlatu.Infer.inferType - group expression should not appear during type inference"
   -- A local variable binding in Mlatu is in fact a lambda term in the ordinary
   -- lambda-calculus sense. We infer the type of its body in the environment
   -- extended with a fresh local bound to a fresh type variable, and produce a
@@ -224,9 +225,9 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
                   -- TODO: Check whether this can happen if a non-constructor
                   -- word is erroneously used in a case; if this is possible, we
                   -- should generate a report rather than an error.
-                  _nonType -> error "constructor not linked to type"
-              _notFound -> error "constructor not found after name resolution"
-          _unqualified -> error "unqualified constructor after name resolution"
+                  _nonType -> ice "Mlatu.Infer.inferType - constructor not linked to type"
+              _notFound -> ice "Mlatu.Infer.inferType - constructor not found after name resolution"
+          _unqualified -> ice "Mlatu.Infer.inferType - unqualified constructor after name resolution"
     (cases', caseTypes, constructors', tenv1) <-
       foldlM inferCase' ([], [], constructors, tenv0) cases
     -- Checkpoint to halt after redundant cases are reported.
@@ -446,9 +447,9 @@ inferCase
           (_covered, remaining) -> return remaining
         return (Case qualified body' origin, typ, dataConstructors', tenv5)
       Nothing ->
-        error
-          "case constructor missing signature after name resolution"
-inferCase _ _ _ _ _ = error "case of non-qualified name after name resolution"
+        ice
+          "Mlatu.Infer.inferCase - case constructor missing signature after name resolution"
+inferCase _ _ _ _ _ = ice "Mlatu.Infer.infeCase - case of non-qualified name after name resolution"
 
 inferValue ::
   (Show a) =>
@@ -475,16 +476,16 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Local (LocalIndex index) ->
     return
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
-  Quotation {} -> error "quotation should not appear during type inference"
+  Quotation {} -> ice "Mlatu.Infer.inferValue - quotation should not appear during type inference"
   Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
     Just (Entry.Word _ _ _ _ (Just signature) _) -> do
       typ <- typeFromSignature tenv0 signature
       return (Name name, typ, tenv0)
     _noBinding ->
-      error $
+      ice $
         show $
           hsep
-            [ "unbound word name",
+            [ "Mlatu.Infer.inferValue - unbound word name",
               dquotes $ Pretty.printQualified name,
               "found during type inference"
             ]
@@ -521,16 +522,15 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
           type',
           tenv1
         )
-    Just {} -> error "what is a non-quantified type doing as a type signature?"
+    Just {} -> ice "Mlatu.Infer.inferCall - what is a non-quantified type doing as a type signature?"
     Nothing -> do
       report $ Report.makeError $ Report.MissingTypeSignature origin name
       halt
 inferCall _dictionary _tenvFinal _tenv0 name _ =
-  -- FIXME: Use proper reporting. (Internal error?)
-  error $
+  ice $
     show $
       hsep
-        ["cannot infer type of non-qualified name", dquotes $ Pretty.printGeneralName name]
+        ["Mlatu.Infer.inferCall - cannot infer type of non-qualified name", dquotes $ Pretty.printGeneralName name]
 
 -- | Desugars a parsed signature into an actual type. We resolve whether names
 -- refer to quantified type variables or data definitions, and make stack
@@ -618,9 +618,8 @@ typeFromSignature tenv signature0 = do
     fromVar origin (QualifiedName name) =
       return $ TypeConstructor origin $ Constructor name
     fromVar _ name =
-      error $
-        toText $
-          "incorrectly resolved name in signature: " ++ show name
+      ice $
+          "Mlatu.Infer.typeFromSignature - incorrectly resolved name in signature: " ++ show name
 
     makeFunction ::
       Origin ->
@@ -696,25 +695,24 @@ typeKind dictionary = go
                 "Join" -> return $ Label :-> Permission :-> Permission
                 "List" -> return $ Value :-> Value
                 _noKind ->
-                  error $
+                  ice $
                     show $
                       hsep
-                        [ "can't infer kind of constructor",
+                        [ "Mlatu.Infer.typeKind - can't infer kind of constructor",
                           dquotes $ Pretty.printQualified qualified,
                           "in dictionary",
                           Dictionary.printDictionary dictionary
                         ]
-            -- TODO: Better error reporting.
             _noKInd ->
-              error $
+              ice $
                 show $
                   hsep
-                    [ "can't infer kind of constructor",
+                    [ "Mlat.Infer.typeKind - can't infer kind of constructor",
                       dquotes $ Pretty.printQualified qualified,
                       "in dictionary",
                       Dictionary.printDictionary dictionary
                     ]
-      TypeValue {} -> error "TODO: infer kind of type value"
+      TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> return k
       TypeConstant _origin (Var _name _ k) -> return k
       Forall _origin _ t' -> go t'
@@ -722,12 +720,11 @@ typeKind dictionary = go
         ka <- go a
         case ka of
           _ :-> k -> return k
-          -- TODO: Better error reporting.
           _nonConstructor ->
-            error $
+            ice $
               show $
                 hsep
-                  [ "applying type",
+                  [ "Mlatu.Infer.typeKind - applying type",
                     dquotes $ Pretty.printType a,
                     "of non-constructor kind",
                     dquotes $ Pretty.printKind ka,

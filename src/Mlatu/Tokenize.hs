@@ -31,6 +31,7 @@ import Relude.Unsafe qualified as Unsafe
 import Text.Parsec (Column, ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos qualified as Parsec
+import Mlatu.Ice (ice)
 
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.
@@ -384,7 +385,7 @@ readBin = go 0
       '0' : ds' -> go (2 * acc + 0) ds'
       '1' : ds' -> go (2 * acc + 1) ds'
       [] -> acc
-      _nonBinary -> error "non-binary digit"
+      _nonBinary -> ice "Mlatu.Tokenize.readBin non-binary digit"
 
 text :: Tokenizer Text
 text = toText . catMaybes <$> many (character '"')

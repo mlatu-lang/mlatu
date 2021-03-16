@@ -13,6 +13,7 @@ import Report (reportAll)
 import System.Directory (makeAbsolute)
 import System.IO (hSetEncoding, utf8)
 import Options.Applicative (info, helper, header, execParser)
+import Data.Time.Clock (NominalDiffTime, getCurrentTime, diffUTCTime)
 
 main :: IO ()
 main = do
@@ -56,21 +57,28 @@ formatFiles paths = forM_ paths $ \relativePath -> do
 checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  result <- runExceptT $ runMlatu $ do
+  (result, t1) <- timed $ runExceptT $ runMlatu $ do
             commonDictionary <- compilePrelude prelude mainPermissions Nothing
             compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
-    Right _ -> pass
+    Right _ -> putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\n---"
 
 runFiles :: Prelude -> [FilePath] -> IO ()
 runFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  result <- runExceptT $ runMlatu $ do
+  (result, t1) <- timed $ runExceptT $ runMlatu $ do
       commonDictionary <- compilePrelude prelude mainPermissions Nothing
       compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right program -> do
-      _ <- interpret program Nothing [] stdin stdout stderr []
-      pass
+      (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
+      putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\nTime taken to interpret files: " <> show t2 <> "\n---"
+
+timed :: IO a -> IO (a, NominalDiffTime)
+timed comp = do 
+  t1 <- getCurrentTime 
+  result <- comp 
+  t2 <- getCurrentTime
+  return (result, diffUTCTime t2 t1)
