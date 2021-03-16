@@ -19,7 +19,7 @@ data Instantiated = Instantiated
   { name :: !Qualified,
     types :: ![Type]
   }
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Hashable Instantiated where
   hashWithSalt s (Instantiated n ts) =

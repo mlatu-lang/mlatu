@@ -82,7 +82,8 @@ executables:
     dependencies:
       - mlatu
       - directory
-      - haskeline
+      - repline
+      - exceptions
       - optparse-applicative
       - time
 

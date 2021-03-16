@@ -1,32 +1,36 @@
 module Main where
 
 import Arguments qualified
+import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 import Interact qualified
-import Mlatu (compile, compilePrelude, fragmentFromSource, runMlatu, Prelude(..))
+import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource, runMlatu)
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
-import Mlatu.Report (Report)
 import Mlatu.Pretty (printFragment)
+import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
+import Options.Applicative (execParser, header, helper, info)
 import Relude
 import Report (reportAll)
 import System.Directory (makeAbsolute)
 import System.IO (hSetEncoding, utf8)
-import Options.Applicative (info, helper, header, execParser)
-import Data.Time.Clock (NominalDiffTime, getCurrentTime, diffUTCTime)
 
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
   arguments <- execParser opts
-  case arguments of 
+  case arguments of
     Arguments.FormatFiles files -> formatFiles files
-    Arguments.Repl prelude -> Interact.run prelude 
+    Arguments.Repl prelude -> do
+      exitCode <- Interact.run prelude
+      case exitCode of
+        0 -> exitSuccess
+        _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
     Arguments.RunFiles prelude files -> runFiles prelude files
- where 
-  opts = 
-    info (Arguments.options <**> helper) (header "The Mlatu programming language")
+  where
+    opts =
+      info (Arguments.options <**> helper) (header "The Mlatu programming language")
 
 mainPermissions :: [GeneralName]
 mainPermissions =
@@ -35,8 +39,8 @@ mainPermissions =
   ]
 
 handleReports :: [Report] -> IO ()
-handleReports reports = do 
-  reportAll reports 
+handleReports reports = do
+  reportAll reports
   exitFailure
 
 formatFiles :: [FilePath] -> IO ()
@@ -57,9 +61,11 @@ formatFiles paths = forM_ paths $ \relativePath -> do
 checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $ runExceptT $ runMlatu $ do
-            commonDictionary <- compilePrelude prelude mainPermissions Nothing
-            compile mainPermissions Nothing paths (Just commonDictionary)
+  (result, t1) <- timed $
+    runExceptT $
+      runMlatu $ do
+        commonDictionary <- compilePrelude prelude mainPermissions Nothing
+        compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right _ -> putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\n---"
@@ -67,9 +73,11 @@ checkFiles prelude relativePaths = do
 runFiles :: Prelude -> [FilePath] -> IO ()
 runFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $ runExceptT $ runMlatu $ do
-      commonDictionary <- compilePrelude prelude mainPermissions Nothing
-      compile mainPermissions Nothing paths (Just commonDictionary)
+  (result, t1) <- timed $
+    runExceptT $
+      runMlatu $ do
+        commonDictionary <- compilePrelude prelude mainPermissions Nothing
+        compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right program -> do
@@ -77,8 +85,8 @@ runFiles prelude relativePaths = do
       putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\nTime taken to interpret files: " <> show t2 <> "\n---"
 
 timed :: IO a -> IO (a, NominalDiffTime)
-timed comp = do 
-  t1 <- getCurrentTime 
-  result <- comp 
+timed comp = do
+  t1 <- getCurrentTime
+  result <- comp
   t2 <- getCurrentTime
   return (result, diffUTCTime t2 t1)

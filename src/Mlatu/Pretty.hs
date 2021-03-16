@@ -328,8 +328,9 @@ instance Show Token.Token where
   show = show . printToken
 
 printInstantiated :: Instantiated -> Doc a
+printInstantiated (Instantiated n []) = printQualified n
 printInstantiated (Instantiated n ts) =
-  printQualified n <> "::" <> list (map printType ts) <> ""
+  printQualified n <> "::" <> list (map printType ts)
 
 printDataConstructor :: DataConstructor.DataConstructor -> Doc a
 printDataConstructor (DataConstructor.DataConstructor fields name _) =

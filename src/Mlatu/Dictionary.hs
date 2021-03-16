@@ -43,9 +43,9 @@ import Mlatu.Pretty (printInstantiated)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Term qualified as Term
+import Optics
 import Prettyprinter (Doc, vsep)
 import Relude hiding (empty, fromList, toList)
-import Optics
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
@@ -173,4 +173,4 @@ wordNames = mapMaybe wordName . toList
     wordName _ = Nothing
 
 printDictionary :: Dictionary -> Doc a
-printDictionary = vsep . map printInstantiated . HashMap.keys . view entries
+printDictionary = vsep . map printInstantiated . sort . HashMap.keys . view entries

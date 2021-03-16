@@ -10,10 +10,10 @@
 -- Portability : GHC
 module Mlatu.Fragment
   ( Fragment (..),
-  declarations,
-  definitions,
-  metadata,
-  types
+    declarations,
+    definitions,
+    metadata,
+    types,
   )
 where
 
@@ -21,8 +21,8 @@ import Mlatu.Declaration (Declaration (..))
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.TypeDefinition (TypeDefinition)
-import Relude
 import Optics
+import Relude
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
@@ -45,8 +45,16 @@ instance Monoid (Fragment a) where
       }
 
 instance Semigroup (Fragment a) where
-  a <> b = 
-    over declarations (<> view declarations b)
-    (over definitions (<> view definitions b)
-    (over metadata (<> view metadata b)
-    (over types (<> view types b) a)))
+  a <> b =
+    over
+      declarations
+      (<> view declarations b)
+      ( over
+          definitions
+          (<> view definitions b)
+          ( over
+              metadata
+              (<> view metadata b)
+              (over types (<> view types b) a)
+          )
+      )
