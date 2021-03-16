@@ -67,7 +67,7 @@ insert :: Instantiated -> Entry -> Dictionary -> Dictionary
 insert name entry = over entries (HashMap.insert name entry)
 
 lookup :: Instantiated -> Dictionary -> Maybe Entry
-lookup = (. view entries) . HashMap.lookup
+lookup name dictionary = HashMap.lookup name (view entries dictionary)
 {-# INLINEABLE lookup #-}
 
 -- | Whether a name is present in the dictionary.

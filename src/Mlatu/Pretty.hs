@@ -49,7 +49,6 @@ import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex 
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Signature (..))
-import Mlatu.Synonym (Synonym (Synonym))
 import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
@@ -158,9 +157,6 @@ printClosureIndex (ClosureIndex i) = "closure." <> pretty i
 printClosed :: Closed -> Doc a
 printClosed (ClosedLocal index) = printLocalIndex index
 printClosed (ClosedClosure index) = printClosureIndex index
-
-printSynonym :: Synonym -> Doc a
-printSynonym (Synonym name1 name2 _) = "synonym" <+> printQualified name1 <> printGeneralName name2
 
 printConstructor :: Constructor -> Doc a
 printConstructor (Constructor name) = printQualified name
@@ -316,7 +312,6 @@ printToken = \case
   Token.Permission -> "permission"
   Token.Reference -> "\\"
   Token.Return -> "return"
-  Token.Synonym -> "synonym"
   Token.Text t -> dquotes $ pretty t
   Token.Trait -> "trait"
   Token.Type -> "type"
@@ -557,12 +552,6 @@ printEntry (Entry.Metadata origin term) =
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
     ]
-printEntry (Entry.Synonym origin name) =
-  vsep
-    [ "synonym",
-      hsep ["defined at", printOrigin origin],
-      hsep ["standing for", printQualified name]
-    ]
 printEntry (Entry.Trait origin signature) =
   vsep
     [ "trait",
@@ -601,10 +590,6 @@ printFragment fragment =
     ( map
         (\g -> printGrouped g <> line)
         groupedDeclarations
-        ++ map
-          (\s -> printSynonym s <> line)
-          ( sort (view Fragment.synonyms fragment)
-          )
         ++ map
           (\t -> printTypeDefinition t <> line)
           ( sort (view Fragment.types fragment)

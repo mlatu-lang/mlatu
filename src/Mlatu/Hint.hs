@@ -8,7 +8,6 @@ import Mlatu.Metadata qualified as Metadata
 import Mlatu.Monad (M)
 import Mlatu.Name (Qualified (..))
 import Mlatu.Report qualified as Report
-import Mlatu.Synonym qualified as Synonym
 import Mlatu.Term
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
@@ -20,7 +19,6 @@ fragment f = do
   forM_ (view Fragment.declarations f) declaration
   forM_ (view Fragment.definitions f) definition
   forM_ (view Fragment.metadata f) metadata
-  forM_ (view Fragment.synonyms f) synonym
   forM_ (view Fragment.types f) typeDefinition
   pass
 
@@ -48,9 +46,6 @@ term t = go $ decompose t
 
 metadata :: Metadata.Metadata -> M ()
 metadata _ = pass
-
-synonym :: Synonym.Synonym -> M ()
-synonym _ = pass
 
 typeDefinition :: TypeDefinition.TypeDefinition -> M ()
 typeDefinition _ = pass

@@ -75,8 +75,6 @@ data Token
     Reference
   | -- | @return@
     Return
-  | -- | @synonym@
-    Synonym
   | -- | @"..."@
     Text !Text
   | -- | @trait@
@@ -128,7 +126,6 @@ instance Eq Token where
   Permission == Permission = True
   Reference == Reference = True
   Return == Return = True
-  Synonym == Synonym = True
   Text a == Text b = a == b
   Trait == Trait = True
   Type == Type = True

@@ -1,10 +1,12 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 517b632d5d2b73d0a0f484167f1d68b3a15f3e00c99065a4967f27951bb903fc
 
-name:           Mlatu
+name:           mlatu
 version:        0.1.0.0
 synopsis:       Mlatu programming language
 category:       Language
@@ -12,8 +14,7 @@ homepage:       https://github.com/brightly-salty/mlatu#readme
 bug-reports:    https://github.com/brightly-salty/mlatu/issues
 author:         Caden Haustein
 maintainer:     code@brightlysalty.33mail.com
-license:        BSD2
-license-file:   LICENSE
+license-file:   LICENSE.md
 build-type:     Simple
 
 source-repository head
@@ -70,7 +71,6 @@ library
       Mlatu.Signature
       Mlatu.Stack
       Mlatu.Substitute
-      Mlatu.Synonym
       Mlatu.Term
       Mlatu.Token
       Mlatu.Tokenize
@@ -81,7 +81,7 @@ library
       Mlatu.Vocabulary
       Mlatu.Zonk
   other-modules:
-      Paths_Mlatu
+      Paths_mlatu
   hs-source-dirs:
       src
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
@@ -99,6 +99,9 @@ library
     , transformers
     , unordered-containers
     , vector
+  if false
+    other-modules:
+        Paths_name
   default-language: Haskell2010
 
 executable mlatu
@@ -107,19 +110,19 @@ executable mlatu
       Arguments
       Interact
       Report
-      Paths_Mlatu
+      Paths_mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
   ghc-options: -Wall -O2 -O2
   build-depends:
-      Mlatu
-    , base >=4.8
+      base >=4.8
     , bytestring
     , containers
     , directory
     , file-embed
     , haskeline
+    , mlatu
     , optics
     , optparse-applicative
     , parsec
@@ -145,20 +148,20 @@ test-suite test
       Test.Resolve
       Test.Tokenize
       Test.Zonk
-      Paths_Mlatu
+      Paths_mlatu
   hs-source-dirs:
       test
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
   ghc-options: -Wall -O2
   build-depends:
       HUnit
-    , Mlatu
     , base >=4.8
     , bytestring
     , containers
     , file-embed
     , hspec
     , knob
+    , mlatu
     , optics
     , parsec
     , prettyprinter

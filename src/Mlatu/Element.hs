@@ -13,7 +13,6 @@ module Mlatu.Element
   _Declaration,
   _Definition,
   _Metadata,
-  _Synonym,
   _Term,
   _TypeDefinition
   )
@@ -22,7 +21,6 @@ where
 import Mlatu.Declaration (Declaration)
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
-import Mlatu.Synonym (Synonym)
 import Mlatu.Term (Term)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics.TH (makePrisms)
@@ -35,8 +33,6 @@ data Element a
     Definition !(Definition a)
   | -- | @about@
     Metadata !Metadata
-  | -- | @synonym@
-    Synonym !Synonym
   | -- | Top-level (@main@) code.
     Term !(Term a)
   | -- | @type@

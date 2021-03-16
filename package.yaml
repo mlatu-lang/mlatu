@@ -1,11 +1,11 @@
-name: Mlatu
+name: mlatu
 version: 0.1.0.0
 synopsis: Mlatu programming language
 category: Language
 author: Caden Haustein
 maintainer: code@brightlysalty.33mail.com
 github: brightly-salty/mlatu
-license: BSD2
+license-file: LICENSE.md 
 
 ghc-options:
   - -Wall
@@ -80,7 +80,7 @@ executables:
     ghc-options:
       - -O2
     dependencies:
-      - Mlatu
+      - mlatu
       - directory
       - haskeline
       - optparse-applicative
@@ -92,6 +92,6 @@ tests:
     source-dirs: test
     dependencies:
       - HUnit
-      - Mlatu
+      - mlatu
       - hspec
       - knob

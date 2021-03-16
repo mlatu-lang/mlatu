@@ -316,7 +316,6 @@ alphanumeric =
           "match" -> Match
           "permission" -> Permission
           "return" -> Return
-          "synonym" -> Synonym
           "trait" -> Trait
           "type" -> Type
           "vocab" -> Vocab

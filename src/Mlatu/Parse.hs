@@ -54,7 +54,6 @@ import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Synonym (Synonym (Synonym))
 import Mlatu.Term (Case (..), Else (..), MatchHint (..), Term (..), Value (..), compose)
 import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
@@ -136,14 +135,13 @@ partitionElements ::
 partitionElements mainPermissions mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
-    rev f = over Fragment.declarations reverse $ over Fragment.definitions reverse $ over Fragment.metadata reverse $ over Fragment.synonyms reverse $ over Fragment.types reverse f
+    rev f = over Fragment.declarations reverse $ over Fragment.definitions reverse $ over Fragment.metadata reverse $ over Fragment.types reverse f
 
     go :: Element () -> Fragment () -> Fragment ()
     go e acc = case e of
       Element.Declaration x -> over Fragment.declarations (x:) acc
       Element.Definition x -> over Fragment.definitions (x:) acc
       Element.Metadata x -> over Fragment.metadata (x:) acc
-      Element.Synonym x -> over Fragment.synonyms (x:) acc
       Element.TypeDefinition x -> over Fragment.types (x:) acc
       Element.Term x ->
         over Fragment.definitions
@@ -298,21 +296,11 @@ elementParser =
               intrinsicParser
             ],
         Element.Metadata <$> metadataParser,
-        Element.Synonym <$> synonymParser,
         Element.TypeDefinition <$> typeDefinitionParser,
         do
           origin <- getTokenOrigin
           Element.Term . compose () origin <$> Parsec.many1 termParser
       ]
-
-synonymParser :: Parser Synonym
-synonymParser = (<?> "synonym definition") $ do
-  origin <- getTokenOrigin <* parserMatch_ Token.Synonym
-  f <-
-    Qualified <$> Parsec.getState
-      <*> unqualifiedNameParser
-  (t, _) <- nameParser
-  return $ Synonym f t origin
 
 metadataParser :: Parser Metadata
 metadataParser = (<?> "metadata block") $ do

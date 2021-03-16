@@ -13,7 +13,6 @@ module Mlatu.Fragment
   declarations,
   definitions,
   metadata,
-  synonyms,
   types
   )
 where
@@ -21,7 +20,6 @@ where
 import Mlatu.Declaration (Declaration (..))
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
-import Mlatu.Synonym (Synonym)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Relude
 import Optics
@@ -31,7 +29,6 @@ data Fragment a = Fragment
   { _declarations :: ![Declaration],
     _definitions :: ![Definition a],
     _metadata :: ![Metadata],
-    _synonyms :: ![Synonym],
     _types :: ![TypeDefinition]
   }
   deriving (Show)
@@ -44,13 +41,12 @@ instance Monoid (Fragment a) where
       { _declarations = mempty,
         _definitions = mempty,
         _metadata = mempty,
-        _synonyms = mempty,
         _types = mempty
       }
 
 instance Semigroup (Fragment a) where
-  a <> b = over declarations (<> view declarations b) 
-            (over definitions (<> view definitions b)
-            (over metadata (<> view metadata b) 
-            (over synonyms (<> view synonyms b) 
-            (over types (<> view types b) a))))
+  a <> b = 
+    over declarations (<> view declarations b)
+    (over definitions (<> view definitions b)
+    (over metadata (<> view metadata b)
+    (over types (<> view types b) a)))
