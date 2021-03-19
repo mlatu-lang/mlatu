@@ -78,7 +78,7 @@ executables:
     main: Main.hs
     source-dirs: app
     ghc-options:
-      - -O2
+      - -threaded
     dependencies:
       - mlatu
       - directory
@@ -86,6 +86,7 @@ executables:
       - exceptions
       - optparse-applicative
       - time
+      - typed-process
 
 tests:
   test:

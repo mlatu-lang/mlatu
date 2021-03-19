@@ -11,9 +11,11 @@ import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Relude
+import Mlatu.Codegen qualified as Codegen
 import Report (reportAll)
-import System.Directory (makeAbsolute)
+import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
+import System.Process.Typed (runProcess_, readProcess_, proc)
 
 main :: IO ()
 main = do
@@ -28,6 +30,7 @@ main = do
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
     Arguments.RunFiles prelude files -> runFiles prelude files
+    Arguments.CompileFiles prelude files -> compileFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -83,6 +86,23 @@ runFiles prelude relativePaths = do
     Right program -> do
       (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
       putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\nTime taken to interpret files: " <> show t2 <> "\n---"
+
+compileFiles :: Prelude -> [FilePath] -> IO ()
+compileFiles prelude relativePaths = do
+  paths <- forM relativePaths makeAbsolute
+  result <- runExceptT $ runMlatu $ do
+    commonDictionary <- compilePrelude prelude mainPermissions Nothing
+    compile mainPermissions Nothing paths (Just commonDictionary)
+  case result of
+    Left reports -> handleReports reports
+    Right program -> do
+      let filename = "output.rs"
+      writeFile filename $ toString $ Codegen.generate program
+      runProcess_ $ proc "rustfmt" [filename]
+      (err, out) <- readProcess_ (proc "rustc" [filename])
+      print out
+      print err 
+      removeFile filename
 
 timed :: IO a -> IO (a, NominalDiffTime)
 timed comp = do
