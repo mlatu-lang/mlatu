@@ -97,12 +97,13 @@ compileFiles prelude relativePaths = do
     Left reports -> handleReports reports
     Right program -> do
       let filename = "output.rs"
-      writeFile filename $ toString $ Codegen.generate program
+      text <- Codegen.generate program
+      writeFile filename $ toString text
       runProcess_ $ proc "rustfmt" [filename]
       (err, out) <- readProcess_ (proc "rustc" [filename])
       print out
       print err 
-      removeFile filename
+      --removeFile filename
 
 timed :: IO a -> IO (a, NominalDiffTime)
 timed comp = do
