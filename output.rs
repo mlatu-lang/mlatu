@@ -1,4 +1,5 @@
 #![feature(destructuring_assignment)]
+#![allow(warnings)]
 type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>);
 #[derive(Debug, Clone)]
 enum Rep {
@@ -12,28 +13,58 @@ enum Rep {
     List(Vec<Rep>),
 }
 use Rep::*;
+fn convertBool(b: bool, stack: Vec<Rep>, closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    if b {
+        (stack, closures) = mtrue(stack, closures);
+        (stack, closures)
+    } else {
+        (stack, closures) = mfalse(stack, closures);
+        (stack, closures)
+    }
+}
+fn convertOption(
+    o: Option<Rep>,
+    stack: Vec<Rep>,
+    closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    if let Some(x) = o {
+        stack.push(x);
+        (stack, closures) = msome(stack, closures);
+        (stack, closures)
+    } else {
+        (stack, closures) = mnone(stack, closures);
+        (stack, closures)
+    }
+}
+#[must_use]
+#[inline]
 fn mnip2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mdrop2(stack, closures);
+    (stack, closures) = mdrop23a3a5bA2c20B5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mor(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     (stack, closures) = mtrue(stack, closures);
-    stack.push(Name(m_3A3Aor3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aor3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20Bool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aassert3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aassert3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -42,46 +73,60 @@ fn m_3A3Aassert3A3Alambda0(
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn m3E3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3e3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m263A3A5BBool5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m263a3a5bBool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mexp(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.exp()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mid(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     (stack, closures)
 }
-fn m3D3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3d3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        if a == b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            (stack, closures) = convertBool(a == b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfold_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mtail_head(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mtail_head3a3a5bB5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -89,14 +134,14 @@ fn mfold_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bList5bB5d2c20B5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 3].clone());
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 4].clone());
                 (stack, closures) = mcall(stack, closures);
                 stack.push(locals[locals.len() - 4].clone());
-                (stack, closures) = mfold_left(stack, closures);
+                (stack, closures) = mfold_left3a3a5bA2c20B5d(stack, closures);
                 locals.pop();
             }
             _ => {
@@ -104,23 +149,28 @@ fn mfold_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn masin(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.asin()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aset3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aset3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -129,8 +179,9 @@ fn m_3A3Aset3A3Alambda0(
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = m3D3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -145,12 +196,14 @@ fn m_3A3Aset3A3Alambda0(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mswap(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -161,48 +214,58 @@ fn mswap(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m7E3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m7e3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c20Bool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+                (stack, closures) = mnot3a3a5bBool5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mnot3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mnot3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Int(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
         stack.push(Int(!a));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_reduce_left2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mmap2(stack, closures);
+    (stack, closures) = mmap23a3a5bA2c20B2c20T5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mreduce_left(stack, closures);
+    (stack, closures) = mreduce_left3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfalse(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![];
@@ -210,37 +273,47 @@ fn mfalse(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mempty(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
-        if a.is_empty() {
-            (stack, closures) = mtrue(stack, closures);
-        } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertBool(a.is_empty(), stack, closures);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m2D3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m2d3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a - b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a - b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Amap_index3A3Ahelper(
+#[must_use]
+#[inline]
+fn m_3a3amap_index3a3ahelper(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -249,20 +322,20 @@ fn m_3A3Amap_index3A3Ahelper(
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 3].clone());
                 stack.push(locals[locals.len() - 4].clone());
                 stack.push(Int(1));
-                (stack, closures) = m2B3A3A5BInt5D(stack, closures);
-                (stack, closures) = m_3A3Amap_index3A3Ahelper(stack, closures);
+                (stack, closures) = m2b3a3a5bInt5d(stack, closures);
+                (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bA2c20T5d(stack, closures);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 4].clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
-                (stack, closures) = mprefix(stack, closures);
+                (stack, closures) = mprefix3a3a5bT5d(stack, closures);
                 locals.pop();
                 locals.pop();
             }
@@ -271,18 +344,22 @@ fn m_3A3Amap_index3A3Ahelper(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfind(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mfilter_in(stack, closures);
-    (stack, closures) = mhead(stack, closures);
+    (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+    (stack, closures) = mhead3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtri2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -309,7 +386,9 @@ fn mtri2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m3D3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3d3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -317,17 +396,19 @@ fn m3D3A3A5BList5BInt5D5D(
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mlength(stack, closures);
+    (stack, closures) = mlength3a3a5bInt5d(stack, closures);
     stack.push(locals[locals.len() - 2].clone());
-    (stack, closures) = mlength(stack, closures);
-    (stack, closures) = m3C3E3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mlength3a3a5bInt5d(stack, closures);
+    (stack, closures) = m3c3e3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = mhead_tail(stack, closures);
-                if let Some(a) = stack.pop() {
+                (stack, closures) = mhead_tail3a3a5bInt5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
@@ -335,12 +416,13 @@ fn m3D3A3A5BList5BInt5D5D(
                         }
                         Algebraic(1, fields) => {
                             stack.extend(fields);
-                            (stack, closures) = munpair(stack, closures);
+                            (stack, closures) = munpair3a3a5bInt2c20List5bInt5d5d(stack, closures);
                             locals.push(stack.pop().unwrap());
                             locals.push(stack.pop().unwrap());
                             stack.push(locals[locals.len() - 4].clone());
-                            (stack, closures) = mhead_tail(stack, closures);
-                            if let Some(a) = stack.pop() {
+                            (stack, closures) = mhead_tail3a3a5bInt5d(stack, closures);
+                            let x = stack.pop();
+                            if let Some(a) = x {
                                 match a {
                                     Algebraic(0, fields) => {
                                         stack.extend(fields);
@@ -348,20 +430,22 @@ fn m3D3A3A5BList5BInt5D5D(
                                     }
                                     Algebraic(1, fields) => {
                                         stack.extend(fields);
-                                        (stack, closures) = munpair(stack, closures);
+                                        (stack, closures) =
+                                            munpair3a3a5bInt2c20List5bInt5d5d(stack, closures);
                                         locals.push(stack.pop().unwrap());
                                         locals.push(stack.pop().unwrap());
                                         stack.push(locals[locals.len() - 3].clone());
                                         stack.push(locals.last().unwrap().clone());
-                                        (stack, closures) = m3C3E3A3A5BInt5D(stack, closures);
-                                        if let Some(a) = stack.pop() {
+                                        (stack, closures) = m3c3e3a3a5bInt5d(stack, closures);
+                                        let x = stack.pop();
+                                        if let Some(a) = x {
                                             match a {
                                                 Algebraic(0, fields) => {
                                                     stack.extend(fields);
                                                     stack.push(locals[locals.len() - 4].clone());
                                                     stack.push(locals[locals.len() - 2].clone());
                                                     (stack, closures) =
-                                                        m3D3A3A5BList5BInt5D5D(stack, closures);
+                                                        m3d3a3a5bList5bInt5d5d(stack, closures);
                                                 }
                                                 Algebraic(1, fields) => {
                                                     stack.extend(fields);
@@ -372,8 +456,8 @@ fn m3D3A3A5BList5BInt5D5D(
                                                 }
                                             };
                                         } else {
-                                            unreachable!()
-                                        };
+                                            panic!("Expected `Some(a)`, but found `{:?}`", x);
+                                        }
                                         locals.pop();
                                         locals.pop();
                                     }
@@ -382,8 +466,8 @@ fn m3D3A3A5BList5BInt5D5D(
                                     }
                                 };
                             } else {
-                                unreachable!()
-                            };
+                                panic!("Expected `Some(a)`, but found `{:?}`", x);
+                            }
                             locals.pop();
                             locals.pop();
                         }
@@ -392,8 +476,8 @@ fn m3D3A3A5BList5BInt5D5D(
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -404,13 +488,15 @@ fn m3D3A3A5BList5BInt5D5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Ainsert_nth3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3ainsert_nth3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -419,8 +505,9 @@ fn m_3A3Ainsert_nth3A3Alambda0(
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = m3D3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -440,12 +527,14 @@ fn m_3A3Ainsert_nth3A3Alambda0(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn m_pointer(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![stack.pop().unwrap()];
@@ -453,32 +542,40 @@ fn m_pointer(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
-fn m3C3E3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BInt5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bInt5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Apartition3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3apartition3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mfilter_out(stack, closures);
+    (stack, closures) = mfilter_out3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aeach23A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aeach23a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn m_3A3Acurry23A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3acurry23a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -489,22 +586,33 @@ fn m_3A3Acurry23A3Alambda0(
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mwrite_file(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Text(a)), Some(Text(b))) = (stack.pop(), stack.pop()) {
-        use std::io::Write;
-        let mut file = std::fs::File::create(b).unwrap();
-        file.write_all(a.as_bytes()).unwrap();
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        let x = stack.pop();
+        if let Some(Text(b)) = x {
+            use std::io::Write;
+            let mut file = std::fs::File::create(b).unwrap();
+            file.write_all(a.as_bytes()).unwrap();
+        } else {
+            panic!("Expected `Some(Text(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -513,16 +621,16 @@ fn mmap(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = mmap(stack, closures);
+                (stack, closures) = mmap3a3a5bA2c20T5d(stack, closures);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
-                (stack, closures) = mprefix(stack, closures);
+                (stack, closures) = mprefix3a3a5bT5d(stack, closures);
                 locals.pop();
                 locals.pop();
             }
@@ -531,82 +639,107 @@ fn mmap(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m2A3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m2a3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a * b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a * b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msqrt(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.sqrt()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_reduce_right(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mmap(stack, closures);
+    (stack, closures) = mmap3a3a5bA2c20T5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mreduce_right(stack, closures);
+    (stack, closures) = mreduce_right3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mswapped(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Aswapped3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aswapped3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mswap(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mswap3a3a5b28R2e2e2e2c20A2c20B202d3eS2e2e2e202bP292c2028R2e2e2e2c20B2c20A202d3eR2e2e2e2c20A2c20B202bP295d(stack, closures);
     (stack, closures) = mcompose(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlength(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Int(0));
-    stack.push(Name(m_3A3Alength3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3alength3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bInt2c20T5d(stack, closures);
     (stack, closures)
 }
-fn m3C3D3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BBool5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bBool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn mzero3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mzero3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Int(0));
     (stack, closures)
 }
-fn mread3A3A5BChar5D(
+#[must_use]
+#[inline]
+fn mread3a3a5bChar5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -614,36 +747,40 @@ fn mread3A3A5BChar5D(
     (stack, closures) = mchars(stack, closures);
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mlength(stack, closures);
+    (stack, closures) = mlength3a3a5bChar5d(stack, closures);
     stack.push(Int(1));
-    (stack, closures) = m3D3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mnone(stack, closures);
+                (stack, closures) = mnone3a3a5bChar5d(stack, closures);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = mhead(stack, closures);
+                (stack, closures) = mhead3a3a5bChar5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mwhile(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     (stack, closures) = mcall(stack, closures);
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -658,37 +795,45 @@ fn mwhile(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m3E3D3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BList5BInt5D5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bList5bInt5d5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_reduce_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mmap(stack, closures);
+    (stack, closures) = mmap3a3a5bA2c20T5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mreduce_left(stack, closures);
+    (stack, closures) = mreduce_left3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Amaximum3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3amaximum3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mmax(stack, closures);
+    (stack, closures) = mmax3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn monce(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -698,53 +843,66 @@ fn monce(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m3C3D3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BDouble5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bDouble5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcosh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.cosh()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mreduce_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = minit_last(stack, closures);
+    (stack, closures) = minit_last3a3a5bT5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Areduce_right3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3areduce_right3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_optional(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mnip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn meither(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -761,12 +919,14 @@ fn meither(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtri(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -788,59 +948,79 @@ fn mtri(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Alefts3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3alefts3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mget_left(stack, closures);
+    (stack, closures) = mget_left3a3a5bA2c20B5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfix(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Afix3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3afix3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     stack.push(locals.last().unwrap().clone());
     (stack, closures) = mcall(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msuffix(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = monce(stack, closures);
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m3C3D3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BString5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bString5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mappend_file(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Text(a)), Some(Text(b))) = (stack.pop(), stack.pop()) {
-        use std::io::Write;
-        let mut file = std::fs::File::open(b).unwrap();
-        file.write_all(a.as_bytes()).unwrap();
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        let x = stack.pop();
+        if let Some(Text(b)) = x {
+            use std::io::Write;
+            let mut file = std::fs::File::open(b).unwrap();
+            file.write_all(a.as_bytes()).unwrap();
+        } else {
+            panic!("Expected `Some(Text(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mis_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -852,62 +1032,76 @@ fn mis_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mremove(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aremove3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aremove3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfilter_out(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfilter_out3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn many(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     (stack, closures) = mtrue(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aany3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aany3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20T5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3D3A3A5BChar5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3d3a3a5bChar5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Char(a)), Some(Char(b))) = (stack.pop(), stack.pop()) {
-        if a == b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Char(a)) = x {
+        let x = stack.pop();
+        if let Some(Char(b)) = x {
+            (stack, closures) = convertBool(a == b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Char(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Char(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aand3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aand3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m263A3A5BBool5D(stack, closures);
+    (stack, closures) = m263a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mover(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -919,50 +1113,63 @@ fn mover(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m3E3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3e3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        if a > b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            (stack, closures) = convertBool(a > b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mIO(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Closure(n, rs)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Closure(n, rs)) = x {
         closures.push(rs);
         (stack, closures) = n(stack, closures);
         closures.pop();
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Closure(n, rs))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn macosh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.acosh()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfold_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = minit_last(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = minit_last3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -970,34 +1177,44 @@ fn mfold_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, V
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bList5bA5d2c20A5d(stack, closures);
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = mfold_right(stack, closures);
+                (stack, closures) = mfold_right3a3a5bA2c20B5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m7C3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m7c3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a | b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a | b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtrue(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![];
@@ -1005,40 +1222,52 @@ fn mtrue(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(1, v));
     (stack, closures)
 }
-fn m3E3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3e3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Text(a)), Some(Text(b))) = (stack.pop(), stack.pop()) {
-        if a > b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        let x = stack.pop();
+        if let Some(Text(b)) = x {
+            (stack, closures) = convertBool(a > b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Text(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m3C3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3c3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = m3E3A3A5BInt5D(stack, closures);
+    (stack, closures) = mswap3a3a5bInt2c20Int5d(stack, closures);
+    (stack, closures) = m3e3a3a5bInt5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn macos(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.acos()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn munpair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1048,14 +1277,17 @@ fn munpair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfrom_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -1066,21 +1298,25 @@ fn mfrom_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, V
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m3C3E3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BBool5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bBool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aremove3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aremove3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -1088,44 +1324,59 @@ fn m_3A3Aremove3A3Alambda0(
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures)
 }
-fn m2F3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m2f3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a / b));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a / b));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn melem(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
+    (stack, closures) = mswap3a3a5bT2c20List5bT5d5d(stack, closures);
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aelem3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aelem3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = many(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = many3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Aany3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aany3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
-    (stack, closures) = m7C3A3A5BBool5D(stack, closures);
+    (stack, closures) = m7c3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdup(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -1134,13 +1385,16 @@ fn mdup(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mis_some(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) = mdrop3a3a5bT5d(stack, closures);
                 (stack, closures) = mtrue(stack, closures);
             }
             _ => {
@@ -1148,15 +1402,19 @@ fn mis_some(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdrop(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let _ = stack.pop().unwrap();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpartition_eithers(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
@@ -1164,26 +1422,31 @@ fn mpartition_eithers(
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mlefts(stack, closures);
+    (stack, closures) = mlefts3a3a5bA2c20B5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mrights(stack, closures);
+    (stack, closures) = mrights3a3a5bA2c20B5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3C3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3c3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = m3E3A3A5BString5D(stack, closures);
+    (stack, closures) = mswap3a3a5bString2c20String5d(stack, closures);
+    (stack, closures) = m3e3a3a5bString5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mabs(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1198,87 +1461,112 @@ fn mabs(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Acartesian_with3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3acartesian_with3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mswap(stack, closures);
+    (stack, closures) = mswap3a3a5bB2c20A5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[1].clone());
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn m3E3D3A3A5BChar5D(
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bChar5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BChar5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bChar5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Ainit_last3A3Alambda2(
+#[must_use]
+#[inline]
+fn m_3a3ainit_last3a3alambda2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bList5bT5d2c20T5d(stack, closures);
     (stack, closures)
 }
-fn m7E3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m7e3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a ^ b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a ^ b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mshow3A3A5BChar5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bChar5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = monce(stack, closures);
+    (stack, closures) = monce3a3a5bChar5d(stack, closures);
     (stack, closures) = mfrom_chars(stack, closures);
     (stack, closures)
 }
-fn m_3A3Afilter_out3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3afilter_out3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Atail_head3A3Alambda2(
+#[must_use]
+#[inline]
+fn m_3a3atail_head3a3alambda2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bList5bT5d2c20T5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Ahead_tail3A3Alambda2(
+#[must_use]
+#[inline]
+fn m_3a3ahead_tail3a3alambda2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bT2c20List5bT5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn munzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bPair5bA5d5bB5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1289,23 +1577,24 @@ fn munzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) =
+                    munpair3a3a5bPair5bA5d5bB5d2c20List5bPair5bA5d5bB5d5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 4].clone());
-                (stack, closures) = munzip(stack, closures);
+                (stack, closures) = munzip3a3a5bA2c20B5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = mprefix(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 4].clone());
-                (stack, closures) = mprefix(stack, closures);
+                (stack, closures) = mprefix3a3a5bB5d(stack, closures);
                 locals.pop();
                 locals.pop();
                 locals.pop();
@@ -1318,10 +1607,12 @@ fn munzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmodify(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -1329,8 +1620,9 @@ fn mmodify(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 3].clone());
-    (stack, closures) = mget(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mget3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1344,7 +1636,7 @@ fn mmodify(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
                 stack.push(locals[locals.len() - 4].clone());
-                (stack, closures) = mset(stack, closures);
+                (stack, closures) = mset3a3a5bT5d(stack, closures);
                 locals.pop();
             }
             _ => {
@@ -1352,44 +1644,54 @@ fn mmodify(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Alast_init3A3Alambda2(
+#[must_use]
+#[inline]
+fn m_3a3alast_init3a3alambda2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bT2c20List5bT5d5d(stack, closures);
     (stack, closures)
 }
-fn m3E3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3e3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        if a > b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            (stack, closures) = convertBool(a > b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aall3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aall3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
-    (stack, closures) = m263A3A5BBool5D(stack, closures);
+    (stack, closures) = m263a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mbi3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -1421,7 +1723,9 @@ fn mbi3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Aassert_eq3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aassert_eq3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -1430,11 +1734,14 @@ fn m_3A3Aassert_eq3A3Alambda0(
     stack.push(closures.last().unwrap().clone()[1].clone());
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_optionally(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1443,28 +1750,29 @@ fn mmap_optionally(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
-                if let Some(a) = stack.pop() {
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
                             stack.push(locals[locals.len() - 2].clone());
                             stack.push(locals[locals.len() - 3].clone());
-                            (stack, closures) = mmap_optionally(stack, closures);
+                            (stack, closures) = mmap_optionally3a3a5bA2c20B5d(stack, closures);
                         }
                         Algebraic(1, fields) => {
                             stack.extend(fields);
                             locals.push(stack.pop().unwrap());
                             stack.push(locals[locals.len() - 3].clone());
                             stack.push(locals[locals.len() - 4].clone());
-                            (stack, closures) = mmap_optionally(stack, closures);
+                            (stack, closures) = mmap_optionally3a3a5bA2c20B5d(stack, closures);
                             stack.push(locals.last().unwrap().clone());
-                            (stack, closures) = mprefix(stack, closures);
+                            (stack, closures) = mprefix3a3a5bB5d(stack, closures);
                             locals.pop();
                         }
                         _ => {
@@ -1472,8 +1780,8 @@ fn mmap_optionally(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
                 locals.pop();
                 locals.pop();
             }
@@ -1482,11 +1790,13 @@ fn mmap_optionally(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mkeep3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -1507,158 +1817,200 @@ fn mkeep3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfloor(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.floor()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlefts(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Alefts3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3alefts3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_optionally(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optionally3a3a5bEither5bA5d5bB5d2c20A5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmaximum(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Amaximum3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3amaximum3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mreduce_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mreduce_left3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m3C3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3c3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = m3E3A3A5BDouble5D(stack, closures);
+    (stack, closures) = mswap3a3a5bDouble2c20Double5d(stack, closures);
+    (stack, closures) = m3e3a3a5bDouble5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
-        if let Some((_, t)) = a.split_first() {
-            stack.push(List(t.to_vec()));
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_first().map(|(_, t)| List(t.to_vec())),
+            stack,
+            closures,
+        );
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtanh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.tanh()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mceil(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.ceil()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mchars(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
         stack.push(List(a.chars().map(Char).collect::<Vec<_>>()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aany23A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aany23a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn m_3A3Areduce_left3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3areduce_left3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mfold_left(stack, closures);
+    (stack, closures) = mfold_left3a3a5bT2c20T5d(stack, closures);
     (stack, closures)
 }
-fn m3C3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3c3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    (stack, closures) = m263A3A5BBool5D(stack, closures);
+    (stack, closures) = mswap3a3a5bBool2c20Bool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    (stack, closures) = m263a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m253A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m253a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a % b));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a % b));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mleft(stack, closures);
+                (stack, closures) = mleft3a3a5bA2c20C5d(stack, closures);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
                 (stack, closures) = mcall(stack, closures);
-                (stack, closures) = mright(stack, closures);
+                (stack, closures) = mright3a3a5bA2c20C5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m2D2D2D3E(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m2d2d2d3e(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1666,7 +2018,8 @@ fn m2D2D2D3E(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) =
+                    mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
                 (stack, closures) = mtrue(stack, closures);
             }
             _ => {
@@ -1674,38 +2027,46 @@ fn m2D2D2D3E(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mshow3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mshow3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Int(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
         stack.push(Text(format!("{:?}", a)));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aconcat3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aconcat3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m7C3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m7c3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c20Bool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) = mdrop3a3a5bBool5d(stack, closures);
                 (stack, closures) = mtrue(stack, closures);
             }
             _ => {
@@ -1713,44 +2074,61 @@ fn m7C3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m3E3D3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BInt5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bInt5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m2B3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m2b3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a + b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a + b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mand(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     (stack, closures) = mtrue(stack, closures);
-    stack.push(Name(m_3A3Aand3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aand3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20Bool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdrop2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mdrop(stack, closures);
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = mdrop3a3a5bB5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdup2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -1763,21 +2141,26 @@ fn mdup2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Acartesian3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3acartesian3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1788,8 +2171,9 @@ fn mzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
                 stack.extend(fields);
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = mhead_tail(stack, closures);
-                if let Some(a) = stack.pop() {
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
@@ -1800,16 +2184,16 @@ fn mzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
                             stack.extend(fields);
                             locals.push(stack.pop().unwrap());
                             stack.push(locals[locals.len() - 2].clone());
-                            (stack, closures) = msecond(stack, closures);
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
                             stack.push(locals.last().unwrap().clone());
-                            (stack, closures) = msecond(stack, closures);
-                            (stack, closures) = mzip(stack, closures);
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
                             stack.push(locals[locals.len() - 2].clone());
-                            (stack, closures) = mfirst(stack, closures);
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
                             stack.push(locals.last().unwrap().clone());
-                            (stack, closures) = mfirst(stack, closures);
-                            (stack, closures) = mpair(stack, closures);
-                            (stack, closures) = mprefix(stack, closures);
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
                             locals.pop();
                         }
                         _ => {
@@ -1817,8 +2201,8 @@ fn mzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
                 locals.pop();
             }
             _ => {
@@ -1826,13 +2210,15 @@ fn mzip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Acurry3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3acurry3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -1842,7 +2228,9 @@ fn m_3A3Acurry3A3Alambda0(
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn mzero3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn mzero3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -1850,43 +2238,52 @@ fn mzero3A3A5BDouble5D(
     stack.push(Float(0.0));
     (stack, closures)
 }
-fn m_3A3Atail_head3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3atail_head3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mtail(stack, closures);
+    (stack, closures) = mtail3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Ahead_tail3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3ahead_tail3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mhead(stack, closures);
+    (stack, closures) = mhead3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn minit(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
-        if let Some((_, i)) = a.split_last() {
-            stack.push(List(i.to_vec()));
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_last().map(|(_, i)| List(i.to_vec())),
+            stack,
+            closures,
+        );
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn muntil(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     (stack, closures) = mcall(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1901,19 +2298,23 @@ fn muntil(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Alast_init3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3alast_init3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mlast(stack, closures);
+    (stack, closures) = mlast3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mnone(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![];
@@ -1921,16 +2322,19 @@ fn mnone(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpad_head(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mlength(stack, closures);
+    (stack, closures) = mlength3a3a5bT5d(stack, closures);
     stack.push(locals[locals.len() - 2].clone());
-    (stack, closures) = m3C3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3c3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -1942,61 +2346,70 @@ fn mpad_head(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
                 stack.push(locals[locals.len() - 3].clone());
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = mlength(stack, closures);
-                (stack, closures) = m2D3A3A5BInt5D(stack, closures);
-                (stack, closures) = mreplicate(stack, closures);
-                (stack, closures) = mprepend(stack, closures);
+                (stack, closures) = mlength3a3a5bT5d(stack, closures);
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
+                (stack, closures) = mprepend3a3a5bT5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mjoin(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     let v = vec![];
     stack.push(List(v));
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Ajoin3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3ajoin3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfunction(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Afunction3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3afunction3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmin(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -2011,172 +2424,215 @@ fn mmin(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcall(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Closure(n, rs)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Closure(n, rs)) = x {
         closures.push(rs);
         (stack, closures) = n(stack, closures);
         closures.pop();
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Closure(n, rs))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn matan(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.atan()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m2A3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m2a3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a * b));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a * b));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mFail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Closure(n, rs)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Closure(n, rs)) = x {
         closures.push(rs);
         (stack, closures) = n(stack, closures);
         closures.pop();
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Closure(n, rs))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpartition(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Apartition3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3apartition3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Apartition3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3apartition3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mbi(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mbi3a3a5bList5bT5d2c20List5bT5d2c20List5bT5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3C3E3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BString5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bString5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mget_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
-                (stack, closures) = msome(stack, closures);
+                (stack, closures) = msome3a3a5bA5d(stack, closures);
             }
             _ => {
-                (stack, closures) = mnone(stack, closures);
+                (stack, closures) = mnone3a3a5bA5d(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
-        panic!("{}", a);
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        panic!("Execution failure: {}", a);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn matanh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     (stack, closures)
 }
-fn m_3A3Ainit_last3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3ainit_last3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = minit(stack, closures);
+    (stack, closures) = minit3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m3C3E3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BDouble5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bDouble5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn mshow3A3A5BString5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn meach2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mzip(stack, closures);
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aeach23A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aeach23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = meach(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = meach3a3a5bPair5bA5d5bB5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m2D2D3E3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m2d2d3e3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c20Bool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) = mdrop3a3a5bBool5d(stack, closures);
                 (stack, closures) = mtrue(stack, closures);
             }
             _ => {
@@ -2184,23 +2640,28 @@ fn m2D2D3E3A3A5BBool5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mshow3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Text(format!("{:?}", a)));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Afunction3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3afunction3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -2208,45 +2669,66 @@ fn m_3A3Afunction3A3Alambda0(
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures)
 }
-fn m253A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m253a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a % b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a % b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mappend3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mappend(stack, closures);
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m2B3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m2b3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a + b));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a + b));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m263A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m263a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c20Bool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) = mdrop3a3a5bBool5d(stack, closures);
                 (stack, closures) = mfalse(stack, closures);
             }
             _ => {
@@ -2254,14 +2736,17 @@ fn m263A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfrom_some(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -2272,20 +2757,25 @@ fn mfrom_some(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn masinh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.asinh()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcurry2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -2294,8 +2784,9 @@ fn mcurry2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(locals[locals.len() - 3].clone());
-    stack.push(Name(m_3A3Acurry23A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acurry23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -2303,19 +2794,22 @@ fn mcurry2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
         ];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_optional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -2323,55 +2817,71 @@ fn mmap_optional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>,
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
-                (stack, closures) = msome(stack, closures);
+                (stack, closures) = msome3a3a5bB5d(stack, closures);
                 locals.pop();
             }
             _ => {
-                (stack, closures) = mnone(stack, closures);
+                (stack, closures) = mnone3a3a5bB5d(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m2B3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m2b3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Text(a)), Some(Text(b))) = (stack.pop(), stack.pop()) {
-        let mut new_string = b.clone();
-        new_string.push_str(&a);
-        stack.push(Text(new_string));
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        let x = stack.pop();
+        if let Some(Text(b)) = x {
+            let mut new_string = b;
+            new_string.push_str(&a);
+            stack.push(Text(new_string));
+        } else {
+            panic!("Expected `Some(Text(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Ajoin3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3ajoin3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mglue(stack, closures);
+    (stack, closures) = mglue3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_index(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Int(0));
-    (stack, closures) = m_3A3Amap_index3A3Ahelper(stack, closures);
+    (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bA2c20B5d(stack, closures);
     (stack, closures)
 }
-fn m3C3A3A5BChar5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3c3a3a5bChar5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = m3E3A3A5BChar5D(stack, closures);
+    (stack, closures) = mswap3a3a5bChar2c20Char5d(stack, closures);
+    (stack, closures) = m3e3a3a5bChar5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn m_list(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![
@@ -2383,6 +2893,8 @@ fn m_list(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -2394,9 +2906,12 @@ fn mdip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mis_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -2408,38 +2923,43 @@ fn mis_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Apartition3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3apartition3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mfilter_in(stack, closures);
+    (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfib(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(Int(2));
-    (stack, closures) = m3C3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3c3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(Int(2));
-                (stack, closures) = m2D3A3A5BInt5D(stack, closures);
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
                 (stack, closures) = mfib(stack, closures);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(Int(1));
-                (stack, closures) = m2D3A3A5BInt5D(stack, closures);
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
                 (stack, closures) = mfib(stack, closures);
-                (stack, closures) = m2B3A3A5BInt5D(stack, closures);
+                (stack, closures) = m2b3a3a5bInt5d(stack, closures);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -2450,36 +2970,43 @@ fn mfib(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m3E3D3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BString5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bString5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m3E3D3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BDouble5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bDouble5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmax(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -2494,12 +3021,14 @@ fn mmax(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtri3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -2531,46 +3060,54 @@ fn mtri3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Aor3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aor3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m7C3A3A5BBool5D(stack, closures);
+    (stack, closures) = m7c3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn mread3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mread3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
-        if let Ok(i) = a.parse() {
-            stack.push(Int(i));
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        (stack, closures) = convertOption(a.parse().ok().map(Int), stack, closures);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msinh(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.sinh()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlog(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.log10()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mover2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -2586,6 +3123,8 @@ fn mover2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msome(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![stack.pop().unwrap()];
@@ -2593,191 +3132,239 @@ fn msome(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(1, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mconcat(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let v = vec![];
     stack.push(List(v));
-    stack.push(Name(m_3A3Aconcat3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aconcat3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcartesian(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Acartesian3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acartesian3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mcartesian_with(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mcartesian_with3a3a5bA2c20B2c20Pair5bA5d5bB5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mreduce_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mtail_head(stack, closures);
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Areduce_left3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3areduce_left3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_optional(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3C3E3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BList5BInt5D5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bList5bInt5d5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msin(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.sin()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn many2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mzip(stack, closures);
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aany23A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aany23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = many(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = many3a3a5bPair5bA5d5bB5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Aget_all3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aget_all3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mget(stack, closures);
+    (stack, closures) = mswap3a3a5bInt2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mget3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlast_init(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Alast_init3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3alast_init3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    stack.push(Name(m_3A3Alast_init3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3alast_init3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mbi(stack, closures);
-    stack.push(Name(m_3A3Alast_init3A3Alambda2));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(stack, closures);
+    stack.push(Name(m_3a3alast_init3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mlift_optional_2(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mhead_tail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Ahead_tail3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    stack.push(Name(m_3A3Ahead_tail3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mbi(stack, closures);
-    stack.push(Name(m_3A3Ahead_tail3A3Alambda2));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mlift_optional_2(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_concat(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mmap(stack, closures);
-    (stack, closures) = mconcat(stack, closures);
+    (stack, closures) = mmap3a3a5bA2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mconcat3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcos(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.cos()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn minit_last(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Ainit_last3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3ainit_last3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    stack.push(Name(m_3A3Ainit_last3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ainit_last3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mbi(stack, closures);
-    stack.push(Name(m_3A3Ainit_last3A3Alambda2));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(stack, closures);
+    stack.push(Name(m_3a3ainit_last3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mlift_optional_2(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mis_none(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -2788,14 +3375,17 @@ fn mis_none(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfrom_optional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -2805,31 +3395,43 @@ fn mfrom_optional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
-fn m2F3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m2f3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a / b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a / b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m26263A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m26263a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) =
+                    mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
                 (stack, closures) = mfalse(stack, closures);
             }
             Algebraic(1, fields) => {
@@ -2841,34 +3443,40 @@ fn m26263A3A5BBool5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcurry(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
-    stack.push(Name(m_3A3Acurry3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acurry3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m7C7C3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m7c7c3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -2876,7 +3484,8 @@ fn m7C7C3A3A5BBool5D(
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mdrop(stack, closures);
+                (stack, closures) =
+                    mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(stack, closures);
                 (stack, closures) = mtrue(stack, closures);
             }
             _ => {
@@ -2884,11 +3493,13 @@ fn m7C7C3A3A5BBool5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Acompose3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3acompose3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -2899,6 +3510,8 @@ fn m_3A3Acompose3A3Alambda0(
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mget_line(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut buf = String::new();
@@ -2906,54 +3519,66 @@ fn mget_line(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
     stack.push(Text(buf));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtail_head(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Atail_head3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3atail_head3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    stack.push(Name(m_3A3Atail_head3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3atail_head3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mbi(stack, closures);
-    stack.push(Name(m_3A3Atail_head3A3Alambda2));
-    if let Some(Name(n)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(stack, closures);
+    stack.push(Name(m_3a3atail_head3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mlift_optional_2(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(stack, closures);
     (stack, closures)
 }
-fn m3C3E3A3A5BChar5D(
+#[must_use]
+#[inline]
+fn m3c3e3a3a5bChar5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3D3A3A5BChar5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3d3a3a5bChar5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn meach(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals.last().unwrap().clone());
@@ -2961,7 +3586,7 @@ fn meach(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
                 (stack, closures) = mcall(stack, closures);
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = meach(stack, closures);
+                (stack, closures) = meach3a3a5bT5d(stack, closures);
                 locals.pop();
                 locals.pop();
             }
@@ -2970,34 +3595,40 @@ fn meach(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mzip(stack, closures);
-    stack.push(Name(m_3A3Amap23A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+    stack.push(Name(m_3a3amap23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     stack.push(locals.last().unwrap().clone());
     (stack, closures) = mcompose(stack, closures);
-    (stack, closures) = mmap(stack, closures);
+    (stack, closures) = mmap3a3a5bPair5bA5d5bB5d2c20C5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn mshow3A3A5BOptional5BT5D5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bOptional5bT5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3008,7 +3639,7 @@ fn mshow3A3A5BOptional5BT5D5D(
                 locals.push(stack.pop().unwrap());
                 stack.push(Text("some ".to_owned()));
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = m2B3A3A5BString5D(stack, closures);
+                (stack, closures) = m2b3a3a5bString5d(stack, closures);
                 locals.pop();
             }
             _ => {
@@ -3016,50 +3647,66 @@ fn mshow3A3A5BOptional5BT5D5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mget(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(List(b))) = (stack.pop(), stack.pop()) {
-        if let Some(gotten) = b.get(a as usize) {
-            stack.push(gotten.clone());
-            (stack, closures) = msome(stack, closures);
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            (stack, closures) = convertOption(b.get(a as usize).cloned(), stack, closures);
         } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m3E3D3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn m3e3d3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3C3A3A5BBool5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3c3a3a5bBool5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mappend(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(List(a)), Some(List(b))) = (stack.pop(), stack.pop()) {
-        let mut new_vec = b.clone();
-        new_vec.extend(a.into_iter());
-        stack.push(List(new_vec));
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mshow3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3074,23 +3721,28 @@ fn mshow3A3A5BBool5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Arights3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3arights3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mget_right(stack, closures);
+    (stack, closures) = mget_right3a3a5bA2c20B5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn moptional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3107,13 +3759,15 @@ fn moptional(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Aremove_nth3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aremove_nth3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3122,8 +3776,9 @@ fn m_3A3Aremove_nth3A3Alambda0(
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = m3D3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3141,61 +3796,75 @@ fn m_3A3Aremove_nth3A3Alambda0(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtrunc(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.trunc()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mminimum(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Aminimum3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aminimum3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mreduce_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mreduce_left3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aall23A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aall23a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures) = mcall(stack, closures);
     (stack, closures)
 }
-fn mneg3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mneg3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(Int(0));
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = m2D3A3A5BInt5D(stack, closures);
+    (stack, closures) = m2d3a3a5bInt5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msurround(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mprepend(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn munit(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![];
@@ -3203,6 +3872,8 @@ fn munit(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mconcat_optionals(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
@@ -3210,49 +3881,59 @@ fn mconcat_optionals(
     let mut locals: Vec<Rep> = Vec::new();
     let v = vec![];
     stack.push(List(v));
-    stack.push(Name(m_3A3Aconcat_optionals3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aconcat_optionals3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20Optional5bT5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_reduce_right2(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mmap2(stack, closures);
+    (stack, closures) = mmap23a3a5bA2c20B2c20T5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mreduce_right(stack, closures);
+    (stack, closures) = mreduce_right3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3C3D3A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BInt5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bInt5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfilter_out(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Afilter_out3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3afilter_out3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfilter_in(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mbi2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -3273,48 +3954,58 @@ fn mbi2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mask(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mprint(stack, closures);
+    (stack, closures) = mprint3a3a5bString5d(stack, closures);
     use std::io::Write;
     std::io::stdout().flush().unwrap();
     (stack, closures) = mget_line(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aconcat_optionals3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aconcat_optionals3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = msuffix(stack, closures);
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
             }
             _ => {}
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mall(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     (stack, closures) = mtrue(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aall3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aall3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mfold_left(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20T5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mkeep2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -3331,48 +4022,58 @@ fn mkeep2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mprint(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
         println!("{}", a);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Amap23A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3amap23a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcartesian_with(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
-    stack.push(Name(m_3A3Acartesian_with3A3Alambda1));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acartesian_with3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_concat(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_concat3a3a5bA2c20C5d(stack, closures);
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_pair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
@@ -3381,7 +4082,7 @@ fn mmap_pair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
     stack.push(locals[locals.len() - 2].clone());
     stack.push(locals[locals.len() - 5].clone());
     (stack, closures) = mcall(stack, closures);
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = mpair3a3a5bC2c20D5d(stack, closures);
     locals.pop();
     locals.pop();
     locals.pop();
@@ -3389,40 +4090,49 @@ fn mmap_pair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
     locals.pop();
     (stack, closures)
 }
-fn m3C3D3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BList5BInt5D5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bList5bInt5d5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mget_right(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = msome(stack, closures);
+                (stack, closures) = msome3a3a5bB5d(stack, closures);
             }
             _ => {
-                (stack, closures) = mnone(stack, closures);
+                (stack, closures) = mnone3a3a5bB5d(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aminimum3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aminimum3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mmin(stack, closures);
+    (stack, closures) = mmin3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpick(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -3437,7 +4147,9 @@ fn mpick(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Acartesian_with3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3acartesian_with3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3446,35 +4158,39 @@ fn m_3A3Acartesian_with3A3Alambda1(
     stack.push(closures.last().unwrap().clone()[0].clone());
     stack.push(locals.last().unwrap().clone());
     stack.push(closures.last().unwrap().clone()[1].clone());
-    stack.push(Name(m_3A3Acartesian_with3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acartesian_with3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap3a3a5bB2c20C5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mreplicate(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(Int(0));
-    (stack, closures) = m3C3D3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3c3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(Int(1));
-                (stack, closures) = m2D3A3A5BInt5D(stack, closures);
-                (stack, closures) = mreplicate(stack, closures);
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = msuffix(stack, closures);
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -3486,12 +4202,14 @@ fn mreplicate(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn massert_eq(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -3500,25 +4218,30 @@ fn massert_eq(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(locals[locals.len() - 3].clone());
-    stack.push(Name(m_3A3Aassert_eq3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aassert_eq3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     (stack, closures) = massert(stack, closures);
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpi(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Float(3.141592653589793));
     (stack, closures)
 }
-fn mread3A3A5BBool5D(
+#[must_use]
+#[inline]
+fn mread3a3a5bBool5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3526,72 +4249,82 @@ fn mread3A3A5BBool5D(
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(Text("true".to_owned()));
-    (stack, closures) = m3D3A3A5BString5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3d3a3a5bString5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
                 stack.push(Text("false".to_owned()));
-                (stack, closures) = m3D3A3A5BString5D(stack, closures);
-                if let Some(a) = stack.pop() {
+                (stack, closures) = m3d3a3a5bString5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
-                            (stack, closures) = mnone(stack, closures);
+                            (stack, closures) = mnone3a3a5bBool5d(stack, closures);
                         }
                         Algebraic(1, fields) => {
                             stack.extend(fields);
                             (stack, closures) = mfalse(stack, closures);
-                            (stack, closures) = msome(stack, closures);
+                            (stack, closures) = msome3a3a5bBool5d(stack, closures);
                         }
                         _ => {
                             (stack, closures) = mabort(stack, closures);
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
                 (stack, closures) = mtrue(stack, closures);
-                (stack, closures) = msome(stack, closures);
+                (stack, closures) = msome3a3a5bBool5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn matan2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a.atan2(b)));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a.atan2(b)));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mhead(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
-        if let Some(h) = a.first() {
-            stack.push(h.clone());
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.first().cloned(), stack, closures);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn mneg3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn mneg3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3599,44 +4332,54 @@ fn mneg3A3A5BDouble5D(
     locals.push(stack.pop().unwrap());
     stack.push(Float(0.0));
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = m2D3A3A5BDouble5D(stack, closures);
+    (stack, closures) = m2d3a3a5bDouble5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mget_all(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bInt5d5d(stack, closures);
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aget_all3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aget_all3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap3a3a5bInt2c20Optional5bT5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn msecond(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
+    (stack, closures) = mswap3a3a5bA2c20B5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mprefix(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = monce(stack, closures);
-    (stack, closures) = mprepend(stack, closures);
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfilter_in(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mtail_head(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3645,16 +4388,17 @@ fn mfilter_in(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals.last().unwrap().clone());
                 stack.push(locals[locals.len() - 3].clone());
-                (stack, closures) = mfilter_in(stack, closures);
+                (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals[locals.len() - 3].clone());
                 (stack, closures) = mcall(stack, closures);
-                if let Some(a) = stack.pop() {
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
@@ -3662,15 +4406,15 @@ fn mfilter_in(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
                         Algebraic(1, fields) => {
                             stack.extend(fields);
                             stack.push(locals[locals.len() - 2].clone());
-                            (stack, closures) = mprefix(stack, closures);
+                            (stack, closures) = mprefix3a3a5bT5d(stack, closures);
                         }
                         _ => {
                             (stack, closures) = mabort(stack, closures);
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
                 locals.pop();
                 locals.pop();
             }
@@ -3679,40 +4423,48 @@ fn mfilter_in(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mExit(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Closure(n, rs)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Closure(n, rs)) = x {
         closures.push(rs);
         (stack, closures) = n(stack, closures);
         closures.pop();
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Closure(n, rs))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mcompose(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
     stack.push(locals[locals.len() - 2].clone());
-    stack.push(Name(m_3A3Acompose3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3acompose3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m3E3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3e3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3720,8 +4472,9 @@ fn m3E3A3A5BList5BInt5D5D(
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3729,12 +4482,13 @@ fn m3E3A3A5BList5BInt5D5D(
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
+                (stack, closures) = munpair3a3a5bInt2c20List5bInt5d5d(stack, closures);
                 locals.push(stack.pop().unwrap());
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 4].clone());
-                (stack, closures) = mhead_tail(stack, closures);
-                if let Some(a) = stack.pop() {
+                (stack, closures) = mhead_tail3a3a5bInt5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(0, fields) => {
                             stack.extend(fields);
@@ -3742,27 +4496,29 @@ fn m3E3A3A5BList5BInt5D5D(
                         }
                         Algebraic(1, fields) => {
                             stack.extend(fields);
-                            (stack, closures) = munpair(stack, closures);
+                            (stack, closures) = munpair3a3a5bInt2c20List5bInt5d5d(stack, closures);
                             locals.push(stack.pop().unwrap());
                             locals.push(stack.pop().unwrap());
                             stack.push(locals[locals.len() - 3].clone());
                             stack.push(locals.last().unwrap().clone());
-                            (stack, closures) = m3E3A3A5BInt5D(stack, closures);
-                            if let Some(a) = stack.pop() {
+                            (stack, closures) = m3e3a3a5bInt5d(stack, closures);
+                            let x = stack.pop();
+                            if let Some(a) = x {
                                 match a {
                                     Algebraic(0, fields) => {
                                         stack.extend(fields);
                                         stack.push(locals[locals.len() - 3].clone());
                                         stack.push(locals.last().unwrap().clone());
-                                        (stack, closures) = m3C3A3A5BInt5D(stack, closures);
-                                        if let Some(a) = stack.pop() {
+                                        (stack, closures) = m3c3a3a5bInt5d(stack, closures);
+                                        let x = stack.pop();
+                                        if let Some(a) = x {
                                             match a {
                                                 Algebraic(0, fields) => {
                                                     stack.extend(fields);
                                                     stack.push(locals[locals.len() - 4].clone());
                                                     stack.push(locals[locals.len() - 2].clone());
                                                     (stack, closures) =
-                                                        m3E3A3A5BList5BInt5D5D(stack, closures);
+                                                        m3e3a3a5bList5bInt5d5d(stack, closures);
                                                 }
                                                 Algebraic(1, fields) => {
                                                     stack.extend(fields);
@@ -3773,8 +4529,8 @@ fn m3E3A3A5BList5BInt5D5D(
                                                 }
                                             };
                                         } else {
-                                            unreachable!()
-                                        };
+                                            panic!("Expected `Some(a)`, but found `{:?}`", x);
+                                        }
                                     }
                                     Algebraic(1, fields) => {
                                         stack.extend(fields);
@@ -3785,8 +4541,8 @@ fn m3E3A3A5BList5BInt5D5D(
                                     }
                                 };
                             } else {
-                                unreachable!()
-                            };
+                                panic!("Expected `Some(a)`, but found `{:?}`", x);
+                            }
                             locals.pop();
                             locals.pop();
                         }
@@ -3795,8 +4551,8 @@ fn m3E3A3A5BList5BInt5D5D(
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
                 locals.pop();
                 locals.pop();
             }
@@ -3805,15 +4561,18 @@ fn m3E3A3A5BList5BInt5D5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn mnot3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn mnot3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3828,63 +4587,82 @@ fn mnot3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Re
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m263A3A5BInt5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m263a3a5bInt5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Int(a)), Some(Int(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Int(a & b));
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(Int(b)) = x {
+            stack.push(Int(a & b));
+        } else {
+            panic!("Expected `Some(Int(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mmap_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mright(stack, closures);
+                (stack, closures) = mright3a3a5bC2c20B5d(stack, closures);
             }
             Algebraic(0, fields) => {
                 stack.extend(fields);
                 stack.push(locals.last().unwrap().clone());
                 (stack, closures) = mcall(stack, closures);
-                (stack, closures) = mleft(stack, closures);
+                (stack, closures) = mleft3a3a5bC2c20B5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mprepend(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mexit(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Int(i)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Int(i)) = x {
         std::process::exit(i as i32);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Int(i))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mreverse(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mhead_tail(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -3893,31 +4671,35 @@ fn mreverse(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
-                (stack, closures) = munpair(stack, closures);
-                (stack, closures) = mreverse(stack, closures);
-                (stack, closures) = mswap(stack, closures);
-                (stack, closures) = msuffix(stack, closures);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                (stack, closures) = mreverse3a3a5bT5d(stack, closures);
+                (stack, closures) = mswap3a3a5bT2c20List5bT5d5d(stack, closures);
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m2D2D3E3A3A5BInt5D(
+#[must_use]
+#[inline]
+fn m2d2d3e3a3a5bInt5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mnot3A3A5BInt5D(stack, closures);
-    (stack, closures) = m7C3A3A5BInt5D(stack, closures);
+    (stack, closures) = mswap3a3a5bInt2c20Int5d(stack, closures);
+    (stack, closures) = mnot3a3a5bInt5d(stack, closures);
+    (stack, closures) = m7c3a3a5bInt5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Aelem3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aelem3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -3925,6 +4707,8 @@ fn m_3A3Aelem3A3Alambda0(
     stack.push(closures.last().unwrap().clone()[0].clone());
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mright(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![stack.pop().unwrap()];
@@ -3932,13 +4716,16 @@ fn mright(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Ve
     stack.push(Algebraic(1, v));
     (stack, closures)
 }
-fn m3D3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3d3a3a5bBool5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
-                (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+                (stack, closures) = mnot3a3a5bBool5d(stack, closures);
             }
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -3948,34 +4735,42 @@ fn m3D3A3A5BBool5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Aswapped3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3aswapped3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
+    (stack, closures) = mswap3a3a5bB2c20A5d(stack, closures);
     (stack, closures)
 }
-fn m3D3A3A5BString5D(
+#[must_use]
+#[inline]
+fn m3d3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Text(a)), Some(Text(b))) = (stack.pop(), stack.pop()) {
-        if a == b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        let x = stack.pop();
+        if let Some(Text(b)) = x {
+            (stack, closures) = convertBool(a == b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Text(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mleft(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![stack.pop().unwrap()];
@@ -3983,34 +4778,48 @@ fn mleft(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
-fn m_3A3Alength3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3alength3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = mdrop3a3a5bT5d(stack, closures);
     stack.push(Int(1));
-    (stack, closures) = m2B3A3A5BInt5D(stack, closures);
+    (stack, closures) = m2b3a3a5bInt5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mprintln(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mprint(stack, closures);
+    (stack, closures) = mprint3a3a5bT5d(stack, closures);
     (stack, closures) = mnewline(stack, closures);
     (stack, closures)
 }
-fn m2D3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m2d3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        stack.push(Float(a - b));
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            stack.push(Float(a - b));
+        } else {
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mkeep(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -4023,18 +4832,23 @@ fn mkeep(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mrights(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    stack.push(Name(m_3A3Arights3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3arights3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_optionally(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optionally3a3a5bEither5bA5d5bB5d2c20B5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mbi(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -4051,81 +4865,102 @@ fn mbi(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<R
     locals.pop();
     (stack, closures)
 }
-fn m3E3A3A5BChar5D(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+#[must_use]
+#[inline]
+fn m3e3a3a5bChar5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Char(a)), Some(Char(b))) = (stack.pop(), stack.pop()) {
-        if a > b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Char(a)) = x {
+        let x = stack.pop();
+        if let Some(Char(b)) = x {
+            (stack, closures) = convertBool(a > b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Char(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Char(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mtan(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.tan()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Ainit_last3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3ainit_last3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mlast(stack, closures);
+    (stack, closures) = mlast3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mread_file(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
         stack.push(Text(std::fs::read_to_string(a).unwrap()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mflip(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = mpair(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
+    (stack, closures) = mswap3a3a5bA2c20B5d(stack, closures);
+    (stack, closures) = mpair3a3a5bB2c20A5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mall2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    (stack, closures) = mzip(stack, closures);
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aall23A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aall23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mall(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mall3a3a5bPair5bA5d5bB5d5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlift_optional_2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
                 locals.push(stack.pop().unwrap());
                 stack.push(locals[locals.len() - 3].clone());
-                if let Some(a) = stack.pop() {
+                let x = stack.pop();
+                if let Some(a) = x {
                     match a {
                         Algebraic(1, fields) => {
                             stack.extend(fields);
@@ -4134,90 +4969,106 @@ fn mlift_optional_2(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Re
                             stack.push(locals.last().unwrap().clone());
                             stack.push(locals[locals.len() - 5].clone());
                             (stack, closures) = mcall(stack, closures);
-                            (stack, closures) = msome(stack, closures);
+                            (stack, closures) = msome3a3a5bC5d(stack, closures);
                             locals.pop();
                         }
                         _ => {
-                            (stack, closures) = mnone(stack, closures);
+                            (stack, closures) = mnone3a3a5bC5d(stack, closures);
                         }
                     };
                 } else {
-                    unreachable!()
-                };
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
                 locals.pop();
             }
             _ => {
-                (stack, closures) = mnone(stack, closures);
+                (stack, closures) = mnone3a3a5bC5d(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn m_3A3Atail_head3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3atail_head3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mhead(stack, closures);
+    (stack, closures) = mhead3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Ahead_tail3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3ahead_tail3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mtail(stack, closures);
+    (stack, closures) = mtail3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mremove_nth(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aremove_nth3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aremove_nth3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_index(stack, closures);
-    (stack, closures) = mconcat(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_index3a3a5bT2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mconcat3a3a5bT5d(stack, closures);
     locals.pop();
     (stack, closures)
 }
-fn m3D3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn m3d3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let (Some(Float(a)), Some(Float(b))) = (stack.pop(), stack.pop()) {
-        if a == b {
-            (stack, closures) = mtrue(stack, closures);
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
+        let x = stack.pop();
+        if let Some(Float(b)) = x {
+            (stack, closures) = convertBool(a == b, stack, closures);
         } else {
-            (stack, closures) = mfalse(stack, closures);
-        };
+            panic!("Expected `Some(Float(b))`, but found `{:?}`", x);
+        }
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mglue(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mprepend(stack, closures);
-    (stack, closures) = mappend(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
     (stack, closures)
 }
-fn mshow3A3A5BEither5BA5D5BB5D5D(
+#[must_use]
+#[inline]
+fn mshow3a3a5bEither5bA5d5bB5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(1, fields) => {
                 stack.extend(fields);
@@ -4230,22 +5081,26 @@ fn mshow3A3A5BEither5BA5D5BB5D5D(
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
-fn m_3A3Alast_init3A3Alambda1(
+#[must_use]
+#[inline]
+fn m_3a3alast_init3a3alambda1(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = minit(stack, closures);
+    (stack, closures) = minit3a3a5bT5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mnot_elem(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = melem(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = melem3a3a5bT5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
 fn main() -> () {
@@ -4254,73 +5109,90 @@ fn main() -> () {
     let mut closures = Vec::new();
     stack.push(Int(15));
     (stack, closures) = mfib(stack, closures);
-    (stack, closures) = mprint(stack, closures);
+    (stack, closures) = mprintln3a3a5bInt5d(stack, closures);
 }
+#[must_use]
+#[inline]
 fn mround(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Float(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(Float(a)) = x {
         stack.push(Float(a.round()));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Float(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfirst(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bB5d(stack, closures);
     (stack, closures)
 }
-fn m3C3A3A5BList5BInt5D5D(
+#[must_use]
+#[inline]
+fn m3c3a3a5bList5bInt5d5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mswap(stack, closures);
-    (stack, closures) = m3E3A3A5BList5BInt5D5D(stack, closures);
+    (stack, closures) = mswap3a3a5bList5bInt5d2c20List5bInt5d5d(stack, closures);
+    (stack, closures) = m3e3a3a5bList5bInt5d5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdrop3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = mdrop(stack, closures);
-    (stack, closures) = mdrop(stack, closures);
-    (stack, closures) = mdrop(stack, closures);
+    (stack, closures) = mdrop3a3a5bC5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bB5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfrom_chars(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
+    let x = stack.pop();
+    if let Some(List(a)) = x {
         stack.push(Text(
             a.iter()
                 .filter_map(|e| if let Char(c) = e { Some(c) } else { None })
                 .collect::<String>(),
         ));
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn massert(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
-    stack.push(Name(m_3A3Aassert3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aassert3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    if let Some(Closure(n, rs)) = stack.pop() {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    let x = stack.pop();
+    if let Some(Closure(n, rs)) = x {
         closures.push(rs);
         (stack, closures) = n(stack, closures);
         closures.pop();
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
-    if let Some(a) = stack.pop() {
+        panic!("Expected `Some(Closure(n, rs))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -4335,12 +5207,14 @@ fn massert(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<V
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
@@ -4348,22 +5222,28 @@ fn mpair(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     stack.push(Algebraic(0, v));
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mnewline(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Text("\n".to_owned()));
-    (stack, closures) = mprint(stack, closures);
+    (stack, closures) = mprint3a3a5bString5d(stack, closures);
     (stack, closures)
 }
-fn m3C3D3A3A5BChar5D(
+#[must_use]
+#[inline]
+fn m3c3d3a3a5bChar5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = m3E3A3A5BChar5D(stack, closures);
-    (stack, closures) = mnot3A3A5BBool5D(stack, closures);
+    (stack, closures) = m3e3a3a5bChar5d(stack, closures);
+    (stack, closures) = mnot3a3a5bBool5d(stack, closures);
     (stack, closures)
 }
-fn m_3A3Afix3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3afix3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
@@ -4372,16 +5252,20 @@ fn m_3A3Afix3A3Alambda0(
     (stack, closures) = mfix(stack, closures);
     (stack, closures)
 }
-fn m_3A3Areduce_right3A3Alambda0(
+#[must_use]
+#[inline]
+fn m_3a3areduce_right3a3alambda0(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = munpair(stack, closures);
+    (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
     stack.push(closures.last().unwrap().clone()[0].clone());
-    (stack, closures) = mfold_right(stack, closures);
+    (stack, closures) = mfold_right3a3a5bT2c20T5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdup3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -4398,88 +5282,96 @@ fn mdup3(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn minsert_nth(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Ainsert_nth3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3ainsert_nth3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_index(stack, closures);
-    (stack, closures) = mconcat(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_index3a3a5bT2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mconcat3a3a5bT5d(stack, closures);
     locals.pop();
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mabort(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     stack.push(Text("abort called".to_owned()));
     (stack, closures) = mfail(stack, closures);
     (stack, closures)
 }
-fn mread3A3A5BDouble5D(
+#[must_use]
+#[inline]
+fn mread3a3a5bDouble5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(Text(a)) = stack.pop() {
-        if let Ok(i) = a.parse() {
-            stack.push(Float(i));
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        (stack, closures) = convertOption(a.parse().ok().map(Float), stack, closures);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mlast(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    if let Some(List(a)) = stack.pop() {
-        if let Some(l) = a.last() {
-            stack.push(l.clone());
-            (stack, closures) = msome(stack, closures);
-        } else {
-            (stack, closures) = mnone(stack, closures);
-        };
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.last().cloned(), stack, closures);
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mset(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals[locals.len() - 2].clone());
     stack.push(locals.last().unwrap().clone());
-    stack.push(Name(m_3A3Aset3A3Alambda0));
-    if let Some(Name(n)) = stack.pop() {
+    stack.push(Name(m_3a3aset3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
         let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
         stack.push(Closure(n, v));
     } else {
-        unreachable!()
-    };
-    (stack, closures) = mmap_index(stack, closures);
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_index3a3a5bT2c20T5d(stack, closures);
     locals.pop();
     locals.pop();
     (stack, closures)
 }
-fn mread3A3A5BString5D(
+#[must_use]
+#[inline]
+fn mread3a3a5bString5d(
     mut stack: Vec<Rep>,
     mut closures: Vec<Vec<Rep>>,
 ) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
-    (stack, closures) = msome(stack, closures);
+    (stack, closures) = msome3a3a5bString5d(stack, closures);
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mdiv_mod(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
@@ -4492,10 +5384,13 @@ fn mdiv_mod(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mfrom_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
-    if let Some(a) = stack.pop() {
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -4506,21 +5401,24 @@ fn mfrom_left(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Ve
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     (stack, closures)
 }
+#[must_use]
+#[inline]
 fn mpad_tail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
     let mut locals: Vec<Rep> = Vec::new();
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     locals.push(stack.pop().unwrap());
     stack.push(locals.last().unwrap().clone());
-    (stack, closures) = mlength(stack, closures);
+    (stack, closures) = mlength3a3a5bT5d(stack, closures);
     stack.push(locals[locals.len() - 2].clone());
-    (stack, closures) = m3C3A3A5BInt5D(stack, closures);
-    if let Some(a) = stack.pop() {
+    (stack, closures) = m3c3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
         match a {
             Algebraic(0, fields) => {
                 stack.extend(fields);
@@ -4531,21 +5429,5407 @@ fn mpad_tail(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec
                 stack.push(locals[locals.len() - 3].clone());
                 stack.push(locals[locals.len() - 2].clone());
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = mlength(stack, closures);
-                (stack, closures) = m2D3A3A5BInt5D(stack, closures);
-                (stack, closures) = mreplicate(stack, closures);
+                (stack, closures) = mlength3a3a5bT5d(stack, closures);
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
                 stack.push(locals.last().unwrap().clone());
-                (stack, closures) = mprepend(stack, closures);
+                (stack, closures) = mprepend3a3a5bT5d(stack, closures);
             }
             _ => {
                 (stack, closures) = mabort(stack, closures);
             }
         };
     } else {
-        unreachable!()
-    };
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
     locals.pop();
     locals.pop();
     locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprepend3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreplicate3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(Int(0));
+    (stack, closures) = m3c3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(Int(1));
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlength3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    stack.push(Name(m_3a3alength3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bInt2c20T5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bString5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_index3a3a5bT2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bT2c20T5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mconcat3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let v = vec![];
+    stack.push(List(v));
+    stack.push(Name(m_3a3aconcat3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_index3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bList5bT5d2c20T5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_right3a3a5bT2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = minit_last3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfold_right3a3a5bT2c20T5d(stack, closures);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bList5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprint3a3a5bString5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mshow3a3a5bString5d(stack, closures);
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        println!("{}", a);
+    } else {
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bC5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bList5bInt5d2c20List5bInt5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprintln3a3a5bInt5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mprint3a3a5bInt5d(stack, closures);
+    (stack, closures) = mnewline(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn melem3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bT2c20List5bT5d5d(stack, closures);
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3aelem3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = many3a3a5bT5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn minit3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_last().map(|(_, i)| List(i.to_vec())),
+            stack,
+            closures,
+        );
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprepend3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mconcat3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let v = vec![];
+    stack.push(List(v));
+    stack.push(Name(m_3a3aconcat3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_index3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bList5bT5d2c20T5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mtail3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_first().map(|(_, t)| List(t.to_vec())),
+            stack,
+            closures,
+        );
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.first().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bC5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bC5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mall3a3a5bPair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtrue(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3aall3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20Pair5bA5d5bB5d5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            let v = vec![];
+                            stack.push(List(v));
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bB2c20A5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlast3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.last().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_optionally3a3a5bEither5bA5d5bB5d2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bEither5bA5d5bB5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bEither5bA5d5bB5d2c20List5bEither5bA5d5bB5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals[locals.len() - 3].clone());
+                            (stack, closures) =
+                                mmap_optionally3a3a5bEither5bA5d5bB5d2c20B5d(stack, closures);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 3].clone());
+                            stack.push(locals[locals.len() - 4].clone());
+                            (stack, closures) =
+                                mmap_optionally3a3a5bEither5bA5d5bB5d2c20B5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mprefix3a3a5bB5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprint3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        println!("{}", a);
+    } else {
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bB2c20A5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bInt2c20Int5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msuffix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreverse3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                (stack, closures) = mreverse3a3a5bT5d(stack, closures);
+                (stack, closures) = mswap3a3a5bT2c20List5bT5d5d(stack, closures);
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bList5bT5d2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mleft3a3a5bC2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mright3a3a5bC2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bInt2c20List5bInt5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bInt5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bInt5d2c20Optional5bInt5d2c20Optional5bList5bInt5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bInt2c20List5bInt5d2c20Pair5bInt5d5bList5bInt5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_in3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mprefix3a3a5bT5d(stack, closures);
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bList5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mtail_head3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3atail_head3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3atail_head3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(stack, closures);
+    stack.push(Name(m_3a3atail_head3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprepend3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn monce3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let v = vec![stack.pop().unwrap()];
+    stack.push(List(v));
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bInt2c20Optional5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bOptional5bT5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bOptional5bT5d2c20List5bOptional5bT5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bOptional5bT5d2c20Int5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bInt5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bList5bT5d2c20List5bInt5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msuffix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreplicate3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(Int(0));
+    (stack, closures) = m3c3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(Int(1));
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bB2c20C5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bC5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bC2c20List5bC5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bC2c20B5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bB5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmin3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                stack.push(locals.last().unwrap().clone());
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bC2c20D5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_concat3a3a5bA2c20C5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mmap3a3a5bC2c20List5bA5d5d(stack, closures);
+    (stack, closures) = mconcat3a3a5bA5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bBool2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bBool2c20T5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msuffix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprint3a3a5bString5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mshow3a3a5bString5d(stack, closures);
+    let x = stack.pop();
+    if let Some(Text(a)) = x {
+        println!("{}", a);
+    } else {
+        panic!("Expected `Some(Text(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_in3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mprefix3a3a5bT5d(stack, closures);
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_right3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = minit_last3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_right3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap23a3a5bA2c20B2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+    stack.push(Name(m_3a3amap23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mcompose(stack, closures);
+    (stack, closures) = mmap3a3a5bPair5bA5d5bB5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bList5bT5d2c20Optional5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bOptional5bT5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bList5bOptional5bT5d5d2c20Optional5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bList5bT5d2c20Optional5bT5d5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprepend3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_left3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_left3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mget_right3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = msome3a3a5bB5d(stack, closures);
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bB5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bPair5bA5d5bB5d2c20C5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bC5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bC2c20List5bC5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bC2c20Pair5bA5d5bB5d5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            let v = vec![];
+                            stack.push(List(v));
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn meach3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = meach3a3a5bT5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals.last().unwrap().clone());
+                            stack.push(locals[locals.len() - 5].clone());
+                            (stack, closures) = mcall(stack, closures);
+                            (stack, closures) =
+                                msome3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) =
+                                mnone3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    (stack, closures) = mcall(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 3].clone());
+    (stack, closures) = mcall(stack, closures);
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals.last().unwrap().clone());
+                            stack.push(locals[locals.len() - 5].clone());
+                            (stack, closures) = mcall(stack, closures);
+                            (stack, closures) =
+                                msome3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) =
+                                mnone3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bPair5bList5bT5d5d5bT5d5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    (stack, closures) = mcall(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 3].clone());
+    (stack, closures) = mcall(stack, closures);
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mconcat3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let v = vec![];
+    stack.push(List(v));
+    stack.push(Name(m_3a3aconcat3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bA2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bList5bT5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20List5bList5bT5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bList5bT5d2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals.last().unwrap().clone());
+                            stack.push(locals[locals.len() - 5].clone());
+                            (stack, closures) = mcall(stack, closures);
+                            (stack, closures) =
+                                msome3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) =
+                                mnone3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    (stack, closures) = mcall(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 3].clone());
+    (stack, closures) = mcall(stack, closures);
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlift_optional_23a3a5bT2c20List5bT5d2c20Pair5bT5d5bList5bT5d5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals.last().unwrap().clone());
+                            stack.push(locals[locals.len() - 5].clone());
+                            (stack, closures) = mcall(stack, closures);
+                            (stack, closures) =
+                                msome3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) =
+                                mnone3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bPair5bT5d5bList5bT5d5d5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mbi3a3a5bList5bT5d2c20Optional5bT5d2c20Optional5bList5bT5d5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    (stack, closures) = mcall(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 3].clone());
+    (stack, closures) = mcall(stack, closures);
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mget3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            (stack, closures) = convertOption(b.get(a as usize).cloned(), stack, closures);
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bInt2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn many3a3a5bPair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtrue(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3aany3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20Pair5bA5d5bB5d5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            let v = vec![];
+                            stack.push(List(v));
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = msome3a3a5bT5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bT5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mtail_head3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3atail_head3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3atail_head3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(stack, closures);
+    stack.push(Name(m_3a3atail_head3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mcartesian_with3a3a5bA2c20B2c20Pair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(Name(m_3a3acartesian_with3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_concat3a3a5bA2c20Pair5bA5d5bB5d5d(stack, closures);
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bList5bT5d2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bList5bT5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bList5bT5d5d2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_in3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mprefix3a3a5bT5d(stack, closures);
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bChar2c20Char5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn m_3a3amap_index3a3ahelper3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bB2c20List5bB5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals[locals.len() - 4].clone());
+                stack.push(Int(1));
+                (stack, closures) = m2b3a3a5bInt5d(stack, closures);
+                (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bB2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mglue3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn meach3a3a5bPair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bPair5bA5d5bB5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bPair5bA5d5bB5d2c20List5bPair5bA5d5bB5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = meach3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            let v = vec![];
+                            stack.push(List(v));
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn minit3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_last().map(|(_, i)| List(i.to_vec())),
+            stack,
+            closures,
+        );
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msome3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mbi3a3a5bList5bT5d2c20List5bT5d2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    (stack, closures) = mcall(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 3].clone());
+    (stack, closures) = mcall(stack, closures);
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bList5bT5d2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bList5bT5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bList5bT5d5d2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprepend3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mswap3a3a5bList5bT5d2c20List5bT5d5d(stack, closures);
+    (stack, closures) = mappend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreplicate3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(Int(0));
+    (stack, closures) = m3c3d3a3a5bInt5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(Int(1));
+                (stack, closures) = m2d3a3a5bInt5d(stack, closures);
+                (stack, closures) = mreplicate3a3a5bT5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                (stack, closures) = msuffix3a3a5bT5d(stack, closures);
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlength3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    stack.push(Name(m_3a3alength3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bInt2c20T5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlast3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.last().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.first().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mtail3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(
+            a.split_first().map(|(_, t)| List(t.to_vec())),
+            stack,
+            closures,
+        );
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bPair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bPair5bA5d5bB5d5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bPair5bA5d5bB5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfirst3a3a5bB2c20List5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = munpair3a3a5bB2c20List5bB5d5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bList5bB5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfirst3a3a5bA2c20List5bA5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bList5bA5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mhead_tail3a3a5bB5d(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            let v = vec![];
+                            stack.push(List(v));
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = msecond3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = msecond3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mfirst3a3a5bA2c20List5bA5d5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mfirst3a3a5bB2c20List5bB5d5d(stack, closures);
+                            (stack, closures) = mpair3a3a5bA2c20B5d(stack, closures);
+                            (stack, closures) = mprefix3a3a5bPair5bA5d5bB5d5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msecond3a3a5bB2c20List5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = munpair3a3a5bB2c20List5bB5d5d(stack, closures);
+    (stack, closures) = mswap3a3a5bB2c20List5bB5d5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bB5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn msecond3a3a5bA2c20List5bA5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
+    (stack, closures) = mswap3a3a5bA2c20List5bA5d5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bB5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bB5d2c20Optional5bB5d2c20Optional5bList5bB5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bB2c20List5bB5d2c20Pair5bB5d5bList5bB5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bA5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bA5d2c20Optional5bA5d2c20Optional5bList5bA5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bA2c20List5bA5d2c20Pair5bA5d5bList5bA5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bBool5d2c20Bool5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bBool2c20Bool5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bBool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5b28R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c2028R2e2e2e202d3eR2e2e2e2c20Bool202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mright3a3a5bA2c20C5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(1, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mleft3a3a5bA2c20C5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bT2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bT2c20T5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bList5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bDouble2c20Double5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_left3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_left3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_optionally3a3a5bEither5bA5d5bB5d2c20A5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bEither5bA5d5bB5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bEither5bA5d5bB5d2c20List5bEither5bA5d5bB5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals[locals.len() - 3].clone());
+                            (stack, closures) =
+                                mmap_optionally3a3a5bEither5bA5d5bB5d2c20A5d(stack, closures);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 3].clone());
+                            stack.push(locals[locals.len() - 4].clone());
+                            (stack, closures) =
+                                mmap_optionally3a3a5bEither5bA5d5bB5d2c20A5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bB5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bB5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_optionally3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bA2c20List5bA5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            stack.push(locals[locals.len() - 3].clone());
+                            (stack, closures) = mmap_optionally3a3a5bA2c20B5d(stack, closures);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            locals.push(stack.pop().unwrap());
+                            stack.push(locals[locals.len() - 3].clone());
+                            stack.push(locals[locals.len() - 4].clone());
+                            (stack, closures) = mmap_optionally3a3a5bA2c20B5d(stack, closures);
+                            stack.push(locals.last().unwrap().clone());
+                            (stack, closures) = mprefix3a3a5bB5d(stack, closures);
+                            locals.pop();
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20List5bA5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bA5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bA5d2c20Optional5bA5d2c20Optional5bList5bA5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bA2c20List5bA5d2c20Pair5bA5d5bList5bA5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mset3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3aset3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_index3a3a5bT2c20T5d(stack, closures);
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mget3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(Int(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            (stack, closures) = convertOption(b.get(a as usize).cloned(), stack, closures);
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(Int(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bB5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bB5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bB5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bA5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bA5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munzip3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mhead_tail3a3a5bPair5bA5d5bB5d5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) =
+                    munpair3a3a5bPair5bA5d5bB5d2c20List5bPair5bA5d5bB5d5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                (stack, closures) = munpair3a3a5bA2c20B5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = munzip3a3a5bA2c20B5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mprefix3a3a5bB5d(stack, closures);
+                locals.pop();
+                locals.pop();
+                locals.pop();
+                locals.pop();
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bPair5bA5d5bB5d2c20List5bPair5bA5d5bB5d5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bPair5bA5d5bB5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mbi3a3a5bList5bPair5bA5d5bB5d5d2c20Optional5bPair5bA5d5bB5d5d2c20Optional5bList5bPair5bA5d5bB5d5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mlift_optional_23a3a5b20Pair5bA5d5bB5da2c20List5bPair5bA5d5bB5d5da2c20Pair5bPair5bA5d5bB5d5d5bList5bPair5bA5d5bB5d5d5d205d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bList5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn monce3a3a5bChar5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let v = vec![stack.pop().unwrap()];
+    stack.push(List(v));
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mpair3a3a5bList5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![stack.pop().unwrap(), stack.pop().unwrap()];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bB2c20A5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bString2c20String5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mrights3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3arights3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optionally3a3a5bEither5bA5d5bB5d2c20B5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlefts3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3alefts3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optionally3a3a5bEither5bA5d5bB5d2c20A5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn many3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtrue(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3aany3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bBool2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bT2c20List5bT5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bInt2c20Int5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_right3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = minit_last3a3a5bA5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bA5d2c20A5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfold_right3a3a5bA2c20B5d(stack, closures);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bList5bA5d2c20A5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn minit_last3a3a5bA5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ainit_last3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ainit_last3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bA5d2c20Optional5bList5bA5d5d2c20Optional5bA5d5d(stack, closures);
+    stack.push(Name(m_3a3ainit_last3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bA5d2c20A2c20Pair5bList5bA5d5d5bA5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bBool2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bBool2c20T5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_out3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3afilter_out3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mappend3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        let x = stack.pop();
+        if let Some(List(b)) = x {
+            let mut new_vec = b.clone();
+            new_vec.extend(a.into_iter());
+            stack.push(List(new_vec));
+        } else {
+            panic!("Expected `Some(List(b))`, but found `{:?}`", x);
+        }
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn monce3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let v = vec![stack.pop().unwrap()];
+    stack.push(List(v));
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mget_left3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                (stack, closures) = msome3a3a5bA5d(stack, closures);
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bA5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop3a3a5bA5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let _ = stack.pop().unwrap();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = msome3a3a5bT5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mnone3a3a5bT5d(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn minit_last3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ainit_last3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ainit_last3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bT5d2c20Optional5bList5bT5d5d2c20Optional5bT5d5d(stack, closures);
+    stack.push(Name(m_3a3ainit_last3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bT5d2c20T2c20Pair5bList5bT5d5d5bT5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmax3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(locals[locals.len() - 2].clone());
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                stack.push(locals.last().unwrap().clone());
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_left3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_left3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bA2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bT2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead3a3a5bChar5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.first().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mnone3a3a5bChar5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let mut v = vec![];
+    v.reverse();
+    stack.push(Algebraic(0, v));
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlength3a3a5bChar5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    stack.push(Name(m_3a3alength3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bInt2c20Char5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bInt2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bInt2c20T5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5b28R2e2e2e2c20A2c20B202d3eS2e2e2e202bP292c2028R2e2e2e2c20B2c20A202d3eR2e2e2e2c20A2c20B202bP295d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_right3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = minit_last3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_right3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bA2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bT2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap3a3a5bA2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mmap3a3a5bT2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20List5bA5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bA5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bA5d2c20Optional5bA5d2c20Optional5bList5bA5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bA2c20List5bA5d2c20Pair5bA5d5bList5bA5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_out3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3afilter_out3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bInt2c20List5bInt5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bInt5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bInt5d2c20Optional5bInt5d2c20Optional5bList5bInt5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bInt2c20List5bInt5d2c20Pair5bInt5d5bList5bInt5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mlength3a3a5bInt5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Int(0));
+    stack.push(Name(m_3a3alength3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mfold_left3a3a5bInt2c20Int5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(List(a)) = x {
+        (stack, closures) = convertOption(a.first().cloned(), stack, closures);
+    } else {
+        panic!("Expected `Some(List(a))`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfilter_in3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bT5d2c20T5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mfilter_in3a3a5bT5d(stack, closures);
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                let x = stack.pop();
+                if let Some(a) = x {
+                    match a {
+                        Algebraic(0, fields) => {
+                            stack.extend(fields);
+                        }
+                        Algebraic(1, fields) => {
+                            stack.extend(fields);
+                            stack.push(locals[locals.len() - 2].clone());
+                            (stack, closures) = mprefix3a3a5bT5d(stack, closures);
+                        }
+                        _ => {
+                            (stack, closures) = mabort(stack, closures);
+                        }
+                    };
+                } else {
+                    panic!("Expected `Some(a)`, but found `{:?}`", x);
+                }
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mprefix3a3a5bT5d(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = monce3a3a5bT5d(stack, closures);
+    (stack, closures) = mprepend3a3a5bT5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn m_3a3amap_index3a3ahelper3a3a5bA2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mhead_tail3a3a5bT5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                let v = vec![];
+                stack.push(List(v));
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bT2c20List5bT5d5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 2].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals[locals.len() - 4].clone());
+                stack.push(Int(1));
+                (stack, closures) = m2b3a3a5bInt5d(stack, closures);
+                (stack, closures) = m_3a3amap_index3a3ahelper3a3a5bT2c20A5d(stack, closures);
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                stack.push(locals[locals.len() - 3].clone());
+                (stack, closures) = mcall(stack, closures);
+                (stack, closures) = mprefix3a3a5bA5d(stack, closures);
+                locals.pop();
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bA2c20List5bA5d5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mhead_tail3a3a5bA5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3ahead_tail3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3ahead_tail3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bA5d2c20Optional5bA5d2c20Optional5bList5bA5d5d5d(stack, closures);
+    stack.push(Name(m_3a3ahead_tail3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bA2c20List5bA5d2c20Pair5bA5d5bList5bA5d5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mreduce_left3a3a5bT5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mtail_head3a3a5bT5d(stack, closures);
+    stack.push(locals.last().unwrap().clone());
+    stack.push(Name(m_3a3areduce_left3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![stack.pop().unwrap()];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) = mmap_optional3a3a5bPair5bList5bT5d5d5bT5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mmap23a3a5bA2c20B2c20T5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    (stack, closures) = mzip3a3a5bA2c20B5d(stack, closures);
+    stack.push(Name(m_3a3amap23a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mcompose(stack, closures);
+    (stack, closures) = mmap3a3a5bPair5bA5d5bB5d2c20T5d(stack, closures);
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mswap3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals[locals.len() - 2].clone());
+    stack.push(locals.last().unwrap().clone());
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bB5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bB5d2c20B5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bA2c20B5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn munpair3a3a5bList5bB5d2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mtail_head3a3a5bB5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    stack.push(Name(m_3a3atail_head3a3alambda0));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    stack.push(Name(m_3a3atail_head3a3alambda1));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mbi3a3a5bList5bB5d2c20Optional5bList5bB5d5d2c20Optional5bB5d5d(stack, closures);
+    stack.push(Name(m_3a3atail_head3a3alambda2));
+    let x = stack.pop();
+    if let Some(Name(n)) = x {
+        let v = vec![];
+        stack.push(Closure(n, v));
+    } else {
+        panic!("Expected `Some(Name(n))`, but found `{:?}`", x);
+    }
+    (stack, closures) =
+        mlift_optional_23a3a5bList5bB5d2c20B2c20Pair5bList5bB5d5d5bB5d5d(stack, closures);
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mfold_left3a3a5bBool2c20Bool5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    locals.push(stack.pop().unwrap());
+    stack.push(locals.last().unwrap().clone());
+    (stack, closures) = mtail_head3a3a5bBool5d(stack, closures);
+    let x = stack.pop();
+    if let Some(a) = x {
+        match a {
+            Algebraic(0, fields) => {
+                stack.extend(fields);
+                stack.push(locals[locals.len() - 2].clone());
+            }
+            Algebraic(1, fields) => {
+                stack.extend(fields);
+                (stack, closures) = munpair3a3a5bList5bBool5d2c20Bool5d(stack, closures);
+                locals.push(stack.pop().unwrap());
+                stack.push(locals[locals.len() - 3].clone());
+                stack.push(locals.last().unwrap().clone());
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mcall(stack, closures);
+                stack.push(locals[locals.len() - 4].clone());
+                (stack, closures) = mfold_left3a3a5bBool2c20Bool5d(stack, closures);
+                locals.pop();
+            }
+            _ => {
+                (stack, closures) = mabort(stack, closures);
+            }
+        };
+    } else {
+        panic!("Expected `Some(a)`, but found `{:?}`", x);
+    }
+    locals.pop();
+    locals.pop();
+    locals.pop();
+    (stack, closures)
+}
+#[must_use]
+#[inline]
+fn mdrop23a3a5bA2c20B5d(
+    mut stack: Vec<Rep>,
+    mut closures: Vec<Vec<Rep>>,
+) -> (Vec<Rep>, Vec<Vec<Rep>>) {
+    let mut locals: Vec<Rep> = Vec::new();
+    (stack, closures) = mdrop3a3a5bB5d(stack, closures);
+    (stack, closures) = mdrop3a3a5bA5d(stack, closures);
     (stack, closures)
 }

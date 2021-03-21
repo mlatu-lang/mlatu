@@ -42,7 +42,7 @@ instanceCheck _ aScheme _ bScheme = do
   let envTypes = Map.elems (view TypeEnv.tvs tenv0)
   success <- attempt $ subsumptionCheck tenv0 aType bType
   unless success failure
-  let escaped = Set.unions $ map (Free.tvs tenv0) (aScheme : bScheme : envTypes)
+  let escaped = Set.unions $ fmap (Free.tvs tenv0) (aScheme : bScheme : envTypes)
   -- Free.tvs tenv0 aScheme `Set.union` Free.tvs tenv0 bScheme
   let bad = Set.filter (`Set.member` escaped) ids
   unless (Set.null bad) failure
@@ -62,12 +62,12 @@ skolemize tenv0 t = case t of
         (TypeConstant origin $ Var name c k)
         t'
     (c', t'') <- skolemize tenv0 substituted
-    return (Set.insert c c', t'')
+    pure (Set.insert c c', t'')
   -- TForall _ t' -> skolemize tenv0 t'
   TypeConstructor origin "Fun" :@ a :@ b :@ e -> do
     (ids, b') <- skolemize tenv0 b
-    return (ids, Type.fun origin a b' e)
-  _nonQuantified -> return (Set.empty, t)
+    pure (ids, Type.fun origin a b' e)
+  _nonQuantified -> pure (Set.empty, t)
 
 -- | Subsumption checking is largely the same as unification, accounting for
 -- function type variance: if @(a -> b) <: (c -> d)@ then @b <: d@ (covariant)
@@ -94,7 +94,7 @@ subsumptionCheckFun tenv0 a b e a' b' e' = do
   forM_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
     Just {} -> pass
     Nothing -> report $ Report.makeError $ Report.MissingPermissionLabel e e' origin label
-  return tenv2
+  pure tenv2
   where
     permissionList :: Type -> [(Origin, Constructor)]
     permissionList (TypeConstructor _ "Join" :@ TypeConstructor origin label :@ es) =

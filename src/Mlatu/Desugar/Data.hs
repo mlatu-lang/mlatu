@@ -75,11 +75,10 @@ desugarConstructor definition index constructor =
         ( Signature.Variable (QualifiedName $ view TypeDefinition.name definition) $
            view  TypeDefinition.origin definition
         )
-        $ map
-          ( \(Parameter parameterOrigin parameter _kind _) ->
+        $ ( \(Parameter parameterOrigin parameter _kind _) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
-          $ view TypeDefinition.parameters definition
+          <$> view TypeDefinition.parameters definition
     constructorSignature =
       Signature.Quantified (view TypeDefinition.parameters definition)
         ( Signature.Function

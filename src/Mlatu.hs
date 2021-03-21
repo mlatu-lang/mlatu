@@ -50,7 +50,7 @@ compile ::
 compile mainPermissions mainName paths mDict = do
   -- Source files must be encoded in UTF-8.
 
-  sources <- liftIO $ mapM (fmap decodeUtf8 . readFileBS) paths
+  sources <- liftIO $ traverse (fmap decodeUtf8 . readFileBS) paths
   parsed <-
     mconcat
       <$> zipWithM
@@ -67,13 +67,13 @@ compilePrelude prelude mainPermissions mainName = do
       <$> zipWithM
         (Enter.fragmentFromSource mainPermissions mainName 1)
         preludePaths
-        (map decodeUtf8 preludeSources)
+        (fmap decodeUtf8 preludeSources)
   -- dictionary <-
   Enter.fragment parsed Dictionary.empty
   where
     (preludePaths, preludeSources) = case prelude of
       Foundation -> ([fst foundation], [snd foundation])
-      Common -> (fst foundation : map fst common, snd foundation : map snd common)
+      Common -> (fst foundation : fmap fst common, snd foundation : fmap snd common)
 
 data Prelude
   = Foundation

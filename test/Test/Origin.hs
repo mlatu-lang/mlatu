@@ -91,7 +91,7 @@ testOrigin :: [Text] -> Expectation
 testOrigin test =
   let (input, origins) = deinterleave test
    in fmap
-        (map Located.origin)
+         (fmap  Located.origin)
         ( runIdentity $
             runMlatuExceptT $
               tokenize 1 "test" $

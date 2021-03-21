@@ -155,7 +155,7 @@ human (Report _ kind) = kindMsg kind
             "but",
             pretty (length args),
             "were provided:",
-            list $ map (dquotes . printType) args
+            list $ fmap (dquotes . printType) args
           ]
       (CannotResolveName origin category name) ->
         hsep
@@ -181,7 +181,7 @@ human (Report _ kind) = kindMsg kind
               dquotes $ printQualified name,
               parens "did you mean to declare it as a trait?"
             ] :
-          map
+          fmap
             ( \duplicateOrigin ->
                 hsep
                   ["also defined at", printOrigin duplicateOrigin]
@@ -252,7 +252,7 @@ human (Report _ kind) = kindMsg kind
             dquotes $ printQualified instead,
             " from the common library instead of what you have here"
           ]
-      (Chain reports) -> vsep $ map kindMsg reports
+      (Chain reports) -> vsep $ fmap kindMsg reports
       (OccursCheckFailure a b) ->
         vsep
           [ hsep
@@ -285,7 +285,7 @@ human (Report _ kind) = kindMsg kind
           (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
       (Context context message) ->
         vsep $
-          map
+          fmap
             (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
             context
             ++ [human message]
@@ -316,15 +316,15 @@ parseError parsecError = Report Error (ParseError origin unexpected' expected')
         ( "expected" :
           punctuate
             comma
-            ( map pretty $
+            ( fmap pretty $
                 ordNub $
                   filter (not . null) $ -- TODO: Replace with "end of input"
-                    map Parsec.messageString expected
+                    fmap Parsec.messageString expected
             )
         )
 
 unexpectedMessages :: [Parsec.Message] -> [Doc ()]
-unexpectedMessages = map unexpectedMessage . ordNub
+unexpectedMessages = fmap unexpectedMessage . ordNub
 
 unexpectedMessage :: Parsec.Message -> Doc ()
 unexpectedMessage message =

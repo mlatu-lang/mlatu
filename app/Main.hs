@@ -15,7 +15,8 @@ import Mlatu.Codegen qualified as Codegen
 import Report (reportAll)
 import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
-import System.Process.Typed (runProcess_, readProcess_, proc)
+import System.Process.Typed (runProcess_, proc)
+import Text.Printf (printf)
 
 main :: IO ()
 main = do
@@ -71,7 +72,7 @@ checkFiles prelude relativePaths = do
         compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
-    Right _ -> putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\n---"
+    Right _ -> reportTime [("generate the IR from the source", t1)]
 
 runFiles :: Prelude -> [FilePath] -> IO ()
 runFiles prelude relativePaths = do
@@ -85,29 +86,40 @@ runFiles prelude relativePaths = do
     Left reports -> handleReports reports
     Right program -> do
       (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
-      putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\nTime taken to interpret files: " <> show t2 <> "\n---"
+     
+      reportTime [("generate the IR from the source", t1), ("interpet the IR", t2)]
 
 compileFiles :: Prelude -> [FilePath] -> IO ()
 compileFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  result <- runExceptT $ runMlatu $ do
+  (result, t1) <- timed $ runExceptT $ runMlatu $ do
     commonDictionary <- compilePrelude prelude mainPermissions Nothing
     compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right program -> do
       let filename = "output.rs"
-      text <- Codegen.generate program
-      writeFile filename $ toString text
+      (text, t2) <- timed $ Codegen.generate program
+      (_, t3) <- timed $ writeFile filename $ toString text
       runProcess_ $ proc "rustfmt" [filename]
-      (err, out) <- readProcess_ (proc "rustc" [filename])
-      print out
-      print err 
+      (_, t4) <- timed $ runProcess_ $ proc "rustc" [filename]
       --removeFile filename
+
+      reportTime [("generate the IR from the source", t1), ("generate Rust from the IR", t2), ("write Rust to a file", t3), ("compile the Rust file", t4)]
 
 timed :: IO a -> IO (a, NominalDiffTime)
 timed comp = do
   t1 <- getCurrentTime
   result <- comp
   t2 <- getCurrentTime
-  return (result, diffUTCTime t2 t1)
+  pure (result, diffUTCTime t2 t1)
+
+reportTime :: [(String, NominalDiffTime)] -> IO ()
+reportTime times = putStrLn ("\n---" <> concatMap report times <> printf "\nTotal time: %.4f seconds\n---" whole) where 
+      whole :: Double
+      whole = sum  (fmap  (realToFrac . snd) times)
+
+      report :: (String, NominalDiffTime) -> String
+      report (text, time) = printf "\nTime taken to %s: %.4f seconds, %.2f%% of total time" text fracTime (100.0 * (fracTime / whole)) where 
+        fracTime :: Double 
+        fracTime = realToFrac time

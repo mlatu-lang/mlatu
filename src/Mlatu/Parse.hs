@@ -95,7 +95,7 @@ fragment line path mainPermissions mainName tokens =
         Left parseError -> do
           report $ Report.parseError parseError
           halt
-        Right result -> return (Data.desugar (insertMain result))
+        Right result -> pure (Data.desugar (insertMain result))
   where
     isMain = (fromMaybe Definition.mainName mainName ==) . view Definition.name
     insertMain f = case find isMain $  view Fragment.definitions f of
@@ -116,7 +116,7 @@ generalName line path text = do
     Left parseError -> do
       report $ Report.parseError parseError
       halt
-    Right (name, _) -> return name
+    Right (name, _) -> pure name
 
 fragmentParser ::
   [GeneralName] -> Maybe Qualified -> Parser (Fragment ())
@@ -151,7 +151,7 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
                 Just index -> case splitAt index defs of
                   (a, existing : b) ->
                     a
-                      ++ over Definition.body (\prev -> composeUnderLambda prev x) existing :
+                      ++ over Definition.body (`composeUnderLambda` x) existing :
                     b
                   _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
                 Nothing ->
@@ -190,7 +190,7 @@ vocabularyParser = (<?> "vocabulary definition") $ do
       do
         es <- blockedParser elementsParser
         Parsec.putState original
-        return es
+        pure es
     ]
 
 blockedParser :: Parser a -> Parser a
@@ -228,7 +228,7 @@ nameParser = (<?> "name") $ do
         (,) Operator.Infix <$> operatorNameParser
       ]
       `Parsec.sepBy1` parserMatch Token.VocabLookup
-  return $ case parts of
+  pure $ case parts of
     [(fixity, unqualified)] ->
       ( ( if global
             then QualifiedName . Qualified Vocabulary.global
@@ -238,7 +238,7 @@ nameParser = (<?> "name") $ do
         fixity
       )
     _list ->
-      let parts' = map ((\(Unqualified part) -> part) . snd) parts
+      let parts' = fmap ((\(Unqualified part) -> part) . snd) parts
           qualifier = Unsafe.fromJust (viaNonEmpty init parts')
           (fixity, unqualified) = Unsafe.fromJust (viaNonEmpty last parts)
        in ( QualifiedName
@@ -271,7 +271,7 @@ operatorNameParser = (<?> "operator name") $ do
   rest <- parseOne $ \token -> case Located.item token of
     Token.Operator (Unqualified name) -> Just name
     _nonUnqualifiedOperator -> Nothing
-  return $ Unqualified $ Text.concat $ angles ++ [rest]
+  pure $ Unqualified $ Text.concat $ angles ++ [rest]
 
 parseOne :: (Located Token -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
@@ -320,7 +320,7 @@ metadataParser = (<?> "metadata block") $ do
         (,)
           <$> (wordNameParser <?> "metadata key identifier")
           <*> (blockParser <?> "metadata value block")
-  return
+  pure
     Metadata
       { Metadata._fields = HashMap.fromList fields,
         Metadata._name = QualifiedName name,
@@ -336,7 +336,7 @@ typeDefinitionParser = (<?> "type definition") $ do
     Operator.Postfix -> pass
   parameters <- Parsec.option [] quantifierParser
   constructors <- blockedParser $ many constructorParser
-  return
+  pure
     TypeDefinition
       { TypeDefinition._constructors = constructors,
         TypeDefinition._name = name,
@@ -352,7 +352,7 @@ constructorParser = (<?> "constructor definition") $ do
     (<?> "constructor fields") $
       Parsec.option [] $
         groupedParser constructorFieldsParser
-  return
+  pure
     DataConstructor
       { DataConstructor._fields = fields,
         DataConstructor._name = name,
@@ -373,7 +373,7 @@ functionTypeParser = (<?> "function type") $ do
         arrowSignature
       ]
   perms <- permissions
-  return (effect perms origin)
+  pure (effect perms origin)
   where
     stackSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
     stackSignature = (<?> "stack function type") $ do
@@ -382,7 +382,7 @@ functionTypeParser = (<?> "function type") $ do
       origin <- arrow
       rightparameter <- UnqualifiedName <$> stack
       rightTypes <- Parsec.option [] (commaParser *> right)
-      return
+      pure
         ( Signature.StackFunction
             (Signature.Variable leftparameter origin)
             leftTypes
@@ -399,7 +399,7 @@ functionTypeParser = (<?> "function type") $ do
       leftTypes <- left
       origin <- arrow
       rightTypes <- right
-      return (Signature.Function leftTypes rightTypes, origin)
+      pure (Signature.Function leftTypes rightTypes, origin)
 
     permissions :: Parser [GeneralName]
     permissions =
@@ -426,7 +426,7 @@ basicTypeParser = (<?> "basic type") $ do
           (name, fixity) <- nameParser
           -- Must be a word, not an operator, but may be qualified.
           guard $ fixity == Operator.Postfix
-          return $ Signature.Variable name origin,
+          pure $ Signature.Variable name origin,
         groupedParser typeParser
       ]
   let apply a b = Signature.Application a b $ Signature.origin prefix
@@ -434,7 +434,7 @@ basicTypeParser = (<?> "basic type") $ do
     Parsec.optionMaybe $
       fmap concat $
         Parsec.many1 $ typeListParser basicTypeParser
-  return $ case mSuffix of
+  pure $ case mSuffix of
     Just suffix -> foldl' apply prefix suffix
     Nothing -> prefix
 
@@ -483,7 +483,7 @@ declarationParser keyword category = do
   suffix <- unqualifiedNameParser <?> "declaration name"
   name <- Qualified <$> Parsec.getState <*> pure suffix
   sig <- signatureParser <?> "declaration signature"
-  return
+  pure
     Declaration
       { Declaration._category = category,
         Declaration._name = name,
@@ -514,7 +514,7 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
   name <- case suffix of
     QualifiedName qualified@(Qualified (Qualifier root parts) unqualified) ->
       case root of
-        -- Fully qualified name: return it as-is.
+        -- Fully qualified name: pure it as-is.
         Absolute -> pure qualified
         -- Partially qualified name: add current vocab prefix to qualifier.
         Relative -> do
@@ -523,7 +523,7 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
     -- Unqualified name: use current vocab prefix as qualifier.
     UnqualifiedName unqualified ->
       Qualified <$> Parsec.getState <*> pure unqualified
-    LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only return qualified or unqualified name"
+    LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only pure qualified or unqualified name"
   pure (name, fixity)
 
 definitionParser :: Token -> Category -> Parser (Definition ())
@@ -532,7 +532,7 @@ definitionParser keyword category = do
   (name, fixity) <- qualifiedNameParser <?> "definition name"
   sig <- signatureParser
   body <- blockLikeParser <?> "definition body"
-  return
+  pure
     Definition
       { Definition._body = body,
         Definition._category = category,
@@ -577,7 +577,7 @@ blockContentsParser = do
   let origin' = case terms of
         x : _ -> Term.origin x
         _emptyList -> origin
-  return $ foldr (Compose ()) (Term.identityCoercion () origin') terms
+  pure $ foldr (Compose ()) (Term.identityCoercion () origin') terms
 
 termParser :: Parser (Term ())
 termParser = (<?> "expression") $ do
@@ -586,7 +586,7 @@ termParser = (<?> "expression") $ do
     [ Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
       do
         (name, fixity) <- nameParser
-        return (Word () fixity name [] origin),
+        pure (Word () fixity name [] origin),
       Parsec.try sectionParser,
       Parsec.try groupParser <?> "parenthesized expression",
       vectorParser,
@@ -629,8 +629,8 @@ sectionParser =
               [ do
                   operandOrigin <- getTokenOrigin
                   operand <- Parsec.many1 termParser
-                  return $ compose () operandOrigin $ operand ++ [call],
-                return call
+                  pure $ compose () operandOrigin $ operand ++ [call],
+                pure call
               ],
           do
             operandOrigin <- getTokenOrigin
@@ -639,7 +639,7 @@ sectionParser =
                 Parsec.notFollowedBy operatorNameParser *> termParser
             origin <- getTokenOrigin
             function <- operatorNameParser
-            return $
+            pure $
               compose () operandOrigin $
                 operand
                   ++ [ Word
@@ -659,9 +659,9 @@ vectorParser = (<?> "vector literal") $ do
     bracketedParser $
       (compose () vectorOrigin <$> Parsec.many1 termParser)
         `Parsec.sepEndBy` commaParser
-  return $
+  pure $
     compose () vectorOrigin $
-      map Group es
+      fmap Group es
         ++ [NewVector () (length es) () vectorOrigin]
 
 lambdaParser :: Parser (Term ())
@@ -671,11 +671,11 @@ lambdaParser = (<?> "parameteriable introduction") $ do
     [ parserMatchOperator ";" *> do
         origin <- getTokenOrigin
         body <- blockContentsParser
-        return $ makeLambda names body origin,
+        pure $ makeLambda names body origin,
       do
         origin <- getTokenOrigin
         body <- blockParser
-        return $ Push () (Quotation $ makeLambda names body origin) origin
+        pure $ Push () (Quotation $ makeLambda names body origin) origin
     ]
 
 matchParser :: Parser (Term ())
@@ -691,18 +691,18 @@ matchParser = (<?> "match") $ do
             origin <- getTokenOrigin
             (name, _) <- nameParser
             body <- blockLikeParser
-            return $ Case name body origin
+            pure $ Case name body origin
     mElse' <- Parsec.optionMaybe $ do
       origin <- getTokenOrigin <* parserMatch Token.Else
       body <- blockParser
-      return $ Else body origin
-    return $
+      pure $ Else body origin
+    pure $
       (,) cases' $
         fromMaybe
           (DefaultElse () matchOrigin)
           mElse'
   let match = Match AnyMatch () cases else_ matchOrigin
-  return $ case mScrutinee of
+  pure $ case mScrutinee of
     Just scrutinee -> compose () scrutineeOrigin [scrutinee, match]
     Nothing -> match
 
@@ -714,7 +714,7 @@ ifParser = (<?> "if-else expression") $ do
   elseBody <-
     Parsec.option (Term.identityCoercion () ifOrigin) $
       parserMatch Token.Else *> blockParser
-  return $
+  pure $
     compose
       ()
       ifOrigin
@@ -737,7 +737,7 @@ doParser = (<?> "do expression") $ do
     -- do (f) { x y z } => { x y z } f
     [ do
         body <- blockLikeParser
-        return $
+        pure $
           compose
             ()
             doOrigin
@@ -745,7 +745,7 @@ doParser = (<?> "do expression") $ do
       -- do (f) [x, y, z] => [x, y, z] f
       do
         body <- vectorParser
-        return $ compose () doOrigin [body, term]
+        pure $ compose () doOrigin [body, term]
     ]
 
 blockValue :: Parser (Value ())
@@ -755,14 +755,14 @@ asParser :: Parser (Term ())
 asParser = (<?> "'as' expression") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.As
   signatures <- groupedParser $ basicTypeParser `Parsec.sepEndBy` commaParser
-  return $ Term.asCoercion () origin signatures
+  pure $ Term.asCoercion () origin signatures
 
 -- A 'with' term is parsed as a coercion followed by a call.
 withParser :: Parser (Term ())
 withParser = (<?> "'with' expression") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.With
   permits <- groupedParser $ Parsec.many1 permitParser
-  return $
+  pure $
     Term.compose
       ()
       origin
@@ -794,7 +794,7 @@ lambdaName :: Parser (Maybe Unqualified, Origin)
 lambdaName = do
   origin <- getTokenOrigin
   name <- Just <$> wordNameParser <|> Nothing <$ parserMatch Token.Ignore
-  return (name, origin)
+  pure (name, origin)
 
 blockLikeParser :: Parser (Term ())
 blockLikeParser =
@@ -804,7 +804,7 @@ blockLikeParser =
         names <- lambdaNamesParser
         origin <- getTokenOrigin
         body <- blockParser
-        return $ makeLambda names body origin
+        pure $ makeLambda names body origin
     ]
 
 makeLambda :: [(Maybe Unqualified, Origin)] -> Term () -> Origin -> Term ()

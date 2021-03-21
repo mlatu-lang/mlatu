@@ -34,11 +34,11 @@ import Relude hiding (Type)
 -- \"Simple type inference for higher-order stack languages\". For example, the
 -- type of @map@:
 --
--- > map :: ∀ρσαβ. ρ × List α × (σ × α → σ × β) → ρ × List β
+-- > fmap :: ∀ρσαβ. ρ × List α × (σ × α → σ × β) → ρ × List β
 --
 -- Can be regeneralized like so:
 --
--- > map :: ∀ραβ. ρ × List α × (∀σ. σ × α → σ × β) → ρ × List β
+-- > fmap :: ∀ραβ. ρ × List α × (∀σ. σ × α → σ × β) → ρ × List β
 --
 -- In order to correctly regeneralize a type, it needs to contain no
 -- higher-ranked quantifiers.
@@ -48,7 +48,7 @@ regeneralize tenv t =
    in foldr addForall t' $
         foldr
           (deleteBy ((==) `on` fst))
-          (Map.toList (Free.tvks tenv t'))
+           (fmap .toList (Free.tvks tenv t'))
           vars
   where
     addForall :: (TypeId, (Unqualified, Kind)) -> Type -> Type
@@ -65,15 +65,15 @@ regeneralize tenv t =
             a' <- go a
             b' <- go b
             e' <- go e
-            return $ Forall origin (Var name c k) $ Type.fun origin a' b' e'
+            pure $ Forall origin (Var name c k) $ Type.fun origin a' b' e'
       c@(TypeConstructor _ "Prod") :@ a :@ b -> do
         a' <- go a
         b' <- go b
-        return $ c :@ a' :@ b'
+        pure $ c :@ a' :@ b'
       -- FIXME: This should descend into the quantified type.
-      Forall {} -> return t'
+      Forall {} -> pure t'
       a :@ b -> (:@) <$> go a <*> go b
-      _alreadyGeneralized -> return t'
+      _alreadyGeneralized -> pure t'
 
 bottommost :: Type -> Type
 bottommost (TypeConstructor _ "Prod" :@ a :@ _) = bottommost a

@@ -100,7 +100,7 @@ rangedTokenizer parser = do
   begin <- Parsec.getPosition
   result <- parser
   end <- Parsec.getPosition
-  return $ At (Origin.range begin end) result
+  pure $ At (Origin.range begin end) result
 
 blockBegin :: Tokenizer Token
 blockBegin = BlockBegin <$ Parsec.char '{'
@@ -121,7 +121,7 @@ singleQuoteCharacterLiteral :: Tokenizer Token
 singleQuoteCharacterLiteral = do
   mc <- Parsec.between singleQuote singleQuote $ character '\''
   case mc of
-    Just c -> return (Character c)
+    Just c -> pure (Character c)
     Nothing -> Parsec.unexpected "empty character literal"
 
 smartQuoteCharacterLiteral :: Tokenizer Token
@@ -130,7 +130,7 @@ smartQuoteCharacterLiteral = do
     Parsec.between (Parsec.char '\x2018') (Parsec.char '\x2019') $
       nestableCharacter '\x2018' '\x2019'
   case mc of
-    [c] -> return (Character c)
+    [c] -> pure (Character c)
     [] -> Parsec.unexpected "empty character literal"
     _multiLit -> Parsec.unexpected "multi-character literal"
 
@@ -147,7 +147,7 @@ character quote = char <|> escape
           Parsec.unexpected
             "newline in text literal; use an escape, gap, or paragraph instead"
             <?> "character or escape"
-        _ -> return $ Just c
+        _ -> pure $ Just c
 
 escape :: Tokenizer (Maybe Char)
 escape =
@@ -169,7 +169,7 @@ escape =
 symbol :: Tokenizer Char
 symbol =
   Parsec.notFollowedBy special
-    *> Parsec.choice (map Parsec.satisfy [isSymbol, isPunctuation])
+    *> Parsec.choice  (fmap  Parsec.satisfy [isSymbol, isPunctuation])
 
 special :: Tokenizer Char
 special = Parsec.oneOf "\"'(),:[\\]_{}"
@@ -181,7 +181,7 @@ ellipsis :: Tokenizer Token
 ellipsis =
   Parsec.try $
     Ellipsis
-      <$ Parsec.choice (map Parsec.string ["...", "\x2026"])
+      <$ Parsec.choice  (fmap  Parsec.string ["...", "\x2026"])
 
 ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
@@ -190,7 +190,7 @@ vocabLookup :: Tokenizer Token
 vocabLookup =
   Parsec.try $
     VocabLookup
-      <$ Parsec.choice (map Parsec.string ["::", "\x2237"])
+      <$ Parsec.choice  (fmap  Parsec.string ["::", "\x2237"])
 
 colon :: Tokenizer Token
 colon = Colon <$ Parsec.char ':'
@@ -285,7 +285,7 @@ arrow :: Tokenizer Token
 arrow =
   Parsec.try $
     Arrow
-      <$ Parsec.choice (map Parsec.string ["->", "\x2192"])
+      <$ Parsec.choice  (fmap  Parsec.string ["->", "\x2192"])
       <* Parsec.notFollowedBy symbol
 
 angleBegin :: Tokenizer Token
@@ -303,7 +303,7 @@ alphanumeric =
             <$> (letter <|> Parsec.char '_')
             <*> (many . Parsec.choice)
               [letter, Parsec.char '_', Parsec.digit]
-        return $ case name of
+        pure $ case name of
           "about" -> About
           "as" -> As
           "case" -> Case
@@ -402,8 +402,8 @@ paragraph =
       _ <- Parsec.endOfLine <?> "newline before paragraph body"
       (prefix, body) <- untilLeft paragraphLine
       body' <- forM body $ \line -> case Text.stripPrefix prefix line of
-        Just line' -> return line'
-        Nothing | Text.null line -> return ""
+        Just line' -> pure line'
+        Nothing | Text.null line -> pure ""
         _prefix ->
           Parsec.unexpected
             (show $ dquotes $ pretty line)
@@ -413,7 +413,7 @@ paragraph =
                 show $ BS.length (encodeUtf8 prefix),
                 " spaces"
               ]
-      return $ Text.intercalate "\n" body'
+      pure $ Text.intercalate "\n" body'
 
 paragraphLine :: Tokenizer (Either Text Text)
 paragraphLine =
@@ -436,5 +436,5 @@ untilLeft p = go []
     go acc = do
       mx <- p
       case mx of
-        Left a -> return (a, reverse acc)
+        Left a -> pure (a, reverse acc)
         Right b -> go (b : acc)

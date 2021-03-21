@@ -41,13 +41,13 @@ scope = scopeTerm [0]
             ()
             name
             ()
-            (scopeTerm (mapHead next stack) a)
+            (scopeTerm  (fmap Head next stack) a)
             origin
         recur (Match hint _ cases else_ origin) =
           Match
             hint
             ()
-            ( map
+            ( fmap
                 ( \(Case name a caseOrigin) ->
                     Case name (recur a) caseOrigin
                 )
@@ -77,7 +77,7 @@ scope = scopeTerm [0]
     scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
     scopeValue _ value@Name {} = value
-    scopeValue stack (Quotation body) = Capture (map ClosedLocal capturedNames) capturedTerm
+    scopeValue stack (Quotation body) = Capture  (fmap  ClosedLocal capturedNames) capturedTerm
       where
         capturedTerm :: Term ()
         capturedNames :: [LocalIndex]
@@ -106,7 +106,7 @@ runCapture stack =
 
 captureTerm :: Term () -> Captured (Term ())
 captureTerm term = case term of
-  Coercion {} -> return term
+  Coercion {} -> pure term
   Compose _ a b -> Compose () <$> captureTerm a <*> captureTerm b
   Generic {} ->
     ice
@@ -124,44 +124,44 @@ captureTerm term = case term of
           <$> local inside (captureTerm a) <*> pure origin
   Match hint _ cases else_ origin ->
     Match hint ()
-      <$> mapM captureCase cases <*> captureElse else_ <*> pure origin
+      <$> traverse captureCase cases <*> captureElse else_ <*> pure origin
     where
       captureCase :: Case () -> Captured (Case ())
       captureCase (Case name a caseOrigin) =
         Case name <$> captureTerm a <*> pure caseOrigin
 
       captureElse :: Else () -> Captured (Else ())
-      captureElse (DefaultElse a b) = return $ DefaultElse a b
+      captureElse (DefaultElse a b) = pure $ DefaultElse a b
       captureElse (Else a elseOrigin) =
         Else <$> captureTerm a <*> pure elseOrigin
-  New {} -> return term
-  NewClosure {} -> return term
-  NewVector {} -> return term
+  New {} -> pure term
+  NewClosure {} -> pure term
+  NewVector {} -> pure term
   Push _ value origin -> Push () <$> captureValue value <*> pure origin
-  Word {} -> return term
+  Word {} -> pure term
 
 captureValue :: Value () -> Captured (Value ())
 captureValue value = case value of
-  Capture names term -> Capture <$> mapM close names <*> pure term
+  Capture names term -> Capture <$> traverse close names <*> pure term
     where
       close :: Closed -> Captured Closed
       close original = case original of
         ClosedLocal index -> do
           closed <- closeLocal index
-          return $ maybe original ClosedClosure closed
-        ClosedClosure {} -> return original
-  Character {} -> return value
-  Closed {} -> return value
-  Float {} -> return value
-  Integer {} -> return value
+          pure $ maybe original ClosedClosure closed
+        ClosedClosure {} -> pure original
+  Character {} -> pure value
+  Closed {} -> pure value
+  Float {} -> pure value
+  Integer {} -> pure value
   Local index -> do
     closed <- closeLocal index
-    return $ maybe value Closed closed
-  Name {} -> return value
+    pure $ maybe value Closed closed
+  Name {} -> pure value
   Quotation term ->
     let inside env = env {scopeStack = 0 : scopeStack env}
      in Quotation <$> local inside (captureTerm term)
-  Text {} -> return value
+  Text {} -> pure value
 
 closeLocal :: LocalIndex -> Captured (Maybe ClosureIndex)
 closeLocal (LocalIndex index) = do
@@ -171,16 +171,16 @@ closeLocal (LocalIndex index) = do
     here : _
       | index >= here ->
         fmap Just $ addName $ LocalIndex $ index - depth
-    _back -> return Nothing
+    _back -> pure Nothing
   where
     addName :: LocalIndex -> Captured ClosureIndex
     addName name = do
       names <- lift get
       case elemIndex name names of
-        Just existing -> return $ ClosureIndex existing
+        Just existing -> pure $ ClosureIndex existing
         Nothing -> do
           lift $ put $ names ++ [name]
-          return $ ClosureIndex $ length names
+          pure $ ClosureIndex $ length names
 
 mapHead :: (a -> a) -> [a] -> [a]
 mapHead _ [] = []

@@ -82,7 +82,7 @@ define cartesian [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
 
 define cartesian_with [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
   -> ys, f;
-  { -> x; ys { x swap f call } map } map_concat
+  { -> x; ys { x swap f call } fmap } map_concat
 }
 
 define concat [T] (List[List[T]] -> List[T]) { [] \append fold_left }
@@ -176,7 +176,7 @@ define lefts [A, B] (List[Either[A, B]] -> List[A]) { \get_left map_optionally }
 
 define length [T] (List[T] -> Int) { 0 { drop 1 (+) } fold_left }
 
-define map [A, B, +P] (List[A], (A -> B +P) -> List[B] +P) {
+define fmap [A, B, +P] (List[A], (A -> B +P) -> List[B] +P) {
   -> f;
   match (head_tail)
   case some { unpair -> h, t; (t f map) (h f call) prefix }
@@ -188,7 +188,7 @@ define map2 [A, B, C, +P] (List[A], List[B], (A, B -> C +P) -> List[C] +P) {
   zip (\unpair f compose) map
 }
 
-define map_concat [A, B] (List[A], (A -> List[B]) -> List[B]) { map concat }
+define map_concat [A, B] (List[A], (A -> List[B]) -> List[B]) { fmap concat }
 
 define map_index [A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P) {
   0 map_index::helper
@@ -208,7 +208,7 @@ define map_optionally [A, B] (List[A], (A -> Optional[B]) -> List[B]) {
 
 define map_reduce_left [A, B] (List[A], (A -> B), (B, B -> B) -> Optional[B]) {
   -> f;
-  map f reduce_left
+  fmap f reduce_left
 }
 
 define map_reduce_left2 [A, B, C] (List[A], List[B], (A, B -> C), (C, C -> C) -> Optional[C]) {
@@ -218,7 +218,7 @@ define map_reduce_left2 [A, B, C] (List[A], List[B], (A, B -> C), (C, C -> C) ->
 
 define map_reduce_right [A, B] (List[A], (A -> B), (B, B -> B) -> Optional[B]) {
   -> f;
-  map f reduce_right
+  fmap f reduce_right
 }
 
 define map_reduce_right2 [A, B, C] (List[A], List[B], (A, B -> C), (C, C -> C) -> Optional[C]) {
@@ -308,7 +308,7 @@ define rights [A, B] (List[Either[A, B]] -> List[B]) {
 
 define set [T] (List[T], T, Int -> List[T]) {
   -> element, index;
-  do (map_index) { -> x, i; if (i = index) { element } else { x } }
+  do  (fmap _index) { -> x, i; if (i = index) { element } else { x } }
 }
 
 define suffix [T] (List[T], T -> List[T]) { once append }

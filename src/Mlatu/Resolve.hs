@@ -49,7 +49,7 @@ definition dictionary def = do
   let vocabulary = qualifierName $ view Definition.name def
   body <- term dictionary vocabulary $ view Definition.body def
   sig <- signature dictionary vocabulary $ view Definition.signature def
-  return
+  pure
     (set Definition.body body (set Definition.signature sig def))
 
 term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
@@ -61,7 +61,7 @@ term dictionary vocabulary = recur
         <$> (Term.AnyCoercion <$> signature dictionary vocabulary sig)
         <*> pure a
         <*> pure b
-    recur unresolved@Coercion {} = return unresolved
+    recur unresolved@Coercion {} = pure unresolved
     recur (Compose _ a b) = Compose () <$> recur a <*> recur b
     recur Generic {} =
       ice
@@ -72,7 +72,7 @@ term dictionary vocabulary = recur
         Lambda () name () <$> recur t <*> pure origin
     recur (Match hint _ cases else_ origin) =
       Match hint ()
-        <$> mapM resolveCase cases
+        <$> traverse resolveCase cases
         <*> resolveElse else_
         <*> pure origin
       where
@@ -82,12 +82,12 @@ term dictionary vocabulary = recur
           Case resolved <$> recur t <*> pure caseOrigin
 
         resolveElse :: Else () -> Resolved (Else ())
-        resolveElse (DefaultElse a b) = return $ DefaultElse a b
+        resolveElse (DefaultElse a b) = pure $ DefaultElse a b
         resolveElse (Else t elseOrigin) =
           Else <$> recur t <*> pure elseOrigin
-    recur unresolved@New {} = return unresolved
-    recur unresolved@NewClosure {} = return unresolved
-    recur unresolved@NewVector {} = return unresolved
+    recur unresolved@New {} = pure unresolved
+    recur unresolved@NewClosure {} = pure unresolved
+    recur unresolved@NewVector {} = pure unresolved
     recur (Push _ v origin) =
       Push ()
         <$> value dictionary vocabulary v <*> pure origin
@@ -99,15 +99,15 @@ term dictionary vocabulary = recur
 
 value :: Dictionary -> Qualifier -> Value () -> Resolved (Value ())
 value _ _ Capture {} = ice "Mlatu.Resolve.value - closure should not appear before name resolution"
-value _ _ v@Character {} = return v
+value _ _ v@Character {} = pure v
 value _ _ Closed {} = ice "Mlatu.Resolve.value - closed name should not appear before name resolution"
-value _ _ v@Float {} = return v
-value _ _ v@Integer {} = return v
+value _ _ v@Float {} = pure v
+value _ _ v@Integer {} = pure v
 value _ _ Local {} = ice "Mlatu.Resolve.value - local name should not appear before name resolution"
 -- FIXME: Maybe should be a GeneralName and require resolution.
-value _ _ v@Name {} = return v
+value _ _ v@Name {} = pure v
 value dictionary vocabulary (Quotation t) = Quotation <$> term dictionary vocabulary t
-value _ _ v@Text {} = return v
+value _ _ v@Text {} = pure v
 
 signature :: Dictionary -> Qualifier -> Signature -> Resolved Signature
 signature dictionary vocabulary = go
@@ -119,8 +119,8 @@ signature dictionary vocabulary = go
     go sig@Signature.Bottom {} = pure sig
     go (Signature.Function as bs es origin) =
       Signature.Function
-        <$> mapM go as
-        <*> mapM go bs
+        <$> traverse go as
+        <*> traverse go bs
         <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go (Signature.Quantified vars a origin) =
@@ -132,9 +132,9 @@ signature dictionary vocabulary = go
         <$> typeName dictionary vocabulary name origin <*> pure origin
     go (Signature.StackFunction r as s bs es origin) =
       Signature.StackFunction r
-        <$> mapM go as
+        <$> traverse go as
         <*> pure s
-        <*> mapM go bs
+        <*> traverse go bs
         <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go sig@Signature.Type {} = pure sig
@@ -147,13 +147,13 @@ definitionName dictionary =
   where
     isDefined = flip Set.member defined
     defined = Set.fromList $ Dictionary.wordNames dictionary
-    resolveLocal _ index = return $ LocalName index
+    resolveLocal _ index = pure $ LocalName index
 typeName dictionary =
   generalName Report.TypeName resolveLocal isDefined
   where
     isDefined = flip Set.member defined
     defined = Set.fromList $ Dictionary.typeNames dictionary
-    resolveLocal l _ = return $ UnqualifiedName l
+    resolveLocal l _ = pure $ UnqualifiedName l
 
 generalName ::
   Report.NameCategory ->
@@ -175,30 +175,30 @@ generalName category resolveLocal isDefined vocabulary name origin =
         Nothing -> do
           let qualified = Qualified vocabulary unqualified
           if isDefined qualified
-            then return (QualifiedName qualified)
+            then pure (QualifiedName qualified)
             else do
               let global = Qualified Vocabulary.global unqualified
               if isDefined global
-                then return (QualifiedName global)
+                then pure (QualifiedName global)
                 else do
                   lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
-                  return name
+                  pure name
 
     -- A qualified name may refer to an intrinsic or a definition.
 
     QualifiedName qualified ->
       if isDefined qualified
-        then return name
+        then pure name
         else do
           let qualified' = case (vocabulary, qualifierName qualified) of
                 (Qualifier _root1 prefix, Qualifier _root2 suffix) ->
                   Qualified (Qualifier Absolute (prefix ++ suffix)) $
                     unqualifiedName qualified
           if isDefined qualified'
-            then return $ QualifiedName qualified'
+            then pure $ QualifiedName qualified'
             else do
               lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
-              return name
+              pure name
     LocalName {} -> ice "Mlatu.Resolve.generalName - local name should not appear before name resolution"
 
 withLocal :: Unqualified -> Resolved a -> Resolved a
@@ -206,4 +206,4 @@ withLocal name action = do
   modify (name :)
   result <- action
   modify (Unsafe.fromJust . viaNonEmpty tail)
-  return result
+  pure result

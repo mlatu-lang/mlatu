@@ -13,6 +13,6 @@ reportAll reports = do
   unless (null warnings) $ mapM_ (hPutStrLn stderr) $ "Warnings: " : warnings
   unless (null infos) $ mapM_ (hPutStrLn stderr) $ "Infos: " : infos
   where
-    errors = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Error) reports
-    warnings = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Warn) reports
-    infos = ordNub $ map (show . human) $ filter (\(Report level _) -> level == Info) reports
+    errors = ordNub $ show . human <$> filter (\(Report level _) -> level == Error) reports
+    warnings = ordNub $ show . human <$> filter (\(Report level _) -> level == Warn) reports
+    infos = ordNub $ show . human <$> filter (\(Report level _) -> level == Info) reports

@@ -58,7 +58,7 @@ testParse sign input = do
         assertFailure $
           toString $
             unlines $
-              map (show . human) reports
+              fmap (show . human) reports
       -- TODO: Test error messages for negative tests.
       Negative -> pass
     Right fragment -> case sign of

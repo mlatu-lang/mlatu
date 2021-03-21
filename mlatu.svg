@@ -45,30 +45,30 @@
 		var children = parent.childNodes;
 		for (var i=0; i<children.length;i++) {
 			if (children[i].tagName == name)
-				return (attr != undefined) ? children[i].attributes[attr].value : children[i];
+				pure (attr != undefined) ? children[i].attributes[attr].value : children[i];
 		}
-		return;
+		pure;
 	}
 	function orig_save(e, attr, val) {
-		if (e.attributes["_orig_"+attr] != undefined) return;
-		if (e.attributes[attr] == undefined) return;
+		if (e.attributes["_orig_"+attr] != undefined) pure;
+		if (e.attributes[attr] == undefined) pure;
 		if (val == undefined) val = e.attributes[attr].value;
 		e.setAttribute("_orig_"+attr, val);
 	}
 	function orig_load(e, attr) {
-		if (e.attributes["_orig_"+attr] == undefined) return;
+		if (e.attributes["_orig_"+attr] == undefined) pure;
 		e.attributes[attr].value = e.attributes["_orig_"+attr].value;
 		e.removeAttribute("_orig_"+attr);
 	}
 	function g_to_text(e) {
 		var text = find_child(e, "title").firstChild.nodeValue;
-		return (text)
+		pure (text)
 	}
 	function g_to_func(e) {
 		var func = g_to_text(e);
 		// if there's any manipulation we want to do to the function
-		// name before it's searched, do it here before returning.
-		return (func);
+		// name before it's searched, do it here before pureing.
+		pure (func);
 	}
 	function update_text(e) {
 		var r = find_child(e, "rect");
@@ -80,18 +80,18 @@
 		// Smaller than this size won't fit anything
 		if (w < 2*12*0.59) {
 			t.textContent = "";
-			return;
+			pure;
 		}
 
 		t.textContent = txt;
 		// Fit in full text width
 		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
-			return;
+			pure;
 
 		for (var x=txt.length-2; x>0; x--) {
 			if (t.getSubStringLength(0, x+2) <= w) {
 				t.textContent = txt.substring(0,x) + "..";
-				return;
+				pure;
 			}
 		}
 		t.textContent = "";
@@ -103,7 +103,7 @@
 			orig_load(e, "x");
 			orig_load(e, "width");
 		}
-		if (e.childNodes == undefined) return;
+		if (e.childNodes == undefined) pure;
 		for(var i=0, c=e.childNodes; i<c.length; i++) {
 			zoom_reset(c[i]);
 		}
@@ -121,7 +121,7 @@
 			}
 		}
 
-		if (e.childNodes == undefined) return;
+		if (e.childNodes == undefined) pure;
 		for(var i=0, c=e.childNodes; i<c.length; i++) {
 			zoom_child(c[i], x-10, ratio);
 		}
@@ -137,7 +137,7 @@
 				e.attributes["width"].value = parseInt(svg.width.baseVal.value) - (10*2);
 			}
 		}
-		if (e.childNodes == undefined) return;
+		if (e.childNodes == undefined) pure;
 		for(var i=0, c=e.childNodes; i<c.length; i++) {
 			zoom_parent(c[i]);
 		}
@@ -276,7 +276,7 @@
 			}
 		}
 		if (!searching)
-			return;
+			pure;
 
 		searchbtn.style["opacity"] = "1.0";
 		searchbtn.firstChild.nodeValue = "Reset Search"
@@ -293,7 +293,7 @@
 		// sort the matched frames by their x location
 		// ascending, then width descending
 		keys.sort(function(a, b){
-			return a - b;
+			pure a - b;
 		});
 		// Step through frames saving only the biggest bottom-up frames
 		// thanks to the sort order. This relies on the tree property
@@ -336,11 +336,11 @@
 <text text-anchor="" x="1090.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="search" onmouseover="searchover()" onmouseout="searchout()" onclick="search_prompt()" style="opacity:0.1;cursor:pointer" >Search</text>
 <text text-anchor="" x="1090.00" y="389" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="matched" > </text>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (7 samples, 0.70%)</title><rect x="1106.2" y="101" width="8.3" height="15.0" fill="rgb(254,116,22)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (7 samples, 0.70%)</title><rect x="1106.2" y="101" width="8.3" height="15.0" fill="rgb(254,116,22)" rx="2" ry="2" />
 <text text-anchor="" x="1109.22" y="111.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (1 samples, 0.10%)</title><rect x="571.7" y="85" width="1.2" height="15.0" fill="rgb(232,84,1)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (1 samples, 0.10%)</title><rect x="571.7" y="85" width="1.2" height="15.0" fill="rgb(232,84,1)" rx="2" ry="2" />
 <text text-anchor="" x="574.68" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -436,7 +436,7 @@
 <text text-anchor="" x="1157.60" y="223.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (5 samples, 0.50%)</title><rect x="769.9" y="69" width="5.9" height="15.0" fill="rgb(246,69,15)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (5 samples, 0.50%)</title><rect x="769.9" y="69" width="5.9" height="15.0" fill="rgb(246,69,15)" rx="2" ry="2" />
 <text text-anchor="" x="772.92" y="79.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -468,7 +468,7 @@
 <text text-anchor="" x="564.06" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (1 samples, 0.10%)</title><rect x="463.1" y="69" width="1.2" height="15.0" fill="rgb(220,103,46)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (1 samples, 0.10%)</title><rect x="463.1" y="69" width="1.2" height="15.0" fill="rgb(220,103,46)" rx="2" ry="2" />
 <text text-anchor="" x="466.12" y="79.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -484,7 +484,7 @@
 <text text-anchor="" x="70.82" y="127.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (1 samples, 0.10%)</title><rect x="1162.9" y="245" width="1.1" height="15.0" fill="rgb(234,175,43)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (1 samples, 0.10%)</title><rect x="1162.9" y="245" width="1.1" height="15.0" fill="rgb(234,175,43)" rx="2" ry="2" />
 <text text-anchor="" x="1165.86" y="255.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -504,7 +504,7 @@
 <text text-anchor="" x="83.80" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (8 samples, 0.80%)</title><rect x="184.6" y="101" width="9.5" height="15.0" fill="rgb(221,169,15)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (8 samples, 0.80%)</title><rect x="184.6" y="101" width="9.5" height="15.0" fill="rgb(221,169,15)" rx="2" ry="2" />
 <text text-anchor="" x="187.64" y="111.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -632,7 +632,7 @@
 <text text-anchor="" x="31.88" y="223.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Data...</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (1 samples, 0.10%)</title><rect x="1046.0" y="85" width="1.2" height="15.0" fill="rgb(230,169,15)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (1 samples, 0.10%)</title><rect x="1046.0" y="85" width="1.2" height="15.0" fill="rgb(230,169,15)" rx="2" ry="2" />
 <text text-anchor="" x="1049.04" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -804,7 +804,7 @@
 <text text-anchor="" x="33.06" y="207.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Data...</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (5 samples, 0.50%)</title><rect x="439.5" y="53" width="5.9" height="15.0" fill="rgb(214,54,51)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (5 samples, 0.50%)</title><rect x="439.5" y="53" width="5.9" height="15.0" fill="rgb(214,54,51)" rx="2" ry="2" />
 <text text-anchor="" x="442.52" y="63.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -872,7 +872,7 @@
 <text text-anchor="" x="94.42" y="191.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (5 samples, 0.50%)</title><rect x="1022.4" y="69" width="5.9" height="15.0" fill="rgb(210,43,51)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (5 samples, 0.50%)</title><rect x="1022.4" y="69" width="5.9" height="15.0" fill="rgb(210,43,51)" rx="2" ry="2" />
 <text text-anchor="" x="1025.44" y="79.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -920,7 +920,7 @@
 <text text-anchor="" x="20.08" y="239.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Data.Has..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>Mlatu.Monad.return (7 samples, 0.70%)</title><rect x="518.6" y="85" width="8.2" height="15.0" fill="rgb(229,159,7)" rx="2" ry="2" />
+<title>Mlatu.Monad.pure (7 samples, 0.70%)</title><rect x="518.6" y="85" width="8.2" height="15.0" fill="rgb(229,159,7)" rx="2" ry="2" />
 <text text-anchor="" x="521.58" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">

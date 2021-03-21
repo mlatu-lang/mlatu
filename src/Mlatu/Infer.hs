@@ -76,10 +76,10 @@ typecheck dictionary mDeclaredSignature term = do
   let tenv0 = TypeEnv.empty
   declaredType <- traverse (typeFromSignature tenv0) mDeclaredSignature
   declaredTypes <-
-    mapM
+    traverse
       (\(name, signature) -> (,) name <$> typeFromSignature tenv0 signature)
       $ Dictionary.signatures dictionary
-  let tenv1 = over TypeEnv.sigs (Map.union (Map.fromList declaredTypes)) tenv0
+  let tenv1 = over TypeEnv.sigs  (fmap .union  (fmap .fromList declaredTypes)) tenv0
   inferType0 dictionary tenv1 declaredType term
 
 -- | Mangles an instance name according to its trait signature.
@@ -92,8 +92,8 @@ mangleInstance dictionary name instanceSignature traitSignature = do
   instanceCheck "trait" traitType "instance" instanceType
   (traitType', args, tenv1) <- Instantiate.prenex tenv0 traitType
   tenv2 <- Unify.typ tenv1 instanceType traitType'
-  args' <- valueKinded dictionary $ map (Zonk.typ tenv2) args
-  return $ Instantiated name args'
+  args' <- valueKinded dictionary $ fmap (Zonk.typ tenv2) args
+  pure $ Instantiated name args'
 
 -- | Since type variables can be generalized if they do not depend on the
 -- initial state of the typing environment, the type of a single definition is
@@ -113,12 +113,12 @@ inferType0 ::
   M (Term Type, Type)
 inferType0 dictionary tenv mDeclared term = do
   rec (term', t, tenvFinal) <- inferType dictionary tenvFinal' tenv term
-      tenvFinal' <- maybe (return tenvFinal) (Unify.typ tenvFinal t) mDeclared
+      tenvFinal' <- maybe (pure tenvFinal) (Unify.typ tenvFinal t) mDeclared
   let zonked = Zonk.typ tenvFinal' t
   let regeneralized = regeneralize tenvFinal' zonked
   forM_ mDeclared (instanceCheck "inferred" regeneralized "declared")
 
-  return (Zonk.term tenvFinal' term', regeneralized)
+  pure (Zonk.term tenvFinal' term', regeneralized)
 
 -- We infer the type of a term and annotate each terminal with the inferred type
 -- as we go. We ignore any existing annotations because a definition may need to
@@ -154,12 +154,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           ]
       let typ = Type.fun origin a a p
       let type' = Zonk.typ tenvFinal typ
-      return (Coercion hint type' origin, typ, tenv0)
+      pure (Coercion hint type' origin, typ, tenv0)
   Coercion hint@(Term.AnyCoercion sig) _ origin ->
     while (Term.origin term0) context $ do
       typ <- typeFromSignature tenv0 sig
       let type' = Zonk.typ tenvFinal typ
-      return (Coercion hint type' origin, typ, tenv0)
+      pure (Coercion hint type' origin, typ, tenv0)
 
   -- The type of the composition of two expressions is the composition of the
   -- types of those expressions.
@@ -175,13 +175,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     let origin = Term.origin term1
     let typ = Type.fun origin a d e1
     let type' = Zonk.typ tenvFinal typ
-    return (Compose type' term1' term2', typ, tenv6)
+    pure (Compose type' term1' term2', typ, tenv6)
 
   -- TODO: Verify that this is correct.
   Generic _name _ t _ -> inferType' tenv0 t
   Group {} ->
-    ice $
-      "Mlatu.Infer.inferType - group expression should not appear during type inference"
+    ice "Mlatu.Infer.inferType - group expression should not appear during type inference"
   -- A local variable binding in Mlatu is in fact a lambda term in the ordinary
   -- lambda-calculus sense. We infer the type of its body in the environment
   -- extended with a fresh local bound to a fresh type variable, and produce a
@@ -198,7 +197,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     let typ = Type.fun origin (Type.prod origin b a) c e
         type' = Zonk.typ tenvFinal typ
         varType' = Zonk.typ tenvFinal a
-    return
+    pure
       ( Lambda type' name varType' term' origin,
         typ,
         tenv3
@@ -254,7 +253,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
                 (Type.prod elseOrigin a unusedScrutinee)
                 b
                 e
-        return (Else body' elseOrigin, elseType, tenv'')
+        pure (Else body' elseOrigin, elseType, tenv'')
       Else body elseOrigin -> do
         (body', bodyType, tenv') <- inferType' tenv1 body
         -- The type of a match is the union of the types of the cases, and
@@ -276,7 +275,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
                 (Type.prod elseOrigin a unusedScrutinee)
                 b
                 e
-        return (Else body' elseOrigin, elseType, tenv'')
+        pure (Else body' elseOrigin, elseType, tenv'')
     (typ, tenv3) <- case constructors' of
       -- FIXME: Assumes caseTypes is non-empty.
       [] -> do
@@ -286,7 +285,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             (\typ tenv -> Unify.typ tenv firstCase typ)
             tenv2
             remainingCases
-        return (Type.setOrigin origin firstCase, tenv')
+        pure (Type.setOrigin origin firstCase, tenv')
       -- Only include 'else' branch if there are unhandled cases.
       _list -> do
         tenv' <-
@@ -294,14 +293,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             (\typ tenv -> Unify.typ tenv elseType typ)
             tenv2
             caseTypes
-        return (Type.setOrigin origin elseType, tenv')
+        pure (Type.setOrigin origin elseType, tenv')
     let type' = Zonk.typ tenvFinal typ
-    return (Match hint type' cases' else' origin, typ, tenv3)
+    pure (Match hint type' cases' else' origin, typ, tenv3)
     where
       inferCase' (cases', types, remaining, tenv) case_ = do
         (case', typ, remaining', tenv') <-
           inferCase dictionary tenvFinal tenv remaining case_
-        return (case' : cases', typ : types, remaining', tenv')
+        pure (case' : cases', typ : types, remaining', tenv')
 
   -- A 'new' expression simply tags some fields on the stack, so the most
   -- straightforward way to type it is as an unsafe cast. For now, we can rely on
@@ -319,7 +318,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           ]
       let typ = Type.fun origin a b e
       let type' = Zonk.typ tenvFinal typ
-      return (New type' constructor size origin, typ, tenv0)
+      pure (New type' constructor size origin, typ, tenv0)
 
   -- Unlike with 'new', we cannot simply type a 'new closure' expression as an
   -- unsafe cast because we need to know its effect on the stack within the body
@@ -354,7 +353,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               (Type.prod origin r f)
               p2
           type' = Zonk.typ tenvFinal typ
-      return (NewClosure type' size origin, typ, tenv0)
+      pure (NewClosure type' size origin, typ, tenv0)
 
   -- This is similar for 'new vector' expressions, which we type as:
   --
@@ -378,7 +377,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               e
           type' = Zonk.typ tenvFinal typ
           b' = Zonk.typ tenvFinal b
-      return (NewVector type' size b' origin, typ, tenv0)
+      pure (NewVector type' size b' origin, typ, tenv0)
 
   -- Pushing a value results in a stack with that value on top.
 
@@ -393,7 +392,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
       let typ = Type.fun origin a (Type.prod origin a t) e
       let type' = Zonk.typ tenvFinal typ
-      return (Push type' value' origin, typ, tenv1)
+      pure (Push type' value' origin, typ, tenv1)
 
   -- FIXME: Should generic parameters be restricted to none?
   Word _ _fixity name _ origin ->
@@ -443,9 +442,9 @@ inferCase
         dataConstructors' <- case partition (\ctor -> view DataConstructor.name ctor == unqualifiedName name) dataConstructors of
           ([], remaining) -> do
             report $ Report.makeError $ Report.RedundantCase origin
-            return remaining
-          (_covered, remaining) -> return remaining
-        return (Case qualified body' origin, typ, dataConstructors', tenv5)
+            pure remaining
+          (_covered, remaining) -> pure remaining
+        pure (Case qualified body' origin, typ, dataConstructors', tenv5)
       Nothing ->
         ice
           "Mlatu.Infer.inferCase - case constructor missing signature after name resolution"
@@ -466,21 +465,21 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     let localEnv = set TypeEnv.closure types tenv0
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
     let tenv2 = set TypeEnv.closure oldClosure tenv1
-    return (Capture names term', t1, tenv2)
-  Character x -> return (Character x, TypeConstructor origin "Char", tenv0)
+    pure (Capture names term', t1, tenv2)
+  Character x -> pure (Character x, TypeConstructor origin "Char", tenv0)
   Closed (ClosureIndex index) ->
-    return
+    pure
       (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x -> return (Float x, TypeConstructor origin "Double", tenv0)
-  Integer x -> return (Integer x, TypeConstructor origin "Int", tenv0)
+  Float x -> pure (Float x, TypeConstructor origin "Double", tenv0)
+  Integer x -> pure (Integer x, TypeConstructor origin "Int", tenv0)
   Local (LocalIndex index) ->
-    return
+    pure
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
   Quotation {} -> ice "Mlatu.Infer.inferValue - quotation should not appear during type inference"
   Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
     Just (Entry.Word _ _ _ _ (Just signature) _) -> do
       typ <- typeFromSignature tenv0 signature
-      return (Name name, typ, tenv0)
+      pure (Name name, typ, tenv0)
     _noBinding ->
       ice $
         show $
@@ -490,7 +489,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
               "found during type inference"
             ]
   Text x ->
-    return
+    pure
       ( Text x,
         TypeConstructor origin "String",
         tenv0
@@ -510,9 +509,9 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
       let type' = Type.setOrigin origin typ
       params' <- valueKinded dictionary params
       let type'' = Zonk.typ tenvFinal type'
-          params'' = map (Zonk.typ tenvFinal) params'
+          params'' = fmap (Zonk.typ tenvFinal) params'
       let mangled = QualifiedName name
-      return
+      pure
         ( Word
             type''
             Operator.Postfix
@@ -546,7 +545,7 @@ typeFromSignature tenv signature0 = do
       $ go signature0
   let forallAnonymous = Forall (Signature.origin signature0)
       forallVar (var, origin) = Forall origin var
-  return $
+  pure $
     foldr
       forallAnonymous
       (foldr forallVar typ $ Map.elems $ sigEnvVars env)
@@ -555,12 +554,12 @@ typeFromSignature tenv signature0 = do
     go :: Signature -> StateT SignatureEnv M Type
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
-      Signature.Bottom origin -> return $ Type.bottom origin
+      Signature.Bottom origin -> pure $ Type.bottom origin
       Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack
         let typeVar = TypeVar origin var
-        es' <- mapM (fromVar origin) es
+        es' <- traverse (fromVar origin) es
         (me, es'') <- lift $ permissionVar origin es'
         Forall origin var <$> makeFunction origin typeVar as typeVar bs es'' me
       Signature.Quantified vars a origin -> do
@@ -574,35 +573,35 @@ typeFromSignature tenv signature0 = do
         a' <- go a
         let result = foldr (Forall origin) a' vars'
         put original
-        return result
+        pure result
         where
           declare ::
             Parameter ->
-            (Map Unqualified (Var, Origin), [Var]) ->
-            M (Map Unqualified (Var, Origin), [Var])
+             (fmap  Unqualified (Var, Origin), [Var]) ->
+            M  (fmap  Unqualified (Var, Origin), [Var])
           declare (Parameter varOrigin name kind _) (envVars, freshVars) = do
             x <- freshTypeId tenv
             let var = Var name x kind
-            return (Map.insert name (var, varOrigin) envVars, var : freshVars)
+            pure  (fmap .insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
       Signature.StackFunction r as s bs es origin -> do
         let var = fromVar origin
         r' <- go r
         s' <- go s
-        es' <- mapM var es
+        es' <- traverse var es
         (me, es'') <- lift $ permissionVar origin es'
         makeFunction origin r' as s' bs es'' me
       -- TODO: Verify that the type contains no free variables.
-      Signature.Type typ -> return typ
+      Signature.Type typ -> pure typ
 
     permissionVar :: Origin -> [Type] -> M (Maybe Type, [Type])
     permissionVar origin types = case splitFind isTypeVar types of
       Just (preceding, typ, following) -> case find isTypeVar following of
-        Nothing -> return (Just typ, preceding ++ following)
+        Nothing -> pure (Just typ, preceding ++ following)
         Just type' -> do
           report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
           halt
-      Nothing -> return (Nothing, types)
+      Nothing -> pure (Nothing, types)
       where
         isTypeVar TypeVar {} = True
         isTypeVar _ = False
@@ -611,12 +610,12 @@ typeFromSignature tenv signature0 = do
     fromVar origin (UnqualifiedName name) = do
       existing <- gets $ Map.lookup name . sigEnvVars
       case existing of
-        Just (var, varOrigin) -> return $ TypeVar varOrigin var
+        Just (var, varOrigin) -> pure $ TypeVar varOrigin var
         Nothing -> lift $ do
           report $ Report.makeError $ Report.CannotResolveType origin $ UnqualifiedName name
           halt
     fromVar origin (QualifiedName name) =
-      return $ TypeConstructor origin $ Constructor name
+      pure $ TypeConstructor origin $ Constructor name
     fromVar _ name =
       ice $
           "Mlatu.Infer.typeFromSignature - incorrectly resolved name in signature: " ++ show name
@@ -631,16 +630,16 @@ typeFromSignature tenv signature0 = do
       Maybe Type ->
       StateT SignatureEnv M Type
     makeFunction origin r as s bs es me = do
-      as' <- mapM go as
-      bs' <- mapM go bs
+      as' <- traverse go as
+      bs' <- traverse go bs
       e <- case me of
-        Just e -> return e
+        Just e -> pure e
         Nothing -> do
           ex <- lift $ freshTypeId tenv
           let var = Var "P" ex Permission
           modify $ \env -> env {sigEnvAnonymous = var : sigEnvAnonymous env}
-          return $ TypeVar origin var
-      return $
+          pure $ TypeVar origin var
+      pure $
         Type.fun origin (stack r as') (stack s bs') $
           foldr (Type.join origin) e es
       where
@@ -657,7 +656,7 @@ splitFind f = go []
 
 data SignatureEnv = SignatureEnv
   { sigEnvAnonymous :: ![Var],
-    sigEnvVars :: !(Map Unqualified (Var, Origin))
+    sigEnvVars :: ! (fmap  Unqualified (Var, Origin))
   }
 
 valueKinded :: Dictionary -> [Type] -> M [Type]
@@ -674,9 +673,9 @@ typeKind dictionary = go
       TypeConstructor _origin (Constructor qualified) ->
         case Dictionary.lookup (Instantiated qualified []) dictionary of
           Just (Entry.Type _origin parameters _ctors) -> case parameters of
-            [] -> return Value
+            [] -> pure Value
             _list ->
-              return $
+              pure $
                 foldr
                   ((:->) . (\(Parameter _ _ k _) -> k))
                   Value
@@ -684,16 +683,16 @@ typeKind dictionary = go
           _noParameters -> case qualified of
             Qualified qualifier unqualified
               | qualifier == Vocabulary.global -> case unqualified of
-                "Bottom" -> return Stack
-                "Fun" -> return $ Stack :-> Stack :-> Permission :-> Value
-                "Prod" -> return $ Stack :-> Value :-> Stack
-                "Sum" -> return $ Value :-> Value :-> Value
-                "Unsafe" -> return Label
-                "Void" -> return Value
-                "IO" -> return Label
-                "Fail" -> return Label
-                "Join" -> return $ Label :-> Permission :-> Permission
-                "List" -> return $ Value :-> Value
+                "Bottom" -> pure Stack
+                "Fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
+                "Prod" -> pure $ Stack :-> Value :-> Stack
+                "Sum" -> pure $ Value :-> Value :-> Value
+                "Unsafe" -> pure Label
+                "Void" -> pure Value
+                "IO" -> pure Label
+                "Fail" -> pure Label
+                "Join" -> pure $ Label :-> Permission :-> Permission
+                "List" -> pure $ Value :-> Value
                 _noKind ->
                   ice $
                     show $
@@ -713,13 +712,13 @@ typeKind dictionary = go
                       Dictionary.printDictionary dictionary
                     ]
       TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
-      TypeVar _origin (Var _name _ k) -> return k
-      TypeConstant _origin (Var _name _ k) -> return k
+      TypeVar _origin (Var _name _ k) -> pure k
+      TypeConstant _origin (Var _name _ k) -> pure k
       Forall _origin _ t' -> go t'
       a :@ b -> do
         ka <- go a
         case ka of
-          _ :-> k -> return k
+          _ :-> k -> pure k
           _nonConstructor ->
             ice $
               show $

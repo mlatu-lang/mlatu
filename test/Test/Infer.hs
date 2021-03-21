@@ -226,7 +226,7 @@ spec = do
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
         \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
-        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles map }"
+        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles fmap }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ int)) (Type.join o io e)
 
   describe "with coercions" $ do
@@ -254,7 +254,7 @@ testTypecheck sign input expected = do
   mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
-      error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : map human reports
+      error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : fmap human reports
     Right dictionary -> do
       result <- runMlatuExceptT $ do
         fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
@@ -279,7 +279,7 @@ testTypecheck sign input expected = do
             assertFailure $
               show $
                 hsep
-                  ["missing main word definition:", list $ map (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
+                  ["missing main word definition:", list $ fmap (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
           where
             matching (Instantiated (Qualified v "test") _, _)
               | v == Vocabulary.global =
@@ -290,7 +290,7 @@ testTypecheck sign input expected = do
             assertFailure $
               toString $
                 unlines $
-                  map (show . human) reports
+                  fmap (show . human) reports
           -- FIXME: This might accept a negative test for the wrong
           -- reason.
           Negative -> pass

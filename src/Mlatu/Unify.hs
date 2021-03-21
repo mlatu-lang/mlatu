@@ -32,7 +32,7 @@ import Optics
 -- for value types, and row unification for permission types.
 typ :: TypeEnv -> Type -> Type -> M TypeEnv
 typ tenv0 t1 t2 = case (t1', t2') of
-  _ | t1' == t2' -> return tenv0
+  _ | t1' == t2' -> pure tenv0
   (TypeVar origin x, t) -> unifyTv tenv0 origin x t
   (_, TypeVar {}) -> commute
   -- FIXME: Unify the kinds here?
@@ -45,7 +45,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     case ms of
       Just (s', substitution, tenv1) ->
         case substitution of
-          Just (x, t) -> typ (over TypeEnv.tvs (Map.insert x t) tenv1) r s'
+          Just (x, t) -> typ (over TypeEnv.tvs  (fmap .insert x t) tenv1) r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
         report $ Report.makeError $ Report.TypeMismatch t1' t2'
@@ -84,7 +84,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
 
 unifyTv :: TypeEnv -> Origin -> Var -> Type -> M TypeEnv
 unifyTv tenv0 origin v@(Var _name x _) t = case t of
-  TypeVar _origin (Var _name y _) | x == y -> return tenv0
+  TypeVar _origin (Var _name y _) | x == y -> pure tenv0
   TypeVar {} -> declare
   _nonVar ->
     if occurs tenv0 x (Zonk.typ tenv0 t)
@@ -104,24 +104,24 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
               halt
       else declare
   where
-    declare = return $ over TypeEnv.tvs (Map.insert x t) tenv0
+    declare = pure $ over TypeEnv.tvs  (fmap .insert x t) tenv0
 
 -- | A convenience function for unifying a type with a function type.
 function :: TypeEnv -> Type -> M (Type, Type, Type, TypeEnv)
 function tenv0 t = case t of
-  TypeConstructor _ "Fun" :@ a :@ b :@ e -> return (a, b, e, tenv0)
+  TypeConstructor _ "Fun" :@ a :@ b :@ e -> pure (a, b, e, tenv0)
   _nonFun -> do
     let origin = Type.origin t
     a <- freshTv tenv0 "A" origin Stack
     b <- freshTv tenv0 "B" origin Stack
     e <- freshTv tenv0 "P" origin Permission
     tenv1 <- typ tenv0 t $ Type.fun origin a b e
-    return (a, b, e, tenv1)
+    pure (a, b, e, tenv1)
 
 -- Row unification is essentially unification of sets. The row-isomorphism
 -- operation (as described in [1]) takes a permission label and a permission
 -- row, and asserts that the row can be rewritten to begin with that label under
--- some substitution. It returns the substitution and the tail of the rewritten
+-- some substitution. It pures the substitution and the tail of the rewritten
 -- row. The substitution is always either empty (∅) or a singleton substitution
 -- (x ↦ τ), so we represent this as a 'Maybe'.
 
@@ -135,21 +135,21 @@ rowIso ::
 -- rewritten by the identity substitution.
 
 rowIso tenv0 l (TypeConstructor _ "Join" :@ l' :@ r') _
-  | l == l' = return $ Just (r', Nothing :: Maybe (TypeId, Type), tenv0)
+  | l == l' = pure $ Just (r', Nothing :: Maybe (TypeId, Type), tenv0)
 -- The "swap" rule: a row which contains the label somewhere within, can be
 -- rewritten to place that label at the head.
 
 rowIso tenv0 l (TypeConstructor origin "Join" :@ l' :@ r') rt
   | l /= l' = do
     ms <- rowIso tenv0 l r' rt
-    return $ case ms of
+    pure $ case ms of
       Just (r'', substitution, tenv1) ->
         Just
           (Type.join origin l' r'', substitution, tenv1)
       Nothing -> Nothing
 
 -- The "var" rule: no label is present, so we cannot test for equality, and must
--- return a fresh variable for the row tail. Here we enforce a side condition
+-- pure a fresh variable for the row tail. Here we enforce a side condition
 -- that ensures termination by preventing unification of rows with a common tail
 -- but distinct prefixes.
 
@@ -157,8 +157,8 @@ rowIso tenv0 l r@(TypeVar origin (Var name a _)) rt
   | r /= rt = do
     -- FIXME: Should this use 'name' or a distinct name?
     b <- freshTv tenv0 name origin Permission
-    return $ Just (b, Just (a, Type.join origin l b), tenv0)
+    pure $ Just (b, Just (a, Type.join origin l b), tenv0)
 
 -- In any other case, the rows are not isomorphic.
 
-rowIso _ _ _ _ = return Nothing
+rowIso _ _ _ _ = pure Nothing

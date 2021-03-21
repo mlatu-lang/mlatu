@@ -215,7 +215,7 @@ printType type0 = recur type0
         where
           prettyForall (Forall _ x t) vars = prettyForall t (x : vars)
           prettyForall t vars =
-            list (map (recur . TypeVar (Type.origin t)) vars)
+            list (fmap (recur . TypeVar (Type.origin t)) vars)
               <> parens (recur t)
       TypeValue _ value -> pretty value
 
@@ -258,7 +258,7 @@ prettyKinded name k = case k of
 
 printSignature :: Signature -> Doc a
 printSignature (Application firstA b _) =
-  printSignature finalA <> brackets (punctuateComma (map printSignature (as ++ [b])))
+  printSignature finalA <> brackets (punctuateComma (fmap printSignature (as ++ [b])))
   where
     (finalA, as) = go [] firstA
     go l (Application x y _) = go (l ++ [y]) x
@@ -266,20 +266,20 @@ printSignature (Application firstA b _) =
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
   parens $
-    mapNonEmpty "" (\sigs -> punctuateComma (map printSignature sigs) <> space) as
+    mapNonEmpty "" (\sigs -> punctuateComma (fmap printSignature sigs) <> space) as
       <> "->"
-      <> mapNonEmpty "" (\sigs -> space <> punctuateComma (map printSignature sigs)) bs
-      <> mapNonEmpty "" (\names -> space <> hsep (map (\p -> "+" <> printGeneralName p) names)) es
+      <> mapNonEmpty "" (\sigs -> space <> punctuateComma (fmap printSignature sigs)) bs
+      <> mapNonEmpty "" (\names -> space <> hsep (fmap (\p -> "+" <> printGeneralName p) names)) es
 printSignature (Quantified names typ _) =
-  mapNonEmpty "" (\ns -> brackets (punctuateComma (map printParameter ns)) <> flatAlt space "\n") names
+  mapNonEmpty "" (\ns -> brackets (punctuateComma (fmap printParameter ns)) <> flatAlt space "\n") names
     <> printSignature typ
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
-    punctuateComma ((printSignature r <> "...") : map printSignature as)
+    punctuateComma ((printSignature r <> "...") : fmap printSignature as)
       <+> "->"
-      <+> punctuateComma ((printSignature s <> "...") : map printSignature bs)
-      <> mapNonEmpty "" (\xs -> space <> hsep (map (("+" <>) . printGeneralName) xs)) es
+      <+> punctuateComma ((printSignature s <> "...") : fmap printSignature bs)
+      <> mapNonEmpty "" (\xs -> space <> hsep (fmap (("+" <>) . printGeneralName) xs)) es
 printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a
@@ -311,7 +311,7 @@ printToken = \case
   Token.Operator name -> printUnqualified name
   Token.Permission -> "permission"
   Token.Reference -> "\\"
-  Token.Return -> "return"
+  Token.pure -> "pure"
   Token.Text t -> dquotes $ pretty t
   Token.Trait -> "trait"
   Token.Type -> "type"
@@ -330,7 +330,7 @@ instance Show Token.Token where
 printInstantiated :: Instantiated -> Doc a
 printInstantiated (Instantiated n []) = printQualified n
 printInstantiated (Instantiated n ts) =
-  printQualified n <> "::" <> list (map printType ts)
+  printQualified n <> "::" <> list (fmap printType ts)
 
 printDataConstructor :: DataConstructor.DataConstructor -> Doc a
 printDataConstructor (DataConstructor.DataConstructor fields name _) =
@@ -338,7 +338,7 @@ printDataConstructor (DataConstructor.DataConstructor fields name _) =
     <+> printUnqualified name
     <> printedFields
   where
-    printedFields = if not $ null fields then space <> tupled (map printSignature fields) else ""
+    printedFields = if not $ null fields then space <> tupled (fmap printSignature fields) else ""
 
 printDeclaration :: Declaration -> Doc a
 printDeclaration (Declaration category name _ signature) = printedCategory <+> printUnqualified (unqualifiedName name) <+> printSignature signature
@@ -353,7 +353,7 @@ printTypeDefinition (TypeDefinition constructors name _ parameters) =
   where
     typeName =
       printQualified name
-        <> if not $ null parameters then (list . map printParameter) parameters else ""
+        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
 
 printTerm :: Term a -> Doc b
 printTerm t = fromMaybe "" (maybePrintTerms (decompose t))
@@ -366,14 +366,14 @@ maybePrintTerms = \case
   (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
-  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
-  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
+  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (fmapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
+  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (fmapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
   (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
-      Just (("with" <> space <> tupled (map (\g -> "+" <> printGeneralName g) grantNames ++ map (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
+      Just (("with" <> space <> tupled (fmap (\g -> "+" <> printGeneralName g) grantNames ++ fmap (\r -> "-" <> printGeneralName r) revokeNames)) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
   (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
@@ -383,7 +383,7 @@ maybePrintTerms = \case
   (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (vsep [printMatch Nothing cases (Just elseBody)] `justVertical` xs)
   (Push _ value _ : xs) -> Just (printValue value `justHoriz` xs)
   (Word _ Operator.Postfix (QualifiedName (Qualified _ "drop")) [] o : xs) ->
-    Just (printLambda "_" (Term.compose () o (map Term.stripMetadata xs)))
+    Just (printLambda "_" (Term.compose () o (fmap Term.stripMetadata xs)))
   (Word _ fixity name args _ : xs) -> Just (printWord fixity name args `justHoriz` xs)
   (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
@@ -424,7 +424,7 @@ printGroup a = parens <$> maybePrintTerm a
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
-  let lambda = printToken Token.Arrow <+> punctuateComma (map printUnqualified names) <> semi
+  let lambda = printToken Token.Arrow <+> punctuateComma (fmap printUnqualified names) <> semi
    in case maybePrintTerm newBody of
         Nothing -> lambda
         Just a -> vsep [lambda, a]
@@ -445,7 +445,7 @@ printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
   vsep
     ( maybe "match" ("match" <+>) (cond >>= printGroup) :
-      ( map
+      ( fmap
           (\(Case n b _) -> printCase n b)
           cases
           ++ maybe
@@ -459,7 +459,7 @@ printCase :: GeneralName -> Term a -> Doc b
 printCase n (Lambda _ name _ body _) =
   group $
     blockMaybe
-      ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (map printUnqualified names))
+      ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (fmap printUnqualified names))
       (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body
@@ -470,13 +470,13 @@ printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTe
 printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
 printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
   | not (Text.any isLetter name) = parens $ pretty name
-printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (map printType xs)) args
+printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (fmap printType xs)) args
 
 printValue :: Value a -> Doc b
 printValue value = case value of
   Capture names term ->
     "$"
-      <> tupled (map printClosed names)
+      <> tupled (fmap printClosed names)
       <> braces (printTerm term)
   Character c -> squotes (pretty c)
   Closed (ClosureIndex index) -> "closure" <> dot <> pretty index
@@ -489,7 +489,7 @@ printValue value = case value of
   Text text -> (if Text.count "\n" text > 1 then multiline else singleline) text
     where
       multiline :: Text -> Doc a
-      multiline t = vsep ([multilineQuote] ++ map pretty (lines t) ++ [multilineQuote])
+      multiline t = vsep ([multilineQuote] ++ fmap pretty (lines t) ++ [multilineQuote])
         where
           multilineQuote = dquote <> dquote <> dquote
 
@@ -509,7 +509,7 @@ printMetadata :: Metadata -> Doc a
 printMetadata metadata =
   vsep $
     ("about" <+> printGeneralName (view Metadata.name metadata) <+> lbrace) :
-    map
+    fmap
       (\(key, term) -> indent 2 $ blockMaybe (printUnqualified key) (maybePrintTerm term))
       ( HashMap.toList $
           view Metadata.fields metadata
@@ -565,8 +565,8 @@ printEntry (Entry.Type origin parameters ctors) =
       hsep ["defined at", printOrigin origin],
       hsep $
         "with parameters [" :
-        intersperse ", " (map printParameter parameters),
-      nestTwo $ vsep $ "and data constructors" : map constructor ctors
+        intersperse ", " (fmap printParameter parameters),
+      nestTwo $ vsep $ "and data constructors" : fmap constructor ctors
     ]
   where
     constructor ctor =
@@ -574,8 +574,7 @@ printEntry (Entry.Type origin parameters ctors) =
         [ printUnqualified $ view DataConstructor.name ctor,
           " with fields (",
           hsep $
-            intersperse ", " $
-              map printSignature $ view DataConstructor.fields ctor,
+            intersperse ", " (printSignature <$> view DataConstructor.fields ctor),
           ")"
         ]
 printEntry (Entry.InstantiatedType origin size) =
@@ -588,10 +587,10 @@ printEntry (Entry.InstantiatedType origin size) =
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
   vcat
-    ( map
+    ( fmap
         (\g -> printGrouped g <> line)
         groupedDeclarations
-        ++ map
+        ++ fmap
           (\t -> printTypeDefinition t <> line)
           ( sort (view Fragment.types fragment)
           )
@@ -599,7 +598,7 @@ printFragment fragment =
           (fmap (<> line) . printDefinition)
           ( sort (view Fragment.definitions fragment)
           )
-        ++ map
+        ++ fmap
           (\m -> printMetadata m <> line)
           ( sort (view Fragment.metadata fragment)
           )
@@ -608,8 +607,8 @@ printFragment fragment =
     groupedDeclarations = groupBy (\a b -> (qualifierName . view Declaration.name) a == (qualifierName . view Declaration.name) b) (view Fragment.declarations fragment)
     printGrouped decls =
       if noVocab
-        then vsep (map (\d -> printDeclaration d <> line) $ sort decls)
-        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : map (indent 2 . printDeclaration) (sort decls) ++ [rbrace]
+        then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
+        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : (indent 2 . printDeclaration) <$> sort decls ++ [rbrace]
       where
         (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
@@ -636,7 +635,7 @@ maybeBlockMaybe (Just before) inner = blockMaybe before inner
 maybeBlockMaybe Nothing Nothing = lbrace <> rbrace
 
 blockMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
-blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> vsep [before <+> lbrace, indent 2 (vsep (map f xs)), rbrace])
+blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> vsep [before <+> lbrace, indent 2 (vsep (fmap f xs)), rbrace])
 
 mapNonEmpty :: b -> ([a] -> b) -> [a] -> b
 mapNonEmpty emptyCase nonEmptyFn l = fromMaybe emptyCase (viaNonEmpty (nonEmptyFn . toList) l)

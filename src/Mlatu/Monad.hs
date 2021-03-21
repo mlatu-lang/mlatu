@@ -25,7 +25,7 @@ import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
 import Mlatu.Ice (ice)
 
--- | A Mlatu action atop a 'Monad' 'm', returning a result of type 'a', which
+-- | A Mlatu action atop a 'Monad' 'm', pureing a result of type 'a', which
 -- maintains a 'Context' stack and can fail with a list of 'Reports'.
 newtype MT m a = MT
   {unKT :: Context -> Reports -> ExceptT Reports m (a, Reports)}
@@ -36,7 +36,7 @@ type Reports = [Report]
 
 type M = MT IO
 
--- | Runs a nested action, returning whether it completed successfully, that is,
+-- | Runs a nested action, pureing whether it completed successfully, that is,
 -- without generating any reports.
 attempt :: (Monad m) => MT m a -> MT m Bool
 attempt action = MT $ \context reports ->
@@ -44,7 +44,7 @@ attempt action = MT $ \context reports ->
     runExceptT (unKT action context reports)
       <&> Right . either (False,) ((True,) . snd)
 
--- | Runs an action, returning the accumulated reports (if any) or final result.
+-- | Runs an action, pureing the accumulated reports (if any) or final result.
 runMlatu :: (Monad m) => MT m a -> ExceptT [Report] m a
 runMlatu (MT m) = m [] [] <&> fst
 
@@ -56,12 +56,12 @@ instance (Monad m) => Functor (MT m) where
   {-# INLINEABLE fmap #-}
 
 instance (Monad m) => Applicative (MT m) where
-  pure x = MT $ const (return . (x,))
+  pure x = MT $ const (pure . (x,))
   MT af <*> MT ax = MT $ ap (flip . ((>>=) .) . af) (uncurry . (. first) . flip . ((<&>) .) . ax)
   {-# INLINEABLE (<*>) #-}
 
 instance (Monad m) => Monad (MT m) where
-  return = pure
+  pure = pure
   MT ax >>= f = MT $ ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unKT)
   {-# INLINEABLE (>>=) #-}
 
@@ -73,7 +73,7 @@ instance (MonadIO m) => MonadFix (MT m) where
     newEmptyMVar
       >>= ap
         ((>>=) . liftIO . unsafeInterleaveIO . takeMVar)
-        ((<=< flip (flip unKT context . k) reports) . (liftIO .) . (`ap` return) . ((>>) .) . (. fst) . putMVar)
+        ((<=< flip (flip unKT context . k) reports) . (liftIO .) . (`ap` pure) . ((>>) .) . (. fst) . putMVar)
 
 instance (MonadIO m) => MonadIO (MT m) where
   liftIO m = MT $ const ((liftIO m <&>) . flip (,))
@@ -86,7 +86,7 @@ instance (Monad m) => Informer (MT m) where
         else Left reports
   halt = MT $ const (hoistEither . Left)
   report r = MT $ \context reports ->
-    return . (,) () $
+    pure . (,) () $
       (\ctxt -> (if null ctxt then r else Report Info (Context ctxt r)) : reports)
         context
   while origin message action = MT $ unKT action . ((origin, message) :)

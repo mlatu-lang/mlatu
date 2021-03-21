@@ -79,7 +79,7 @@ operatorMetadata ::
   (Informer m) => Dictionary -> m (HashMap Qualified Operator)
 operatorMetadata dictionary =
   HashMap.fromList
-    <$> mapM
+    <$> traverse
       getMetadata
       (filter isOperatorName $ wordNames dictionary)
   where
@@ -131,7 +131,7 @@ operatorMetadata dictionary =
         defaultAssociativity = Operator.Nonassociative
 
         yield associativity precedence =
-          return
+          pure
             ( name,
               Operator
                 { Operator.associativity = associativity,
@@ -173,4 +173,4 @@ wordNames = mapMaybe wordName . toList
     wordName _ = Nothing
 
 printDictionary :: Dictionary -> Doc a
-printDictionary = vsep . map printInstantiated . sort . HashMap.keys . view entries
+printDictionary = vsep . fmap printInstantiated . sort . HashMap.keys . view entries

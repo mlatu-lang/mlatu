@@ -104,7 +104,7 @@ cmd input = do
       -- correctly by the interpreter.
       _ <- Unify.typ tenv stackScheme (Term.typ mainBody)
       warnCheckpoint
-      return (dictionary'', mainBody)
+      pure (dictionary'', mainBody)
   case mResults of
     Left reports -> do
       liftIO $ reportAll reports
@@ -137,8 +137,8 @@ cmd input = do
 completer :: String -> StateT Dictionary (StateT [Rep] (StateT Int IO)) [String]
 completer n = do
   dictionary <- get
-  let dictNames = map (show . fst) (Dictionary.toList dictionary)
-  return $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
+  let dictNames = fmap (show . fst) (Dictionary.toList dictionary)
+  pure $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
@@ -186,8 +186,8 @@ typeCmd expression = do
           errorCheckpoint
           (_, typ) <- typecheck dictionary Nothing $ view Definition.body resolved
           errorCheckpoint
-          return (Just typ)
-        _otherDefinition -> return Nothing
+          pure (Just typ)
+        _otherDefinition -> pure Nothing
 
   liftIO $ case mResults of
     Left reports -> reportAll reports
@@ -203,7 +203,7 @@ ini = liftIO $ putStrLn "Welcome!"
 final :: MRepl ExitDecision
 final = do
   liftIO $ putStrLn "Bye!"
-  return Exit
+  pure Exit
 
 run :: Prelude -> IO Int
 run prelude = do
@@ -230,7 +230,7 @@ run prelude = do
         }
 
 renderStack :: [Rep] -> IO ()
-renderStack stack = unless (null stack) (print $ vcat $ map printRep stack)
+renderStack stack = unless (null stack) (print $ vcat $ fmap printRep stack)
 
 renderDictionary :: Dictionary -> IO ()
 renderDictionary = print . Dictionary.printDictionary
