@@ -18,9 +18,9 @@ spec = do
   it "does nothing to free type variables" $ do
     Zonk.typ TypeEnv.empty va `shouldBe` va
   it "substitutes one level" $ do
-    Zonk.typ (set TypeEnv.tvs  (fmap .singleton ia vb) TypeEnv.empty) va `shouldBe` vb
+    Zonk.typ (set TypeEnv.tvs  (Map.singleton ia vb) TypeEnv.empty) va `shouldBe` vb
   it "substitutes multiple levels" $ do
-    Zonk.typ (set TypeEnv.tvs  (fmap .fromList [(ia, vb), (ib, int)]) TypeEnv.empty) va `shouldBe` int
+    Zonk.typ (set TypeEnv.tvs  (Map.fromList [(ia, vb), (ib, int)]) TypeEnv.empty) va `shouldBe` int
   where
     o = Origin.point "" 0 0
     ia = TypeId 0

@@ -32,11 +32,11 @@ typ tenv0 = recur
     recur t = case t of
       TypeConstructor {} -> t
       TypeValue {} -> error "TODO: zonk type value"
-      TypeVar _origin (Var _name x _k) -> maybe t recur  (fmap .lookup x (view TypeEnv.tvs tenv0))
+      TypeVar _origin (Var _name x _k) -> maybe t recur  (Map.lookup x (view TypeEnv.tvs tenv0))
       TypeConstant {} -> t
       Forall origin var@(Var _ i _) t' ->
         Forall origin var $
-          typ (over TypeEnv.tvs  (fmap .delete i) tenv0) t'
+          typ (over TypeEnv.tvs  (Map.delete i) tenv0) t'
       a :@ b -> recur a :@ recur b
 
 -- | Zonking a term zonks all the annotated types of its subterms. This could be

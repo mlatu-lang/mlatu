@@ -10,8 +10,8 @@
 -- Portability : GHC
 module Mlatu.Stack
   ( Stack (..),
-  _Bottom,
-  (.:::),
+    _Bottom,
+    (.:::),
     fromList,
     popNote,
     pops,
@@ -19,8 +19,8 @@ module Mlatu.Stack
   )
 where
 
-import Relude hiding (fromList)
 import Optics
+import Relude hiding (fromList)
 
 -- | A stack with strictly evaluated elements and spine.
 data Stack a = Bottom | !a ::: !(Stack a)

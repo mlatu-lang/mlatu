@@ -24,4 +24,3 @@ data Instantiated = Instantiated
 instance Hashable Instantiated where
   hashWithSalt s (Instantiated n ts) =
     hashWithSalt s (0 :: Int, n, ts)
-

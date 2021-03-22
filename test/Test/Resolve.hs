@@ -30,11 +30,11 @@ import Mlatu.Resolve qualified as Resolve
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Prettyprinter (dquotes, hsep, list, tupled)
 import Relude
 import Test.HUnit (assertEqual, assertFailure)
 import Test.Hspec (Spec, it)
-import Optics
 
 spec :: Spec
 spec = do
@@ -155,29 +155,33 @@ testWord contextSource viewpoint name expected = do
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
         fragment =
-          set Fragment.definitions (one
-                  Definition
-                    { Definition._body = Term.Word () Operator.Postfix name [] origin,
-                      Definition._category = Category.Word,
-                      Definition._fixity = Operator.Postfix,
-                      Definition._inferSignature = False,
-                      Definition._merge = Merge.Deny,
-                      Definition._name = Qualified viewpoint "test",
-                      Definition._origin = origin,
-                      Definition._parent = Nothing,
-                      Definition._signature =
-                        Signature.Quantified
-                          [Parameter origin "R" Stack Nothing]
-                          ( Signature.StackFunction
-                              (Signature.Variable "R" origin)
-                              []
-                              (Signature.Variable "R" origin)
-                              []
-                              []
-                              origin
-                          )
-                          origin
-                    }) mempty
+          set
+            Fragment.definitions
+            ( one
+                Definition
+                  { Definition._body = Term.Word () Operator.Postfix name [] origin,
+                    Definition._category = Category.Word,
+                    Definition._fixity = Operator.Postfix,
+                    Definition._inferSignature = False,
+                    Definition._merge = Merge.Deny,
+                    Definition._name = Qualified viewpoint "test",
+                    Definition._origin = origin,
+                    Definition._parent = Nothing,
+                    Definition._signature =
+                      Signature.Quantified
+                        [Parameter origin "R" Stack Nothing]
+                        ( Signature.StackFunction
+                            (Signature.Variable "R" origin)
+                            []
+                            (Signature.Variable "R" origin)
+                            []
+                            []
+                            origin
+                        )
+                        origin
+                  }
+            )
+            mempty
     Enter.fragment fragment contextDictionary
   case Dictionary.toList <$> dictionary of
     Right definitions -> case find matching definitions of

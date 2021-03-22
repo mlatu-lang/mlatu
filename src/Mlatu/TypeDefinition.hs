@@ -10,10 +10,10 @@
 -- Portability : GHC
 module Mlatu.TypeDefinition
   ( TypeDefinition (..),
-  constructors,
-  name,
-  origin,
-  parameters
+    constructors,
+    name,
+    origin,
+    parameters,
   )
 where
 
@@ -21,8 +21,8 @@ import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
-import Relude hiding (Constraint)
 import Optics.TH (makeLenses)
+import Relude hiding (Constraint)
 
 data TypeDefinition = TypeDefinition
   { _constructors :: ![DataConstructor],

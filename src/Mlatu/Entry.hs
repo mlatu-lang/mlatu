@@ -10,11 +10,11 @@
 -- Portability : GHC
 module Mlatu.Entry
   ( Entry (..),
-  _Word,
-  _Metadata, 
-  _Trait,
-  _Type, 
-  _InstantiatedType
+    _Word,
+    _Metadata,
+    _Trait,
+    _Type,
+    _InstantiatedType,
   )
 where
 
@@ -27,8 +27,8 @@ import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
-import Relude hiding (Constraint, Type)
 import Optics.TH (makePrisms)
+import Relude hiding (Constraint, Type)
 
 -- | An entry in the dictionary.
 --

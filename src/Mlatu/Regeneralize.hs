@@ -48,7 +48,7 @@ regeneralize tenv t =
    in foldr addForall t' $
         foldr
           (deleteBy ((==) `on` fst))
-           (fmap .toList (Free.tvks tenv t'))
+          (Map.toList (Free.tvks tenv t'))
           vars
   where
     addForall :: (TypeId, (Unqualified, Kind)) -> Type -> Type

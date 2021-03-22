@@ -10,11 +10,11 @@
 -- Portability : GHC
 module Mlatu.Element
   ( Element (..),
-  _Declaration,
-  _Definition,
-  _Metadata,
-  _Term,
-  _TypeDefinition
+    _Declaration,
+    _Definition,
+    _Metadata,
+    _Term,
+    _TypeDefinition,
   )
 where
 

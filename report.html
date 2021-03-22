@@ -161,12 +161,15 @@ document.body.className = "script";
 
 <p><a class="all" href="javascript:show('')">All hints</a></p>
 <ul>
-<li>No hints</li>
+<li><a id="hint0" href="javascript:show('hint0')">Suggestion: Reduce duplication (2)</a></li>
+<li><a id="hint1" href="javascript:show('hint1')">Suggestion: Use one (1)</a></li>
 </ul>
 
 <p><a class="all" href="javascript:show('')">All files</a></p>
 <ul>
-<li>No files</li>
+<li><a id="file0" href="javascript:show('file0')">src/Mlatu/Free.hs (1)</a></li>
+<li><a id="file1" href="javascript:show('file1')">src/Mlatu/Infer.hs (1)</a></li>
+<li><a id="file2" href="javascript:show('file2')">src/Mlatu/Interpret.hs (1)</a></li>
 </ul>
 
 </div>
@@ -177,7 +180,41 @@ v3.1.6
     - a tool to suggest improvements to your Haskell code.
 </p>
 
-No hints
+<div class="hint1 file0">
+src/Mlatu/Free.hs:34:37-49: Suggestion: Use one<br/>
+Found<br/>
+<pre><span class='hs-conid'>Map.singleton</span></pre>
+Perhaps<br/>
+<pre><span class='hs-definition'>one</span></pre>
+<span class='note'>Note: Use <tt>one</tt></span>
+</div>
+
+<div class="hint0 file1">
+src/Mlatu/Infer.hs:248:9-75: Suggestion: Reduce duplication<br/>
+Found<br/>
+<pre><span class='hs-definition'>unusedScrutinee</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-conid'>TypeEnv.freshTv</span> <span class='hs-varid'>tenv1</span> <span class='hs-str'>"MatchUnused"</span> <span class='hs-varid'>origin</span> <span class='hs-conid'>Value</span>
+<span class='hs-layout'>(</span><span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-varid'>b</span><span class='hs-layout'>,</span> <span class='hs-varid'>e</span><span class='hs-layout'>,</span> <span class='hs-varid'>tenv''</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-conid'>Unify.function</span> <span class='hs-varid'>tenv'</span> <span class='hs-varid'>bodyType</span>
+<span class='hs-keyword'>let</span> <span class='hs-varid'>elseType</span>
+      <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Type.fun</span> <span class='hs-varid'>elseOrigin</span> <span class='hs-layout'>(</span><span class='hs-conid'>Type.prod</span> <span class='hs-varid'>elseOrigin</span> <span class='hs-varid'>a</span> <span class='hs-varid'>unusedScrutinee</span><span class='hs-layout'>)</span> <span class='hs-varid'>b</span> <span class='hs-varid'>e</span>
+<span class='hs-definition'>pure</span> <span class='hs-layout'>(</span><span class='hs-conid'>Else</span> <span class='hs-varid'>body'</span> <span class='hs-varid'>elseOrigin</span><span class='hs-layout'>,</span> <span class='hs-varid'>elseType</span><span class='hs-layout'>,</span> <span class='hs-varid'>tenv''</span><span class='hs-layout'>)</span>
+</pre>
+Perhaps<br/>
+<pre><span class='hs-conid'>Combine</span> <span class='hs-varid'>with</span> <span class='hs-varid'>src</span><span class='hs-varop'>/</span><span class='hs-conid'>Mlatu</span><span class='hs-varop'>/</span><span class='hs-conid'>Infer.hs</span><span class='hs-conop'>:</span><span class='hs-num'>270</span><span class='hs-conop'>:</span><span class='hs-num'>9</span><span class='hs-comment'>-</span><span class='hs-num'>75</span></pre>
+
+</div>
+
+<div class="hint0 file2">
+src/Mlatu/Interpret.hs:491:15-29: Suggestion: Reduce duplication<br/>
+Found<br/>
+<pre><span class='hs-definition'>result</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>f</span> <span class='hs-varid'>txt</span>
+<span class='hs-definition'>writeIORef</span> <span class='hs-varid'>stackRef</span> <span class='hs-varop'>$</span> <span class='hs-varid'>rep</span> <span class='hs-varid'>result</span> <span class='hs-conop'>:::</span> <span class='hs-varid'>r</span>
+<span class='hs-definition'>word</span> <span class='hs-varid'>callStack</span> <span class='hs-layout'>(</span><span class='hs-conid'>Qualified</span> <span class='hs-conid'>Vocabulary.global</span> <span class='hs-str'>"some"</span><span class='hs-layout'>)</span> <span class='hs-conid'>[]</span>
+</pre>
+Perhaps<br/>
+<pre><span class='hs-conid'>Combine</span> <span class='hs-varid'>with</span> <span class='hs-varid'>src</span><span class='hs-varop'>/</span><span class='hs-conid'>Mlatu</span><span class='hs-varop'>/</span><span class='hs-conid'>Interpret.hs</span><span class='hs-conop'>:</span><span class='hs-num'>503</span><span class='hs-conop'>:</span><span class='hs-num'>15</span><span class='hs-comment'>-</span><span class='hs-num'>29</span></pre>
+
+</div>
+
 </div>
 <script type='text/javascript'>
 show(window.location.hash.slice(1), true);

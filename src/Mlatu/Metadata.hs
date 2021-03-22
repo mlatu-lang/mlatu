@@ -10,17 +10,17 @@
 -- Portability : GHC
 module Mlatu.Metadata
   ( Metadata (..),
-  fields,
-  name,
-  origin
+    fields,
+    name,
+    origin,
   )
 where
 
 import Mlatu.Name (GeneralName, Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Term (Term)
-import Relude
 import Optics.TH
+import Relude
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata

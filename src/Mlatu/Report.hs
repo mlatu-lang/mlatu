@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- |
 -- Module      : Mlatu.Report
@@ -36,7 +36,7 @@ module Mlatu.Report
     _InvalidOperatorMetadata,
     _ParseError,
     _UseCommon,
-    _Context
+    _Context,
   )
 where
 
@@ -50,11 +50,11 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor, Type)
 import Mlatu.Type qualified as Type
-import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>), colon)
+import Optics.TH (makePrisms)
+import Prettyprinter (Doc, Pretty (pretty), colon, comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>))
 import Relude hiding (Type)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
-import Optics.TH (makePrisms)
 
 data NameCategory = WordName | TypeName
   deriving (Eq, Show)

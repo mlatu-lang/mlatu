@@ -16,8 +16,9 @@ where
 import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
-import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), Base(..))
+import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..))
 import Mlatu.Located (Located (..))
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
@@ -31,7 +32,6 @@ import Relude.Unsafe qualified as Unsafe
 import Text.Parsec (Column, ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos qualified as Parsec
-import Mlatu.Ice (ice)
 
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.
@@ -169,7 +169,7 @@ escape =
 symbol :: Tokenizer Char
 symbol =
   Parsec.notFollowedBy special
-    *> Parsec.choice  (fmap  Parsec.satisfy [isSymbol, isPunctuation])
+    *> Parsec.choice (fmap Parsec.satisfy [isSymbol, isPunctuation])
 
 special :: Tokenizer Char
 special = Parsec.oneOf "\"'(),:[\\]_{}"
@@ -181,7 +181,7 @@ ellipsis :: Tokenizer Token
 ellipsis =
   Parsec.try $
     Ellipsis
-      <$ Parsec.choice  (fmap  Parsec.string ["...", "\x2026"])
+      <$ Parsec.choice (fmap Parsec.string ["...", "\x2026"])
 
 ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
@@ -190,7 +190,7 @@ vocabLookup :: Tokenizer Token
 vocabLookup =
   Parsec.try $
     VocabLookup
-      <$ Parsec.choice  (fmap  Parsec.string ["::", "\x2237"])
+      <$ Parsec.choice (fmap Parsec.string ["::", "\x2237"])
 
 colon :: Tokenizer Token
 colon = Colon <$ Parsec.char ':'
@@ -285,7 +285,7 @@ arrow :: Tokenizer Token
 arrow =
   Parsec.try $
     Arrow
-      <$ Parsec.choice  (fmap  Parsec.string ["->", "\x2192"])
+      <$ Parsec.choice (fmap Parsec.string ["->", "\x2192"])
       <* Parsec.notFollowedBy symbol
 
 angleBegin :: Tokenizer Token
@@ -368,7 +368,7 @@ nestableCharacter open close = go
         [ (<?> "character") $ one <$> Parsec.noneOf ['\\', open, close],
           (\o t c -> o : t ++ [c])
             <$> (Parsec.char open <?> "nested opening quote")
-            <*> (concat <$> Parsec.many go)
+            <*> (asum <$> Parsec.many go)
             <*> (Parsec.char close <?> "matching closing quote"),
           maybeToList <$> escape
         ]
@@ -391,7 +391,7 @@ text = toText . catMaybes <$> many (character '"')
 
 nestableText :: Char -> Char -> Tokenizer Text
 nestableText open close =
-  toText . concat
+  toText . asum
     <$> many (nestableCharacter open close)
 
 paragraph :: Tokenizer Token
@@ -408,7 +408,7 @@ paragraph =
           Parsec.unexpected
             (show $ dquotes $ pretty line)
             -- HACK: Relies on formatting of messages to include "expected ...".
-            <?> concat
+            <?> asum
               [ "all lines to be empty or begin with ",
                 show $ BS.length (encodeUtf8 prefix),
                 " spaces"

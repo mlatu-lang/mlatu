@@ -21,6 +21,7 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry.Parameter (Parameter (Parameter))
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Monad (M)
 import Mlatu.Name
@@ -31,10 +32,9 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
-import Optics
-import Mlatu.Ice (ice)
 
 type Resolved a = StateT [Unqualified] M a
 

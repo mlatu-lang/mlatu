@@ -27,10 +27,10 @@ tvs tenv0 = Set.fromList . Map.keys . tvks tenv0
 
 -- | Finds free variables (those not bound by any quantifier) and pures them
 -- along with their kinds.
-tvks :: TypeEnv -> Type -> fmap TypeId (Unqualified, Kind)
+tvks :: TypeEnv -> Type -> Map TypeId (Unqualified, Kind)
 tvks tenv x = go (Zonk.typ tenv x)
   where
-    go :: Type -> fmap TypeId (Unqualified, Kind)
+    go :: Type -> Map TypeId (Unqualified, Kind)
     go (TypeVar _ (Var name i k)) = Map.singleton i (name, k)
     go (Forall _ (Var _name i _) t') = Map.delete i $ go t'
     go (a :@ b) = Map.union (go a) (go b)

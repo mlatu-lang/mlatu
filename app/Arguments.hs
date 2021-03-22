@@ -36,5 +36,5 @@ checkFilesCommand = command "check" (info (CheckFiles <$> preludeFlag <*> filesA
 runFilesCommand :: Mod CommandFields Options
 runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> filesArgument) (progDesc "Runs Mlatu files"))
 
-compileFilesCommand :: Mod CommandFields Options 
+compileFilesCommand :: Mod CommandFields Options
 compileFilesCommand = command "compile" (info (CompileFiles <$> preludeFlag <*> filesArgument) (progDesc "Compiles Mlatu files"))

@@ -11,6 +11,7 @@
 module Mlatu.Dictionary
   ( Dictionary (..),
     empty,
+    difference,
     insert,
     lookup,
     member,
@@ -60,6 +61,9 @@ empty =
   Dictionary
     { _entries = HashMap.empty
     }
+
+difference :: Dictionary -> Dictionary -> Dictionary
+difference a b = Dictionary {_entries = HashMap.difference (view entries a) (view entries b)}
 
 -- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
 -- lead to an invalid dictionary state.

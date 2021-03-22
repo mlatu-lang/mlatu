@@ -16,6 +16,7 @@ import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..))
@@ -26,13 +27,12 @@ import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
+import Optics
 import Relude hiding (Compose)
 import Relude.Extra (universe)
 import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
-import Optics
-import Mlatu.Ice (ice)
 
 type Rewriter a = Parsec [Term ()] () a
 
@@ -46,10 +46,10 @@ desugar dictionary definition = do
 
       rawOperatorTable :: [[Operator]]
       rawOperatorTable =
-          ( \p ->
-              HashMap.elems $
-                HashMap.filter ((== p) . Operator.precedence) operatorMetadata
-          )
+        ( \p ->
+            HashMap.elems $
+              HashMap.filter ((== p) . Operator.precedence) operatorMetadata
+        )
           <$> reverse universe
 
       expression :: Rewriter (Term ())

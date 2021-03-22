@@ -17,13 +17,13 @@ where
 
 import Control.Monad (ap)
 import Control.Monad.Fix (MonadFix (..))
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report (..), ReportKind (..))
 import Prettyprinter (Doc)
 import Relude
 import System.IO.Unsafe (unsafeInterleaveIO)
-import Mlatu.Ice (ice)
 
 -- | A Mlatu action atop a 'Monad' 'm', pureing a result of type 'a', which
 -- maintains a 'Context' stack and can fail with a list of 'Reports'.
@@ -61,7 +61,7 @@ instance (Monad m) => Applicative (MT m) where
   {-# INLINEABLE (<*>) #-}
 
 instance (Monad m) => Monad (MT m) where
-  pure = pure
+  return = pure
   MT ax >>= f = MT $ ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unKT)
   {-# INLINEABLE (>>=) #-}
 

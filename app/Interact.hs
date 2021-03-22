@@ -10,11 +10,11 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Fragment qualified as Fragment
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
+import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
-import Mlatu.Infer (typecheck, typeFromSignature)
+import Mlatu.Infer (typeFromSignature, typecheck)
 import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Interpret (Failure, Rep, interpret, printRep)
@@ -34,12 +34,12 @@ import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
 import System.IO (hPrint)
-import Optics
 
 type MRepl a = HaskelineT (StateT Dictionary (StateT [Rep] (StateT Int IO))) a
 
@@ -143,16 +143,15 @@ completer n = do
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
   ["help"] -> putStrLn helpHelp
-  ["stack"] -> putStrLn stackHelp 
+  ["stack"] -> putStrLn stackHelp
   ["dict"] -> putStrLn dictHelp
   ["type"] -> putStrLn typeHelp
-  _ -> forM_ [dictHelp, stackHelp, helpHelp] putStrLn
-  where 
+  _ -> traverse_ putStrLn [dictHelp, stackHelp, helpHelp]
+  where
     helpHelp = ":help - Show this help."
     stackHelp = ":stack - Show the current state of the stack."
     dictHelp = ":dict - Show the current state of the dictionary."
     typeHelp = ":type - Show the type of an expression."
-
 
 stackCmd :: String -> MRepl ()
 stackCmd =
@@ -163,15 +162,15 @@ stackCmd =
 dictCmd :: String -> MRepl ()
 dictCmd =
   const $
-  lift get
+    lift get
       >>= (liftIO . renderDictionary)
 
 typeCmd :: String -> MRepl ()
-typeCmd expression = do 
-  dictionary <- lift get 
+typeCmd expression = do
+  dictionary <- lift get
   lineNumber <- lift $ lift $ lift get
-  mResults <- liftIO $ 
-    runMlatuExceptT $ do 
+  mResults <- liftIO $
+    runMlatuExceptT $ do
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Qualified Vocabulary.global "IO"]

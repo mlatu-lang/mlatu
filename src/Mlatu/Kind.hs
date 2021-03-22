@@ -10,16 +10,16 @@
 -- Portability : GHC
 module Mlatu.Kind
   ( Kind (..),
-  _Value,
-  _Stack,
-  _Label,
-  _Permission,
-  (.:->)
+    _Value,
+    _Stack,
+    _Label,
+    _Permission,
+    (.:->),
   )
 where
 
-import Relude
 import Optics.TH (makePrisms)
+import Relude
 
 -- | A kind (κ) is the type of a type. Types with the \"value\" kind (@*@) are
 -- inhabited by values; all other types are used only to enforce program

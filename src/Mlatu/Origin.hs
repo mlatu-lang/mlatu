@@ -18,10 +18,11 @@ module Mlatu.Origin
     beginLine,
     beginColumn,
     endLine,
-    endColumn
+    endColumn,
   )
 where
 
+import Optics
 import Relude
 import Text.Parsec.Pos
   ( Column,
@@ -33,7 +34,6 @@ import Text.Parsec.Pos
     sourceLine,
     sourceName,
   )
-import Optics
 
 -- | A source location, in the form of an origin name (typically a file path)
 -- and source span between two ('Line', 'Column') pairs.
@@ -77,4 +77,3 @@ range a b =
       _endLine = sourceLine b,
       _endColumn = sourceColumn b
     }
-

@@ -4,6 +4,7 @@ import Arguments qualified
 import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 import Interact qualified
 import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource, runMlatu)
+import Mlatu.Codegen qualified as Codegen
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
@@ -11,11 +12,10 @@ import Mlatu.Report (Report)
 import Mlatu.Vocabulary qualified as Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Relude
-import Mlatu.Codegen qualified as Codegen
 import Report (reportAll)
 import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
-import System.Process.Typed (runProcess_, proc)
+import System.Process.Typed (proc, runProcess_)
 import Text.Printf (printf)
 
 main :: IO ()
@@ -48,7 +48,7 @@ handleReports reports = do
   exitFailure
 
 formatFiles :: [FilePath] -> IO ()
-formatFiles paths = forM_ paths $ \relativePath -> do
+formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
@@ -86,26 +86,28 @@ runFiles prelude relativePaths = do
     Left reports -> handleReports reports
     Right program -> do
       (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
-     
+
       reportTime [("generate the IR from the source", t1), ("interpet the IR", t2)]
 
 compileFiles :: Prelude -> [FilePath] -> IO ()
 compileFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $ runExceptT $ runMlatu $ do
-    commonDictionary <- compilePrelude prelude mainPermissions Nothing
-    compile mainPermissions Nothing paths (Just commonDictionary)
+  (result, t1) <- timed $
+    runExceptT $
+      runMlatu $ do
+        commonDictionary <- compilePrelude prelude mainPermissions Nothing
+        compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right program -> do
       let filename = "output.rs"
-      (text, t2) <- timed $ Codegen.generate program
-      (_, t3) <- timed $ writeFile filename $ toString text
-      runProcess_ $ proc "rustfmt" [filename]
-      (_, t4) <- timed $ runProcess_ $ proc "rustc" [filename]
-      --removeFile filename
+      (bs, t2) <- timed $ Codegen.generate program
+      (_, t3) <- timed $ writeFileBS filename bs
+      (_, t4) <- timed $ runProcess_ $ proc "rustfmt" [filename]
+      (_, t5) <- timed $ runProcess_ $ proc "rustc" [filename]
+      removeFile filename
 
-      reportTime [("generate the IR from the source", t1), ("generate Rust from the IR", t2), ("write Rust to a file", t3), ("compile the Rust file", t4)]
+      reportTime [("generate the IR from the source", t1), ("generate Rust from the IR", t2), ("write Rust to a file", t3), ("format the Rust file", t4), ("compile the Rust file", t5)]
 
 timed :: IO a -> IO (a, NominalDiffTime)
 timed comp = do
@@ -115,11 +117,13 @@ timed comp = do
   pure (result, diffUTCTime t2 t1)
 
 reportTime :: [(String, NominalDiffTime)] -> IO ()
-reportTime times = putStrLn ("\n---" <> concatMap report times <> printf "\nTotal time: %.4f seconds\n---" whole) where 
-      whole :: Double
-      whole = sum  (fmap  (realToFrac . snd) times)
+reportTime times = putStrLn ("\n---" <> concatMap report times <> printf "\nTotal time: %.4f seconds\n---" whole)
+  where
+    whole :: Double
+    whole = sum (fmap (realToFrac . snd) times)
 
-      report :: (String, NominalDiffTime) -> String
-      report (text, time) = printf "\nTime taken to %s: %.4f seconds, %.2f%% of total time" text fracTime (100.0 * (fracTime / whole)) where 
-        fracTime :: Double 
+    report :: (String, NominalDiffTime) -> String
+    report (text, time) = printf "\nTime taken to %s: %.4f seconds, %.2f%% of total time" text fracTime (100.0 * (fracTime / whole))
+      where
+        fracTime :: Double
         fracTime = realToFrac time

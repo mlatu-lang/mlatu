@@ -40,9 +40,10 @@ import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
+import Mlatu.Ice (ice)
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Literal (FloatLiteral (..), IntegerLiteral (..), Base(..), floatValue, integerBase, integerValue)
+import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..), floatValue, integerBase, integerValue)
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
@@ -56,12 +57,11 @@ import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeDefinition (TypeDefinition (..))
 import Numeric (showIntAtBase)
+import Optics
 import Prettyprinter
 import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
-import Optics
-import Mlatu.Ice (ice)
 
 punctuateComma :: [Doc a] -> Doc a
 punctuateComma = hsep . punctuate comma
@@ -311,7 +311,7 @@ printToken = \case
   Token.Operator name -> printUnqualified name
   Token.Permission -> "permission"
   Token.Reference -> "\\"
-  Token.pure -> "pure"
+  Token.Return -> "return"
   Token.Text t -> dquotes $ pretty t
   Token.Trait -> "trait"
   Token.Type -> "type"
@@ -366,8 +366,8 @@ maybePrintTerms = \case
   (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
-  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (fmapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
-  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (fmapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
+  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
+  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
@@ -608,7 +608,7 @@ printFragment fragment =
     printGrouped decls =
       if noVocab
         then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
-        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : (indent 2 . printDeclaration) <$> sort decls ++ [rbrace]
+        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : (indent 2 . printDeclaration <$> sort decls) ++ [rbrace]
       where
         (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)

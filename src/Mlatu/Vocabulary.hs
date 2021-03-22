@@ -13,8 +13,8 @@ module Mlatu.Vocabulary
   )
 where
 
-import Relude
 import Mlatu.Name (Qualifier (..), Root (..))
+import Relude
 
 global :: Qualifier
 global = Qualifier Absolute []

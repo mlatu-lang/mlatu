@@ -28,6 +28,7 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Hint qualified as Hint
+import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
 import Mlatu.Instantiated (Instantiated (Instantiated))
@@ -52,10 +53,9 @@ import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
+import Optics
 import Prettyprinter (dquotes, hsep)
 import Relude
-import Optics
-import Mlatu.Ice (ice)
 
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
@@ -228,10 +228,10 @@ addMetadata dictionary0 metadata =
       pure $ case Dictionary.lookup (Instantiated name []) dictionary of
         Just {} -> dictionary -- TODO: Report duplicates or merge?
         Nothing ->
-            Dictionary.insert
-              (Instantiated name [])
-              (Entry.Metadata origin term)
-              dictionary
+          Dictionary.insert
+            (Instantiated name [])
+            (Entry.Metadata origin term)
+            dictionary
 
 resolveSignature :: Dictionary -> Qualified -> M Dictionary
 resolveSignature dictionary name = do

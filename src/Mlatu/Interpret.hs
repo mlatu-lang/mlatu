@@ -28,6 +28,7 @@ import Mlatu.Definition (mainName)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
+import Mlatu.Ice (ice)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Literal qualified as Literal
@@ -50,6 +51,7 @@ import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (log)
+import Optics
 import Prettyprinter (Doc, Pretty (pretty), dquotes, hcat, hsep, list, nest, squotes, vcat)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
@@ -57,8 +59,6 @@ import System.Exit (ExitCode (..))
 import System.IO (hFlush, hGetLine, hPrint, hPutStr, readIO)
 import System.IO.Error (IOError, ioeGetErrorType)
 import Text.Show qualified
-import Optics
-import Mlatu.Ice (ice)
 
 -- | Representation of a runtime value.
 data Rep

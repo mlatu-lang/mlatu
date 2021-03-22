@@ -30,6 +30,7 @@ import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiate qualified as Instantiate
@@ -53,11 +54,10 @@ import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
 import Mlatu.Zonk qualified as Zonk
+import Optics
 import Prettyprinter (Doc, dquotes, hsep)
 import Relude hiding (Compose, Type)
 import Relude.Unsafe qualified as Unsafe
-import Optics
-import Mlatu.Ice (ice)
 
 -- | Type inference takes a program fragment and produces a program with every
 -- term annotated with its inferred type. It's polymorphic in the annotation
@@ -79,7 +79,7 @@ typecheck dictionary mDeclaredSignature term = do
     traverse
       (\(name, signature) -> (,) name <$> typeFromSignature tenv0 signature)
       $ Dictionary.signatures dictionary
-  let tenv1 = over TypeEnv.sigs  (fmap .union  (fmap .fromList declaredTypes)) tenv0
+  let tenv1 = over TypeEnv.sigs (Map.union (Map.fromList declaredTypes)) tenv0
   inferType0 dictionary tenv1 declaredType term
 
 -- | Mangles an instance name according to its trait signature.
@@ -116,7 +116,7 @@ inferType0 dictionary tenv mDeclared term = do
       tenvFinal' <- maybe (pure tenvFinal) (Unify.typ tenvFinal t) mDeclared
   let zonked = Zonk.typ tenvFinal' t
   let regeneralized = regeneralize tenvFinal' zonked
-  forM_ mDeclared (instanceCheck "inferred" regeneralized "declared")
+  for_ mDeclared (instanceCheck "inferred" regeneralized "declared")
 
   pure (Zonk.term tenvFinal' term', regeneralized)
 
@@ -190,7 +190,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
     a <- TypeEnv.freshTv tenv0 varTypeName origin Value
     let oldLocals = view TypeEnv.vs tenv0
-    let localEnv = over TypeEnv.vs (a:) tenv0
+    let localEnv = over TypeEnv.vs (a :) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
     let tenv2 = set TypeEnv.vs oldLocals tenv1
     (b, c, e, tenv3) <- Unify.function tenv2 t1
@@ -577,12 +577,12 @@ typeFromSignature tenv signature0 = do
         where
           declare ::
             Parameter ->
-             (fmap  Unqualified (Var, Origin), [Var]) ->
-            M  (fmap  Unqualified (Var, Origin), [Var])
+            (Map Unqualified (Var, Origin), [Var]) ->
+            M (Map Unqualified (Var, Origin), [Var])
           declare (Parameter varOrigin name kind _) (envVars, freshVars) = do
             x <- freshTypeId tenv
             let var = Var name x kind
-            pure  (fmap .insert name (var, varOrigin) envVars, var : freshVars)
+            pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
       Signature.StackFunction r as s bs es origin -> do
         let var = fromVar origin
@@ -618,7 +618,7 @@ typeFromSignature tenv signature0 = do
       pure $ TypeConstructor origin $ Constructor name
     fromVar _ name =
       ice $
-          "Mlatu.Infer.typeFromSignature - incorrectly resolved name in signature: " ++ show name
+        "Mlatu.Infer.typeFromSignature - incorrectly resolved name in signature: " ++ show name
 
     makeFunction ::
       Origin ->
@@ -656,7 +656,7 @@ splitFind f = go []
 
 data SignatureEnv = SignatureEnv
   { sigEnvAnonymous :: ![Var],
-    sigEnvVars :: ! (fmap  Unqualified (Var, Origin))
+    sigEnvVars :: !(Map Unqualified (Var, Origin))
   }
 
 valueKinded :: Dictionary -> [Type] -> M [Type]

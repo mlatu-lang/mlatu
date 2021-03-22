@@ -12,11 +12,11 @@ module Mlatu.Scope
 where
 
 import Data.List (elemIndex)
+import Mlatu.Ice (ice)
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..))
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Relude hiding (Compose)
 import Relude.Extra (next)
-import Mlatu.Ice (ice)
 
 -- | Whereas name resolution is concerned with resolving references to
 -- definitions, scope resolution resolves local names to relative (De Bruijn)
@@ -41,7 +41,7 @@ scope = scopeTerm [0]
             ()
             name
             ()
-            (scopeTerm  (fmap Head next stack) a)
+            (scopeTerm (mapHead next stack) a)
             origin
         recur (Match hint _ cases else_ origin) =
           Match
@@ -77,7 +77,7 @@ scope = scopeTerm [0]
     scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
     scopeValue _ value@Name {} = value
-    scopeValue stack (Quotation body) = Capture  (fmap  ClosedLocal capturedNames) capturedTerm
+    scopeValue stack (Quotation body) = Capture (fmap ClosedLocal capturedNames) capturedTerm
       where
         capturedTerm :: Term ()
         capturedNames :: [LocalIndex]

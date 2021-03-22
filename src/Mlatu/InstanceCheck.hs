@@ -26,9 +26,9 @@ import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Zonk qualified as Zonk
-import Relude hiding (Type)
-import Prettyprinter (Doc)
 import Optics
+import Prettyprinter (Doc)
+import Relude hiding (Type)
 
 -- | Checks whether one type is a generic instance of another, used for checking
 -- type signatures. Remember, when using this function, which way the subtyping
@@ -91,7 +91,7 @@ subsumptionCheckFun tenv0 a b e a' b' e' = do
   tenv2 <- subsumptionCheck tenv1 b b'
   let labels = permissionList $ Zonk.typ tenv2 e
       labels' = permissionList $ Zonk.typ tenv2 e'
-  forM_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
+  for_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
     Just {} -> pass
     Nothing -> report $ Report.makeError $ Report.MissingPermissionLabel e e' origin label
   pure tenv2

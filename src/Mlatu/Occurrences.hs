@@ -13,12 +13,12 @@ module Mlatu.Occurrences
 where
 
 import Data.Map qualified as Map
+import Mlatu.Ice (ice)
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
-import Relude hiding (Type)
 import Optics
-import Mlatu.Ice (ice)
+import Relude hiding (Type)
 
 -- | We need to be able to count occurrences of a type variable in a type, not
 -- just check for its presence. This is for two reasons: to prevent infinite

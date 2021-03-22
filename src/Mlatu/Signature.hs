@@ -1,4 +1,4 @@
- {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- |
 -- Module      : Mlatu.Signature
@@ -10,13 +10,13 @@
 -- Portability : GHC
 module Mlatu.Signature
   ( Signature (..),
-  _Application,
-  _Bottom,
-  _Function,
-  _Quantified,
-  _Variable,
-  _StackFunction,
-  _Type,
+    _Application,
+    _Bottom,
+    _Function,
+    _Quantified,
+    _Variable,
+    _StackFunction,
+    _Type,
     origin,
   )
 where
@@ -26,8 +26,8 @@ import Mlatu.Name (GeneralName)
 import Mlatu.Origin (Origin)
 import Mlatu.Type (Type)
 import Mlatu.Type qualified as Type
-import Relude hiding (Constraint, Type)
 import Optics.TH (makePrisms)
+import Relude hiding (Constraint, Type)
 
 -- | A parsed type signature.
 data Signature

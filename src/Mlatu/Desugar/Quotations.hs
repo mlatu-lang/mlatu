@@ -29,9 +29,9 @@ import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
+import Optics
 import Relude hiding (Compose, Type)
 import Relude.Extra (next)
-import Optics
 
 newtype LambdaIndex = LambdaIndex Int
 
@@ -66,7 +66,7 @@ desugar dictionary qualifier term0 = do
         let oldLocals = view TypeEnv.vs tenv0
             localEnv = over TypeEnv.vs (varType :) tenv0
         (a', tenv1) <- go localEnv a
-        let tenv2 = set TypeEnv.vs oldLocals tenv1 
+        let tenv2 = set TypeEnv.vs oldLocals tenv1
         pure (Lambda typ name varType a' origin, tenv2)
       Match hint typ cases else_ origin -> do
         (cases', tenv1) <-

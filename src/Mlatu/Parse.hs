@@ -33,6 +33,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Located (Located)
@@ -62,13 +63,12 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Relude hiding (Compose, Constraint)
 import Relude.Unsafe qualified as Unsafe
 import Text.Parsec ((<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Pos (SourcePos)
-import Optics
-import Mlatu.Ice (ice)
 
 -- | Parses a program fragment.
 fragment ::
@@ -98,13 +98,18 @@ fragment line path mainPermissions mainName tokens =
         Right result -> pure (Data.desugar (insertMain result))
   where
     isMain = (fromMaybe Definition.mainName mainName ==) . view Definition.name
-    insertMain f = case find isMain $  view Fragment.definitions f of
+    insertMain f = case find isMain $ view Fragment.definitions f of
       Just {} -> f
       Nothing ->
-        over Fragment.definitions ( Definition.main
-                mainPermissions
-                mainName
-                (Term.identityCoercion () (Origin.point path line 1)) :) f 
+        over
+          Fragment.definitions
+          ( Definition.main
+              mainPermissions
+              mainName
+              (Term.identityCoercion () (Origin.point path line 1))
+              :
+          )
+          f
 
 -- | Parses only a name.
 generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
@@ -125,7 +130,7 @@ fragmentParser mainPermissions mainName =
     <$> elementsParser <* Parsec.eof
 
 elementsParser :: Parser [Element ()]
-elementsParser = concat <$> many (vocabularyParser <|> one <$> elementParser)
+elementsParser = asum <$> many (vocabularyParser <|> one <$> elementParser)
 
 partitionElements ::
   [GeneralName] ->
@@ -139,15 +144,17 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
 
     go :: Element () -> Fragment () -> Fragment ()
     go e acc = case e of
-      Element.Declaration x -> over Fragment.declarations (x:) acc
-      Element.Definition x -> over Fragment.definitions (x:) acc
-      Element.Metadata x -> over Fragment.metadata (x:) acc
-      Element.TypeDefinition x -> over Fragment.types (x:) acc
+      Element.Declaration x -> over Fragment.declarations (x :) acc
+      Element.Definition x -> over Fragment.definitions (x :) acc
+      Element.Metadata x -> over Fragment.metadata (x :) acc
+      Element.TypeDefinition x -> over Fragment.types (x :) acc
       Element.Term x ->
-        over Fragment.definitions
-          (\defs ->
+        over
+          Fragment.definitions
+          ( \defs ->
               case findIndex
-                ((== fromMaybe Definition.mainName mainName) . view Definition.name) defs of
+                ((== fromMaybe Definition.mainName mainName) . view Definition.name)
+                defs of
                 Just index -> case splitAt index defs of
                   (a, existing : b) ->
                     a
@@ -156,7 +163,8 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
                   _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
                 Nothing ->
                   Definition.main mainPermissions mainName x : defs
-          ) acc
+          )
+          acc
         where
           -- In top-level code, we want local parameteriable bindings to remain in scope even
           -- when separated by other top-level program elements, e.g.:
@@ -432,7 +440,7 @@ basicTypeParser = (<?> "basic type") $ do
   let apply a b = Signature.Application a b $ Signature.origin prefix
   mSuffix <-
     Parsec.optionMaybe $
-      fmap concat $
+      fmap asum $
         Parsec.many1 $ typeListParser basicTypeParser
   pure $ case mSuffix of
     Just suffix -> foldl' apply prefix suffix

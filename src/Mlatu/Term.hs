@@ -46,8 +46,8 @@ import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
+import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose, Type)
-import qualified Mlatu.Vocabulary as Vocabulary
 
 -- | This is the core language. It permits pushing values to the stack, invoking
 -- definitions, and moving values between the stack and local variables.
@@ -103,8 +103,8 @@ data MatchHint
   deriving (Ord, Eq, Show)
 
 -- | A case branch in a @match@ expression.
-data Case a = 
-  Case !GeneralName !(Term a) !Origin
+data Case a
+  = Case !GeneralName !(Term a) !Origin
   deriving (Ord, Eq, Show)
 
 -- | An @else@ branch in a @match@ (or @if@) expression.
@@ -172,7 +172,7 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                 (fmap  permitName grants)
+                (fmap permitName grants)
                 o
             ]
             [ Signature.StackFunction
@@ -180,7 +180,7 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                 (fmap  permitName revokes)
+                (fmap permitName revokes)
                 o
             ]
             []
@@ -243,7 +243,7 @@ stripMetadata term = case term of
   Generic a b term' c -> Generic a b (stripMetadata term') c
   Group term' -> stripMetadata term'
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
-  Match a _ b c d -> Match a ()  (fmap  stripCase b) (stripElse c) d
+  Match a _ b c d -> Match a () (fmap stripCase b) (stripElse c) d
   New _ a b c -> New () a b c
   NewClosure _ a b -> NewClosure () a b
   NewVector _ a _ b -> NewVector () a () b
