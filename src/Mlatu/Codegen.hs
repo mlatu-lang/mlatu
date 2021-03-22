@@ -13,7 +13,6 @@ where
 
 import Data.ByteString qualified as ByteString
 import Data.Char (isAlphaNum)
-import Data.HashMap.Strict qualified as HashMap
 import Data.Set qualified as Set
 import Mlatu.Definition (mainName)
 import Mlatu.Dictionary (Dictionary)
@@ -38,10 +37,10 @@ generate :: Dictionary -> IO ByteString
 generate d = do
   bs <- go (Dictionary.toList d) [] d
   pure
-    ( "#![feature(destructuring_assignment)] #![allow(warnings)] "
+    ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut)]"
         <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>),Algebraic(i64, Vec<Rep>), Char(char), Text(String), Int(i64), Float(f64), List(Vec<Rep>) } use Rep::*;"
-        <> "fn convertBool(b: bool, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if b { mtrue(stack, closures) } else { mfalse(stack, closures) } }"
-        <> "fn convertOption(o: Option<Rep>, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if let Some(x) = o { stack.push(x); msome(stack, closures) } else { mnone(stack, closures) } }"
+        <> "#[inline] fn convertBool(b: bool, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if b { mtrue(stack, closures) } else { mfalse(stack, closures) } }"
+        <> "#[inline] fn convertOption(o: Option<Rep>, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if let Some(x) = o { stack.push(x); msome(stack, closures) } else { mnone(stack, closures) } }"
         <> ByteString.concat (Set.toList bs)
     )
   where
@@ -136,10 +135,8 @@ word name args =
         usedList <- lift get
         if mangled `elem` fmap fst list || mangled `elem` usedList
           then case mangled of
-            (Instantiated (Qualified v unqualified) []) -> case name of
-              Qualified v unqualified
-                | v == Vocabulary.intrinsic -> intrinsic unqualified
-              _ -> pure $ "(stack, closures) = " <> rustifyInstantiated mangled <> "(stack, closures);"
+            (Instantiated (Qualified v unqualified) [])
+              | v == Vocabulary.intrinsic -> intrinsic unqualified
             _ -> pure $ "(stack, closures) = " <> rustifyInstantiated mangled <> "(stack, closures);"
           else do
             dict <- lift $ lift ask
@@ -205,7 +202,7 @@ intrinsic = \case
   "floor_float64" -> pure $ ifLetPop "Float(a)" $ stackPush "Float(a.floor())"
   "ceil_float64" -> pure $ ifLetPop "Float(a)" $ stackPush "Float(a.ceil())"
   "gt_float64" -> pure $ ifLetPop2 ("Float(a)", "Float(b)") "(stack, closures) = convertBool(a > b, stack, closures);"
-  "eq_float64" -> pure $ ifLetPop2 ("Float(a)", "Float(b)") "(stack, closures) = convertBool(a == b, stack, closures);"
+  "eq_float64" -> pure $ ifLetPop2 ("Float(a)", "Float(b)") "(stack, closures) = convertBool((a - b).abs() < f64::EPSILON, stack, closures);"
   "gt_string" -> pure $ ifLetPop2 ("Text(a)", "Text(b)") "(stack, closures) = convertBool(a > b, stack, closures);"
   "eq_string" -> pure $ ifLetPop2 ("Text(a)", "Text(b)") "(stack, closures) = convertBool(a == b, stack, closures);"
   "show_int64" -> pure $ ifLetPop "Int(a)" $ stackPush "Text(format!(\"{:?}\", a))"

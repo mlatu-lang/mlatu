@@ -3,9 +3,10 @@ module Main where
 import Arguments qualified
 import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 import Interact qualified
-import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource, runMlatu)
+import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource)
 import Mlatu.Codegen qualified as Codegen
 import Mlatu.Interpret (interpret)
+import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
@@ -52,7 +53,7 @@ formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
-  result <- runExceptT $ runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
+  result <- runMlatuExceptT $ fragmentFromSource mainPermissions Nothing 0 path text
   case result of
     Left reports -> handleReports reports
     Right fragment -> do
@@ -66,55 +67,52 @@ checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
   (result, t1) <- timed $
-    runExceptT $
-      runMlatu $ do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
+    runMlatuExceptT $ do
+      commonDictionary <- compilePrelude prelude mainPermissions Nothing
+      compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right _ -> reportTime [("generate the IR from the source", t1)]
 
 runFiles :: Prelude -> [FilePath] -> IO ()
-runFiles prelude relativePaths = do
-  paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $
-    runExceptT $
-      runMlatu $ do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
-  case result of
-    Left reports -> handleReports reports
-    Right program -> do
-      (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
-
-      reportTime [("generate the IR from the source", t1), ("interpet the IR", t2)]
+runFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= ( \paths ->
+            timed (runMlatuExceptT (compilePrelude prelude mainPermissions Nothing >>= (compile mainPermissions Nothing paths . Just)))
+              >>= ( \(result, t1) -> case result of
+                      Left reports -> handleReports reports
+                      Right program ->
+                        timed (interpret program Nothing [] stdin stdout stderr [])
+                          >>= (\(_, t2) -> reportTime [("generate the IR from the source", t1), ("interpet the IR", t2)])
+                  )
+        )
 
 compileFiles :: Prelude -> [FilePath] -> IO ()
 compileFiles prelude relativePaths = do
   paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $
-    runExceptT $
-      runMlatu $ do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
+  result <-
+    runMlatuExceptT $ do
+      commonDictionary <- compilePrelude prelude mainPermissions Nothing
+      compile mainPermissions Nothing paths (Just commonDictionary)
   case result of
     Left reports -> handleReports reports
     Right program -> do
-      let filename = "output.rs"
-      (bs, t2) <- timed $ Codegen.generate program
-      (_, t3) <- timed $ writeFileBS filename bs
-      (_, t4) <- timed $ runProcess_ $ proc "rustfmt" [filename]
-      (_, t5) <- timed $ runProcess_ $ proc "rustc" [filename]
-      removeFile filename
+      bs <- Codegen.generate program
+      writeFileBS "output.rs" bs
+      runProcess_ $ proc "rustfmt" ["output.rs"]
+      runProcess_ $ proc "rustc" ["-C", "opt-level=3", "output.rs"]
+      removeFile "output.rs"
+      runProcess_ $ proc "upx" ["--best", "-q", "output"]
 
-      reportTime [("generate the IR from the source", t1), ("generate Rust from the IR", t2), ("write Rust to a file", t3), ("format the Rust file", t4), ("compile the Rust file", t5)]
+timed' :: IO () -> IO NominalDiffTime
+timed' comp =
+  getCurrentTime
+    >>= (\t1 -> comp >>= const (getCurrentTime >>= (\t2 -> pure (diffUTCTime t2 t1))))
 
 timed :: IO a -> IO (a, NominalDiffTime)
-timed comp = do
-  t1 <- getCurrentTime
-  result <- comp
-  t2 <- getCurrentTime
-  pure (result, diffUTCTime t2 t1)
+timed comp =
+  getCurrentTime
+    >>= (\t1 -> comp >>= (\result -> getCurrentTime >>= (\t2 -> pure (result, diffUTCTime t2 t1))))
 
 reportTime :: [(String, NominalDiffTime)] -> IO ()
 reportTime times = putStrLn ("\n---" <> concatMap report times <> printf "\nTotal time: %.4f seconds\n---" whole)

@@ -77,9 +77,7 @@ makePrisms ''Rep
 valueRep :: (Show a) => Value a -> Rep
 valueRep (Term.Character c) = Character c
 valueRep (Term.Float literal) = Float64 $ Literal.floatValue literal
-valueRep (Term.Integer literal) = rep $ view Literal.integerValue literal
-  where
-    rep = Int64 . fromInteger
+valueRep (Term.Integer literal) = Int64 $ fromInteger $ view Literal.integerValue literal
 valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
 valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: " ++ show value

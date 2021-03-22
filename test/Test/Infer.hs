@@ -226,7 +226,7 @@ spec = do
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
         \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
-        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles fmap }"
+        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles map }"
         $ Type.fun o r (Type.prod o r (ctor "List" :@ int)) (Type.join o io e)
 
   describe "with coercions" $ do
