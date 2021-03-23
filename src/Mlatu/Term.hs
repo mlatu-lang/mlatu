@@ -172,7 +172,7 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                (fmap permitName grants)
+                (permitName <$> grants)
                 o
             ]
             [ Signature.StackFunction
@@ -180,7 +180,7 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
                 []
                 (Signature.Variable "S" o)
                 []
-                (fmap permitName revokes)
+                (permitName <$> revokes)
                 o
             ]
             []
@@ -243,7 +243,7 @@ stripMetadata term = case term of
   Generic a b term' c -> Generic a b (stripMetadata term') c
   Group term' -> stripMetadata term'
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
-  Match a _ b c d -> Match a () (fmap stripCase b) (stripElse c) d
+  Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
   New _ a b c -> New () a b c
   NewClosure _ a b -> NewClosure () a b
   NewVector _ a _ b -> NewVector () a () b

@@ -17,8 +17,8 @@ import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
-import Relude hiding (Compose, Type)
 import Optics
+import Relude hiding (Compose, Type)
 
 -- | Zonking a type fully substitutes all type variables. That is, if you have:
 --
@@ -32,11 +32,11 @@ typ tenv0 = recur
     recur t = case t of
       TypeConstructor {} -> t
       TypeValue {} -> error "TODO: zonk type value"
-      TypeVar _origin (Var _name x _k) -> maybe t recur  (Map.lookup x (view TypeEnv.tvs tenv0))
+      TypeVar _origin (Var _name x _k) -> maybe t recur (Map.lookup x (view TypeEnv.tvs tenv0))
       TypeConstant {} -> t
       Forall origin var@(Var _ i _) t' ->
         Forall origin var $
-          typ (over TypeEnv.tvs  (Map.delete i) tenv0) t'
+          typ (over TypeEnv.tvs (Map.delete i) tenv0) t'
       a :@ b -> recur a :@ recur b
 
 -- | Zonking a term zonks all the annotated types of its subterms. This could be
@@ -58,7 +58,7 @@ term tenv0 = go
       Lambda tref name varType body origin ->
         Lambda (zonk tref) name (zonk varType) (go body) origin
       Match hint tref cases else_ origin ->
-        Match hint (zonk tref)  (fmap  goCase cases) (goElse else_) origin
+        Match hint (zonk tref) (goCase <$> cases) (goElse else_) origin
         where
           goCase (Case name body caseOrigin) =
             Case name (go body) caseOrigin

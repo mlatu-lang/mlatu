@@ -34,8 +34,8 @@ spec = do
     -- <: [R..., +P]    (R... -> R..., Int +P)
     testInstanceCheck
       Positive
-      (fr $ fe $ fx $ Type.fun o r (Type.prod o r x) e)
-      (fr $ fe $ Type.fun o r (Type.prod o r int) e)
+      (fr $ fe $ fx $ Type.Fun o r (Type.Prod o r x) e)
+      (fr $ fe $ Type.Fun o r (Type.Prod o r int) e)
 
   it "with parameterized types" $ do
     --    [A, B] (Pair[A, B])
@@ -53,20 +53,20 @@ spec = do
           fx $
             fy $
               fe $
-                Type.fun
+                Type.Fun
                   o
-                  (Type.prod o r (pair :@ x :@ y))
-                  (Type.prod o r (pair :@ y :@ x))
+                  (Type.Prod o r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ y :@ x))
                   e
       )
       ( fr $
           fx $
             fy $
               fe $
-                Type.fun
+                Type.Fun
                   o
-                  (Type.prod o r (pair :@ x :@ y))
-                  (Type.prod o r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ x :@ y))
                   e
       )
   where

@@ -56,7 +56,7 @@ regeneralize tenv t =
 
     go :: Type -> Writer [(TypeId, (Unqualified, Kind))] Type
     go t' = case t' of
-      TypeConstructor _ "Fun" :@ a :@ b :@ e
+      Type.Fun _ a b e
         | TypeVar origin (Var name c k) <- bottommost a,
           TypeVar _ (Var _name d _) <- bottommost b,
           c == d ->
@@ -65,16 +65,16 @@ regeneralize tenv t =
             a' <- go a
             b' <- go b
             e' <- go e
-            pure $ Forall origin (Var name c k) $ Type.fun origin a' b' e'
-      c@(TypeConstructor _ "Prod") :@ a :@ b -> do
+            pure $ Forall origin (Var name c k) $ Type.Fun origin a' b' e'
+      Type.Prod o a b -> do
         a' <- go a
         b' <- go b
-        pure $ c :@ a' :@ b'
+        pure $ Type.Prod o a b
       -- FIXME: This should descend into the quantified type.
       Forall {} -> pure t'
       a :@ b -> (:@) <$> go a <*> go b
       _alreadyGeneralized -> pure t'
 
 bottommost :: Type -> Type
-bottommost (TypeConstructor _ "Prod" :@ a :@ _) = bottommost a
+bottommost (Type.Prod _ a _) = bottommost a
 bottommost a = a

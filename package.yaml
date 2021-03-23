@@ -5,7 +5,7 @@ category: Language
 author: Caden Haustein
 maintainer: code@brightlysalty.33mail.com
 github: brightly-salty/mlatu
-license-file: LICENSE.md 
+license-file: LICENSE.md
 
 ghc-options:
   - -Wall
@@ -85,7 +85,6 @@ executables:
       - repline
       - exceptions
       - optparse-applicative
-      - time
       - typed-process
 
 tests:

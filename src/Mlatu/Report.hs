@@ -155,7 +155,7 @@ human (Report _ kind) = kindMsg kind
             "but",
             pretty (length args),
             "were provided:",
-            list $ fmap (dquotes . printType) args
+            list $ dquotes . printType <$> args
           ]
       (CannotResolveName origin category name) ->
         hsep
@@ -181,12 +181,12 @@ human (Report _ kind) = kindMsg kind
               dquotes $ printQualified name,
               parens "did you mean to declare it as a trait?"
             ] :
-          fmap
-            ( \duplicateOrigin ->
+          ( ( \duplicateOrigin ->
                 hsep
                   ["also defined at", printOrigin duplicateOrigin]
             )
-            duplicates
+              <$> duplicates
+          )
       (WordRedefinition origin name originalOrigin) ->
         vsep
           [ hsep
@@ -252,7 +252,7 @@ human (Report _ kind) = kindMsg kind
             dquotes $ printQualified instead,
             " from the common library instead of what you have here"
           ]
-      (Chain reports) -> vsep $ fmap kindMsg reports
+      (Chain reports) -> vsep $ kindMsg <$> reports
       (OccursCheckFailure a b) ->
         vsep
           [ hsep
@@ -285,9 +285,9 @@ human (Report _ kind) = kindMsg kind
           (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
       (Context context message) ->
         vsep $
-          fmap
-            (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
-            context
+          ( (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
+              <$> context
+          )
             ++ [human message]
 
 showOriginPrefix :: Origin.Origin -> Doc a
@@ -316,10 +316,11 @@ parseError parsecError = Report Error (ParseError origin unexpected' expected')
         ( "expected" :
           punctuate
             comma
-            ( fmap pretty $
-                ordNub $
-                  filter (not . null) $ -- TODO: Replace with "end of input"
-                    fmap Parsec.messageString expected
+            ( pretty
+                <$> ordNub
+                  ( filter (not . null) $ -- TODO: Replace with "end of input"
+                      Parsec.messageString <$> expected
+                  )
             )
         )
 

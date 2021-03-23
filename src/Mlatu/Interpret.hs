@@ -85,14 +85,14 @@ valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: 
 printRep :: Rep -> Doc a
 printRep (Algebraic (ConstructorIndex index) values) =
   hsep $
-    fmap printRep values ++ [hcat ["#", pretty index]]
+    (printRep <$> values) ++ [hcat ["#", pretty index]]
 printRep (Array values) =
   list $
-    Vector.toList $ fmap printRep values
+    Vector.toList $ printRep <$> values
 printRep (Character c) = squotes $ pretty c
 printRep (Closure name closure) =
   hsep $
-    fmap printRep closure ++ [hcat ["#", Pretty.printQualified name]]
+    (printRep <$> closure) ++ [hcat ["#", Pretty.printQualified name]]
 printRep (Float64 f) = pretty f
 printRep (Int64 i) = pretty i
 printRep (Name n) = hcat ["\\", Pretty.printQualified n]
@@ -142,7 +142,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                           dquotes $ Pretty.printQualified name,
                           ":"
                         ] :
-                      fmap Report.human reports
+                      (Report.human <$> reports)
             -- An intrinsic.
             Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
               Qualified v unqualified
@@ -253,7 +253,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     pretty txt
                   ] :
                 "Call stack:" :
-                fmap (nest 2 . Pretty.printQualified) callStack
+                (nest 2 . Pretty.printQualified <$> callStack)
         "exit" -> do
           Int64 i ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -515,7 +515,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     vcat $
                       "Execution failure: integer division by zero" :
                       "Call stack:" :
-                      fmap (nest 2 . Pretty.printQualified) callStack
+                      (nest 2 . Pretty.printQualified <$> callStack)
               unexpectedError -> throwIO unexpectedError
 
           catchFloatModByZero :: IO a -> IO a
@@ -527,7 +527,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     vcat $
                       "Execution failure: float modulus by zero" :
                       "Call stack:" :
-                      fmap (nest 2 . Pretty.printQualified) callStack
+                      (nest 2 . Pretty.printQualified <$> callStack)
               unexpectedError -> throwIO unexpectedError
 
           catchFileAccessErrors :: IO a -> IO a
@@ -539,7 +539,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     "Execution failure:" :
                     show (ioeGetErrorType e) :
                     "Call stack:" :
-                    fmap (nest 2 . Pretty.printQualified) callStack
+                    (nest 2 . Pretty.printQualified <$> callStack)
 
   let entryPointName = fromMaybe mainName mName
   word [entryPointName] entryPointName mainArgs

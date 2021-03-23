@@ -246,7 +246,7 @@ nameParser = (<?> "name") $ do
         fixity
       )
     _list ->
-      let parts' = fmap ((\(Unqualified part) -> part) . snd) parts
+      let parts' = (\(Unqualified part) -> part) . snd <$> parts
           qualifier = Unsafe.fromJust (viaNonEmpty init parts')
           (fixity, unqualified) = Unsafe.fromJust (viaNonEmpty last parts)
        in ( QualifiedName
@@ -440,8 +440,10 @@ basicTypeParser = (<?> "basic type") $ do
   let apply a b = Signature.Application a b $ Signature.origin prefix
   mSuffix <-
     Parsec.optionMaybe $
-      fmap asum $
-        Parsec.many1 $ typeListParser basicTypeParser
+      asum
+        <$> Parsec.many1
+          ( typeListParser basicTypeParser
+          )
   pure $ case mSuffix of
     Just suffix -> foldl' apply prefix suffix
     Nothing -> prefix
@@ -669,7 +671,7 @@ vectorParser = (<?> "vector literal") $ do
         `Parsec.sepEndBy` commaParser
   pure $
     compose () vectorOrigin $
-      fmap Group es
+      Group <$> es
         ++ [NewVector () (length es) () vectorOrigin]
 
 lambdaParser :: Parser (Term ())

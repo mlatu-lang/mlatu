@@ -47,11 +47,10 @@ scope = scopeTerm [0]
           Match
             hint
             ()
-            ( fmap
-                ( \(Case name a caseOrigin) ->
-                    Case name (recur a) caseOrigin
-                )
-                cases
+            ( ( \(Case name a caseOrigin) ->
+                  Case name (recur a) caseOrigin
+              )
+                <$> cases
             )
             ( ( \case
                   (DefaultElse a elseOrigin) -> (DefaultElse a elseOrigin)
@@ -77,7 +76,7 @@ scope = scopeTerm [0]
     scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
     scopeValue _ value@Name {} = value
-    scopeValue stack (Quotation body) = Capture (fmap ClosedLocal capturedNames) capturedTerm
+    scopeValue stack (Quotation body) = Capture (ClosedLocal <$> capturedNames) capturedTerm
       where
         capturedTerm :: Term ()
         capturedNames :: [LocalIndex]

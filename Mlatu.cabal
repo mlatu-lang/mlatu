@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5e7aa20c7117f1bcb146701e5290e00f78934521f86a0d0d2ada14b0560d8a0f
+-- hash: b19b59e48b7381ba8f8c80d95b37b16de094b03b5c967fd1f3a6e5ec2f9d741b
 
 name:           mlatu
 version:        0.1.0.0
@@ -131,7 +131,6 @@ executable mlatu
     , relude ==0.7.0.0
     , repline
     , text
-    , time
     , transformers
     , typed-process
     , unordered-containers

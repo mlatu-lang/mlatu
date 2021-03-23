@@ -137,7 +137,7 @@ cmd input = do
 completer :: String -> StateT Dictionary (StateT [Rep] (StateT Int IO)) [String]
 completer n = do
   dictionary <- get
-  let dictNames = fmap (show . fst) (Dictionary.toList dictionary)
+  let dictNames = show . fst <$> Dictionary.toList dictionary
   pure $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
 
 helpCmd :: String -> MRepl ()
@@ -229,7 +229,7 @@ run prelude = do
         }
 
 renderStack :: [Rep] -> IO ()
-renderStack stack = unless (null stack) (print $ vcat $ fmap printRep stack)
+renderStack stack = unless (null stack) (print $ vcat $ printRep <$> stack)
 
 renderDictionary :: Dictionary -> IO ()
 renderDictionary = print . Dictionary.printDictionary

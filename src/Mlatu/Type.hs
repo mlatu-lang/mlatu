@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- |
 -- Module      : Mlatu.Type
 -- Description : Types
@@ -11,10 +13,11 @@ module Mlatu.Type
     Type (..),
     TypeId (..),
     Var (..),
-    bottom,
-    fun,
-    join,
-    prod,
+    pattern Bottom,
+    pattern Fun,
+    pattern Prod,
+    pattern Join,
+    pattern Sum,
     setOrigin,
     origin,
   )
@@ -24,7 +27,7 @@ import Mlatu.Kind (Kind (..))
 import Mlatu.Name (Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Vocabulary qualified as Vocabulary
-import Relude hiding (Type, join, void)
+import Relude hiding (Sum, Type, void)
 
 -- | This is the type language. It describes a system of conventional Hindley–
 -- Milner types, with type constructors joined by type application, as well as
@@ -43,6 +46,16 @@ data Type
 
 infixl 1 :@
 
+pattern Bottom o = TypeConstructor o "Bottom"
+
+pattern Fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
+
+pattern Prod o a b = TypeConstructor o "Prod" :@ a :@ b
+
+pattern Join o a b = TypeConstructor o "Join" :@ a :@ b
+
+pattern Sum o a b = TypeConstructor o "Sum" :@ a :@ b
+
 newtype Constructor = Constructor Qualified
   deriving (Ord, Eq, Hashable, Show)
 
@@ -56,18 +69,6 @@ data Var = Var
 instance Eq Var where
   -- We ignore the name hint for equality tests.
   Var _ a b == Var _ c d = (a, b) == (c, d)
-
-bottom :: Origin -> Type
-bottom o = TypeConstructor o "Bottom"
-
-fun :: Origin -> Type -> Type -> Type -> Type
-fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
-
-prod :: Origin -> Type -> Type -> Type
-prod o a b = TypeConstructor o "Prod" :@ a :@ b
-
-join :: Origin -> Type -> Type -> Type
-join o a b = TypeConstructor o "Join" :@ a :@ b
 
 origin :: Type -> Origin
 origin = \case

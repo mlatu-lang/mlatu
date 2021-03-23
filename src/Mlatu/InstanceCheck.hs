@@ -42,7 +42,7 @@ instanceCheck _ aScheme _ bScheme = do
   let envTypes = Map.elems (view TypeEnv.tvs tenv0)
   success <- attempt $ subsumptionCheck tenv0 aType bType
   unless success failure
-  let escaped = Set.unions $ fmap (Free.tvs tenv0) (aScheme : bScheme : envTypes)
+  let escaped = Set.unions $ Free.tvs tenv0 <$> aScheme : bScheme : envTypes
   -- Free.tvs tenv0 aScheme `Set.union` Free.tvs tenv0 bScheme
   let bad = Set.filter (`Set.member` escaped) ids
   unless (Set.null bad) failure
@@ -64,9 +64,9 @@ skolemize tenv0 t = case t of
     (c', t'') <- skolemize tenv0 substituted
     pure (Set.insert c c', t'')
   -- TForall _ t' -> skolemize tenv0 t'
-  TypeConstructor origin "Fun" :@ a :@ b :@ e -> do
+  Type.Fun origin a b e -> do
     (ids, b') <- skolemize tenv0 b
-    pure (ids, Type.fun origin a b' e)
+    pure (ids, Type.Fun origin a b' e)
   _nonQuantified -> pure (Set.empty, t)
 
 -- | Subsumption checking is largely the same as unification, accounting for
@@ -76,10 +76,10 @@ subsumptionCheck :: TypeEnv -> Type -> Type -> M TypeEnv
 subsumptionCheck tenv0 (Forall origin (Var name x k) t) t2 = do
   (t1, _, tenv1) <- Instantiate.typ tenv0 origin name x k t
   subsumptionCheck tenv1 t1 t2
-subsumptionCheck tenv0 t1 (TypeConstructor _ "Fun" :@ a' :@ b' :@ e') = do
+subsumptionCheck tenv0 t1 (Type.Fun _ a' b' e') = do
   (a, b, e, tenv1) <- Unify.function tenv0 t1
   subsumptionCheckFun tenv1 a b e a' b' e'
-subsumptionCheck tenv0 (TypeConstructor _ "Fun" :@ a :@ b :@ e) t2 = do
+subsumptionCheck tenv0 (Type.Fun _ a b e) t2 = do
   (a', b', e', tenv1) <- Unify.function tenv0 t2
   subsumptionCheckFun tenv1 a b e a' b' e'
 subsumptionCheck tenv0 t1 t2 = Unify.typ tenv0 t1 t2
@@ -97,6 +97,6 @@ subsumptionCheckFun tenv0 a b e a' b' e' = do
   pure tenv2
   where
     permissionList :: Type -> [(Origin, Constructor)]
-    permissionList (TypeConstructor _ "Join" :@ TypeConstructor origin label :@ es) =
+    permissionList (Type.Join _ (TypeConstructor origin label) es) =
       (origin, label) : permissionList es
     permissionList _ = []

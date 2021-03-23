@@ -201,7 +201,7 @@ testWord contextSource viewpoint name expected = do
         assertFailure $
           show $
             hsep
-              ["missing test word definition:", list $ fmap (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
+              ["missing test word definition:", list $ (\(i, e) -> tupled [printInstantiated i, printEntry e]) <$> definitions]
       where
         matching (Instantiated (Qualified v "test") _, _)
           | v == viewpoint =
@@ -211,7 +211,7 @@ testWord contextSource viewpoint name expected = do
       assertFailure $
         toString $
           unlines $
-            fmap (show . human) reports
+            show . human <$> reports
 
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
@@ -249,4 +249,4 @@ testType contextSource viewpoint name expected = do
       assertFailure $
         toString $
           unlines $
-            fmap (show . human) reports
+            show . human <$> reports

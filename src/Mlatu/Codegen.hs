@@ -37,7 +37,7 @@ generate :: Dictionary -> IO ByteString
 generate d = do
   bs <- go (Dictionary.toList d) [] d
   pure
-    ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut)]"
+    ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
         <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>),Algebraic(i64, Vec<Rep>), Char(char), Text(String), Int(i64), Float(f64), List(Vec<Rep>) } use Rep::*;"
         <> "#[inline] fn convertBool(b: bool, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if b { mtrue(stack, closures) } else { mfalse(stack, closures) } }"
         <> "#[inline] fn convertOption(o: Option<Rep>, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if let Some(x) = o { stack.push(x); msome(stack, closures) } else { mnone(stack, closures) } }"
@@ -65,14 +65,13 @@ entryRs =
             [] -> pure ""
             ((i, e) : xs) ->
               put xs
-                >>= const (lift $ modify' (i :))
-                >>= const
-                  ( case (i, e) of
-                      (Instantiated name [], Entry.Word _ _ _ _ _ (Just body))
-                        | name == mainName -> (\t -> "fn main() { let mut stack = Vec::new(); let mut locals: Vec<Rep> = Vec::new(); let mut closures = Vec::new();" <> t <> "}") <$> termRs body
-                      (i, Entry.Word _ _ _ _ _ (Just body)) -> stackFn (rustifyInstantiated i) <$> termRs body
-                      _ -> pure ""
-                  )
+                >> lift (modify' (i :))
+                >> ( case (i, e) of
+                       (Instantiated name [], Entry.Word _ _ _ _ _ (Just body))
+                         | name == mainName -> (\t -> "fn main() { let mut stack = Vec::new(); let mut locals: Vec<Rep> = Vec::new(); let mut closures = Vec::new();" <> t <> "}") <$> termRs body
+                       (i, Entry.Word _ _ _ _ _ (Just body)) -> stackFn (rustifyInstantiated i) <$> termRs body
+                       _ -> pure ""
+                   )
         )
 
 termRs :: Term Type -> Codegen ByteString
@@ -80,7 +79,7 @@ termRs (Compose _ a b) =
   termRs a
     >>= ( \t1 ->
             termRs b
-              >>= (\t2 -> pure (t1 <> t2))
+              <&> (t1 <>)
         )
 termRs (Generic _ _ a _) = termRs a
 termRs (Group a) = termRs a
@@ -113,7 +112,7 @@ termRs (Push _ v _) = pure $ case v of
   Capture {} -> ""
 termRs (Word _ _ (QualifiedName name) args _) = word name args
 termRs Word {} = error "Non-qualified name"
-termRs (Lambda _ _ _ body _) = termRs body >>= (\t -> pure ("locals.push(stack.pop().unwrap());" <> t <> "locals.pop();"))
+termRs (Lambda _ _ _ body _) = termRs body <&> (\t -> "locals.push(stack.pop().unwrap());" <> t <> "locals.pop();")
 termRs (Match _ _ cases els _) = do
   cs <- traverse caseRs cases
   e <- case els of
@@ -133,7 +132,7 @@ word name args =
    in do
         list <- get
         usedList <- lift get
-        if mangled `elem` fmap fst list || mangled `elem` usedList
+        if mangled `elem` (fst <$> list) || mangled `elem` usedList
           then case mangled of
             (Instantiated (Qualified v unqualified) [])
               | v == Vocabulary.intrinsic -> intrinsic unqualified
@@ -154,7 +153,7 @@ word name args =
                   Qualified v unqualified
                     | v == Vocabulary.intrinsic -> intrinsic unqualified
                   _ -> error "No such intrinsic"
-                _ -> pure ""
+                _ -> pure $ "/* (stack, closures) = " <> rustifyInstantiated mangled <> "(stack, closures); */"
 
 intrinsic :: Unqualified -> Codegen ByteString
 intrinsic = \case
@@ -212,13 +211,13 @@ intrinsic = \case
   "empty" -> pure $ ifLetPop "List(a)" "(stack, closures) = convertBool(a.is_empty(), stack, closures);"
   "cat" -> pure $ ifLetPop2 ("List(a)", "List(b)") (letStmt "mut new_vec" "b.clone()" <> "new_vec.extend(a.into_iter());" <> stackPush "List(new_vec)")
   "string_concat" -> pure $ ifLetPop2 ("Text(a)", "Text(b)") (letStmt "mut new_string" "b" <> "new_string.push_str(&a);" <> stackPush "Text(new_string)")
-  "string_from_list" -> pure $ ifLetPop "List(a)" $ stackPush ("Text(a.iter().filter_map(|e| " <> ifLetElse "Char(c)" "e" "Some(c)" "None" <> ").collect::<String>())")
+  "string_from_list" -> pure $ ifLetPop "List(a)" $ stackPush "Text(a.iter().filter_map(|e| if let Char(c) = e { Some(c) } else { None } ).collect::<String>())"
   "string_to_list" -> pure $ ifLetPop "Text(a)" $ stackPush "List(a.chars().map(Char).collect::<Vec<_>>())"
   "get" -> pure $ ifLetPop2 ("Int(a)", "List(b)") "(stack, closures) = convertOption(b.get(a as usize).cloned(), stack, closures);"
   "set" -> do
     s <- word (Qualified Vocabulary.global "some") []
     n <- word (Qualified Vocabulary.global "none") []
-    pure $ ifLetPop3 ("Int(a)", "x", "List(b)") $ ifElse "a < 0 || (a as usize) >= b.len()" ("b[a as usize] = x;" <> stackPush "List(b)" <> s) n
+    pure $ ifLetPop3 ("Int(a)", "x", "List(b)") ("if a < 0 || (a as usize) >= b.len() { b[a as usize] = x;" <> stackPush "List(b)" <> s <> " } else {" <> n <> "}")
   "head" -> pure $ ifLetPop "List(a)" "(stack, closures) = convertOption(a.first().cloned(), stack, closures);"
   "last" -> pure $ ifLetPop "List(a)" "(stack, closures) = convertOption(a.last().cloned(), stack, closures);"
   "tail" -> pure $ ifLetPop "List(a)" "(stack, closures) = convertOption(a.split_first().map(|(_, t)| List(t.to_vec())), stack, closures);"
@@ -240,7 +239,7 @@ vecBuilder x = "vec![" <> go x "" <> "]"
 
 caseRs :: Case Type -> Codegen (Maybe (ByteString, ByteString))
 caseRs (Case (QualifiedName name) caseBody _) = do
-  dict <- lift $ ask
+  dict <- lift ask
   case Dictionary.lookup (Instantiated name []) dict of
     Just (Entry.Word _ _ _ _ _ (Just ctorBody)) ->
       case decompose ctorBody of
@@ -267,7 +266,7 @@ stackFn :: ByteString -> ByteString -> ByteString
 stackFn name body = "#[must_use] #[inline] fn " <> name <> "(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { let mut locals: Vec<Rep> = Vec::new();" <> body <> " (stack, closures) }"
 
 ifLetPop :: ByteString -> ByteString -> ByteString
-ifLetPop binding body = letStmt "x" "stack.pop()" <> ifLetElse ("Some(" <> binding <> ")") "x" body ("panic!(\"Expected `Some(" <> binding <> ")`, but found `{:?}`\", x);")
+ifLetPop binding body = matchStmt "stack.pop()" [("Some(" <> binding <> ")", body), ("x", "panic!(\"Expected `Some(" <> binding <> ")`, but found `{:?}`\", x);")]
 
 ifLetPop2 :: (ByteString, ByteString) -> ByteString -> ByteString
 ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)
@@ -275,14 +274,8 @@ ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)
 ifLetPop3 :: (ByteString, ByteString, ByteString) -> ByteString -> ByteString
 ifLetPop3 (b1, b2, b3) body = ifLetPop b1 (ifLetPop b2 (ifLetPop b3 body))
 
-ifLetElse :: ByteString -> ByteString -> ByteString -> ByteString -> ByteString
-ifLetElse binding expression = ifElse ("let " <> binding <> " = " <> expression)
-
-ifElse :: ByteString -> ByteString -> ByteString -> ByteString
-ifElse cond trueBody falseBody = "if " <> cond <> " {" <> trueBody <> "} else {" <> falseBody <> "}"
-
 matchStmt :: ByteString -> [(ByteString, ByteString)] -> ByteString
-matchStmt target cases = "match " <> target <> " { " <> ByteString.concat (fmap (\(binding, block) -> binding <> " => {" <> block <> "},") cases) <> " };"
+matchStmt target cases = "match " <> target <> " { " <> ByteString.concat ((\(binding, block) -> binding <> " => {" <> block <> "},") <$> cases) <> " };"
 
 letStmt :: ByteString -> ByteString -> ByteString
 letStmt binding expression = "let " <> binding <> " = " <> expression <> ";"

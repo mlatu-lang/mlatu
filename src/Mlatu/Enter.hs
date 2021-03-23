@@ -73,7 +73,7 @@ fragment f =
     -- With everything type-level declared, we can resolve type signatures.
     >=> foldlMx
       resolveSignature
-      (fmap (view Declaration.name) (view Fragment.declarations f))
+      (view Declaration.name <$> view Fragment.declarations f)
     -- And declare regular words.
     >=> foldlMx
       declareWord

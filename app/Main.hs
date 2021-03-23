@@ -1,12 +1,10 @@
 module Main where
 
 import Arguments qualified
-import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 import Interact qualified
-import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource)
+import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
 import Mlatu.Codegen qualified as Codegen
 import Mlatu.Interpret (interpret)
-import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
@@ -17,7 +15,6 @@ import Report (reportAll)
 import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
 import System.Process.Typed (proc, runProcess_)
-import Text.Printf (printf)
 
 main :: IO ()
 main = do
@@ -59,69 +56,45 @@ formatFiles paths = for_ paths $ \relativePath -> do
     Right fragment -> do
       let newText = show $ printFragment fragment
       writeFile path newText
-      if newText /= toString text
-        then putStrLn $ "Formatted " <> path <> " successfully"
-        else putStrLn $ path <> " was already formatted"
+      putStrLn $
+        if newText /= toString text
+          then "Formatted " <> path <> " successfully"
+          else path <> " was already formatted"
 
 checkFiles :: Prelude -> [FilePath] -> IO ()
-checkFiles prelude relativePaths = do
-  paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $
-    runMlatuExceptT $ do
-      commonDictionary <- compilePrelude prelude mainPermissions Nothing
-      compile mainPermissions Nothing paths (Just commonDictionary)
-  case result of
-    Left reports -> handleReports reports
-    Right _ -> reportTime [("generate the IR from the source", t1)]
+checkFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
 runFiles :: Prelude -> [FilePath] -> IO ()
 runFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= ( \paths ->
-            timed (runMlatuExceptT (compilePrelude prelude mainPermissions Nothing >>= (compile mainPermissions Nothing paths . Just)))
-              >>= ( \(result, t1) -> case result of
+            runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths)
+              >>= ( \case
                       Left reports -> handleReports reports
-                      Right program ->
-                        timed (interpret program Nothing [] stdin stdout stderr [])
-                          >>= (\(_, t2) -> reportTime [("generate the IR from the source", t1), ("interpet the IR", t2)])
+                      Right program -> void (interpret program Nothing [] stdin stdout stderr [])
                   )
         )
 
 compileFiles :: Prelude -> [FilePath] -> IO ()
 compileFiles prelude relativePaths = do
-  paths <- forM relativePaths makeAbsolute
-  result <-
-    runMlatuExceptT $ do
-      commonDictionary <- compilePrelude prelude mainPermissions Nothing
-      compile mainPermissions Nothing paths (Just commonDictionary)
-  case result of
-    Left reports -> handleReports reports
-    Right program -> do
-      bs <- Codegen.generate program
-      writeFileBS "output.rs" bs
-      runProcess_ $ proc "rustfmt" ["output.rs"]
-      runProcess_ $ proc "rustc" ["-C", "opt-level=3", "output.rs"]
-      removeFile "output.rs"
-      runProcess_ $ proc "upx" ["--best", "-q", "output"]
-
-timed' :: IO () -> IO NominalDiffTime
-timed' comp =
-  getCurrentTime
-    >>= (\t1 -> comp >>= const (getCurrentTime >>= (\t2 -> pure (diffUTCTime t2 t1))))
-
-timed :: IO a -> IO (a, NominalDiffTime)
-timed comp =
-  getCurrentTime
-    >>= (\t1 -> comp >>= (\result -> getCurrentTime >>= (\t2 -> pure (result, diffUTCTime t2 t1))))
-
-reportTime :: [(String, NominalDiffTime)] -> IO ()
-reportTime times = putStrLn ("\n---" <> concatMap report times <> printf "\nTotal time: %.4f seconds\n---" whole)
-  where
-    whole :: Double
-    whole = sum (fmap (realToFrac . snd) times)
-
-    report :: (String, NominalDiffTime) -> String
-    report (text, time) = printf "\nTime taken to %s: %.4f seconds, %.2f%% of total time" text fracTime (100.0 * (fracTime / whole))
-      where
-        fracTime :: Double
-        fracTime = realToFrac time
+  forM relativePaths makeAbsolute
+    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= ( \case
+            Left reports -> handleReports reports
+            Right program ->
+              ( Codegen.generate program
+                  >>= writeFileBS "output.rs"
+              )
+                >> runProcess_
+                  ( proc "rustfmt" ["output.rs"]
+                  )
+                >> runProcess_
+                  ( proc "rustc" ["-C", "opt-level=3", "output.rs"]
+                  )
+                >> removeFile "output.rs"
+                >> runProcess_
+                  ( proc "upx" ["--best", "-q", "output"]
+                  )
+        )

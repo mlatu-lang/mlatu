@@ -30,7 +30,7 @@ spec = do
         error $
           show $
             vcat $
-              "unable to set up interpreter tests:" : fmap human reports
+              "unable to set up interpreter tests:" : (human <$> reports)
       Right dictionary -> pure $ testInterpretFull dictionary
 
   let testInterpret = testInterpretWithHandles "" Nothing Nothing
@@ -183,7 +183,7 @@ testInterpretFull
         assertEqual
           ( show $
               hsep
-                ["stack", list $ fmap printRep expectedStack, "=", list $ fmap printRep actualStack]
+                ["stack", list $ printRep <$> expectedStack, "=", list $ printRep <$> actualStack]
           )
           expectedStack
           actualStack
@@ -221,4 +221,4 @@ testInterpretFull
         assertFailure $
           toString $
             unlines $
-              fmap (show . human) reports
+              show . human <$> reports

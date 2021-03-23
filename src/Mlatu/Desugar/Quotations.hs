@@ -117,7 +117,7 @@ desugar dictionary qualifier term0 = do
           lift $
             inferType0 dict tenv2 Nothing $
               Term.compose () origin $
-                fmap pushClosed closed
+                (pushClosed <$> closed)
                   ++ [ Push () (Name name) origin,
                        NewClosure () (length closed) origin
                      ]

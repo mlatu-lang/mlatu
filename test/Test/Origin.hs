@@ -90,13 +90,7 @@ spec = do
 testOrigin :: [Text] -> Expectation
 testOrigin test =
   let (input, origins) = deinterleave test
-   in fmap
-        (fmap Located.origin)
-        ( runIdentity $
-            runMlatuExceptT $
-              tokenize 1 "test" $
-                unlines input
-        )
+   in (Located.origin <<$>> runIdentity (runMlatuExceptT $ tokenize 1 "test" $ unlines input))
         `shouldBe` Right (parseOrigins origins)
 
 deinterleave :: [a] -> ([a], [a])
@@ -118,20 +112,18 @@ parseOrigins = concatMap (uncurry goLine) . zip [1 ..]
   where
     goLine :: Line -> Text -> [Origin]
     goLine line text =
-      map
-        (toOrigin line)
-        ( reverse
-            ( envSpans
-                ( foldl'
-                    go
-                    Env
-                      { envPoint = 1,
-                        envSpans = []
-                      }
-                    (toString text)
-                )
-            )
-        )
+      toOrigin line
+        <$> reverse
+          ( envSpans
+              ( foldl'
+                  go
+                  Env
+                    { envPoint = 1,
+                      envSpans = []
+                    }
+                  (toString text)
+              )
+          )
 
     toOrigin :: Line -> Span -> Origin
     toOrigin line (Span begin end) =
@@ -183,7 +175,7 @@ parseOrigins = concatMap (uncurry goLine) . zip [1 ..]
         malformed =
           error $
             toText $
-              concat
+              asum
                 [ "malformed origin string at (",
                   show point,
                   "): '",

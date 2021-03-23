@@ -25,8 +25,8 @@ import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTv)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Zonk qualified as Zonk
-import Relude hiding (Type)
 import Optics
+import Relude hiding (Type)
 
 -- | There are two kinds of unification going on here: basic logical unification
 -- for value types, and row unification for permission types.
@@ -40,17 +40,17 @@ typ tenv0 t1 t2 = case (t1', t2') of
     (b, _, tenv1) <- Instantiate.typ tenv0 origin name x k t
     typ tenv1 a b
   (Forall {}, _) -> commute
-  (TypeConstructor _ "Join" :@ l :@ r, s) -> do
+  (Type.Join _ l r, s) -> do
     ms <- rowIso tenv0 l s (permissionTail r)
     case ms of
       Just (s', substitution, tenv1) ->
         case substitution of
-          Just (x, t) -> typ (over TypeEnv.tvs  (Map.insert x t) tenv1) r s'
+          Just (x, t) -> typ (over TypeEnv.tvs (Map.insert x t) tenv1) r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
         report $ Report.makeError $ Report.TypeMismatch t1' t2'
         halt
-  (_, TypeConstructor _ "Join" :@ _ :@ _) -> commute
+  (_, Type.Join {}) -> commute
   -- We fall back to regular unification for value type constructors. This makes
   -- the somewhat iffy assumption that there is no higher-kinded polymorphism
   -- going on between value type constructors and permission type constructors.
@@ -68,7 +68,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     t1' = Zonk.typ tenv0 t1
     t2' = Zonk.typ tenv0 t2
     commute = typ tenv0 t2 t1
-    permissionTail (TypeConstructor _ "Join" :@ _ :@ a) = permissionTail a
+    permissionTail (Type.Join _ _ a) = permissionTail a
     permissionTail t = t
 
 -- Unification of a type variable with a type simply looks up the current value
@@ -98,24 +98,24 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
                       Report.OccursCheckFailure (TypeVar origin v) t'
                     ]
                       ++ case t' of
-                        TypeConstructor _ "Prod" :@ _ :@ _ -> [Report.StackDepthMismatch (Type.origin t')]
+                        Type.Prod {} -> [Report.StackDepthMismatch (Type.origin t')]
                         _nonProd -> []
 
               halt
       else declare
   where
-    declare = pure $ over TypeEnv.tvs  (Map.insert x t) tenv0
+    declare = pure $ over TypeEnv.tvs (Map.insert x t) tenv0
 
 -- | A convenience function for unifying a type with a function type.
 function :: TypeEnv -> Type -> M (Type, Type, Type, TypeEnv)
 function tenv0 t = case t of
-  TypeConstructor _ "Fun" :@ a :@ b :@ e -> pure (a, b, e, tenv0)
+  Type.Fun _ a b e -> pure (a, b, e, tenv0)
   _nonFun -> do
     let origin = Type.origin t
     a <- freshTv tenv0 "A" origin Stack
     b <- freshTv tenv0 "B" origin Stack
     e <- freshTv tenv0 "P" origin Permission
-    tenv1 <- typ tenv0 t $ Type.fun origin a b e
+    tenv1 <- typ tenv0 t $ Type.Fun origin a b e
     pure (a, b, e, tenv1)
 
 -- Row unification is essentially unification of sets. The row-isomorphism
@@ -134,18 +134,18 @@ rowIso ::
 -- The "head" rule: a row which already begins with the label is trivially
 -- rewritten by the identity substitution.
 
-rowIso tenv0 l (TypeConstructor _ "Join" :@ l' :@ r') _
+rowIso tenv0 l (Type.Join _ l' r') _
   | l == l' = pure $ Just (r', Nothing :: Maybe (TypeId, Type), tenv0)
 -- The "swap" rule: a row which contains the label somewhere within, can be
 -- rewritten to place that label at the head.
 
-rowIso tenv0 l (TypeConstructor origin "Join" :@ l' :@ r') rt
+rowIso tenv0 l (Type.Join origin l' r') rt
   | l /= l' = do
     ms <- rowIso tenv0 l r' rt
     pure $ case ms of
       Just (r'', substitution, tenv1) ->
         Just
-          (Type.join origin l' r'', substitution, tenv1)
+          (Type.Join origin l' r'', substitution, tenv1)
       Nothing -> Nothing
 
 -- The "var" rule: no label is present, so we cannot test for equality, and must
@@ -157,7 +157,7 @@ rowIso tenv0 l r@(TypeVar origin (Var name a _)) rt
   | r /= rt = do
     -- FIXME: Should this use 'name' or a distinct name?
     b <- freshTv tenv0 name origin Permission
-    pure $ Just (b, Just (a, Type.join origin l b), tenv0)
+    pure $ Just (b, Just (a, Type.Join origin l b), tenv0)
 
 -- In any other case, the rows are not isomorphic.
 
