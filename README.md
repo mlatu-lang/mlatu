@@ -6,7 +6,7 @@ Mlatu is a statically typed, stack-based functional programming language designe
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 
-I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj) and [this Gitter community]((https://gitter.im/mlatu-lang/community).
+I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj) and [this Gitter community](https://gitter.im/mlatu-lang/community).
 
 ## Examples
 
