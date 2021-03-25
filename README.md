@@ -2,11 +2,11 @@
 
 [![](https://tokei.rs/b1/github/brightly-salty/mlatu)](https://github.com/XAMPPRocky/tokei) [![Join the chat at https://gitter.im/mlatu-lang/community](https://badges.gitter.im/mlatu-lang/community.svg)](https://gitter.im/mlatu-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. 
+Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. Mlatu features algebraic data types and algebraic effects (called permissions).
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 
-I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj).
+I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj) and [this Gitter community]((https://gitter.im/mlatu-lang/community).
 
 ## Examples
 
@@ -70,7 +70,7 @@ Available commands:
   run                      Runs Mlatu files
 ```
 
-Type `//help` in the interactive REPL for command options.
+Type `:help` in the interactive REPL for command options.
 
 ## Miscellany
 
