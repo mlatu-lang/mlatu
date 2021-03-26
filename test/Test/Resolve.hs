@@ -30,11 +30,11 @@ import Mlatu.Resolve qualified as Resolve
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Prettyprinter (dquotes, hsep, list, tupled)
 import Relude
 import Test.HUnit (assertEqual, assertFailure)
 import Test.Hspec (Spec, it)
-import Optics
 
 spec :: Spec
 spec = do
@@ -155,29 +155,33 @@ testWord contextSource viewpoint name expected = do
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
         fragment =
-          set Fragment.definitions (one
-                  Definition
-                    { Definition._body = Term.Word () Operator.Postfix name [] origin,
-                      Definition._category = Category.Word,
-                      Definition._fixity = Operator.Postfix,
-                      Definition._inferSignature = False,
-                      Definition._merge = Merge.Deny,
-                      Definition._name = Qualified viewpoint "test",
-                      Definition._origin = origin,
-                      Definition._parent = Nothing,
-                      Definition._signature =
-                        Signature.Quantified
-                          [Parameter origin "R" Stack Nothing]
-                          ( Signature.StackFunction
-                              (Signature.Variable "R" origin)
-                              []
-                              (Signature.Variable "R" origin)
-                              []
-                              []
-                              origin
-                          )
-                          origin
-                    }) mempty
+          set
+            Fragment.definitions
+            ( one
+                Definition
+                  { Definition._body = Term.Word () Operator.Postfix name [] origin,
+                    Definition._category = Category.Word,
+                    Definition._fixity = Operator.Postfix,
+                    Definition._inferSignature = False,
+                    Definition._merge = Merge.Deny,
+                    Definition._name = Qualified viewpoint "test",
+                    Definition._origin = origin,
+                    Definition._parent = Nothing,
+                    Definition._signature =
+                      Signature.Quantified
+                        [Parameter origin "R" Stack Nothing]
+                        ( Signature.StackFunction
+                            (Signature.Variable "R" origin)
+                            []
+                            (Signature.Variable "R" origin)
+                            []
+                            []
+                            origin
+                        )
+                        origin
+                  }
+            )
+            mempty
     Enter.fragment fragment contextDictionary
   case Dictionary.toList <$> dictionary of
     Right definitions -> case find matching definitions of
@@ -197,7 +201,7 @@ testWord contextSource viewpoint name expected = do
         assertFailure $
           show $
             hsep
-              ["missing test word definition:", list $ map (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
+              ["missing test word definition:", list $ (\(i, e) -> tupled [printInstantiated i, printEntry e]) <$> definitions]
       where
         matching (Instantiated (Qualified v "test") _, _)
           | v == viewpoint =
@@ -207,7 +211,7 @@ testWord contextSource viewpoint name expected = do
       assertFailure $
         toString $
           unlines $
-            map (show . human) reports
+            show . human <$> reports
 
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
@@ -245,4 +249,4 @@ testType contextSource viewpoint name expected = do
       assertFailure $
         toString $
           unlines $
-            map (show . human) reports
+            show . human <$> reports

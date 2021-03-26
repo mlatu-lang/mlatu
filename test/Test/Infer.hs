@@ -33,24 +33,24 @@ spec = do
       testTypecheck
         Positive
         "define test (->) {}"
-        $ Type.fun o r r e
+        $ Type.Fun o r r e
 
     it "typechecks single literals" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 0 }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
       testTypecheck
         Positive
         "define test (-> Double) { 1.0 }"
-        $ Type.fun o r (Type.prod o r float) e
+        $ Type.Fun o r (Type.Prod o r float) e
 
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
         "define test (-> List[Pair[Int, Int]]) { [1 1 pair, 2 2 pair, 3 3 pair] }"
-        $ Type.fun o r (Type.prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
+        $ Type.Fun o r (Type.Prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
 
     it "typechecks intrinsics" $ do
       testTypecheck
@@ -59,52 +59,52 @@ spec = do
         \ intrinsic magic[R..., S...] (R... -> S...)\
         \}\
         \define test [R..., S..., +P] (R... -> S... +P) { _::mlatu::magic }"
-        $ Type.fun o r s e
+        $ Type.Fun o r s e
 
       testTypecheck
         Positive
         "define test (-> Int) { 1 2 _::mlatu::add_int64 }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
     it "typechecks data types" $ do
       testTypecheck
         Positive
         "type Unit { case unit }\n\
         \define test (-> Unit) { unit }"
-        $ Type.fun o r (Type.prod o r (ctor "Unit")) e
+        $ Type.Fun o r (Type.Prod o r (ctor "Unit")) e
 
       testTypecheck
         Positive
         "type Unit { case unit () }\n\
         \define test (-> Unit) { unit }"
-        $ Type.fun o r (Type.prod o r (ctor "Unit")) e
+        $ Type.Fun o r (Type.Prod o r (ctor "Unit")) e
 
     it "typechecks definitions" $ do
       testTypecheck
         Positive
         "define one (-> Int) { 1 }\n\
         \define test (-> Int) { one }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
       testTypecheck
         Positive
         "define one (-> Int) { 1 }\n\
         \define two (-> Int) { 2 }\n\
         \define test (-> Int) { one two _::mlatu::add_int64 }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
       testTypecheck
         Positive
         "define up (Int -> Int) { 1 _::mlatu::add_int64 }\n\
         \define down (Int -> Int) { -1 _::mlatu::add_int64 }\n\
         \define test (-> Int) { 1 up 2 down _::mlatu::add_int64 }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
     it "typechecks operators" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 1 + 1 }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
     it "typechecks nested scopes" $ do
       testTypecheck
@@ -135,7 +135,7 @@ spec = do
         \    } call\n\
         \  } call\n\
         \}"
-        $ Type.fun o r (Type.prod o (Type.prod o r int) int) e
+        $ Type.Fun o r (Type.Prod o (Type.Prod o r int) int) e
 
     it "typechecks closures with multiple types" $ do
       testTypecheck
@@ -144,13 +144,13 @@ spec = do
         \  0 0.0 -> x, y;\n\
         \  { x y }\n\
         \}"
-        $ Type.fun
+        $ Type.Fun
           o
           r
-          ( Type.prod
+          ( Type.Prod
               o
               r
-              (Type.fun o r (Type.prod o (Type.prod o r int) float) e)
+              (Type.Fun o r (Type.Prod o (Type.Prod o r int) float) e)
           )
           e
 
@@ -163,53 +163,53 @@ spec = do
         \  match case pair -> x, y { y x pair }\n\
         \}\n\
         \define test (-> Pair[Char, Double]) { 1 '1' pair flip }"
-        $ Type.fun o r (Type.prod o r (ctor "Pair" :@ char :@ int)) e
+        $ Type.Fun o r (Type.Prod o r (ctor "Pair" :@ char :@ int)) e
 
     it "accepts valid permissions" $ do
       testTypecheck
         Positive
         "define test (-> +Fail) { abort }"
-        $ Type.fun o r r (Type.join o fail_ e)
+        $ Type.Fun o r r (Type.Join o fail_ e)
 
       testTypecheck
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
         \define test (-> +Fail +IO) { launch_missiles abort }"
-        $ Type.fun o r r (Type.join o fail_ (Type.join o io e))
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
 
       testTypecheck
         Positive
         "intrinsic launch_missiles (-> +IO)\n\
         \define test (-> +IO +Fail) { launch_missiles abort }"
-        $ Type.fun o r r (Type.join o fail_ (Type.join o io e))
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
 
     it "accepts redundant permissions" $ do
       testTypecheck
         Positive
         "define test (-> +Fail) {}"
-        $ Type.fun o r r (Type.join o fail_ e)
+        $ Type.Fun o r r (Type.Join o fail_ e)
 
       testTypecheck
         Positive
         "define test (-> +Fail +IO) {}"
-        $ Type.fun o r r (Type.join o fail_ (Type.join o io e))
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
 
       testTypecheck
         Positive
         "define test (-> +IO +Fail) {}"
-        $ Type.fun o r r (Type.join o fail_ (Type.join o io e))
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
 
     it "rejects missing permissions" $ do
       testTypecheck
         Negative
         "define test (->) { abort }"
-        $ Type.fun o r r e
+        $ Type.Fun o r r e
 
       testTypecheck
         Negative
         "intrinsic launch_missiles (-> +IO)\n\
         \define test (->) { launch_missiles abort }"
-        $ Type.fun o r r e
+        $ Type.Fun o r r e
 
   describe "with higher-order functions" $ do
     it "typechecks curried functions" $ do
@@ -219,7 +219,7 @@ spec = do
         \  -> x; { -> y; x y _::mlatu::add_int64 }\n\
         \}\n\
         \define test (-> Int) { 1 2 curried_add call }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
 
     it "typechecks permissions of higher-order functions" $ do
       testTypecheck
@@ -227,14 +227,14 @@ spec = do
         "intrinsic launch_missiles (-> +IO)\n\
         \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
         \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles map }"
-        $ Type.fun o r (Type.prod o r (ctor "List" :@ int)) (Type.join o io e)
+        $ Type.Fun o r (Type.Prod o r (ctor "List" :@ int)) (Type.Join o io e)
 
   describe "with coercions" $ do
     it "typechecks identity coercions" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 1 as (Int) }"
-        $ Type.fun o r (Type.prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int) e
   where
     o = Origin.point "" 0 0
     r = TypeVar o $ Var "R" (TypeId 0) Stack
@@ -254,7 +254,7 @@ testTypecheck sign input expected = do
   mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
   case mDictionary of
     Left reports ->
-      error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : map human reports
+      error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : (human <$> reports)
     Right dictionary -> do
       result <- runMlatuExceptT $ do
         fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
@@ -279,7 +279,7 @@ testTypecheck sign input expected = do
             assertFailure $
               show $
                 hsep
-                  ["missing main word definition:", list $ map (\(i, e) -> tupled [printInstantiated i, printEntry e]) definitions]
+                  ["missing main word definition:", list $ (\(i, e) -> tupled [printInstantiated i, printEntry e]) <$> definitions]
           where
             matching (Instantiated (Qualified v "test") _, _)
               | v == Vocabulary.global =
@@ -290,7 +290,7 @@ testTypecheck sign input expected = do
             assertFailure $
               toString $
                 unlines $
-                  map (show . human) reports
+                  show . human <$> reports
           -- FIXME: This might accept a negative test for the wrong
           -- reason.
           Negative -> pass

@@ -26,7 +26,7 @@ data Entry = Entry
     export :: !Bool,
     -- User-defined metadata.
 
-    metadata :: !(HashMap Unqualified (Term ())),
+    metadata :: !(Map Unqualified (Term ())),
     -- Source location.
 
     origin :: !Origin,

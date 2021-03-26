@@ -50,10 +50,10 @@ import Optics
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { _tvs :: !(Map TypeId Type),
+  { _tvs :: ! (Map TypeId Type),
     _vs :: ![Type],
     _closure :: ![Type],
-    _sigs :: !(Map Qualified Type),
+    _sigs :: ! (Map Qualified Type),
     _currentType :: !(IORef TypeId)
   }
 
@@ -81,7 +81,7 @@ freshTypeId :: TypeEnv -> M TypeId
 freshTypeId tenv = liftIO $ do
   x <- readIORef $ view currentType tenv
   writeIORef (view currentType tenv) $ next x
-  return x
+  pure x
 
 getClosed :: TypeEnv -> Closed -> Maybe Type
 getClosed tenv name = case name of

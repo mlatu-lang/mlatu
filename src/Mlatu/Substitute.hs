@@ -28,15 +28,15 @@ typ tenv0 x a = recur
   where
     recur t = case t of
       Forall origin var@(Var name x' k) t'
-        | x == x' -> return t
+        | x == x' -> pure t
         | x' `Set.notMember` Free.tvs tenv0 t' -> Forall origin var <$> recur t'
         | otherwise -> do
           z <- freshTypeId tenv0
           t'' <- typ tenv0 x' (TypeVar origin $ Var name z k) t'
           Forall origin (Var name z k) <$> recur t''
-      TypeVar _ (Var _name x' _) | x == x' -> return a
+      TypeVar _ (Var _name x' _) | x == x' -> pure a
       m :@ n -> (:@) <$> recur m <*> recur n
-      _noSubst -> return t
+      _noSubst -> pure t
 
 term :: TypeEnv -> TypeId -> Type -> Term Type -> M (Term Type)
 term tenv x a = recur
@@ -59,7 +59,7 @@ term tenv x a = recur
           <*> pure origin
       Match hint tref cases else_ origin ->
         Match hint <$> go tref
-          <*> mapM goCase cases
+          <*> traverse goCase cases
           <*> goElse else_
           <*> pure origin
         where
@@ -68,7 +68,7 @@ term tenv x a = recur
             Case name <$> recur body <*> pure caseOrigin
 
           goElse :: Else Type -> M (Else Type)
-          goElse (DefaultElse elseType elseOrigin) = return $ DefaultElse elseType elseOrigin
+          goElse (DefaultElse elseType elseOrigin) = pure $ DefaultElse elseType elseOrigin
           goElse (Else body elseOrigin) = Else <$> recur body <*> pure elseOrigin
       New tref index size origin ->
         New
@@ -87,7 +87,7 @@ term tenv x a = recur
         Word <$> go tref
           <*> pure fixity
           <*> pure name
-          <*> mapM go args
+          <*> traverse go args
           <*> pure origin
     {-# INLINEABLE recur #-}
 

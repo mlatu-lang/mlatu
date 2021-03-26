@@ -1,4 +1,5 @@
-{-# LANGUAGE DerivingStrategies, TemplateHaskell #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- |
 -- Module      : Mlatu.Definition
@@ -20,7 +21,7 @@ module Mlatu.Definition
     merge,
     origin,
     signature,
-    parent
+    parent,
   )
 where
 
@@ -40,8 +41,8 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Relude
-import Optics 
 
 data Definition a = Definition
   { _category :: !Category,

@@ -28,6 +28,7 @@ import Mlatu.Definition (mainName)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
+import Mlatu.Ice (ice)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Literal qualified as Literal
@@ -50,6 +51,7 @@ import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Vocabulary qualified as Vocabulary
 import Numeric (log)
+import Optics
 import Prettyprinter (Doc, Pretty (pretty), dquotes, hcat, hsep, list, nest, squotes, vcat)
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
@@ -57,8 +59,6 @@ import System.Exit (ExitCode (..))
 import System.IO (hFlush, hGetLine, hPrint, hPutStr, readIO)
 import System.IO.Error (IOError, ioeGetErrorType)
 import Text.Show qualified
-import Optics
-import Mlatu.Ice (ice)
 
 -- | Representation of a runtime value.
 data Rep
@@ -77,9 +77,7 @@ makePrisms ''Rep
 valueRep :: (Show a) => Value a -> Rep
 valueRep (Term.Character c) = Character c
 valueRep (Term.Float literal) = Float64 $ Literal.floatValue literal
-valueRep (Term.Integer literal) = rep $ view Literal.integerValue literal
-  where
-    rep = Int64 . fromInteger
+valueRep (Term.Integer literal) = Int64 $ fromInteger $ view Literal.integerValue literal
 valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
 valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: " ++ show value
@@ -87,14 +85,14 @@ valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: 
 printRep :: Rep -> Doc a
 printRep (Algebraic (ConstructorIndex index) values) =
   hsep $
-    map printRep values ++ [hcat ["#", pretty index]]
+    (printRep <$> values) ++ [hcat ["#", pretty index]]
 printRep (Array values) =
   list $
-    Vector.toList $ fmap printRep values
+    Vector.toList $ printRep <$> values
 printRep (Character c) = squotes $ pretty c
 printRep (Closure name closure) =
   hsep $
-    map printRep closure ++ [hcat ["#", Pretty.printQualified name]]
+    (printRep <$> closure) ++ [hcat ["#", Pretty.printQualified name]]
 printRep (Float64 f) = pretty f
 printRep (Int64 i) = pretty i
 printRep (Name n) = hcat ["\\", Pretty.printQualified n]
@@ -144,7 +142,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                           dquotes $ Pretty.printQualified name,
                           ":"
                         ] :
-                      map Report.human reports
+                      (Report.human <$> reports)
             -- An intrinsic.
             Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
               Qualified v unqualified
@@ -255,7 +253,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     pretty txt
                   ] :
                 "Call stack:" :
-                map (nest 2 . Pretty.printQualified) callStack
+                (nest 2 . Pretty.printQualified <$> callStack)
         "exit" -> do
           Int64 i ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -350,11 +348,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           writeIORef stackRef $ Text (Text.concat [x, y]) ::: r
         "string_from_list" -> do
           Array cs ::: r <- readIORef stackRef
-          let string = map (\(Character c) -> c) $ Vector.toList cs
+          let string = (\(Character c) -> c) <$> Vector.toList cs
           writeIORef stackRef $ Text (toText string) ::: r
         "string_to_list" -> do
           Text txt ::: r <- readIORef stackRef
-          let string = Array (Vector.fromList $ map Character $ toString txt)
+          let string = Array (Vector.fromList (Character <$> toString txt))
           writeIORef stackRef $ string ::: r
         "get" -> do
           Int64 i ::: Array xs ::: r <- readIORef stackRef
@@ -517,7 +515,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     vcat $
                       "Execution failure: integer division by zero" :
                       "Call stack:" :
-                      map (nest 2 . Pretty.printQualified) callStack
+                      (nest 2 . Pretty.printQualified <$> callStack)
               unexpectedError -> throwIO unexpectedError
 
           catchFloatModByZero :: IO a -> IO a
@@ -529,7 +527,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     vcat $
                       "Execution failure: float modulus by zero" :
                       "Call stack:" :
-                      map (nest 2 . Pretty.printQualified) callStack
+                      (nest 2 . Pretty.printQualified <$> callStack)
               unexpectedError -> throwIO unexpectedError
 
           catchFileAccessErrors :: IO a -> IO a
@@ -541,7 +539,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     "Execution failure:" :
                     show (ioeGetErrorType e) :
                     "Call stack:" :
-                    map (nest 2 . Pretty.printQualified) callStack
+                    (nest 2 . Pretty.printQualified <$> callStack)
 
   let entryPointName = fromMaybe mainName mName
   word [entryPointName] entryPointName mainArgs

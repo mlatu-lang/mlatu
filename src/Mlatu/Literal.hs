@@ -10,19 +10,20 @@
 -- Portability : GHC
 module Mlatu.Literal
   ( FloatLiteral (..),
-    IntegerLiteral (..), Base(..),
+    IntegerLiteral (..),
+    Base (..),
     integerValue,
     integerBase,
     floatValue,
     floatSignificand,
     floatFractional,
-    floatExponent
+    floatExponent,
   )
 where
 
 import Data.Ratio ((%))
-import Relude
 import Optics.TH
+import Relude
 
 -- | The radix of an integer literal.
 data Base
@@ -40,7 +41,8 @@ makePrisms ''Base
 
 data IntegerLiteral = IntegerLiteral
   { _integerValue :: !Integer,
-    _integerBase :: !Base  }
+    _integerBase :: !Base
+  }
   deriving (Show)
 
 makeLenses ''IntegerLiteral

@@ -10,11 +10,11 @@
 -- Portability : GHC
 module Mlatu.Entry
   ( Entry (..),
-  _Word,
-  _Metadata, 
-  _Trait,
-  _Type, 
-  _InstantiatedType
+    _Word,
+    _Metadata,
+    _Trait,
+    _Type,
+    _InstantiatedType,
   )
 where
 
@@ -27,13 +27,13 @@ import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
-import Relude hiding (Constraint, Type)
 import Optics.TH (makePrisms)
+import Relude hiding (Constraint, Type)
 
 -- | An entry in the dictionary.
 --
 -- FIXME: This could use significant cleaning up. We could possibly make each
--- constructor into a separate 'HashMap' in the 'Dictionary'.
+-- constructor into a separate 'Map' in the 'Dictionary'.
 data Entry
   = -- | A word definition. If the implementation is 'Nothing', this is a
     -- declaration: it can be used for type checking and name resolution, but not

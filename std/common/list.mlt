@@ -308,7 +308,7 @@ define rights [A, B] (List[Either[A, B]] -> List[B]) {
 
 define set [T] (List[T], T, Int -> List[T]) {
   -> element, index;
-  do (map_index) { -> x, i; if (i = index) { element } else { x } }
+  do  (map_index) { -> x, i; if (i = index) { element } else { x } }
 }
 
 define suffix [T] (List[T], T -> List[T]) { once append }

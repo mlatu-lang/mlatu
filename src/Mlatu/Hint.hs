@@ -11,15 +11,15 @@ import Mlatu.Report qualified as Report
 import Mlatu.Term
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
-import Relude hiding (Compose)
 import Optics
+import Relude hiding (Compose)
 
 fragment :: Fragment.Fragment () -> M ()
 fragment f = do
-  forM_ (view Fragment.declarations f) declaration
-  forM_ (view Fragment.definitions f) definition
-  forM_ (view Fragment.metadata f) metadata
-  forM_ (view Fragment.types f) typeDefinition
+  for_ (view Fragment.declarations f) declaration
+  for_ (view Fragment.definitions f) definition
+  for_ (view Fragment.metadata f) metadata
+  for_ (view Fragment.types f) typeDefinition
   pass
 
 declaration :: Declaration.Declaration -> M ()

@@ -29,9 +29,9 @@ import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
+import Optics
 import Relude hiding (Compose, Type)
 import Relude.Extra (next)
-import Optics
 
 newtype LambdaIndex = LambdaIndex Int
 
@@ -46,7 +46,7 @@ desugar dictionary qualifier term0 = do
   ((term', _), (_, dictionary')) <-
     usingStateT (LambdaIndex 0, dictionary) $
       go TypeEnv.empty term0
-  return (term', dictionary')
+  pure (term', dictionary')
   where
     go ::
       TypeEnv ->
@@ -57,32 +57,32 @@ desugar dictionary qualifier term0 = do
       Compose typ a b -> do
         (a', tenv1) <- go tenv0 a
         (b', tenv2) <- go tenv1 b
-        return (Compose typ a' b', tenv2)
+        pure (Compose typ a' b', tenv2)
       Generic name typ a origin -> do
         (a', tenv1) <- go tenv0 a
-        return (Generic name typ a' origin, tenv1)
+        pure (Generic name typ a' origin, tenv1)
       Group {} -> error "group should not appear after infix desugaring"
       Lambda typ name varType a origin -> do
         let oldLocals = view TypeEnv.vs tenv0
             localEnv = over TypeEnv.vs (varType :) tenv0
         (a', tenv1) <- go localEnv a
-        let tenv2 = set TypeEnv.vs oldLocals tenv1 
-        return (Lambda typ name varType a' origin, tenv2)
+        let tenv2 = set TypeEnv.vs oldLocals tenv1
+        pure (Lambda typ name varType a' origin, tenv2)
       Match hint typ cases else_ origin -> do
         (cases', tenv1) <-
           foldrM
             ( \(Case name a caseOrigin) (acc, tenv) -> do
                 (a', tenv') <- go tenv a
-                return (Case name a' caseOrigin : acc, tenv')
+                pure (Case name a' caseOrigin : acc, tenv')
             )
             ([], tenv0)
             cases
         (else', tenv2) <- case else_ of
-          DefaultElse a elseOrigin -> return (DefaultElse a elseOrigin, tenv1)
+          DefaultElse a elseOrigin -> pure (DefaultElse a elseOrigin, tenv1)
           Else a elseOrigin -> do
             (a', tenv') <- go tenv1 a
-            return (Else a' elseOrigin, tenv')
-        return (Match hint typ cases' else' origin, tenv2)
+            pure (Else a' elseOrigin, tenv')
+        pure (Match hint typ cases' else' origin, tenv2)
       New {} -> done
       NewClosure {} -> done
       NewVector {} -> done
@@ -117,11 +117,11 @@ desugar dictionary qualifier term0 = do
           lift $
             inferType0 dict tenv2 Nothing $
               Term.compose () origin $
-                map pushClosed closed
+                (pushClosed <$> closed)
                   ++ [ Push () (Name name) origin,
                        NewClosure () (length closed) origin
                      ]
-        return (typechecked, tenv2)
+        pure (typechecked, tenv2)
         where
           pushClosed :: Closed -> Term ()
           pushClosed name =
@@ -135,4 +135,4 @@ desugar dictionary qualifier term0 = do
       Push {} -> done
       Word {} -> done
       where
-        done = return (term, tenv0)
+        done = pure (term, tenv0)

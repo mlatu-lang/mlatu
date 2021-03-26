@@ -27,8 +27,8 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
-import Relude
 import Optics
+import Relude
 
 -- | Desugars data type constructors into word definitions, e.g.:
 --
@@ -61,10 +61,13 @@ desugarConstructor definition index constructor =
       Definition._fixity = Operator.Postfix,
       Definition._inferSignature = False,
       Definition._merge = Merge.Deny,
-      Definition._name = Qualified qualifier $
+      Definition._name =
+        Qualified qualifier $
           view DataConstructor.name constructor,
       Definition._origin = origin,
-      Definition._parent = Just $ Parent.Type $
+      Definition._parent =
+        Just $
+          Parent.Type $
             view TypeDefinition.name definition,
       Definition._signature = constructorSignature
     }
@@ -73,15 +76,15 @@ desugarConstructor definition index constructor =
       foldl'
         (\a b -> Signature.Application a b origin)
         ( Signature.Variable (QualifiedName $ view TypeDefinition.name definition) $
-           view  TypeDefinition.origin definition
+            view TypeDefinition.origin definition
         )
-        $ map
-          ( \(Parameter parameterOrigin parameter _kind _) ->
+        $ ( \(Parameter parameterOrigin parameter _kind _) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
-          $ view TypeDefinition.parameters definition
+          <$> view TypeDefinition.parameters definition
     constructorSignature =
-      Signature.Quantified (view TypeDefinition.parameters definition)
+      Signature.Quantified
+        (view TypeDefinition.parameters definition)
         ( Signature.Function
             (view DataConstructor.fields constructor)
             [resultSignature]

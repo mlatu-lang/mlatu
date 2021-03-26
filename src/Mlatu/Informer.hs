@@ -16,8 +16,8 @@ where
 
 import Mlatu.Origin (Origin)
 import Mlatu.Report (Level (..), Report)
-import Relude
 import Prettyprinter (Doc)
+import Relude
 
 -- | Class of error-reporting monads.
 class (Monad m) => Informer m where

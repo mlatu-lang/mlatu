@@ -13,8 +13,10 @@ module Mlatu
     Prelude (..),
     compile,
     runMlatu,
+    runMlatuExceptT,
     tokenize,
     compilePrelude,
+    compileWithPrelude,
   )
 where
 
@@ -22,7 +24,7 @@ import Data.FileEmbed (embedDir, embedFile)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Monad (M, runMlatu)
+import Mlatu.Monad (M, runMlatu, runMlatuExceptT)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Tokenize (tokenize)
 import Relude
@@ -50,7 +52,7 @@ compile ::
 compile mainPermissions mainName paths mDict = do
   -- Source files must be encoded in UTF-8.
 
-  sources <- liftIO $ mapM (fmap decodeUtf8 . readFileBS) paths
+  sources <- liftIO $ traverse (fmap decodeUtf8 . readFileBS) paths
   parsed <-
     mconcat
       <$> zipWithM
@@ -60,6 +62,11 @@ compile mainPermissions mainName paths mDict = do
   -- dictionary <-
   Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
+compileWithPrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> [FilePath] -> M Dictionary
+compileWithPrelude prelude mainPermissions mainName paths = do
+  commonDictionary <- compilePrelude prelude mainPermissions mainName
+  compile mainPermissions mainName paths (Just commonDictionary)
+
 compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> M Dictionary
 compilePrelude prelude mainPermissions mainName = do
   parsed <-
@@ -67,13 +74,13 @@ compilePrelude prelude mainPermissions mainName = do
       <$> zipWithM
         (Enter.fragmentFromSource mainPermissions mainName 1)
         preludePaths
-        (map decodeUtf8 preludeSources)
+        (decodeUtf8 <$> preludeSources)
   -- dictionary <-
   Enter.fragment parsed Dictionary.empty
   where
     (preludePaths, preludeSources) = case prelude of
       Foundation -> ([fst foundation], [snd foundation])
-      Common -> (fst foundation : map fst common, snd foundation : map snd common)
+      Common -> (fst foundation : (fst <$> common), snd foundation : (snd <$> common))
 
 data Prelude
   = Foundation

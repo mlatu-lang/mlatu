@@ -11,11 +11,12 @@ module Mlatu.Desugar.Infix
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.Map.Strict qualified as Map
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
+import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..))
@@ -26,13 +27,12 @@ import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
+import Optics
 import Relude hiding (Compose)
 import Relude.Extra (universe)
 import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
-import Optics
-import Mlatu.Ice (ice)
 
 type Rewriter a = Parsec [Term ()] () a
 
@@ -42,16 +42,15 @@ desugar :: Dictionary -> Definition () -> M (Definition ())
 desugar dictionary definition = do
   operatorMetadata <- Dictionary.operatorMetadata dictionary
   let operatorTable :: [[Expr.Operator [Term ()] () Identity (Term ())]]
-      operatorTable = map (map toOperator) rawOperatorTable
+      operatorTable = toOperator <<$>> rawOperatorTable
 
       rawOperatorTable :: [[Operator]]
       rawOperatorTable =
-        map
-          ( \p ->
-              HashMap.elems $
-                HashMap.filter ((== p) . Operator.precedence) operatorMetadata
-          )
-          $ reverse universe
+        ( \p ->
+            Map.elems $
+              Map.filter ((== p) . Operator.precedence) operatorMetadata
+        )
+          <$> reverse universe
 
       expression :: Rewriter (Term ())
       expression = Expr.buildExpressionParser operatorTable operand
@@ -63,30 +62,30 @@ desugar dictionary definition = do
                 Word _ Operator.Infix _ _ _ -> False
                 Lambda {} -> False
                 _otherTerm -> True
-            return $ Term.compose () origin results
+            pure $ Term.compose () origin results
 
       desugarTerms :: [Term ()] -> M (Term ())
       desugarTerms terms = do
-        terms' <- mapM desugarTerm terms
+        terms' <- traverse desugarTerm terms
         let expression' = infixExpression <* Parsec.eof
             infixExpression = do
               desugaredTerms <- many $ expression <|> lambda
               let origin = case desugaredTerms of
                     term : _ -> Term.origin term
                     _noTerms -> view Definition.origin definition
-              return $ Term.compose () origin desugaredTerms
+              pure $ Term.compose () origin desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
             report $ Report.parseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
                   _noTerms -> view Definition.origin definition
-            return $ Term.compose () origin terms
-          Right result -> return result
+            pure $ Term.compose () origin terms
+          Right result -> pure result
 
       desugarTerm :: Term () -> M (Term ())
       desugarTerm term = case term of
-        Coercion {} -> return term
+        Coercion {} -> pure term
         Compose _ a b -> desugarTerms (Term.decompose a ++ Term.decompose b)
         Generic {} ->
           ice
@@ -97,21 +96,21 @@ desugar dictionary definition = do
             <$> desugarTerms' body <*> pure origin
         Match hint _ cases else_ origin ->
           Match hint ()
-            <$> mapM desugarCase cases <*> desugarElse else_ <*> pure origin
+            <$> traverse desugarCase cases <*> desugarElse else_ <*> pure origin
           where
             desugarCase :: Case () -> M (Case ())
             desugarCase (Case name body caseOrigin) =
               Case name <$> desugarTerms' body <*> pure caseOrigin
 
             desugarElse :: Else () -> M (Else ())
-            desugarElse (DefaultElse metadata o) = return $ DefaultElse metadata o
+            desugarElse (DefaultElse metadata o) = pure $ DefaultElse metadata o
             desugarElse (Else body elseOrigin) =
               Else <$> desugarTerms' body <*> pure elseOrigin
-        New {} -> return term
-        NewClosure {} -> return term
-        NewVector {} -> return term
+        New {} -> pure term
+        NewClosure {} -> pure term
+        NewVector {} -> pure term
         Push _ value origin -> Push () <$> desugarValue value <*> pure origin
-        Word {} -> return term
+        Word {} -> pure term
 
       desugarTerms' :: Term () -> M (Term ())
       desugarTerms' = desugarTerms . Term.decompose
@@ -119,17 +118,17 @@ desugar dictionary definition = do
       desugarValue :: Value () -> M (Value ())
       desugarValue value = case value of
         Capture names body -> Capture names <$> desugarTerms' body
-        Character {} -> return value
+        Character {} -> pure value
         Closed {} -> error "closed name should not appear before infix desugaring"
-        Float {} -> return value
-        Integer {} -> return value
+        Float {} -> pure value
+        Integer {} -> pure value
         Local {} -> error "local name should not appear before infix desugaring"
-        Name {} -> return value
+        Name {} -> pure value
         Quotation body -> Quotation <$> desugarTerms' body
-        Text {} -> return value
+        Text {} -> pure value
 
   desugared <- desugarTerms' $ view Definition.body definition
-  return $ set Definition.body desugared definition
+  pure $ set Definition.body desugared definition
 
 toOperator :: Operator -> Expr.Operator [Term ()] () Identity (Term ())
 toOperator operator = Expr.Infix

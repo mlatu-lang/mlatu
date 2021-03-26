@@ -10,11 +10,11 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Fragment qualified as Fragment
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
+import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
-import Mlatu.Infer (typecheck, typeFromSignature)
+import Mlatu.Infer (typeFromSignature, typecheck)
 import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Interpret (Failure, Rep, interpret, printRep)
@@ -34,12 +34,12 @@ import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary qualified as Vocabulary
+import Optics
 import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
 import System.IO (hPrint)
-import Optics
 
 type MRepl a = HaskelineT (StateT Dictionary (StateT [Rep] (StateT Int IO))) a
 
@@ -104,7 +104,7 @@ cmd input = do
       -- correctly by the interpreter.
       _ <- Unify.typ tenv stackScheme (Term.typ mainBody)
       warnCheckpoint
-      return (dictionary'', mainBody)
+      pure (dictionary'', mainBody)
   case mResults of
     Left reports -> do
       liftIO $ reportAll reports
@@ -137,22 +137,21 @@ cmd input = do
 completer :: String -> StateT Dictionary (StateT [Rep] (StateT Int IO)) [String]
 completer n = do
   dictionary <- get
-  let dictNames = map (show . fst) (Dictionary.toList dictionary)
-  return $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
+  let dictNames = show . fst <$> Dictionary.toList dictionary
+  pure $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
   ["help"] -> putStrLn helpHelp
-  ["stack"] -> putStrLn stackHelp 
+  ["stack"] -> putStrLn stackHelp
   ["dict"] -> putStrLn dictHelp
   ["type"] -> putStrLn typeHelp
-  _ -> forM_ [dictHelp, stackHelp, helpHelp] putStrLn
-  where 
+  _ -> traverse_ putStrLn [dictHelp, stackHelp, helpHelp]
+  where
     helpHelp = ":help - Show this help."
     stackHelp = ":stack - Show the current state of the stack."
     dictHelp = ":dict - Show the current state of the dictionary."
     typeHelp = ":type - Show the type of an expression."
-
 
 stackCmd :: String -> MRepl ()
 stackCmd =
@@ -163,15 +162,15 @@ stackCmd =
 dictCmd :: String -> MRepl ()
 dictCmd =
   const $
-  lift get
+    lift get
       >>= (liftIO . renderDictionary)
 
 typeCmd :: String -> MRepl ()
-typeCmd expression = do 
-  dictionary <- lift get 
+typeCmd expression = do
+  dictionary <- lift get
   lineNumber <- lift $ lift $ lift get
-  mResults <- liftIO $ 
-    runMlatuExceptT $ do 
+  mResults <- liftIO $
+    runMlatuExceptT $ do
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Qualified Vocabulary.global "IO"]
@@ -186,13 +185,13 @@ typeCmd expression = do
           errorCheckpoint
           (_, typ) <- typecheck dictionary Nothing $ view Definition.body resolved
           errorCheckpoint
-          return (Just typ)
-        _otherDefinition -> return Nothing
+          pure (Just typ)
+        _otherDefinition -> pure Nothing
 
   liftIO $ case mResults of
     Left reports -> reportAll reports
     Right (Just typ) -> print $ printType typ
-    Right Nothing -> hPrint stderr "That doesn't look like an expression"
+    Right Nothing -> hPrint stderr ("That doesn't look like an expression" :: String)
 
 opts :: [(String, String -> MRepl ())]
 opts = [("help", helpCmd), ("stack", stackCmd), ("dict", dictCmd), ("type", typeCmd)]
@@ -203,7 +202,7 @@ ini = liftIO $ putStrLn "Welcome!"
 final :: MRepl ExitDecision
 final = do
   liftIO $ putStrLn "Bye!"
-  return Exit
+  pure Exit
 
 run :: Prelude -> IO Int
 run prelude = do
@@ -230,7 +229,7 @@ run prelude = do
         }
 
 renderStack :: [Rep] -> IO ()
-renderStack stack = unless (null stack) (print $ vcat $ map printRep stack)
+renderStack stack = unless (null stack) (print $ vcat $ printRep <$> stack)
 
 renderDictionary :: Dictionary -> IO ()
 renderDictionary = print . Dictionary.printDictionary

@@ -1,9 +1,9 @@
 module Main where
 
 import Arguments qualified
-import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 import Interact qualified
-import Mlatu (Prelude (..), compile, compilePrelude, fragmentFromSource, runMlatu)
+import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
+import Mlatu.Codegen qualified as Codegen
 import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
@@ -12,8 +12,9 @@ import Mlatu.Vocabulary qualified as Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Relude
 import Report (reportAll)
-import System.Directory (makeAbsolute)
+import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
+import System.Process.Typed (proc, runProcess_)
 
 main :: IO ()
 main = do
@@ -28,6 +29,7 @@ main = do
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
     Arguments.RunFiles prelude files -> runFiles prelude files
+    Arguments.CompileFiles prelude files -> compileFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -44,49 +46,55 @@ handleReports reports = do
   exitFailure
 
 formatFiles :: [FilePath] -> IO ()
-formatFiles paths = forM_ paths $ \relativePath -> do
+formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
-  result <- runExceptT $ runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
+  result <- runMlatuExceptT $ fragmentFromSource mainPermissions Nothing 0 path text
   case result of
     Left reports -> handleReports reports
     Right fragment -> do
       let newText = show $ printFragment fragment
       writeFile path newText
-      if newText /= toString text
-        then putStrLn $ "Formatted " <> path <> " successfully"
-        else putStrLn $ path <> " was already formatted"
+      putStrLn $
+        if newText /= toString text
+          then "Formatted " <> path <> " successfully"
+          else path <> " was already formatted"
 
 checkFiles :: Prelude -> [FilePath] -> IO ()
-checkFiles prelude relativePaths = do
-  paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $
-    runExceptT $
-      runMlatu $ do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
-  case result of
-    Left reports -> handleReports reports
-    Right _ -> putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\n---"
+checkFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
 runFiles :: Prelude -> [FilePath] -> IO ()
-runFiles prelude relativePaths = do
-  paths <- forM relativePaths makeAbsolute
-  (result, t1) <- timed $
-    runExceptT $
-      runMlatu $ do
-        commonDictionary <- compilePrelude prelude mainPermissions Nothing
-        compile mainPermissions Nothing paths (Just commonDictionary)
-  case result of
-    Left reports -> handleReports reports
-    Right program -> do
-      (_, t2) <- timed $ interpret program Nothing [] stdin stdout stderr []
-      putStrLn $ "---\nTime taken to parse and check files: " <> show t1 <> "\nTime taken to interpret files: " <> show t2 <> "\n---"
+runFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= ( \paths ->
+            runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths)
+              >>= ( \case
+                      Left reports -> handleReports reports
+                      Right program -> void (interpret program Nothing [] stdin stdout stderr [])
+                  )
+        )
 
-timed :: IO a -> IO (a, NominalDiffTime)
-timed comp = do
-  t1 <- getCurrentTime
-  result <- comp
-  t2 <- getCurrentTime
-  return (result, diffUTCTime t2 t1)
+compileFiles :: Prelude -> [FilePath] -> IO ()
+compileFiles prelude relativePaths = do
+  forM relativePaths makeAbsolute
+    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= ( \case
+            Left reports -> handleReports reports
+            Right program ->
+              ( Codegen.generate program
+                  >>= writeFileBS "output.rs"
+              )
+                >> runProcess_
+                  ( proc "rustfmt" ["output.rs"]
+                  )
+                >> runProcess_
+                  ( proc "rustc" ["-C", "opt-level=3", "output.rs"]
+                  )
+                >> removeFile "output.rs"
+                >> runProcess_
+                  ( proc "upx" ["--best", "-q", "output"]
+                  )
+        )

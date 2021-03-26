@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- |
 -- Module      : Mlatu.Report
@@ -36,7 +36,7 @@ module Mlatu.Report
     _InvalidOperatorMetadata,
     _ParseError,
     _UseCommon,
-    _Context
+    _Context,
   )
 where
 
@@ -50,11 +50,11 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor, Type)
 import Mlatu.Type qualified as Type
-import Prettyprinter (Doc, Pretty (pretty), comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>), colon)
+import Optics.TH (makePrisms)
+import Prettyprinter (Doc, Pretty (pretty), colon, comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>))
 import Relude hiding (Type)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
-import Optics.TH (makePrisms)
 
 data NameCategory = WordName | TypeName
   deriving (Eq, Show)
@@ -155,7 +155,7 @@ human (Report _ kind) = kindMsg kind
             "but",
             pretty (length args),
             "were provided:",
-            list $ map (dquotes . printType) args
+            list $ dquotes . printType <$> args
           ]
       (CannotResolveName origin category name) ->
         hsep
@@ -181,12 +181,12 @@ human (Report _ kind) = kindMsg kind
               dquotes $ printQualified name,
               parens "did you mean to declare it as a trait?"
             ] :
-          map
-            ( \duplicateOrigin ->
+          ( ( \duplicateOrigin ->
                 hsep
                   ["also defined at", printOrigin duplicateOrigin]
             )
-            duplicates
+              <$> duplicates
+          )
       (WordRedefinition origin name originalOrigin) ->
         vsep
           [ hsep
@@ -252,7 +252,7 @@ human (Report _ kind) = kindMsg kind
             dquotes $ printQualified instead,
             " from the common library instead of what you have here"
           ]
-      (Chain reports) -> vsep $ map kindMsg reports
+      (Chain reports) -> vsep $ kindMsg <$> reports
       (OccursCheckFailure a b) ->
         vsep
           [ hsep
@@ -285,9 +285,9 @@ human (Report _ kind) = kindMsg kind
           (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
       (Context context message) ->
         vsep $
-          map
-            (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
-            context
+          ( (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
+              <$> context
+          )
             ++ [human message]
 
 showOriginPrefix :: Origin.Origin -> Doc a
@@ -316,15 +316,16 @@ parseError parsecError = Report Error (ParseError origin unexpected' expected')
         ( "expected" :
           punctuate
             comma
-            ( map pretty $
-                ordNub $
-                  filter (not . null) $ -- TODO: Replace with "end of input"
-                    map Parsec.messageString expected
+            ( pretty
+                <$> ordNub
+                  ( filter (not . null) $ -- TODO: Replace with "end of input"
+                      Parsec.messageString <$> expected
+                  )
             )
         )
 
 unexpectedMessages :: [Parsec.Message] -> [Doc ()]
-unexpectedMessages = map unexpectedMessage . ordNub
+unexpectedMessages = fmap unexpectedMessage . ordNub
 
 unexpectedMessage :: Parsec.Message -> Doc ()
 unexpectedMessage message =

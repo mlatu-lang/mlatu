@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5d19fea56ea64a5fe9451ab6b2575600525cd160897d20887d8eae802d088c5e
+-- hash: 5080fa2422e7b6d5fdd55ae34043638779e6d157a0d33c9dd339e693b09b77a1
 
 name:           mlatu
 version:        0.1.0.0
@@ -24,6 +24,7 @@ source-repository head
 library
   exposed-modules:
       Mlatu
+      Mlatu.Codegen
       Mlatu.DataConstructor
       Mlatu.Declaration
       Mlatu.Definition
@@ -91,6 +92,7 @@ library
     , bytestring
     , containers
     , file-embed
+    , monad-loops
     , optics
     , parsec
     , prettyprinter
@@ -114,7 +116,7 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
-  ghc-options: -Wall -O2 -O2
+  ghc-options: -Wall -O2 -threaded
   build-depends:
       base >=4.8
     , bytestring
@@ -123,6 +125,7 @@ executable mlatu
     , exceptions
     , file-embed
     , mlatu
+    , monad-loops
     , optics
     , optparse-applicative
     , parsec
@@ -130,8 +133,8 @@ executable mlatu
     , relude ==0.7.0.0
     , repline
     , text
-    , time
     , transformers
+    , typed-process
     , unordered-containers
     , vector
   default-language: Haskell2010
@@ -163,6 +166,7 @@ test-suite test
     , hspec
     , knob
     , mlatu
+    , monad-loops
     , optics
     , parsec
     , prettyprinter
