@@ -13,7 +13,7 @@ module Mlatu.Enter
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.Map.Strict qualified as Map
 import Mlatu.Declaration (Declaration)
 import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition)
@@ -216,7 +216,7 @@ declareWord dictionary definition =
 
 addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
-  foldlM addField dictionary0 $ HashMap.toList $ view Metadata.fields metadata
+  foldlM addField dictionary0 $ Map.toList $ view Metadata.fields metadata
   where
     QualifiedName qualified = view Metadata.name metadata
     origin = view Metadata.origin metadata

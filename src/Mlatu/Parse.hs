@@ -14,8 +14,8 @@ module Mlatu.Parse
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex)
+import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
@@ -330,7 +330,7 @@ metadataParser = (<?> "metadata block") $ do
           <*> (blockParser <?> "metadata value block")
   pure
     Metadata
-      { Metadata._fields = HashMap.fromList fields,
+      { Metadata._fields = Map.fromList fields,
         Metadata._name = QualifiedName name,
         Metadata._origin = origin
       }

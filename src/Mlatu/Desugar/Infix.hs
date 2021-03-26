@@ -11,7 +11,7 @@ module Mlatu.Desugar.Infix
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.Map.Strict qualified as Map
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
@@ -47,8 +47,8 @@ desugar dictionary definition = do
       rawOperatorTable :: [[Operator]]
       rawOperatorTable =
         ( \p ->
-            HashMap.elems $
-              HashMap.filter ((== p) . Operator.precedence) operatorMetadata
+            Map.elems $
+              Map.filter ((== p) . Operator.precedence) operatorMetadata
         )
           <$> reverse universe
 

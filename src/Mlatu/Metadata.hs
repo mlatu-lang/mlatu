@@ -24,7 +24,7 @@ import Relude
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
-  { _fields :: !(HashMap Unqualified (Term ())),
+  { _fields :: !(Map Unqualified (Term ())),
     _name :: !GeneralName,
     _origin :: !Origin
   }

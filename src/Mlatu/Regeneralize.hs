@@ -69,7 +69,7 @@ regeneralize tenv t =
       Type.Prod o a b -> do
         a' <- go a
         b' <- go b
-        pure $ Type.Prod o a b
+        pure $ Type.Prod o a' b'
       -- FIXME: This should descend into the quantified type.
       Forall {} -> pure t'
       a :@ b -> (:@) <$> go a <*> go b

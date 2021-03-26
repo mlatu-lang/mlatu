@@ -191,7 +191,7 @@ typeCmd expression = do
   liftIO $ case mResults of
     Left reports -> reportAll reports
     Right (Just typ) -> print $ printType typ
-    Right Nothing -> hPrint stderr "That doesn't look like an expression"
+    Right Nothing -> hPrint stderr ("That doesn't look like an expression" :: String)
 
 opts :: [(String, String -> MRepl ())]
 opts = [("help", helpCmd), ("stack", stackCmd), ("dict", dictCmd), ("type", typeCmd)]

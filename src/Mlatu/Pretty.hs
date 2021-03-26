@@ -26,8 +26,8 @@ module Mlatu.Pretty
 where
 
 import Data.Char (isLetter)
-import Data.HashMap.Strict qualified as HashMap
 import Data.List (findIndex, groupBy)
+import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Declaration (Declaration (..))
@@ -194,7 +194,7 @@ printType type0 = recur type0
         -- The default cases here shouldn't happen if the context was built
         -- correctly, so it's fine if we fall back to something ugly.
         fromMaybe (printVar var) $ do
-          ids <- HashMap.lookup name context
+          ids <- Map.lookup name context
           case ids of
             -- Only one variable with this name: print without index.
             [(i', _)] | i == i' -> pure $ prettyKinded name k
@@ -219,7 +219,7 @@ printType type0 = recur type0
               <> parens (recur t)
       TypeValue _ value -> pretty value
 
-type PrettyContext = HashMap Unqualified [(TypeId, Kind)]
+type PrettyContext = Map Unqualified [(TypeId, Kind)]
 
 buildContext :: Type -> PrettyContext
 buildContext = go mempty
@@ -233,7 +233,7 @@ buildContext = go mempty
       Forall _ (Var name i k) t -> go (record name i k context) t
       TypeValue {} -> context
       where
-        record name i k = HashMap.insertWith (<>) name [(i, k)]
+        record name i k = Map.insertWith (<>) name [(i, k)]
 
 printTypeId :: TypeId -> Doc a
 printTypeId (TypeId i) = "T" <> pretty i
@@ -510,7 +510,7 @@ printMetadata metadata =
   vsep $
     ("about" <+> printGeneralName (view Metadata.name metadata) <+> lbrace) :
     ( (\(key, term) -> indent 2 $ blockMaybe (printUnqualified key) (maybePrintTerm term))
-        <$> HashMap.toList
+        <$> Map.toList
           ( view Metadata.fields metadata
           )
     )

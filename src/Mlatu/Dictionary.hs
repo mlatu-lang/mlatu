@@ -10,6 +10,7 @@
 -- Portability : GHC
 module Mlatu.Dictionary
   ( Dictionary (..),
+    entries,
     empty,
     difference,
     insert,
@@ -24,7 +25,7 @@ module Mlatu.Dictionary
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.Map.Strict qualified as Map
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
@@ -50,7 +51,7 @@ import Relude hiding (empty, fromList, toList)
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
 newtype Dictionary = Dictionary
-  { _entries :: HashMap Instantiated Entry
+  { _entries :: Map Instantiated Entry
   }
   deriving (Show)
 
@@ -59,30 +60,30 @@ makeLenses ''Dictionary
 empty :: Dictionary
 empty =
   Dictionary
-    { _entries = HashMap.empty
+    { _entries = Map.empty
     }
 
 difference :: Dictionary -> Dictionary -> Dictionary
-difference a b = Dictionary {_entries = HashMap.difference (view entries a) (view entries b)}
+difference a b = Dictionary {_entries = Map.difference (view entries a) (view entries b)}
 
 -- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
 -- lead to an invalid dictionary state.
 insert :: Instantiated -> Entry -> Dictionary -> Dictionary
-insert name entry = over entries (HashMap.insert name entry)
+insert name entry = over entries (Map.insert name entry)
 
 lookup :: Instantiated -> Dictionary -> Maybe Entry
-lookup name dictionary = HashMap.lookup name (view entries dictionary)
+lookup name dictionary = Map.lookup name (view entries dictionary)
 {-# INLINEABLE lookup #-}
 
 -- | Whether a name is present in the dictionary.
 member :: Instantiated -> Dictionary -> Bool
-member = (. view entries) . HashMap.member
+member = (. view entries) . Map.member
 
 -- | Compiles all operator metadata for infix desugaring.
 operatorMetadata ::
-  (Informer m) => Dictionary -> m (HashMap Qualified Operator)
+  (Informer m) => Dictionary -> m (Map Qualified Operator)
 operatorMetadata dictionary =
-  HashMap.fromList
+  Map.fromList
     <$> traverse
       getMetadata
       (filter isOperatorName $ wordNames dictionary)
@@ -156,7 +157,7 @@ signatures = mapMaybe getSignature . toList
     getSignature _ = Nothing
 
 toList :: Dictionary -> [(Instantiated, Entry)]
-toList = HashMap.toList . view entries
+toList = Map.toList . view entries
 
 -- | All type names (for data types or permissions) in the dictionary.
 typeNames :: Dictionary -> [Qualified]
@@ -177,4 +178,4 @@ wordNames = mapMaybe wordName . toList
     wordName _ = Nothing
 
 printDictionary :: Dictionary -> Doc a
-printDictionary = vsep . fmap printInstantiated . sort . HashMap.keys . view entries
+printDictionary = vsep . fmap printInstantiated . sort . Map.keys . view entries

@@ -58,6 +58,7 @@ dependencies:
   - bytestring
   - containers
   - file-embed
+  - monad-loops
   - optics
   - parsec
   - prettyprinter

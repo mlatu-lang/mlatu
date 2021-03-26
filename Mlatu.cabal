@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b19b59e48b7381ba8f8c80d95b37b16de094b03b5c967fd1f3a6e5ec2f9d741b
+-- hash: 5080fa2422e7b6d5fdd55ae34043638779e6d157a0d33c9dd339e693b09b77a1
 
 name:           mlatu
 version:        0.1.0.0
@@ -92,6 +92,7 @@ library
     , bytestring
     , containers
     , file-embed
+    , monad-loops
     , optics
     , parsec
     , prettyprinter
@@ -124,6 +125,7 @@ executable mlatu
     , exceptions
     , file-embed
     , mlatu
+    , monad-loops
     , optics
     , optparse-applicative
     , parsec
@@ -164,6 +166,7 @@ test-suite test
     , hspec
     , knob
     , mlatu
+    , monad-loops
     , optics
     , parsec
     , prettyprinter
