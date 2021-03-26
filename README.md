@@ -2,11 +2,18 @@
 
 [![](https://tokei.rs/b1/github/brightly-salty/mlatu)](https://github.com/XAMPPRocky/tokei) [![Join the chat at https://gitter.im/mlatu-lang/community](https://badges.gitter.im/mlatu-lang/community.svg)](https://gitter.im/mlatu-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Mlatu is a statically typed, stack-based functional programming language designed for simplicity, speed, and safety. Mlatu features algebraic data types and algebraic effects (called permissions).
+Mlatu is a statically typed, stack-based purely functional programming language designed for simplicity, speed, and safety.
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 
 I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj) and [this Gitter community](https://gitter.im/mlatu-lang/community).
+
+## Features
+
+Functions are first-class values, (*higher-order functions*) can be passed around as function arguments and results, and stored in data structures exactly as other values.
+The use of *algebraic data types* combined with *pattern matching* make it easy to handle very complex data structures in a natural way.
+The *strong type system* and automatic *type inference* provide increased safety from programming errors.
+*Parametric polymorphism* encourages the programmer to write general functions that can later be reused.
 
 ## Examples
 
@@ -34,7 +41,30 @@ define or (List[Bool] -> Bool) {
 }
 ```
 
-See the /examples folder for more examples.
+It is very easy to, for example, implement lazy evaluation and its use:
+
+```
+type Lazy[T] {
+  case thunk (-> T)
+  case value (T)
+}
+
+define force[T] (Lazy[T] -> T) {
+  match {
+    case thunk { call }
+    case value {}
+  }
+}
+
+define lazy_or(Lazy[Bool], Lazy[Bool] -> Lazy[Bool] {
+  match (force) {
+    case true { true value }
+    case false {}
+  }
+}
+```
+
+See the `/examples` folder for more examples.
 
 ## Installation and Usage
 
