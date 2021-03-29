@@ -9,15 +9,15 @@ vocab mlatu {
   intrinsic tail [T] (List[T] -> Optional[List[T]])
 }
 
-type List[T] {   case _list (Pointer[T], Pointer[T], Pointer[T]) }
+type List[T] {}
 
-instance < (List[Int], List[Int] -> Bool) { swap (>) }
+instance Lt for List[Int] { define < (List[Int], List[Int] -> Bool) { swap (>) } }
 
-instance <= (List[Int], List[Int] -> Bool) { (>) not }
+instance Le for List[Int] { define <= (List[Int], List[Int] -> Bool) { (>) not } }
 
-instance <> (List[Int], List[Int] -> Bool) { (=) not }
+instance Ne for List[Int] { define <> (List[Int], List[Int] -> Bool) { (=) not } }
 
-instance = (List[Int], List[Int] -> Bool) {
+instance Eq for List[Int] { define = (List[Int], List[Int] -> Bool) {
   -> xs, ys;
   if (xs length <> ys length) { false }
   else {
@@ -30,9 +30,9 @@ instance = (List[Int], List[Int] -> Bool) {
     }
     case none { true }
   }
-}
+} }
 
-instance > (List[Int], List[Int] -> Bool) {
+instance Gt for List[Int] { define > (List[Int], List[Int] -> Bool) {
   -> xs, ys;
   match (xs head_tail)
   case some {
@@ -46,9 +46,9 @@ instance > (List[Int], List[Int] -> Bool) {
     case none { true }
   }
   case none { false }
-}
+} }
 
-instance >= (List[Int], List[Int] -> Bool) { (<) not }
+instance Ge for List[Int] { define >= (List[Int], List[Int] -> Bool) { (<) not } }
 
 define all [T] (List[T], (T -> Bool) -> Bool) {
   -> f;

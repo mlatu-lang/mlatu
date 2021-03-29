@@ -288,12 +288,6 @@ arrow =
       <$ Parsec.choice (fmap Parsec.string ["->", "\x2192"])
       <* Parsec.notFollowedBy symbol
 
-angleBegin :: Tokenizer Token
-angleBegin = AngleBegin <$ Parsec.char '<'
-
-angleEnd :: Tokenizer Token
-angleEnd = AngleEnd <$ Parsec.char '>'
-
 alphanumeric :: Tokenizer Token
 alphanumeric =
   Parsec.choice
@@ -307,29 +301,22 @@ alphanumeric =
           "about" -> About
           "as" -> As
           "case" -> Case
+          "class" -> Class
           "define" -> Define
           "do" -> Do
           "else" -> Else
+          "for" -> For
           "if" -> If
           "instance" -> Instance
           "intrinsic" -> Intrinsic
           "match" -> Match
+          "method" -> Method
           "permission" -> Permission
-          "return" -> Return
-          "trait" -> Trait
           "type" -> Type
           "vocab" -> Vocab
           "with" -> With
           "where" -> Where
           _ -> Word (Unqualified name),
-      -- See note [Angle Brackets].
-
-      Operator (Unqualified (one '<'))
-        <$ Parsec.try (Parsec.char '<' <* Parsec.notFollowedBy symbol),
-      angleBegin,
-      Operator (Unqualified (one '>'))
-        <$ Parsec.try (Parsec.char '>' <* Parsec.notFollowedBy symbol),
-      angleEnd,
       operator
     ]
 

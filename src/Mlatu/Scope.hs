@@ -60,7 +60,6 @@ scope = scopeTerm [0]
                 else_
             )
             origin
-        recur term@New {} = term
         recur term@NewClosure {} = term
         recur term@NewVector {} = term
         recur (Push _ value origin) = Push () (scopeValue stack value) origin
@@ -133,7 +132,6 @@ captureTerm term = case term of
       captureElse (DefaultElse a b) = pure $ DefaultElse a b
       captureElse (Else a elseOrigin) =
         Else <$> captureTerm a <*> pure elseOrigin
-  New {} -> pure term
   NewClosure {} -> pure term
   NewVector {} -> pure term
   Push _ value origin -> Push () <$> captureValue value <*> pure origin

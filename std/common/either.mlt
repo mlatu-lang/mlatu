@@ -1,4 +1,4 @@
-type Either[A, B] {   case left (A) case right (B) }
+type Either[A, B] { case left (A) case right (B) }
 
 define either [R..., S..., A, B] (R..., Either[A, B], (R..., A -> S...), (R..., B -> S...) -> S...) {
   -> f, g;

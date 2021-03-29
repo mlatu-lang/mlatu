@@ -127,10 +127,32 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         case Dictionary.lookup mangled dictionary of
           -- An entry in the dictionary should already be instantiated, so we
           -- shouldn't need to instantiate it again here.
-          Just (Entry.Word _ _ _ _ _ (Just body)) -> term (name : callStack) body
+          Just (Entry.Word _ _ _ (Just body)) -> term (name : callStack) body
+          Just (Entry.Permission _ _ (Just body)) -> term (name : callStack) body
+          Just (Entry.Constructor _ _ _ (Just (index, size))) -> do
+            r <- readIORef stackRef
+            let (fields, r') = Stack.pops size r
+            writeIORef stackRef $ Algebraic index fields ::: r'
           _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
             -- A regular word.
-            Just (Entry.Word _ _ _ _ _ (Just body)) -> do
+            Just (Entry.Permission _ _ (Just body)) -> do
+              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
+              case mBody' of
+                Right body' -> term (name : callStack) body'
+                Left reports ->
+                  hPrint stdout' $
+                    vcat $
+                      hcat
+                        [ "Could not instantiate generic word ",
+                          dquotes $ Pretty.printQualified name,
+                          ":"
+                        ] :
+                      (Report.human <$> reports)
+            Just (Entry.Constructor _ _ _ (Just (index, size))) -> do
+              r <- readIORef stackRef
+              let (fields, r') = Stack.pops size r
+              writeIORef stackRef $ Algebraic index fields ::: r'
+            Just (Entry.Word _ _ _ (Just body)) -> do
               mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
               case mBody' of
                 Right body' -> term (name : callStack) body'
@@ -144,7 +166,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                         ] :
                       (Report.human <$> reports)
             -- An intrinsic.
-            Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
+            Just (Entry.Word _ _ _ Nothing) -> case name of
               Qualified v unqualified
                 | v == Vocabulary.intrinsic ->
                   intrinsic (name : callStack) unqualified
@@ -156,7 +178,9 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                     [ "I can't find an instantiation of ",
                       dquotes $ Pretty.printQualified name,
                       ": ",
-                      dquotes $ Pretty.printInstantiated mangled
+                      dquotes $ Pretty.printInstantiated mangled,
+                      ", all I found was",
+                      show _noInstantiation
                     ]
 
       term :: [Qualified] -> Term Type -> IO ()
@@ -182,9 +206,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           let go (Case (QualifiedName name) caseBody _ : _)
                 -- FIXME: Embed this information during name resolution, rather than
                 -- looking it up.
-                | Just (Entry.Word _ _ _ _ _ (Just ctorBody)) <-
+                | Just (Entry.Constructor _ _ _ (Just (ConstructorIndex index', _))) <-
                     Dictionary.lookup (Instantiated name []) dictionary,
-                  [New _ (ConstructorIndex index') _ _] <- Term.decompose ctorBody,
                   Algebraic (ConstructorIndex index) fields <- x,
                   index == index' =
                   do
@@ -195,10 +218,6 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
                 DefaultElse m o -> term callStack (defaultElseBody m o)
                 Else body _ -> term callStack body
           go cases
-        New _ index size _ -> do
-          r <- readIORef stackRef
-          let (fields, r') = Stack.pops size r
-          writeIORef stackRef $ Algebraic index fields ::: r'
         NewClosure _ size _ -> do
           r <- readIORef stackRef
           let (Name name : closure, r') = Stack.pops (size + 1) r

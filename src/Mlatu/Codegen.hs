@@ -62,12 +62,19 @@ entryRs =
               Just ((i, e), newMap) ->
                 assign _1 newMap
                   >> ( case (i, e) of
-                         (Instantiated name [], Entry.Word _ _ _ _ _ (Just body))
+                         (Instantiated name [], Entry.Word _ _ _ (Just body))
                            | name == mainName -> do
                              x <- (<> "}") . ("fn main() { let mut stack: Vec<Rep> = Vec::new(); let mut locals: Vec<Rep> = Vec::new(); let mut closures: Vec<Vec<Rep>> = Vec::new();" <>) <$> termRs body
                              modify' $ over _1 (Map.insert i e)
                              pure x
-                         (_, Entry.Word _ _ _ _ _ (Just body)) -> do
+                         (_, Entry.Word _ _ _ (Just body)) -> do
+                           x <- stackFn (rustifyInstantiated i) <$> termRs body
+                           modify' $ over _1 (Map.insert i e)
+                           pure x
+                         (_, Entry.Constructor _ _ _ (Just (ConstructorIndex index, size))) -> do
+                           modify' $ over _1 (Map.insert i e)
+                           pure $ stackFn (rustifyInstantiated i) $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show index <> ", v)")
+                         (_, Entry.Permission _ _ (Just body)) -> do
                            x <- stackFn (rustifyInstantiated i) <$> termRs body
                            modify' $ over _1 (Map.insert i e)
                            pure x
@@ -132,7 +139,6 @@ termRs x = goTerms $ decompose x
           (Else body _) -> termRs body
           (DefaultElse _ _) -> word (Qualified Vocabulary.global "abort") []
         pure $ matchStmt "stack.pop()" (catMaybes cs ++ [("_", e)])
-      (New _ (ConstructorIndex i) size _) -> pure $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show i <> ", v)")
       NewClosure _ size _ -> pure $ ifLetPop "Name(n)" (letStmt "v" (vecBuilder size) <> stackPush "Closure(n, v)")
       _ -> pure ""
 
@@ -157,15 +163,24 @@ word name args = do
     else do
       isUninstantiated <- searchLists (Instantiated name [])
       case isUninstantiated of
-        Just (Entry.Word a b c d e (Just body)) ->
+        Just (Entry.Word a b c (Just body)) ->
           liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
             >>= ( \case
                     Right body' -> do
-                      modify' (over _1 (Map.insert (Instantiated name args) (Entry.Word a b c d e (Just body'))))
+                      modify' (over _1 (Map.insert (Instantiated name args) (Entry.Word a b c (Just body'))))
                       pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
-        Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
+        Just (Entry.Permission a b (Just body)) ->
+          liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
+            >>= ( \case
+                    Right body' -> do
+                      modify' (over _1 (Map.insert (Instantiated name args) (Entry.Permission a b (Just body'))))
+                      pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
+                    Left _ -> error "Could not instantiate generic type"
+                )
+        Just (Entry.Constructor _ _ _ (Just (ConstructorIndex index, size))) -> pure $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show index <> ", v)")
+        Just (Entry.Word _ _ _ Nothing) -> case name of
           (Qualified v unqualified)
             | v == Vocabulary.intrinsic -> intrinsic unqualified
           _ -> error "No such intrinsic"
@@ -261,10 +276,8 @@ caseRs :: Case Type -> Codegen (Maybe (ByteString, ByteString))
 caseRs (Case (QualifiedName name) caseBody _) = do
   dict <- ask
   case Dictionary.lookup (Instantiated name []) dict of
-    Just (Entry.Word _ _ _ _ _ (Just ctorBody)) ->
-      case decompose ctorBody of
-        [New _ (ConstructorIndex i) _ _] -> Just . ("Some(Algebraic(" <> show i <> ", fields))",) . ("stack.extend(fields); " <>) <$> termRs caseBody
-        _ -> pure Nothing
+    Just (Entry.Constructor _ _ _ (Just (ConstructorIndex i, _))) ->
+      Just . ("Some(Algebraic(" <> show i <> ", fields))",) . ("stack.extend(fields); " <>) <$> termRs caseBody
     _ -> pure Nothing
 caseRs _ = pure Nothing
 

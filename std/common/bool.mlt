@@ -1,43 +1,43 @@
-trait & [T] (T, T -> T)
+class And[T] { method & (T, T -> T) }
 
-trait && [T] (T, (-> T) -> T)
+class LazyAnd[T] { method && (T, (-> T) -> T) }
 
-trait --> [T] (T, T -> T)
+class Implies[T] { method --> (T, T -> T) }
 
-trait not [T] (T -> T)
+class Not[T] { method not (T -> T) }
 
-trait | [T] (T, T -> T)
+class Or[T] { method | (T, T -> T) }
 
-trait || [T] (T, (-> T) -> T)
+class LazyOr[T] { method || (T, (-> T) -> T) }
 
-trait ~ [A] (A, A -> A)
+class Xor[A] { method ~ (A, A -> A) }
 
 
 type Bool {   case false case true }
 
-instance & (Int, Int -> Int) { _::mlatu::and_int64 }
+instance And for Int { define & (Int, Int -> Int) { _::mlatu::and_int64 } }
 
-instance & (Bool, Bool -> Bool) { swap (not) if { drop false } else {} }
+instance And for Bool { define & (Bool, Bool -> Bool) { swap (not) if { drop false } else {} } }
 
-instance && (Bool, (-> Bool) -> Bool) { swap if { call } else { drop false } }
+instance LazyAnd for Bool { define && (Bool, (-> Bool) -> Bool) { swap if { call } else { drop false } } }
 
-instance --> (Bool, Bool -> Bool) { swap (not) if { drop true } else {} }
+instance Implies for Bool { define --> (Bool, Bool -> Bool) { swap (not) if { drop true } else {} } }
 
-instance --> (Int, Int -> Int) { swap not (|) }
+instance Implies for Bool { define --> (Int, Int -> Int) { swap not (|) } }
 
-instance not (Bool -> Bool) { if { false } else { true } }
+instance Not for Bool { define not (Bool -> Bool) { if { false } else { true } } }
 
-instance not (Int -> Int) { _::mlatu::not_int64 }
+instance Not for Int { define not (Int -> Int) { _::mlatu::not_int64 } }
 
-instance | (Int, Int -> Int) { _::mlatu::or_int64 }
+instance Or for Int { define | (Int, Int -> Int) { _::mlatu::or_int64 } }
 
-instance | (Bool, Bool -> Bool) { swap if { drop true } else {} }
+instance Or for Bool { define | (Bool, Bool -> Bool) { swap if { drop true } else {} } }
 
-instance || (Bool, (-> Bool) -> Bool) { swap if { drop true } else { call } }
+instance LazyOr for Bool { define || (Bool, (-> Bool) -> Bool) { swap if { drop true } else { call } } }
 
-instance ~ (Int, Int -> Int) { _::mlatu::xor_int64 }
+instance Xor for Int { define ~ (Int, Int -> Int) { _::mlatu::xor_int64 } }
 
-instance ~ (Bool, Bool -> Bool) { swap if { not } else {} }
+instance Xor for Bool { define ~ (Bool, Bool -> Bool) { swap if { not } else {} } }
 
 define ---> (Bool, (-> Bool) -> Bool) {
   swap (not)

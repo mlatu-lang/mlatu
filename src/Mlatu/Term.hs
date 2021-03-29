@@ -74,8 +74,6 @@ data Term a
   | -- | @match { case C {...}... else {...} }@, @if {...} else {...}@:
     -- pattern-matching.
     Match !MatchHint !a ![Case a] !(Else a) !Origin
-  | -- | @new.n@: ADT allocation.
-    New !a !ConstructorIndex !Int !Origin
   | -- | @new.closure.n@: closure allocation.
     NewClosure !a !Int !Origin
   | -- | @new.vec.n@: vector allocation.
@@ -204,7 +202,6 @@ origin term = case term of
   Generic _ _ _ o -> o
   Group a -> origin a
   Lambda _ _ _ _ o -> o
-  New _ _ _ o -> o
   NewClosure _ _ o -> o
   NewVector _ _ _ o -> o
   Match _ _ _ _ o -> o
@@ -230,7 +227,6 @@ metadata term = case term of
   Group term' -> metadata term'
   Lambda t _ _ _ _ -> t
   Match _ t _ _ _ -> t
-  New t _ _ _ -> t
   NewClosure t _ _ -> t
   NewVector t _ _ _ -> t
   Push t _ _ -> t
@@ -244,7 +240,6 @@ stripMetadata term = case term of
   Group term' -> stripMetadata term'
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
   Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
-  New _ a b c -> New () a b c
   NewClosure _ a b -> NewClosure () a b
   NewVector _ a _ b -> NewVector () a () b
   Push _ a b -> Push () (stripValue a) b

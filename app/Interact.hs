@@ -79,7 +79,7 @@ cmd input = do
           mainBody = case Dictionary.lookup
             (Instantiated Definition.mainName [])
             dictionary'' of
-            Just (Entry.Word _ _ _ _ _ (Just body)) ->
+            Just (Entry.Word _ _ _ (Just body)) ->
               body
             _noEntryPoint -> ice "Interact.run - cannot get entry point"
       let currentOrigin = Origin.point "<interactive>" lineNumber 1
@@ -179,11 +179,11 @@ typeCmd expression = do
           "<interactive>"
           (toText expression)
       errorCheckpoint
-      case view Fragment.definitions fragment of
-        [main] | view Definition.name main == Definition.mainName -> do
-          resolved <- Enter.resolveAndDesugar dictionary main
+      case view Fragment.wordDefinitions fragment of
+        [main] | view Definition.wordName main == Definition.mainName -> do
+          resolved <- Enter.resolveAndDesugarWord dictionary main
           errorCheckpoint
-          (_, typ) <- typecheck dictionary Nothing $ view Definition.body resolved
+          (_, typ) <- typecheck dictionary Nothing $ view Definition.wordBody resolved
           errorCheckpoint
           pure (Just typ)
         _otherDefinition -> pure Nothing

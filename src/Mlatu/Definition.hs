@@ -10,29 +10,36 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Definition
-  ( Definition (..),
+  ( WordDefinition (..),
+    ConstructorDefinition (..),
+    PermissionDefinition (..),
+    constructorBody,
+    constructorName,
+    constructorOrigin,
+    constructorSignature,
+    constructorParent,
     main,
     mainName,
-    category,
-    name,
-    body,
-    fixity,
-    inferSignature,
-    merge,
-    origin,
-    signature,
-    parent,
+    wordName,
+    wordBody,
+    wordFixity,
+    wordInferSignature,
+    wordMerge,
+    wordOrigin,
+    wordSignature,
+    permissionName,
+    permissionBody,
+    permissionFixity,
+    permissionSignature,
+    permissionOrigin,
   )
 where
 
-import Mlatu.Entry.Category (Category)
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Entry.Parent (Parent (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Name (ConstructorIndex, GeneralName (..), Qualified (..))
 import Mlatu.Operator (Fixity)
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
@@ -42,22 +49,42 @@ import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
-import Relude
+import Relude hiding (Type)
 
-data Definition a = Definition
-  { _category :: !Category,
-    _name :: !Qualified,
-    _body :: !(Term a),
-    _fixity :: !Fixity,
-    _inferSignature :: !Bool,
-    _merge :: !Merge,
-    _origin :: !Origin,
-    _signature :: !Signature,
-    _parent :: !(Maybe Parent)
+data WordDefinition a = WordDefinition
+  { _wordName :: !Qualified,
+    _wordBody :: !(Term a),
+    _wordFixity :: !Fixity,
+    _wordInferSignature :: !Bool,
+    _wordMerge :: !Merge,
+    _wordOrigin :: !Origin,
+    _wordSignature :: !Signature
   }
   deriving (Ord, Eq, Show)
 
-makeLenses ''Definition
+makeLenses ''WordDefinition
+
+data PermissionDefinition a = PermissionDefinition
+  { _permissionName :: !Qualified,
+    _permissionBody :: !(Term a),
+    _permissionFixity :: !Fixity,
+    _permissionOrigin :: !Origin,
+    _permissionSignature :: !Signature
+  }
+  deriving (Ord, Eq, Show)
+
+makeLenses ''PermissionDefinition
+
+data ConstructorDefinition a = ConstructorDefinition
+  { _constructorName :: !Qualified,
+    _constructorBody :: !(ConstructorIndex, Int),
+    _constructorOrigin :: !Origin,
+    _constructorSignature :: !Signature,
+    _constructorParent :: !Qualified
+  }
+  deriving (Ord, Eq, Show)
+
+makeLenses ''ConstructorDefinition
 
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
@@ -68,18 +95,16 @@ main ::
   Maybe Qualified ->
   -- | Body.
   Term a ->
-  Definition a
+  WordDefinition a
 main permissions mName term =
-  Definition
-    { _body = term,
-      _category = Category.Word,
-      _fixity = Operator.Postfix,
-      _inferSignature = True,
-      _merge = Merge.Compose,
-      _name = fromMaybe mainName mName,
-      _origin = o,
-      _parent = Nothing,
-      _signature =
+  WordDefinition
+    { _wordBody = term,
+      _wordFixity = Operator.Postfix,
+      _wordInferSignature = True,
+      _wordMerge = Merge.Compose,
+      _wordName = fromMaybe mainName mName,
+      _wordOrigin = o,
+      _wordSignature =
         Signature.Quantified
           [Parameter o "R" Stack Nothing]
           ( Signature.StackFunction

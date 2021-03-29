@@ -1,6 +1,4 @@
-type Unit {   case unit }
-
-type Pointer[T] {   case _pointer (Int) }
+type Unit { case unit }
 
 about Unit {
   docs {

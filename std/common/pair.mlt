@@ -1,4 +1,4 @@
-type Pair[A, B] {   case pair (A, B) }
+type Pair[A, B] { case pair (A, B) }
 
 define first [A, B] (Pair[A, B] -> A) { unpair drop }
 

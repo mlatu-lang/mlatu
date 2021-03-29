@@ -1,6 +1,6 @@
-trait read [T] (String -> Optional[T])
+class Read[T] { method read (String -> Optional[T]) }
 
-trait show [T] (T -> String)
+class Show[T] { method show (T -> String) }
 
 
 vocab mlatu {
@@ -17,59 +17,47 @@ vocab mlatu {
 
 type String {}
 
-instance + (String, String -> String) { _::mlatu::string_concat }
+instance Add for String { define + (String, String -> String) { _::mlatu::string_concat } }
 
-instance < (String, String -> Bool) { swap (>) }
+instance Lt for String { define < (String, String -> Bool) { swap (>) } }
 
-instance <= (String, String -> Bool) { (>) not }
+instance Le for String { define <= (String, String -> Bool) { (>) not } }
 
-instance <> (String, String -> Bool) { (=) not }
+instance Ne for String { define <> (String, String -> Bool) { (=) not } }
 
-instance = (String, String -> Bool) { _::mlatu::eq_string }
+instance Eq for String { define = (String, String -> Bool) { _::mlatu::eq_string } }
 
-instance > (String, String -> Bool) { _::mlatu::gt_string }
+instance Gt for String { define > (String, String -> Bool) { _::mlatu::gt_string } }
 
-instance >= (String, String -> Bool) { (<) not }
+instance Ge for String { define >= (String, String -> Bool) { (<) not } }
 
-instance read (String -> Optional[Bool]) {
+instance Read for Bool { define read (String -> Optional[Bool]) {
   -> s;
   if (s = "true") { true some }
   else { if (s = "false") { false some } else { none } }
-}
+}}
 
-instance read (String -> Optional[Double]) { _::mlatu::read_float64 }
+instance Read for Double { define read (String -> Optional[Double]) { _::mlatu::read_float64 } }
 
-instance read (String -> Optional[Int]) { _::mlatu::read_int64 }
+instance Read for Int { define read (String -> Optional[Int]) { _::mlatu::read_int64 } }
 
-instance read (String -> Optional[Char]) {
+instance Read for Char { define read (String -> Optional[Char]) {
   chars -> cs;
   if (cs length = 1) { cs head }
   else { none }
-}
+}}
 
-instance read (String -> Optional[String]) { some }
+instance Read for String { define read (String -> Optional[String]) { some } }
 
-instance show (String -> String) {}
+instance Show for String { define show (String -> String) {} }
 
-instance show (Bool -> String) { if { "true" } else { "false" } }
+instance Show for Bool { define show (Bool -> String) { if { "true" } else { "false" } } }
 
-instance show [A, B] (Either[A, B] -> String) {
-  match
-  case left { show }
-  case right { show }
-}
+instance Show for Double { define show (Double -> String) { _::mlatu::show_float64 } }
 
-instance show [T] (Optional[T] -> String) {
-  match
-  case some -> x { "some " + x show }
-  case none { "none" }
-}
+instance Show for Int { define show (Int -> String) { _::mlatu::show_int64 } }
 
-instance show (Double -> String) { _::mlatu::show_float64 }
-
-instance show (Int -> String) { _::mlatu::show_int64 }
-
-instance show (Char -> String) { once from_chars }
+instance Show for Char { define show (Char -> String) { once from_chars } }
 
 define chars (String -> List[Char]) { _::mlatu::string_to_list }
 

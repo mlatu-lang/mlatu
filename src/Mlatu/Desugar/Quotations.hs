@@ -16,7 +16,6 @@ import Data.Map qualified as Map
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Free qualified as Free
 import Mlatu.Infer (inferType0)
@@ -83,7 +82,6 @@ desugar dictionary qualifier term0 = do
             (a', tenv') <- go tenv1 a
             pure (Else a' elseOrigin, tenv')
         pure (Match hint typ cases' else' origin, tenv2)
-      New {} -> done
       NewClosure {} -> done
       NewVector {} -> done
       Push _type (Capture closed a) origin -> do
@@ -105,10 +103,8 @@ desugar dictionary qualifier term0 = do
         modify $ \(l, d) ->
           let entry =
                 Entry.Word
-                  Category.Word
                   Merge.Deny
                   (Term.origin a')
-                  Nothing
                   (Just (Signature.Type typ))
                   (Just a')
            in (l, Dictionary.insert (Instantiated name []) entry d)

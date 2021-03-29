@@ -16,25 +16,25 @@ where
 
 import Data.List (findIndex)
 import Data.Map.Strict qualified as Map
-import Data.Text qualified as Text
+import Mlatu.Class (Class (..), Method (..))
+import Mlatu.Class qualified as Class
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Declaration (Declaration (Declaration))
-import Mlatu.Declaration qualified as Declaration
-import Mlatu.Definition (Definition (Definition))
+import Mlatu.Definition (PermissionDefinition (..), WordDefinition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Data qualified as Data
 import Mlatu.Element (Element)
 import Mlatu.Element qualified as Element
-import Mlatu.Entry.Category (Category)
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (Parameter))
-import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..), errorCheckpoint)
+import Mlatu.Instance (Instance (..))
+import Mlatu.Instance qualified as Instance
+import Mlatu.Intrinsic (Intrinsic (..))
+import Mlatu.Intrinsic qualified as Intrinsic
 import Mlatu.Kind (Kind (..))
 import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
@@ -97,12 +97,12 @@ fragment line path mainPermissions mainName tokens =
           halt
         Right result -> pure (Data.desugar (insertMain result))
   where
-    isMain = (fromMaybe Definition.mainName mainName ==) . view Definition.name
-    insertMain f = case find isMain $ view Fragment.definitions f of
+    isMain = (fromMaybe Definition.mainName mainName ==) . view Definition.wordName
+    insertMain f = case find isMain $ view Fragment.wordDefinitions f of
       Just {} -> f
       Nothing ->
         over
-          Fragment.definitions
+          Fragment.wordDefinitions
           ( Definition.main
               mainPermissions
               mainName
@@ -140,25 +140,35 @@ partitionElements ::
 partitionElements mainPermissions mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
-    rev f = over Fragment.declarations reverse $ over Fragment.definitions reverse $ over Fragment.metadata reverse $ over Fragment.types reverse f
+    rev f =
+      over Fragment.intrinsics reverse $
+        over Fragment.instances reverse $
+          over Fragment.classes reverse $
+            over Fragment.wordDefinitions reverse $
+              over Fragment.permissionDefinitions reverse $
+                over Fragment.metadata reverse $
+                  over Fragment.types reverse f
 
     go :: Element () -> Fragment () -> Fragment ()
     go e acc = case e of
-      Element.Declaration x -> over Fragment.declarations (x :) acc
-      Element.Definition x -> over Fragment.definitions (x :) acc
+      Element.Intrinsic x -> over Fragment.intrinsics (x :) acc
+      Element.Instance x -> over Fragment.instances (x :) acc
+      Element.Class x -> over Fragment.classes (x :) acc
+      Element.WordDefinition x -> over Fragment.wordDefinitions (x :) acc
+      Element.PermissionDefinition x -> over Fragment.permissionDefinitions (x :) acc
       Element.Metadata x -> over Fragment.metadata (x :) acc
       Element.TypeDefinition x -> over Fragment.types (x :) acc
       Element.Term x ->
         over
-          Fragment.definitions
+          Fragment.wordDefinitions
           ( \defs ->
               case findIndex
-                ((== fromMaybe Definition.mainName mainName) . view Definition.name)
+                ((== fromMaybe Definition.mainName mainName) . view Definition.wordName)
                 defs of
                 Just index -> case splitAt index defs of
                   (a, existing : b) ->
                     a
-                      ++ over Definition.body (`composeUnderLambda` x) existing :
+                      ++ over Definition.wordBody (`composeUnderLambda` x) existing :
                     b
                   _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
                 Nothing ->
@@ -271,15 +281,10 @@ wordNameParser = (<?> "word name") $
 
 operatorNameParser :: Parser Unqualified
 operatorNameParser = (<?> "operator name") $ do
-  angles <- many $
-    parseOne $ \token -> case Located.item token of
-      Token.AngleBegin -> Just "<"
-      Token.AngleEnd -> Just ">"
-      _nonAngle -> Nothing
-  rest <- parseOne $ \token -> case Located.item token of
+  name <- parseOne $ \token -> case Located.item token of
     Token.Operator (Unqualified name) -> Just name
     _nonUnqualifiedOperator -> Nothing
-  pure $ Unqualified $ Text.concat $ angles ++ [rest]
+  pure $ Unqualified name
 
 parseOne :: (Located Token -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
@@ -292,17 +297,11 @@ elementParser :: Parser (Element ())
 elementParser =
   (<?> "top-level program element") $
     Parsec.choice
-      [ Element.Definition
-          <$> Parsec.choice
-            [ basicDefinitionParser,
-              instanceParser,
-              permissionParser
-            ],
-        Element.Declaration
-          <$> Parsec.choice
-            [ traitParser,
-              intrinsicParser
-            ],
+      [ Element.WordDefinition <$> basicDefinitionParser,
+        Element.PermissionDefinition <$> permissionParser,
+        Element.Instance <$> instanceParser,
+        Element.Class <$> classParser,
+        Element.Intrinsic <$> intrinsicParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
         do
@@ -474,47 +473,98 @@ quantifiedParser thing = do
   params <- quantifierParser
   Signature.Quantified params <$> thing <*> pure origin
 
-traitParser :: Parser Declaration
-traitParser =
-  (<?> "trait declaration") $
-    declarationParser Token.Trait Declaration.Trait
+classParser :: Parser Class
+classParser =
+  (<?> "type class declaration") $ do
+    origin <- getTokenOrigin <* parserMatch Token.Class
+    suffix <- unqualifiedNameParser <?> "type class name"
+    name <- Qualified <$> Parsec.getState <*> pure suffix
+    parameters <- Parsec.option [] quantifierParser
+    methods <- blockedParser $ many methodParser
+    pure
+      Class
+        { Class._className = name,
+          Class._classOrigin = origin,
+          Class._parameters = parameters,
+          Class._methods = methods
+        }
 
-intrinsicParser :: Parser Declaration
-intrinsicParser =
-  (<?> "intrinsic declaration") $
-    declarationParser Token.Intrinsic Declaration.Intrinsic
-
-declarationParser ::
-  Token ->
-  Declaration.Category ->
-  Parser Declaration
-declarationParser keyword category = do
-  origin <- getTokenOrigin <* parserMatch keyword
-  suffix <- unqualifiedNameParser <?> "declaration name"
+methodParser :: Parser Method
+methodParser = (<?> "method") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Method
+  suffix <- unqualifiedNameParser <?> "method name"
   name <- Qualified <$> Parsec.getState <*> pure suffix
-  sig <- signatureParser <?> "declaration signature"
+  sig <- signatureParser
   pure
-    Declaration
-      { Declaration._category = category,
-        Declaration._name = name,
-        Declaration._origin = origin,
-        Declaration._signature = sig
+    Method
+      { Class._signature = sig,
+        Class._name = name,
+        Class._origin = origin
       }
 
-basicDefinitionParser :: Parser (Definition ())
+intrinsicParser :: Parser Intrinsic
+intrinsicParser =
+  (<?> "intrinsic declaration") $ do
+    origin <- getTokenOrigin <* parserMatch Token.Intrinsic
+    suffix <- unqualifiedNameParser <?> "intrinsic name"
+    name <- Qualified <$> Parsec.getState <*> pure suffix
+    sig <- signatureParser <?> "declaration signature"
+    pure
+      Intrinsic
+        { Intrinsic._name = name,
+          Intrinsic._origin = origin,
+          Intrinsic._signature = sig
+        }
+
+basicDefinitionParser :: Parser (WordDefinition ())
 basicDefinitionParser =
-  (<?> "word definition") $
-    definitionParser Token.Define Category.Word
+  (<?> "word definition") $ do
+    origin <- getTokenOrigin <* parserMatch Token.Define
+    (name, fixity) <- qualifiedNameParser <?> "word definition name"
+    sig <- signatureParser <?> "word definition signature"
+    body <- blockLikeParser <?> "word definition body"
+    pure
+      WordDefinition
+        { Definition._wordBody = body,
+          Definition._wordFixity = fixity,
+          Definition._wordInferSignature = False,
+          Definition._wordMerge = Merge.Deny,
+          Definition._wordName = name,
+          Definition._wordOrigin = origin,
+          Definition._wordSignature = sig
+        }
 
-instanceParser :: Parser (Definition ())
-instanceParser =
-  (<?> "instance definition") $
-    definitionParser Token.Instance Category.Instance
+instanceParser :: Parser (Instance ())
+instanceParser = (<?> "class instance") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Instance
+  suffix <- unqualifiedNameParser <?> "class name"
+  name <- Qualified <$> Parsec.getState <*> pure suffix
+  parserMatch Token.For
+  target <- basicTypeParser
+  methods <- blockedParser $ many basicDefinitionParser
+  pure
+    Instance
+      { Instance._name = name,
+        Instance._origin = origin,
+        Instance._target = target,
+        Instance._methods = methods
+      }
 
-permissionParser :: Parser (Definition ())
+permissionParser :: Parser (PermissionDefinition ())
 permissionParser =
-  (<?> "permission definition") $
-    definitionParser Token.Permission Category.Permission
+  (<?> "permission definition") $ do
+    origin <- getTokenOrigin <* parserMatch Token.Permission
+    (name, fixity) <- qualifiedNameParser <?> "definition name"
+    sig <- signatureParser
+    body <- blockLikeParser <?> "definition body"
+    pure
+      PermissionDefinition
+        { Definition._permissionBody = body,
+          Definition._permissionFixity = fixity,
+          Definition._permissionName = name,
+          Definition._permissionOrigin = origin,
+          Definition._permissionSignature = sig
+        }
 
 -- | Unqualified or partially qualified name, implicitly qualified by the
 -- current vocabulary, or fully qualified (global) name.
@@ -535,28 +585,6 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
       Qualified <$> Parsec.getState <*> pure unqualified
     LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only pure qualified or unqualified name"
   pure (name, fixity)
-
-definitionParser :: Token -> Category -> Parser (Definition ())
-definitionParser keyword category = do
-  origin <- getTokenOrigin <* parserMatch keyword
-  (name, fixity) <- qualifiedNameParser <?> "definition name"
-  sig <- signatureParser
-  body <- blockLikeParser <?> "definition body"
-  pure
-    Definition
-      { Definition._body = body,
-        Definition._category = category,
-        Definition._fixity = fixity,
-        Definition._inferSignature = False,
-        Definition._merge = Merge.Deny,
-        Definition._name = name,
-        Definition._origin = origin,
-        -- HACK: Should be passed in from outside?
-        Definition._parent = case keyword of
-          Token.Instance -> Just $ Parent.Trait name
-          _nonInstance -> Nothing,
-        Definition._signature = sig
-      }
 
 signatureParser :: Parser Signature
 signatureParser = quantifiedParser signature <|> signature <?> "type signature"
@@ -671,7 +699,7 @@ vectorParser = (<?> "vector literal") $ do
         `Parsec.sepEndBy` commaParser
   pure $
     compose () vectorOrigin $
-      Group <$> es
+      (Group <$> es)
         ++ [NewVector () (length es) () vectorOrigin]
 
 lambdaParser :: Parser (Term ())

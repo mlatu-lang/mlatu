@@ -21,10 +21,6 @@ import Relude
 data Token
   = -- | @about@
     About
-  | -- | @<@ See note [Angle Brackets].
-    AngleBegin
-  | -- | @>@ See note [Angle Brackets].
-    AngleEnd
   | -- | @->@
     Arrow
   | -- | @as@
@@ -37,6 +33,8 @@ data Token
     Case
   | -- | @'x'@
     Character !Char
+  | -- | @class@
+    Class
   | -- | @:@
     Colon
   | -- | @,@
@@ -51,6 +49,8 @@ data Token
     Else
   | -- | See note [Float Literals].
     Float !FloatLiteral
+  | -- | @for@
+    For
   | -- | @(@
     GroupBegin
   | -- | @)@
@@ -67,19 +67,17 @@ data Token
     Intrinsic
   | -- | @match@
     Match
+  | -- | @method@
+    Method
   | -- | @+@
     Operator !Unqualified
   | -- | @permission@
     Permission
   | -- | @\@
     Reference
-  | -- | @return@
-    Return
   | -- | @"..."@
     Text !Text
   | -- | @trait@
-    Trait
-  | -- | @type@
     Type
   | -- | @[@
     VectorBegin
@@ -98,14 +96,13 @@ data Token
 
 instance Eq Token where
   About == About = True
-  AngleBegin == AngleBegin = True
-  AngleEnd == AngleEnd = True
   Arrow == Arrow = True
   As == As = True
   BlockBegin == BlockBegin = True
   BlockEnd == BlockEnd = True
   Case == Case = True
   Character a == Character b = a == b
+  Class == Class = True
   Colon == Colon = True
   Comma == Comma = True
   Define == Define = True
@@ -114,6 +111,7 @@ instance Eq Token where
   Else == Else = True
   -- See note [Float Literals].
   Float a == Float b = a == b
+  For == For = True
   GroupBegin == GroupBegin = True
   GroupEnd == GroupEnd = True
   If == If = True
@@ -122,12 +120,11 @@ instance Eq Token where
   Integer a == Integer b = a == b
   Intrinsic == Intrinsic = True
   Match == Match = True
+  Method == Method = True
   Operator a == Operator b = a == b
   Permission == Permission = True
   Reference == Reference = True
-  Return == Return = True
   Text a == Text b = a == b
-  Trait == Trait = True
   Type == Type = True
   VectorBegin == VectorBegin = True
   VectorEnd == VectorEnd = True

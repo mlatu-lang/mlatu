@@ -7,7 +7,8 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Resolve
-  ( definition,
+  ( wordDefinition,
+    permissionDefinition,
     generalName,
     run,
     signature,
@@ -16,7 +17,7 @@ where
 
 import Data.List (elemIndex)
 import Data.Set qualified as Set
-import Mlatu.Definition (Definition)
+import Mlatu.Definition (PermissionDefinition, WordDefinition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
@@ -43,14 +44,23 @@ type Resolved a = StateT [Unqualified] M a
 run :: Resolved a -> M a
 run = flip evalStateT []
 
-definition :: Dictionary -> Definition () -> Resolved (Definition ())
-definition dictionary def = do
+wordDefinition :: Dictionary -> WordDefinition () -> Resolved (WordDefinition ())
+wordDefinition dictionary def = do
   -- FIXME: reportDuplicate dictionary def
-  let vocabulary = qualifierName $ view Definition.name def
-  body <- term dictionary vocabulary $ view Definition.body def
-  sig <- signature dictionary vocabulary $ view Definition.signature def
+  let vocabulary = qualifierName $ view Definition.wordName def
+  body <- term dictionary vocabulary $ view Definition.wordBody def
+  sig <- signature dictionary vocabulary $ view Definition.wordSignature def
   pure
-    (set Definition.body body (set Definition.signature sig def))
+    (set Definition.wordBody body (set Definition.wordSignature sig def))
+
+permissionDefinition :: Dictionary -> PermissionDefinition () -> Resolved (PermissionDefinition ())
+permissionDefinition dictionary def = do
+  -- FIXME: reportDuplicate dictionary def
+  let vocabulary = qualifierName $ view Definition.permissionName def
+  body <- term dictionary vocabulary $ view Definition.permissionBody def
+  sig <- signature dictionary vocabulary $ view Definition.permissionSignature def
+  pure
+    (set Definition.permissionBody body (set Definition.permissionSignature sig def))
 
 term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
 term dictionary vocabulary = recur
@@ -85,7 +95,6 @@ term dictionary vocabulary = recur
         resolveElse (DefaultElse a b) = pure $ DefaultElse a b
         resolveElse (Else t elseOrigin) =
           Else <$> recur t <*> pure elseOrigin
-    recur unresolved@New {} = pure unresolved
     recur unresolved@NewClosure {} = pure unresolved
     recur unresolved@NewVector {} = pure unresolved
     recur (Push _ v origin) =

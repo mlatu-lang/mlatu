@@ -10,16 +10,21 @@
 -- Portability : GHC
 module Mlatu.Element
   ( Element (..),
-    _Declaration,
-    _Definition,
+    _Intrinsic,
+    _Class,
+    _WordDefinition,
     _Metadata,
     _Term,
     _TypeDefinition,
+    _PermissionDefinition,
+    _Instance,
   )
 where
 
-import Mlatu.Declaration (Declaration)
-import Mlatu.Definition (Definition)
+import Mlatu.Class (Class)
+import Mlatu.Definition (PermissionDefinition, WordDefinition)
+import Mlatu.Instance (Instance)
+import Mlatu.Intrinsic (Intrinsic)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Term (Term)
 import Mlatu.TypeDefinition (TypeDefinition)
@@ -27,10 +32,16 @@ import Optics.TH (makePrisms)
 
 -- | A top-level program element.
 data Element a
-  = -- | @intrinsic@, @trait@
-    Declaration !Declaration
-  | -- | @define@, @instance@
-    Definition !(Definition a)
+  = -- | @intrinsic@
+    Intrinsic !Intrinsic
+  | -- | @instance@
+    Instance !(Instance a)
+  | -- | @class@
+    Class !Class
+  | -- | @define@
+    WordDefinition !(WordDefinition a)
+  | -- | @define@
+    PermissionDefinition !(PermissionDefinition a)
   | -- | @about@
     Metadata !Metadata
   | -- | Top-level (@main@) code.

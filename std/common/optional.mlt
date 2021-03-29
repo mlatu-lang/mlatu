@@ -1,4 +1,4 @@
-type Optional[T] {   case none case some (T) }
+type Optional[T] { case none case some (T) }
 
 define from_optional [T] (Optional[T], T -> T) {
   -> default;

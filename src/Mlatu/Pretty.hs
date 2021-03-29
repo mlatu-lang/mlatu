@@ -26,22 +26,21 @@ module Mlatu.Pretty
 where
 
 import Data.Char (isLetter)
-import Data.List (findIndex, groupBy)
+import Data.List (findIndex)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
+import Mlatu.Class (Class (..), Method (..))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Declaration (Declaration (..))
-import Mlatu.Declaration qualified as Declaration
-import Mlatu.Definition (Definition (Definition), mainName)
+import Mlatu.Definition (PermissionDefinition (..), WordDefinition (..), mainName)
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
+import Mlatu.Instance (Instance (..))
 import Mlatu.Instantiated (Instantiated (..))
+import Mlatu.Intrinsic (Intrinsic (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..), floatValue, integerBase, integerValue)
 import Mlatu.Metadata (Metadata (..))
@@ -124,12 +123,6 @@ printOrigin origin =
     bl = view Origin.endLine origin
     ac = view Origin.beginColumn origin
     bc = view Origin.endColumn origin
-
-printCategory :: Category.Category -> Doc a
-printCategory Category.Constructor = "constructor"
-printCategory Category.Instance = "instance"
-printCategory Category.Permission = "permission"
-printCategory Category.Word = "word"
 
 printKind :: Kind -> Doc a
 printKind Value = "value"
@@ -285,14 +278,13 @@ printSignature (Type t) = printType t
 printToken :: Token.Token -> Doc a
 printToken = \case
   Token.About -> "about"
-  Token.AngleBegin -> "<"
-  Token.AngleEnd -> ">"
   Token.Arrow -> "->"
   Token.As -> "as"
   Token.BlockBegin -> "{"
   Token.BlockEnd -> "}"
   Token.Case -> "case"
   Token.Character c -> squotes $ pretty c
+  Token.Class -> "class"
   Token.Colon -> ":"
   Token.Comma -> ","
   Token.Define -> "define"
@@ -300,6 +292,7 @@ printToken = \case
   Token.Ellipsis -> "..."
   Token.Else -> "else"
   Token.Float a -> pretty (floatValue a :: Double)
+  Token.For -> "for"
   Token.GroupBegin -> "("
   Token.GroupEnd -> ")"
   Token.If -> "if"
@@ -308,12 +301,11 @@ printToken = \case
   Token.Integer literal -> printIntegerLiteral literal
   Token.Intrinsic -> "intrinsic"
   Token.Match -> "match"
+  Token.Method -> "method"
   Token.Operator name -> printUnqualified name
   Token.Permission -> "permission"
   Token.Reference -> "\\"
-  Token.Return -> "return"
   Token.Text t -> dquotes $ pretty t
-  Token.Trait -> "trait"
   Token.Type -> "type"
   Token.VectorBegin -> "["
   Token.VectorEnd -> "]"
@@ -340,12 +332,18 @@ printDataConstructor (DataConstructor.DataConstructor fields name _) =
   where
     printedFields = if not $ null fields then space <> tupled (printSignature <$> fields) else ""
 
-printDeclaration :: Declaration -> Doc a
-printDeclaration (Declaration category name _ signature) = printedCategory <+> printUnqualified (unqualifiedName name) <+> printSignature signature
+printIntrinsic :: Intrinsic -> Doc a
+printIntrinsic (Intrinsic name _ signature) = "intrinsic" <+> printQualified name <+> printSignature signature
+
+printClass :: Class -> Doc a
+printClass (Class name _ methods parameters) = group $ blockMulti ("class" <+> className) printMethod methods
   where
-    printedCategory = case category of
-      Declaration.Trait -> "trait"
-      Declaration.Intrinsic -> "intrinsic"
+    className =
+      printQualified name
+        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
+
+printMethod :: Method -> Doc a
+printMethod (Method name _ signature) = "method" <+> printQualified name <+> printSignature signature
 
 printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
@@ -356,9 +354,7 @@ printTypeDefinition (TypeDefinition constructors name _ parameters) =
         <> if not $ null parameters then (list . fmap printParameter) parameters else ""
 
 printTerm :: Term a -> Doc b
-printTerm t = fromMaybe "" (maybePrintTerms (decompose t))
-  where
-    decompose = Term.decompose . Term.stripMetadata
+printTerm t = fromMaybe "" $ maybePrintTerm t
 
 maybePrintTerms :: [Term a] -> Maybe (Doc b)
 maybePrintTerms = \case
@@ -516,36 +512,32 @@ printMetadata metadata =
     )
       ++ [rbrace]
 
-printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
-printDefinition (Definition Category.Constructor _ _ _ _ _ _ _ _) = Nothing
-printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
-  Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
-  Just $ group $ blockMaybe ("instance" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-printDefinition (Definition Category.Word name body _ _ _ _ _ _)
+printPermissionDefinition :: (Show a) => PermissionDefinition a -> Maybe (Doc b)
+printPermissionDefinition (PermissionDefinition name body _ _ signature) = Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
+
+printWordDefinition :: (Show a) => WordDefinition a -> Maybe (Doc b)
+printWordDefinition (WordDefinition name body _ _ _ _ _)
   | name == mainName = maybePrintTerm body
-printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
+printWordDefinition (WordDefinition name body _ _ _ _ signature) =
   Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
 printEntry :: Entry -> Doc a
-printEntry (Entry.Word category _ origin mParent mSignature _) =
+printEntry (Entry.Word _ origin mSignature _) =
   vsep
-    [ printCategory category,
+    [ "word",
       hsep ["defined at", printOrigin origin],
       case mSignature of
         Just signature ->
           hsep
             ["with signature", dquotes $ printSignature signature]
-        Nothing -> "with no signature",
-      case mParent of
-        Just parent ->
-          hsep
-            [ "with parent",
-              case parent of
-                Parent.Trait a -> "trait" <+> printQualified a
-                Parent.Type a -> "type" <+> printQualified a
-            ]
-        Nothing -> "with no parent"
+        Nothing -> "with no signature"
+    ]
+printEntry (Entry.Permission origin mSignature _) =
+  vsep
+    [ "permission",
+      hsep ["defined at", printOrigin origin],
+      hsep
+        ["with signature", dquotes $ printSignature mSignature]
     ]
 printEntry (Entry.Metadata origin term) =
   vsep
@@ -553,9 +545,9 @@ printEntry (Entry.Metadata origin term) =
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
     ]
-printEntry (Entry.Trait origin signature) =
+printEntry (Entry.ClassMethod origin signature) =
   vsep
-    [ "trait",
+    [ "type class function",
       hsep ["defined at", printOrigin origin],
       hsep ["with signature", printSignature signature]
     ]
@@ -584,33 +576,36 @@ printEntry (Entry.InstantiatedType origin size) =
       hsep ["with size", pretty size]
     ]
 
+printInstance :: (Show a) => Instance a -> Doc b
+printInstance (Instance name _ methods target) = group $ blockMulti ("instance" <+> printQualified name <+> "for" <+> printSignature target) (fromMaybe "" . printWordDefinition) methods
+
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
   vcat
-    ( ( (\g -> printGrouped g <> line)
-          <$> groupedDeclarations
+    ( ( (\t -> printIntrinsic t <> line)
+          <$> sort (view Fragment.intrinsics fragment)
       )
+        ++ ( (\t -> printClass t <> line)
+               <$> sort (view Fragment.classes fragment)
+           )
         ++ ( (\t -> printTypeDefinition t <> line)
                <$> sort (view Fragment.types fragment)
            )
+        ++ ( (\t -> printInstance t <> line)
+               <$> sort (view Fragment.instances fragment)
+           )
         ++ mapMaybe
-          (fmap (<> line) . printDefinition)
-          ( sort (view Fragment.definitions fragment)
+          (fmap (<> line) . printWordDefinition)
+          ( sort (view Fragment.wordDefinitions fragment)
+          )
+        ++ mapMaybe
+          (fmap (<> line) . printPermissionDefinition)
+          ( sort (view Fragment.permissionDefinitions fragment)
           )
         ++ ( (\m -> printMetadata m <> line)
                <$> sort (view Fragment.metadata fragment)
            )
     )
-  where
-    groupedDeclarations = groupBy (\a b -> (qualifierName . view Declaration.name) a == (qualifierName . view Declaration.name) b) (view Fragment.declarations fragment)
-    printGrouped decls =
-      if noVocab
-        then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
-        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : (indent 2 . printDeclaration <$> sort decls) ++ [rbrace]
-      where
-        (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
-          (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
-          n -> (n, False)
 
 nestTwo :: Doc a -> Doc a
 nestTwo = nest 2
@@ -633,7 +628,7 @@ maybeBlockMaybe (Just before) inner = blockMaybe before inner
 maybeBlockMaybe Nothing Nothing = lbrace <> rbrace
 
 blockMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
-blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> vsep [before <+> lbrace, indent 2 (vsep (f <$> xs)), rbrace])
+blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> flatAlt (vsep [before <+> lbrace, indent 2 (vsep (f <$> xs)), rbrace]) (before <+> lbrace <+> hsep (f <$> xs) <+> rbrace))
 
 mapNonEmpty :: b -> ([a] -> b) -> [a] -> b
 mapNonEmpty emptyCase nonEmptyFn l = fromMaybe emptyCase (viaNonEmpty (nonEmptyFn . toList) l)

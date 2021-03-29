@@ -4,12 +4,11 @@ module Test.Resolve
 where
 
 import Mlatu (fragmentFromSource)
-import Mlatu.Definition (Definition (Definition))
+import Mlatu.Definition (WordDefinition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
@@ -140,10 +139,10 @@ spec = do
       (QualifiedName (Qualified (Qualifier Relative ["v3"]) "T"))
       (Qualified (Qualifier Absolute ["v1", "v2", "v3"]) "T")
 
-  it "resolves types in trait signatures" $ do
+  it "resolves types in class method signatures" $ do
     testType
       "type Size {}\n\
-      \trait alignment[T] (T -> Size)"
+      \class Alignment[T] { method alignment[T] (T -> Size) }"
       Vocabulary.global
       (UnqualifiedName "Size")
       (Qualified Vocabulary.global "Size")
@@ -156,18 +155,16 @@ testWord contextSource viewpoint name expected = do
     let origin = Origin.point "<test>" 0 0
         fragment =
           set
-            Fragment.definitions
+            Fragment.wordDefinitions
             ( one
-                Definition
-                  { Definition._body = Term.Word () Operator.Postfix name [] origin,
-                    Definition._category = Category.Word,
-                    Definition._fixity = Operator.Postfix,
-                    Definition._inferSignature = False,
-                    Definition._merge = Merge.Deny,
-                    Definition._name = Qualified viewpoint "test",
-                    Definition._origin = origin,
-                    Definition._parent = Nothing,
-                    Definition._signature =
+                WordDefinition
+                  { Definition._wordBody = Term.Word () Operator.Postfix name [] origin,
+                    Definition._wordFixity = Operator.Postfix,
+                    Definition._wordInferSignature = False,
+                    Definition._wordMerge = Merge.Deny,
+                    Definition._wordName = Qualified viewpoint "test",
+                    Definition._wordOrigin = origin,
+                    Definition._wordSignature =
                       Signature.Quantified
                         [Parameter origin "R" Stack Nothing]
                         ( Signature.StackFunction
@@ -185,7 +182,7 @@ testWord contextSource viewpoint name expected = do
     Enter.fragment fragment contextDictionary
   case Dictionary.toList <$> dictionary of
     Right definitions -> case find matching definitions of
-      Just (_, Entry.Word _ _ _ _ _ (Just term))
+      Just (_, Entry.Word _ _ _ (Just term))
         | [Term.Word _ _ name' _ _] <- Term.decompose term ->
           let message =
                 show $

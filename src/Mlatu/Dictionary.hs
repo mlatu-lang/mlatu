@@ -28,7 +28,6 @@ where
 import Data.Map.Strict qualified as Map
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Informer (Informer (..))
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Literal (IntegerLiteral (IntegerLiteral))
@@ -150,9 +149,13 @@ signatures :: Dictionary -> [(Qualified, Signature)]
 signatures = mapMaybe getSignature . toList
   where
     getSignature :: (Instantiated, Entry) -> Maybe (Qualified, Signature)
-    getSignature (Instantiated name [], Entry.Word _ _ _ _ (Just signature) _) =
+    getSignature (Instantiated name [], Entry.Word _ _ (Just signature) _) =
       Just (name, signature)
-    getSignature (Instantiated name [], Entry.Trait _ signature) =
+    getSignature (Instantiated name [], Entry.Constructor _ _ signature _) =
+      Just (name, signature)
+    getSignature (Instantiated name [], Entry.Permission _ signature _) =
+      Just (name, signature)
+    getSignature (Instantiated name [], Entry.ClassMethod _ signature) =
       Just (name, signature)
     getSignature _ = Nothing
 
@@ -163,18 +166,20 @@ toList = Map.toList . view entries
 typeNames :: Dictionary -> [Qualified]
 typeNames = mapMaybe typeName . toList
   where
-    typeName (Instantiated name _, Entry.Word Category.Permission _ _ _ _ _) =
+    typeName (Instantiated name _, Entry.Permission {}) =
       Just name
     typeName (Instantiated name _, Entry.Type {}) = Just name
     typeName _ = Nothing
 
--- | All word names (for words or traits) in the dictionary.
+-- | All word names (for words or type classes) in the dictionary.
 wordNames :: Dictionary -> [Qualified]
 wordNames = mapMaybe wordName . toList
   where
     wordName (Instantiated name [], Entry.Word {}) = Just name
     -- TODO: Figure out how to get mangled names out of this...
-    wordName (Instantiated name _, Entry.Trait {}) = Just name
+    wordName (Instantiated name _, Entry.ClassMethod {}) = Just name
+    wordName (Instantiated name _, Entry.Permission {}) = Just name
+    wordName (Instantiated name _, Entry.Constructor {}) = Just name
     wordName _ = Nothing
 
 printDictionary :: Dictionary -> Doc a

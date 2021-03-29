@@ -29,7 +29,6 @@ import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (Parameter))
-import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..), errorCheckpoint)
 import Mlatu.InstanceCheck (instanceCheck)
@@ -218,7 +217,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           [] -> []
           Case (QualifiedName ctorName) _ _ : _ ->
             case Dictionary.lookup (Instantiated ctorName []) dictionary of
-              Just (Entry.Word _ _ _ (Just (Parent.Type typeName)) _ _) ->
+              Just (Entry.Constructor _ typeName _ _) ->
                 case Dictionary.lookup (Instantiated typeName []) dictionary of
                   Just (Entry.Type _ _ ctors) -> ctors
                   -- TODO: Check whether this can happen if a non-constructor
@@ -301,24 +300,6 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         (case', typ, remaining', tenv') <-
           inferCase dictionary tenvFinal tenv remaining case_
         pure (case' : cases', typ : types, remaining', tenv')
-
-  -- A 'new' expression simply tags some fields on the stack, so the most
-  -- straightforward way to type it is as an unsafe cast. For now, we can rely on
-  -- the type signature of the desugared data constructor definition to make this
-  -- type-safe, since only the compiler can generate 'new' expressions.
-
-  New _ constructor size origin ->
-    while (Term.origin term0) context $ do
-      [a, b, e] <-
-        fresh
-          origin
-          [ ("R", Stack),
-            ("S", Stack),
-            ("P", Permission)
-          ]
-      let typ = Type.Fun origin a b e
-      let type' = Zonk.typ tenvFinal typ
-      pure (New type' constructor size origin, typ, tenv0)
 
   -- Unlike with 'new', we cannot simply type a 'new closure' expression as an
   -- unsafe cast because we need to know its effect on the stack within the body
@@ -477,7 +458,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
   Quotation {} -> ice "Mlatu.Infer.inferValue - quotation should not appear during type inference"
   Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
-    Just (Entry.Word _ _ _ _ (Just signature) _) -> do
+    Just (Entry.Word _ _ (Just signature) _) -> do
       typ <- typeFromSignature tenv0 signature
       pure (Name name, typ, tenv0)
     _noBinding ->

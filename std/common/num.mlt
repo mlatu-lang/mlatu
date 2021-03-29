@@ -42,31 +42,31 @@ vocab mlatu {
   intrinsic xor_int64 (Int, Int -> Int)
 }
 
-trait % [T] (T, T -> T +Fail)
+class Mod[T] { method % (T, T -> T +Fail) }
 
-trait * [T] (T, T -> T)
+class Mul[T] { method * (T, T -> T) }
 
-trait + [T] (T, T -> T)
+class Add[T] { method + (T, T -> T) }
 
-trait - [T] (T, T -> T)
+class Sub[T] { method - (T, T -> T) }
 
-trait / [T] (T, T -> T +Fail)
+class Div[T] { method / (T, T -> T +Fail) }
 
-trait < [T] (T, T -> Bool)
+class Lt[T] { method < (T, T -> Bool) }
 
-trait <= [T] (T, T -> Bool)
+class Le[T] { method <= (T, T -> Bool) }
 
-trait <> [T] (T, T -> Bool)
+class Ne[T] { method <> (T, T -> Bool) }
 
-trait = [T] (T, T -> Bool)
+class Eq[T] { method = (T, T -> Bool) }
 
-trait > [T] (T, T -> Bool)
+class Gt[T] { method > (T, T -> Bool) }
 
-trait >= [T] (T, T -> Bool)
+class Ge[T] { method >= (T, T -> Bool) }
 
-trait neg [T] (T -> T)
+class Neg[T] { method neg (T -> T) }
 
-trait zero [T] (-> T)
+class Zero[T] { method zero (-> T) }
 
 
 type Char {}
@@ -75,81 +75,81 @@ type Double {}
 
 type Int {}
 
-instance % (Double, Double -> Double +Fail) { _::mlatu::mod_float64 }
+instance Mod for Double { define % (Double, Double -> Double +Fail) { _::mlatu::mod_float64 } }
 
-instance % (Int, Int -> Int +Fail) { _::mlatu::mod_int64 }
+instance Mod for Int { define % (Int, Int -> Int +Fail) { _::mlatu::mod_int64 } }
 
-instance * (Double, Double -> Double) { _::mlatu::mul_float64 }
+instance Mul for Double { define * (Double, Double -> Double) { _::mlatu::mul_float64 } }
 
-instance * (Int, Int -> Int) { _::mlatu::mul_int64 }
+instance Mul for Int { define * (Int, Int -> Int) { _::mlatu::mul_int64 } }
 
-instance + (Double, Double -> Double) { _::mlatu::add_float64 }
+instance Add for Double { define + (Double, Double -> Double) { _::mlatu::add_float64 } }
 
-instance + (Int, Int -> Int) { _::mlatu::add_int64 }
+instance Add for Int { define + (Int, Int -> Int) { _::mlatu::add_int64 } }
 
-instance - (Double, Double -> Double) { _::mlatu::sub_float64 }
+instance Sub for Double { define - (Double, Double -> Double) { _::mlatu::sub_float64 } }
 
-instance - (Int, Int -> Int) { _::mlatu::sub_int64 }
+instance Sub for Int { define - (Int, Int -> Int) { _::mlatu::sub_int64 } }
 
-instance / (Double, Double -> Double +Fail) { _::mlatu::div_float64 }
+instance Div for Double { define / (Double, Double -> Double +Fail) { _::mlatu::div_float64 } }
 
-instance / (Int, Int -> Int +Fail) { _::mlatu::div_int64 }
+instance Div for Int { define / (Int, Int -> Int +Fail) { _::mlatu::div_int64 } }
 
-instance < (Int, Int -> Bool) { swap (>) }
+instance Lt for Int { define < (Int, Int -> Bool) { swap (>) } }
 
-instance < (Char, Char -> Bool) { swap (>) }
+instance Lt for Char { define < (Char, Char -> Bool) { swap (>) } }
 
-instance < (Double, Double -> Bool) { swap (>) }
+instance Lt for Double { define < (Double, Double -> Bool) { swap (>) } }
 
-instance < (Bool, Bool -> Bool) { swap not (&) }
+instance Lt for Bool { define < (Bool, Bool -> Bool) { swap not (&) } }
 
-instance <= (Int, Int -> Bool) { (>) not }
+instance Le for Int { define <= (Int, Int -> Bool) { (>) not } }
 
-instance <= (Char, Char -> Bool) { (>) not }
+instance Le for Char { define <= (Char, Char -> Bool) { (>) not } }
 
-instance <= (Double, Double -> Bool) { (>) not }
+instance Le for Double { define <= (Double, Double -> Bool) { (>) not } }
 
-instance <= (Bool, Bool -> Bool) { (>) not }
+instance Le for Bool { define <= (Bool, Bool -> Bool) { (>) not } }
 
-instance <> (Int, Int -> Bool) { (=) not }
+instance Ne for Int { define <> (Int, Int -> Bool) { (=) not } }
 
-instance <> (Char, Char -> Bool) { (=) not }
+instance Ne for Char { define <> (Char, Char -> Bool) { (=) not } }
 
-instance <> (Double, Double -> Bool) { (=) not }
+instance Ne for Double { define <> (Double, Double -> Bool) { (=) not } }
 
-instance <> (Bool, Bool -> Bool) { (=) not }
+instance Ne for Bool { define <> (Bool, Bool -> Bool) { (=) not } }
 
-instance = (Bool, Bool -> Bool) { if {} else { not } }
+instance Eq for Bool { define = (Bool, Bool -> Bool) { if {} else { not } } }
 
-instance = (Char, Char -> Bool) { _::mlatu::eq_char }
+instance Eq for Char { define = (Char, Char -> Bool) { _::mlatu::eq_char } }
 
-instance = (Double, Double -> Bool) { _::mlatu::eq_float64 }
+instance Eq for Double { define = (Double, Double -> Bool) { _::mlatu::eq_float64 } }
 
-instance = (Int, Int -> Bool) { _::mlatu::eq_int64 }
+instance Eq for Int { define = (Int, Int -> Bool) { _::mlatu::eq_int64 } }
 
-instance > (Char, Char -> Bool) { _::mlatu::gt_char }
+instance Gt for Char { define > (Char, Char -> Bool) { _::mlatu::gt_char } }
 
-instance > (Double, Double -> Bool) { _::mlatu::gt_float64 }
+instance Gt for Double { define > (Double, Double -> Bool) { _::mlatu::gt_float64 } }
 
-instance > (Int, Int -> Bool) { _::mlatu::gt_int64 }
+instance Gt for Int { define > (Int, Int -> Bool) { _::mlatu::gt_int64 } }
 
-instance > (Bool, Bool -> Bool) { (&) not }
+instance Gt for Bool { define > (Bool, Bool -> Bool) { (&) not } }
 
-instance >= (Int, Int -> Bool) { (<) not }
+instance Gt for Int { define >= (Int, Int -> Bool) { (<) not } }
 
-instance >= (Char, Char -> Bool) { (<) not }
+instance Gt for Char { define >= (Char, Char -> Bool) { (<) not } }
 
-instance >= (Double, Double -> Bool) { (<) not }
+instance Gt for Double { define >= (Double, Double -> Bool) { (<) not } }
 
-instance >= (Bool, Bool -> Bool) { (<) not }
+instance Gt for Bool { define >= (Bool, Bool -> Bool) { (<) not } }
 
-instance neg (Double -> Double) { -> x; 0.0 - x }
+instance Neg for Double { define neg (Double -> Double) { -> x; 0.0 - x } }
 
-instance neg (Int -> Int) { -> x; 0 - x }
+instance Neg for Int { define neg (Int -> Int) { -> x; 0 - x } }
 
-instance zero (-> Double) { 0.0 }
+instance Zero for Double { define zero (-> Double) { 0.0 } }
 
-instance zero (-> Int) { 0 }
+instance Zero for Int { define zero (-> Int) { 0 } }
 
 define abs [T] (T -> T) { -> x; if (x < zero) { x neg } else { x } }
 

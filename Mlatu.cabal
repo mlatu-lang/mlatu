@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5080fa2422e7b6d5fdd55ae34043638779e6d157a0d33c9dd339e693b09b77a1
+-- hash: 2b8896b95c0c231d7f33946212c4664747a7deb959f54bb03b6fd653d7b71e77
 
 name:           mlatu
 version:        0.1.0.0
@@ -24,9 +24,9 @@ source-repository head
 library
   exposed-modules:
       Mlatu
+      Mlatu.Class
       Mlatu.Codegen
       Mlatu.DataConstructor
-      Mlatu.Declaration
       Mlatu.Definition
       Mlatu.Desugar.Data
       Mlatu.Desugar.Infix
@@ -35,22 +35,19 @@ library
       Mlatu.Element
       Mlatu.Enter
       Mlatu.Entry
-      Mlatu.Entry.Category
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
-      Mlatu.Entry.Parent
-      Mlatu.Entry.Type
-      Mlatu.Entry.Word
       Mlatu.Fragment
       Mlatu.Free
-      Mlatu.Hint
       Mlatu.Ice
       Mlatu.Infer
       Mlatu.Informer
+      Mlatu.Instance
       Mlatu.InstanceCheck
       Mlatu.Instantiate
       Mlatu.Instantiated
       Mlatu.Interpret
+      Mlatu.Intrinsic
       Mlatu.Kind
       Mlatu.Literal
       Mlatu.Located

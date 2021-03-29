@@ -261,7 +261,7 @@ testTypecheck sign input expected = do
         Enter.fragment fragment dictionary
       case Dictionary.toList <$> result of
         Right definitions -> case find matching definitions of
-          Just (_, Entry.Word _ _ _ _ _ (Just term)) -> do
+          Just (_, Entry.Word _ _ _ (Just term)) -> do
             let actual = Term.typ term
             check <- runMlatuExceptT $ do
               instanceCheck "inferred" actual "declared" expected

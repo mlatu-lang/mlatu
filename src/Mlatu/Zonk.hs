@@ -65,8 +65,6 @@ term tenv0 = go
           goElse (DefaultElse a b) = DefaultElse a b
           goElse (Else body elseOrigin) =
             Else (go body) elseOrigin
-      New tref index size origin ->
-        New (zonk tref) index size origin
       NewClosure tref index origin ->
         NewClosure (zonk tref) index origin
       NewVector tref size elemType origin ->
