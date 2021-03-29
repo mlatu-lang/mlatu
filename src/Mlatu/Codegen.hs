@@ -39,7 +39,7 @@ instance IsString a => IsString (Codegen a) where
 
 generate :: Dictionary -> IO ByteString
 generate dict = do
-  bs <- evalCodegen (untilM entryRs (Map.null <$> use _1)) (view entries dict, Map.empty) dict
+  bs <- evalCodegen (untilM entryRs (Map.null <$> use _1)) (Map.filterWithKey (\(Instantiated name args) _ -> null args && name == mainName) (view entries dict), Map.empty) dict
   pure
     ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
         <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>),Algebraic(i64, Vec<Rep>), Char(char), Text(String), Int(i64), Float(f64), List(Vec<Rep>) } use Rep::*;"
@@ -65,21 +65,21 @@ entryRs =
                          (Instantiated name [], Entry.Word _ _ _ (Just body))
                            | name == mainName -> do
                              x <- (<> "}") . ("fn main() { let mut stack: Vec<Rep> = Vec::new(); let mut locals: Vec<Rep> = Vec::new(); let mut closures: Vec<Vec<Rep>> = Vec::new();" <>) <$> termRs body
-                             modify' $ over _1 (Map.insert i e)
+                             modify' $ over _2 (Map.insert i e)
                              pure x
                          (_, Entry.Word _ _ _ (Just body)) -> do
                            x <- stackFn (rustifyInstantiated i) <$> termRs body
-                           modify' $ over _1 (Map.insert i e)
+                           modify' $ over _2 (Map.insert i e)
                            pure x
                          (_, Entry.Constructor _ _ _ (Just (ConstructorIndex index, size))) -> do
-                           modify' $ over _1 (Map.insert i e)
+                           modify' $ over _2 (Map.insert i e)
                            pure $ stackFn (rustifyInstantiated i) $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show index <> ", v)")
                          (_, Entry.Permission _ _ (Just body)) -> do
                            x <- stackFn (rustifyInstantiated i) <$> termRs body
-                           modify' $ over _1 (Map.insert i e)
+                           modify' $ over _2 (Map.insert i e)
                            pure x
                          _ -> do
-                           modify' $ over _1 (Map.insert i e)
+                           modify' $ over _2 (Map.insert i e)
                            pure ""
                      )
           )
@@ -145,47 +145,58 @@ termRs x = goTerms $ decompose x
 stackPush :: ByteString -> ByteString
 stackPush x = "stack.push(" <> x <> ");"
 
-searchLists :: Instantiated -> Codegen (Maybe Entry)
-searchLists name = do
-  (toBeDone, done) <- get
-  pure $ case Map.lookup name toBeDone of
-    Just e -> Just e
-    Nothing -> Map.lookup name done
+addToDo :: Instantiated -> Entry -> Codegen ()
+addToDo name entry = modify' (over _1 (Map.insert name entry))
+
+lookup :: Instantiated -> Codegen (Maybe (Entry, Bool))
+lookup x = do
+  dict <- ask
+  (first, second) <- get
+  pure $ case Map.lookup x first of
+    Just x -> Just (x, False)
+    Nothing -> case Map.lookup x second of
+      Just y -> Just (y, False)
+      Nothing -> (,True) <$> Dictionary.lookup x dict
 
 word :: Qualified -> [Type] -> Codegen ByteString
 word name args = do
-  isInstantiated <- isJust <$> searchLists (Instantiated name args)
-  if isInstantiated
-    then case Instantiated name args of
+  withArgs <- lookup (Instantiated name args)
+  case withArgs of
+    Just (instantiated, b) -> case Instantiated name args of
       (Instantiated (Qualified v unqualified) [])
         | v == Vocabulary.intrinsic -> intrinsic unqualified
-      _ -> pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
-    else do
-      isUninstantiated <- searchLists (Instantiated name [])
-      case isUninstantiated of
-        Just (Entry.Word a b c (Just body)) ->
+      _ -> do
+        when b $ addToDo (Instantiated name args) instantiated
+        pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
+    Nothing -> do
+      withoutArgs <- lookup (Instantiated name [])
+      case withoutArgs of
+        Just ((Entry.Word merge origin sig (Just body)), b) ->
           liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
             >>= ( \case
                     Right body' -> do
-                      modify' (over _1 (Map.insert (Instantiated name args) (Entry.Word a b c (Just body'))))
+                      when b $ addToDo (Instantiated name args) (Entry.Word merge origin sig (Just body'))
                       pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
-        Just (Entry.Permission a b (Just body)) ->
+        Just (Entry.Permission origin sig (Just body), b) ->
           liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
             >>= ( \case
                     Right body' -> do
-                      modify' (over _1 (Map.insert (Instantiated name args) (Entry.Permission a b (Just body'))))
+                      when b $ addToDo (Instantiated name args) (Entry.Permission origin sig (Just body'))
                       pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
-        Just (Entry.Constructor _ _ _ (Just (ConstructorIndex index, size))) -> pure $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show index <> ", v)")
-        Just (Entry.Word _ _ _ Nothing) -> case name of
+        Just (e@(Entry.Constructor origin n sig (Just (ConstructorIndex index, size))), b) -> do
+          when b $ addToDo (Instantiated name args) e
+          pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
+        Just (Entry.Word _ _ _ Nothing, _) -> case name of
           (Qualified v unqualified)
             | v == Vocabulary.intrinsic -> intrinsic unqualified
           _ -> error "No such intrinsic"
-        Just e -> pure $ "/*" <> show (printInstantiated (Instantiated name args)) <> show (printEntry e) <> "*/"
-        Nothing -> pure $ "/* " <> show (printInstantiated (Instantiated name args)) <> "*/"
+        Just (Entry.ClassMethod {}, _) -> pure "/* an error occurred here during instantiation of instances */"
+        Just (e, _) -> error $ show e
+        Nothing -> error "Nothing"
 
 intrinsic :: Unqualified -> Codegen ByteString
 intrinsic = \case

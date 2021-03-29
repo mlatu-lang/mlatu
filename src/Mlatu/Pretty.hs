@@ -106,7 +106,7 @@ printQualified (Qualified qualifier unqualifiedName) =
   printQualifier qualifier <> "::" <> printUnqualified unqualifiedName
 
 printQualifier :: Qualifier -> Doc a
-printQualifier (Qualifier Absolute parts) = printQualifier $ Qualifier Relative ("_" : parts)
+printQualifier (Qualifier Absolute parts) = printQualifier $ Qualifier Relative parts
 printQualifier (Qualifier Relative parts) =
   pretty $ Text.intercalate "::" parts
 

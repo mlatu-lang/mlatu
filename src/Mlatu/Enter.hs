@@ -29,7 +29,6 @@ import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
-import Mlatu.Instance (Instance (..))
 import Mlatu.Instance qualified as Instance
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Intrinsic (Intrinsic)

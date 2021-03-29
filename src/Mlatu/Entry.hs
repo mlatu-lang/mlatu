@@ -58,6 +58,6 @@ data Entry
     Type !Origin ![Parameter] ![DataConstructor]
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
-  deriving (Show)
+  deriving (Show, Ord, Eq)
 
 makePrisms ''Entry
