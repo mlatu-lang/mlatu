@@ -13,7 +13,6 @@ module Mlatu.Fragment
     intrinsics,
     classes,
     wordDefinitions,
-    permissionDefinitions,
     constructorDefinitions,
     metadata,
     instances,
@@ -22,7 +21,7 @@ module Mlatu.Fragment
 where
 
 import Mlatu.Class (Class (..))
-import Mlatu.Definition (ConstructorDefinition, PermissionDefinition, WordDefinition)
+import Mlatu.Definition (ConstructorDefinition, WordDefinition)
 import Mlatu.Instance (Instance)
 import Mlatu.Intrinsic (Intrinsic (..))
 import Mlatu.Metadata (Metadata)
@@ -37,7 +36,6 @@ data Fragment a = Fragment
     _classes :: ![Class],
     _wordDefinitions :: ![WordDefinition a],
     _constructorDefinitions :: ![ConstructorDefinition a],
-    _permissionDefinitions :: ![PermissionDefinition a],
     _metadata :: ![Metadata],
     _types :: ![TypeDefinition]
   }
@@ -54,7 +52,6 @@ instance Monoid (Fragment a) where
         _wordDefinitions = mempty,
         _metadata = mempty,
         _constructorDefinitions = mempty,
-        _permissionDefinitions = mempty,
         _types = mempty
       }
 
@@ -67,6 +64,5 @@ instance Semigroup (Fragment a) where
         _wordDefinitions = _wordDefinitions a <> _wordDefinitions b,
         _metadata = _metadata a <> _metadata b,
         _constructorDefinitions = _constructorDefinitions a <> _constructorDefinitions b,
-        _permissionDefinitions = _permissionDefinitions a <> _permissionDefinitions b,
         _types = _types a <> _types b
       }

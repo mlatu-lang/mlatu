@@ -8,7 +8,6 @@
 -- Portability : GHC
 module Mlatu.Resolve
   ( wordDefinition,
-    permissionDefinition,
     generalName,
     run,
     signature,
@@ -17,7 +16,7 @@ where
 
 import Data.List (elemIndex)
 import Data.Set qualified as Set
-import Mlatu.Definition (PermissionDefinition, WordDefinition)
+import Mlatu.Definition (WordDefinition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
@@ -52,15 +51,6 @@ wordDefinition dictionary def = do
   sig <- signature dictionary vocabulary $ view Definition.wordSignature def
   pure
     (set Definition.wordBody body (set Definition.wordSignature sig def))
-
-permissionDefinition :: Dictionary -> PermissionDefinition () -> Resolved (PermissionDefinition ())
-permissionDefinition dictionary def = do
-  -- FIXME: reportDuplicate dictionary def
-  let vocabulary = qualifierName $ view Definition.permissionName def
-  body <- term dictionary vocabulary $ view Definition.permissionBody def
-  sig <- signature dictionary vocabulary $ view Definition.permissionSignature def
-  pure
-    (set Definition.permissionBody body (set Definition.permissionSignature sig def))
 
 term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
 term dictionary vocabulary = recur
@@ -126,11 +116,10 @@ signature dictionary vocabulary = go
       Signature.Application
         <$> go a <*> go b <*> pure origin
     go sig@Signature.Bottom {} = pure sig
-    go (Signature.Function as bs es origin) =
+    go (Signature.Function as bs origin) =
       Signature.Function
         <$> traverse go as
         <*> traverse go bs
-        <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go (Signature.Quantified vars a origin) =
       Signature.Quantified vars
@@ -139,12 +128,11 @@ signature dictionary vocabulary = go
     go (Signature.Variable name origin) =
       Signature.Variable
         <$> typeName dictionary vocabulary name origin <*> pure origin
-    go (Signature.StackFunction r as s bs es origin) =
+    go (Signature.StackFunction r as s bs origin) =
       Signature.StackFunction r
         <$> traverse go as
         <*> pure s
         <*> traverse go bs
-        <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go sig@Signature.Type {} = pure sig
 

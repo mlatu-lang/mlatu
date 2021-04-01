@@ -25,7 +25,7 @@ import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Literal (floatValue, integerValue)
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
-import Mlatu.Pretty (printEntry, printInstantiated, printQualified)
+import Mlatu.Pretty (printInstantiated, printQualified)
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..), decompose)
 import Mlatu.Type (Type)
 import Mlatu.TypeEnv qualified as TypeEnv
@@ -74,10 +74,6 @@ entryRs =
                          (_, Entry.Constructor _ _ _ (Just (ConstructorIndex index, size))) -> do
                            modify' $ over _2 (Map.insert i e)
                            pure $ stackFn (rustifyInstantiated i) $ letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPush ("Algebraic(" <> show index <> ", v)")
-                         (_, Entry.Permission _ _ (Just body)) -> do
-                           x <- stackFn (rustifyInstantiated i) <$> termRs body
-                           modify' $ over _2 (Map.insert i e)
-                           pure x
                          _ -> do
                            modify' $ over _2 (Map.insert i e)
                            pure ""
@@ -171,19 +167,11 @@ word name args = do
     Nothing -> do
       withoutArgs <- lookup (Instantiated name [])
       case withoutArgs of
-        Just ((Entry.Word merge origin sig (Just body)), b) ->
+        Just (Entry.Word merge origin sig (Just body), b) ->
           liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
             >>= ( \case
                     Right body' -> do
                       when b $ addToDo (Instantiated name args) (Entry.Word merge origin sig (Just body'))
-                      pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
-                    Left _ -> error "Could not instantiate generic type"
-                )
-        Just (Entry.Permission origin sig (Just body), b) ->
-          liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
-            >>= ( \case
-                    Right body' -> do
-                      when b $ addToDo (Instantiated name args) (Entry.Permission origin sig (Just body'))
                       pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )

@@ -36,7 +36,7 @@ data Signature
   | -- | An empty stack.
     Bottom !Origin
   | -- | @A, B -> C, D +P +Q@
-    Function ![Signature] ![Signature] ![GeneralName] !Origin
+    Function ![Signature] ![Signature] !Origin
   | -- | @\<R..., T, +P\> (...)@
     Quantified ![Parameter] !Signature !Origin
   | -- | @T@
@@ -47,7 +47,6 @@ data Signature
       ![Signature]
       !Signature
       ![Signature]
-      ![GeneralName]
       !Origin
   | -- | Produced when generating signatures for lifted quotations after
     -- typechecking.
@@ -59,11 +58,11 @@ makePrisms ''Signature
 -- | Signatures are compared regardless of origin.
 instance Eq Signature where
   Application a b _ == Application c d _ = (a, b) == (c, d)
-  Function a b c _ == Function d e f _ = (a, b, c) == (d, e, f)
+  Function a b _ == Function c d _ = (a, b) == (c, d)
   Quantified a b _ == Quantified c d _ = (a, b) == (c, d)
   Variable a _ == Variable b _ = a == b
-  StackFunction a b c d e _ == StackFunction f g h i j _ =
-    (a, b, c, d, e) == (f, g, h, i, j)
+  StackFunction a b c d _ == StackFunction e f g h _ =
+    (a, b, c, d) == (e, f, g, h)
   _ == _ = False
 
 deriving instance Ord Signature
@@ -72,8 +71,8 @@ origin :: Signature -> Origin
 origin signature = case signature of
   Application _ _ o -> o
   Bottom o -> o
-  Function _ _ _ o -> o
+  Function _ _ o -> o
   Quantified _ _ o -> o
   Variable _ o -> o
-  StackFunction _ _ _ _ _ o -> o
+  StackFunction _ _ _ _ o -> o
   Type t -> Type.origin t

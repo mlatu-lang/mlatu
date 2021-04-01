@@ -20,7 +20,7 @@ import Mlatu.Class (Class (..), Method (..))
 import Mlatu.Class qualified as Class
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Definition (PermissionDefinition (..), WordDefinition (..))
+import Mlatu.Definition (WordDefinition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Data qualified as Data
 import Mlatu.Element (Element)
@@ -76,18 +76,16 @@ fragment ::
   Int ->
   -- | Source file path.
   FilePath ->
-  -- | List of permissions granted to @main@.
-  [GeneralName] ->
   -- | Override name of @main@.
   Maybe Qualified ->
   -- | Input tokens.
   [Located Token] ->
   -- | Parsed program fragment.
   M (Fragment ())
-fragment line path mainPermissions mainName tokens =
+fragment line path mainName tokens =
   let parsed =
         Parsec.runParser
-          (fragmentParser mainPermissions mainName)
+          (fragmentParser mainName)
           Vocabulary.global
           path
           tokens
@@ -104,7 +102,6 @@ fragment line path mainPermissions mainName tokens =
         over
           Fragment.wordDefinitions
           ( Definition.main
-              mainPermissions
               mainName
               (Term.identityCoercion () (Origin.point path line 1))
               :
@@ -124,20 +121,19 @@ generalName line path text = do
     Right (name, _) -> pure name
 
 fragmentParser ::
-  [GeneralName] -> Maybe Qualified -> Parser (Fragment ())
-fragmentParser mainPermissions mainName =
-  partitionElements mainPermissions mainName
+  Maybe Qualified -> Parser (Fragment ())
+fragmentParser mainName =
+  partitionElements mainName
     <$> elementsParser <* Parsec.eof
 
 elementsParser :: Parser [Element ()]
 elementsParser = asum <$> many (vocabularyParser <|> one <$> elementParser)
 
 partitionElements ::
-  [GeneralName] ->
   Maybe Qualified ->
   [Element ()] ->
   Fragment ()
-partitionElements mainPermissions mainName = rev . foldr go mempty
+partitionElements mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
     rev f =
@@ -145,9 +141,8 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
         over Fragment.instances reverse $
           over Fragment.classes reverse $
             over Fragment.wordDefinitions reverse $
-              over Fragment.permissionDefinitions reverse $
-                over Fragment.metadata reverse $
-                  over Fragment.types reverse f
+              over Fragment.metadata reverse $
+                over Fragment.types reverse f
 
     go :: Element () -> Fragment () -> Fragment ()
     go e acc = case e of
@@ -155,7 +150,6 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
       Element.Instance x -> over Fragment.instances (x :) acc
       Element.Class x -> over Fragment.classes (x :) acc
       Element.WordDefinition x -> over Fragment.wordDefinitions (x :) acc
-      Element.PermissionDefinition x -> over Fragment.permissionDefinitions (x :) acc
       Element.Metadata x -> over Fragment.metadata (x :) acc
       Element.TypeDefinition x -> over Fragment.types (x :) acc
       Element.Term x ->
@@ -172,7 +166,7 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
                     b
                   _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
                 Nothing ->
-                  Definition.main mainPermissions mainName x : defs
+                  Definition.main mainName x : defs
           )
           acc
         where
@@ -298,7 +292,6 @@ elementParser =
   (<?> "top-level program element") $
     Parsec.choice
       [ Element.WordDefinition <$> basicDefinitionParser,
-        Element.PermissionDefinition <$> permissionParser,
         Element.Instance <$> instanceParser,
         Element.Class <$> classParser,
         Element.Intrinsic <$> intrinsicParser,
@@ -379,10 +372,9 @@ functionTypeParser = (<?> "function type") $ do
       [ stackSignature,
         arrowSignature
       ]
-  perms <- permissions
-  pure (effect perms origin)
+  pure (effect origin)
   where
-    stackSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
+    stackSignature :: Parser (Origin -> Signature, Origin)
     stackSignature = (<?> "stack function type") $ do
       leftparameter <- UnqualifiedName <$> stack
       leftTypes <- Parsec.option [] (commaParser *> left)
@@ -401,17 +393,12 @@ functionTypeParser = (<?> "function type") $ do
         stack :: Parser Unqualified
         stack = Parsec.try $ wordNameParser <* parserMatch Token.Ellipsis
 
-    arrowSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
+    arrowSignature :: Parser (Origin -> Signature, Origin)
     arrowSignature = (<?> "arrow function type") $ do
       leftTypes <- left
       origin <- arrow
       rightTypes <- right
       pure (Signature.Function leftTypes rightTypes, origin)
-
-    permissions :: Parser [GeneralName]
-    permissions =
-      (<?> "permission labels") $
-        many $ parserMatchOperator "+" *> (fst <$> nameParser)
 
     left, right :: Parser [Signature]
     left = basicTypeParser `Parsec.sepEndBy` commaParser
@@ -550,22 +537,6 @@ instanceParser = (<?> "class instance") $ do
         Instance._methods = methods
       }
 
-permissionParser :: Parser (PermissionDefinition ())
-permissionParser =
-  (<?> "permission definition") $ do
-    origin <- getTokenOrigin <* parserMatch Token.Permission
-    (name, fixity) <- qualifiedNameParser <?> "definition name"
-    sig <- signatureParser
-    body <- blockLikeParser <?> "definition body"
-    pure
-      PermissionDefinition
-        { Definition._permissionBody = body,
-          Definition._permissionFixity = fixity,
-          Definition._permissionName = name,
-          Definition._permissionOrigin = origin,
-          Definition._permissionSignature = sig
-        }
-
 -- | Unqualified or partially qualified name, implicitly qualified by the
 -- current vocabulary, or fully qualified (global) name.
 qualifiedNameParser :: Parser (Qualified, Operator.Fixity)
@@ -633,7 +604,6 @@ termParser = (<?> "expression") $ do
       ifParser,
       doParser,
       Push () <$> blockValue <*> pure origin,
-      withParser,
       asParser
     ]
 
@@ -792,32 +762,6 @@ asParser = (<?> "'as' expression") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.As
   signatures <- groupedParser $ basicTypeParser `Parsec.sepEndBy` commaParser
   pure $ Term.asCoercion () origin signatures
-
--- A 'with' term is parsed as a coercion followed by a call.
-withParser :: Parser (Term ())
-withParser = (<?> "'with' expression") $ do
-  origin <- getTokenOrigin <* parserMatch_ Token.With
-  permits <- groupedParser $ Parsec.many1 permitParser
-  pure $
-    Term.compose
-      ()
-      origin
-      [ Term.permissionCoercion permits () origin,
-        Word
-          ()
-          (QualifiedName (Qualified Vocabulary.intrinsic "call"))
-          []
-          origin
-      ]
-
-permitParser :: Parser Term.Permit
-permitParser =
-  Term.Permit
-    <$> Parsec.choice
-      [ True <$ parserMatchOperator "+",
-        False <$ parserMatchOperator "-"
-      ]
-    <*> (UnqualifiedName <$> wordNameParser)
 
 parserMatchOperator :: Text -> Parser (Located Token)
 parserMatchOperator = parserMatch . Token.Operator . Unqualified

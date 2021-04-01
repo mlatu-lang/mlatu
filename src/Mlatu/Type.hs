@@ -16,7 +16,6 @@ module Mlatu.Type
     pattern Bottom,
     pattern Fun,
     pattern Prod,
-    pattern Join,
     pattern Sum,
     setOrigin,
     origin,
@@ -49,14 +48,11 @@ infixl 1 :@
 pattern Bottom :: Origin -> Type
 pattern Bottom o = TypeConstructor o "Bottom"
 
-pattern Fun :: Origin -> Type -> Type -> Type -> Type
-pattern Fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
+pattern Fun :: Origin -> Type -> Type -> Type
+pattern Fun o a b = TypeConstructor o "Fun" :@ a :@ b
 
 pattern Prod :: Origin -> Type -> Type -> Type
 pattern Prod o a b = TypeConstructor o "Prod" :@ a :@ b
-
-pattern Join :: Origin -> Type -> Type -> Type
-pattern Join o a b = TypeConstructor o "Join" :@ a :@ b
 
 pattern Sum :: Origin -> Type -> Type -> Type
 pattern Sum o a b = TypeConstructor o "Sum" :@ a :@ b

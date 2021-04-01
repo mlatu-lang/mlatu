@@ -153,8 +153,6 @@ signatures = mapMaybe getSignature . toList
       Just (name, signature)
     getSignature (Instantiated name [], Entry.Constructor _ _ signature _) =
       Just (name, signature)
-    getSignature (Instantiated name [], Entry.Permission _ signature _) =
-      Just (name, signature)
     getSignature (Instantiated name [], Entry.ClassMethod _ signature) =
       Just (name, signature)
     getSignature _ = Nothing
@@ -166,8 +164,6 @@ toList = Map.toList . view entries
 typeNames :: Dictionary -> [Qualified]
 typeNames = mapMaybe typeName . toList
   where
-    typeName (Instantiated name _, Entry.Permission {}) =
-      Just name
     typeName (Instantiated name _, Entry.Type {}) = Just name
     typeName _ = Nothing
 
@@ -178,7 +174,6 @@ wordNames = mapMaybe wordName . toList
     wordName (Instantiated name [], Entry.Word {}) = Just name
     -- TODO: Figure out how to get mangled names out of this...
     wordName (Instantiated name _, Entry.ClassMethod {}) = Just name
-    wordName (Instantiated name _, Entry.Permission {}) = Just name
     wordName (Instantiated name _, Entry.Constructor {}) = Just name
     wordName _ = Nothing
 

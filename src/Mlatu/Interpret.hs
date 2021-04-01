@@ -128,26 +128,11 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           -- An entry in the dictionary should already be instantiated, so we
           -- shouldn't need to instantiate it again here.
           Just (Entry.Word _ _ _ (Just body)) -> term (name : callStack) body
-          Just (Entry.Permission _ _ (Just body)) -> term (name : callStack) body
           Just (Entry.Constructor _ _ _ (Just (index, size))) -> do
             r <- readIORef stackRef
             let (fields, r') = Stack.pops size r
             writeIORef stackRef $ Algebraic index fields ::: r'
           _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
-            -- A regular word.
-            Just (Entry.Permission _ _ (Just body)) -> do
-              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
-              case mBody' of
-                Right body' -> term (name : callStack) body'
-                Left reports ->
-                  hPrint stdout' $
-                    vcat $
-                      hcat
-                        [ "Could not instantiate generic word ",
-                          dquotes $ Pretty.printQualified name,
-                          ":"
-                        ] :
-                      (Report.human <$> reports)
             Just (Entry.Constructor _ _ _ (Just (index, size))) -> do
               r <- readIORef stackRef
               let (fields, r') = Stack.pops size r

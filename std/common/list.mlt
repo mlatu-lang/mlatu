@@ -91,14 +91,14 @@ define concat_optionals [T] (List[Optional[T]] -> List[T]) {
   [] do (fold_left) { match case some { suffix } else {} }
 }
 
-define each [T, +P] (List[T], (T -> +P) -> +P) {
+define each [T] (List[T], (T ->) ->) {
   -> f;
   match (head_tail)
   case some { unpair -> h, t; h f call t f each }
   case none {}
 }
 
-define each2 [A, B, +P] (List[A], List[B], (A, B -> +P) -> +P) {
+define each2 [A, B] (List[A], List[B], (A, B ->) ->) {
   -> f;
   zip { unpair f call } each
 }
@@ -176,21 +176,21 @@ define lefts [A, B] (List[Either[A, B]] -> List[A]) { \get_left map_optionally }
 
 define length [T] (List[T] -> Int) { 0 { drop 1 (+) } fold_left }
 
-define map [A, B, +P] (List[A], (A -> B +P) -> List[B] +P) {
+define map [A, B] (List[A], (A -> B) -> List[B]) {
   -> f;
   match (head_tail)
   case some { unpair -> h, t; (t f map) (h f call) prefix }
   case none { [] }
 }
 
-define map2 [A, B, C, +P] (List[A], List[B], (A, B -> C +P) -> List[C] +P) {
+define map2 [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
   -> f;
   zip (\unpair f compose) map
 }
 
 define map_concat [A, B] (List[A], (A -> List[B]) -> List[B]) { map concat }
 
-define map_index [A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P) {
+define map_index [A, B] (List[A], (A, Int -> B) -> List[B]) {
   0 map_index::helper
 }
 
@@ -348,7 +348,7 @@ define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
   case none { [] }
 }
 
-define _::map_index::helper [A, B, +P] (List[A], (A, Int -> B +P), Int -> List[B] +P) {
+define _::map_index::helper [A, B] (List[A], (A, Int -> B), Int -> List[B]) {
   -> f, i;
   match (head_tail)
   case some { unpair -> h, t; (t f (i 1 +) helper) (h i f call) prefix }

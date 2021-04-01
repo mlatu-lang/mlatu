@@ -12,7 +12,6 @@
 module Mlatu.Definition
   ( WordDefinition (..),
     ConstructorDefinition (..),
-    PermissionDefinition (..),
     constructorBody,
     constructorName,
     constructorOrigin,
@@ -27,11 +26,6 @@ module Mlatu.Definition
     wordMerge,
     wordOrigin,
     wordSignature,
-    permissionName,
-    permissionBody,
-    permissionFixity,
-    permissionSignature,
-    permissionOrigin,
   )
 where
 
@@ -39,7 +33,7 @@ import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Name (ConstructorIndex, GeneralName (..), Qualified (..))
+import Mlatu.Name (ConstructorIndex, Qualified (..))
 import Mlatu.Operator (Fixity)
 import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
@@ -64,17 +58,6 @@ data WordDefinition a = WordDefinition
 
 makeLenses ''WordDefinition
 
-data PermissionDefinition a = PermissionDefinition
-  { _permissionName :: !Qualified,
-    _permissionBody :: !(Term a),
-    _permissionFixity :: !Fixity,
-    _permissionOrigin :: !Origin,
-    _permissionSignature :: !Signature
-  }
-  deriving (Ord, Eq, Show)
-
-makeLenses ''PermissionDefinition
-
 data ConstructorDefinition a = ConstructorDefinition
   { _constructorName :: !Qualified,
     _constructorBody :: !(ConstructorIndex, Int),
@@ -89,14 +72,12 @@ makeLenses ''ConstructorDefinition
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
 main ::
-  -- | List of permissions implicitly granted.
-  [GeneralName] ->
   -- | Override default name.
   Maybe Qualified ->
   -- | Body.
   Term a ->
   WordDefinition a
-main permissions mName term =
+main mName term =
   WordDefinition
     { _wordBody = term,
       _wordFixity = Operator.Postfix,
@@ -112,7 +93,6 @@ main permissions mName term =
               []
               (Signature.Variable "R" o)
               []
-              permissions
               o
           )
           o

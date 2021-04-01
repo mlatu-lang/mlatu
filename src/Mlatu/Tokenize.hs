@@ -314,7 +314,6 @@ alphanumeric =
           "permission" -> Permission
           "type" -> Type
           "vocab" -> Vocab
-          "with" -> With
           "where" -> Where
           _ -> Word (Unqualified name),
       operator

@@ -16,13 +16,12 @@ module Mlatu.Element
     _Metadata,
     _Term,
     _TypeDefinition,
-    _PermissionDefinition,
     _Instance,
   )
 where
 
 import Mlatu.Class (Class)
-import Mlatu.Definition (PermissionDefinition, WordDefinition)
+import Mlatu.Definition (WordDefinition)
 import Mlatu.Instance (Instance)
 import Mlatu.Intrinsic (Intrinsic)
 import Mlatu.Metadata (Metadata)
@@ -40,8 +39,6 @@ data Element a
     Class !Class
   | -- | @define@
     WordDefinition !(WordDefinition a)
-  | -- | @define@
-    PermissionDefinition !(PermissionDefinition a)
   | -- | @about@
     Metadata !Metadata
   | -- | Top-level (@main@) code.

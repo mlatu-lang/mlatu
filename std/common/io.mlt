@@ -1,24 +1,24 @@
 vocab mlatu {
-  intrinsic append_file (String, String -> +IO)
-  intrinsic flush_stdout (-> +IO)
-  intrinsic get_line (-> String +IO)
-  intrinsic print (String -> +IO)
-  intrinsic read_file (String -> String +IO)
-  intrinsic write_file (String, String -> +IO)
+  intrinsic append_file (String, String ->)
+  intrinsic flush_stdout (->)
+  intrinsic get_line (-> String)
+  intrinsic print (String ->)
+  intrinsic read_file (String -> String)
+  intrinsic write_file (String, String ->)
 }
 
-define append_file (String, String -> +IO) { _::mlatu::append_file }
+define append_file (String, String ->) { _::mlatu::append_file }
 
-define ask (String -> String +IO) { print _::mlatu::flush_stdout get_line }
+define ask (String -> String) { print _::mlatu::flush_stdout get_line }
 
-define get_line (-> String +IO) { _::mlatu::get_line }
+define get_line (-> String) { _::mlatu::get_line }
 
-define newline (-> +IO) { "\n" print }
+define newline (->) { "\n" print }
 
-define print [T] (T -> +IO) { show _::mlatu::print }
+define print [T] (T ->) { show _::mlatu::print }
 
-define println [T] (T -> +IO) { print newline }
+define println [T] (T ->) { print newline }
 
-define read_file (String -> String +IO) { _::mlatu::read_file }
+define read_file (String -> String) { _::mlatu::read_file }
 
-define write_file (String, String -> +IO) { _::mlatu::write_file }
+define write_file (String, String ->) { _::mlatu::write_file }

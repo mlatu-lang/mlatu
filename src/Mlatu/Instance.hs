@@ -18,7 +18,6 @@ module Mlatu.Instance
 where
 
 import Mlatu.Definition (WordDefinition)
-import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)

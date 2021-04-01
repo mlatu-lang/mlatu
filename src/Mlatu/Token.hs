@@ -89,8 +89,6 @@ data Token
     VocabLookup
   | -- | @where@
     Where
-  | -- | @with@
-    With
   | -- | @word@
     Word !Unqualified
 
@@ -131,7 +129,6 @@ instance Eq Token where
   Vocab == Vocab = True
   VocabLookup == VocabLookup = True
   Where == Where = True
-  With == With = True
   Word a == Word b = a == b
   _ == _ = False
 

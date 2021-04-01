@@ -42,7 +42,7 @@ vocab mlatu {
   intrinsic xor_int64 (Int, Int -> Int)
 }
 
-class Mod[T] { method % (T, T -> T +Fail) }
+class Mod[T] { method % (T, T -> T) }
 
 class Mul[T] { method * (T, T -> T) }
 
@@ -50,7 +50,7 @@ class Add[T] { method + (T, T -> T) }
 
 class Sub[T] { method - (T, T -> T) }
 
-class Div[T] { method / (T, T -> T +Fail) }
+class Div[T] { method / (T, T -> T) }
 
 class Lt[T] { method < (T, T -> Bool) }
 
@@ -75,9 +75,9 @@ type Double {}
 
 type Int {}
 
-instance Mod for Double { define % (Double, Double -> Double +Fail) { _::mlatu::mod_float64 } }
+instance Mod for Double { define % (Double, Double -> Double) { _::mlatu::mod_float64 } }
 
-instance Mod for Int { define % (Int, Int -> Int +Fail) { _::mlatu::mod_int64 } }
+instance Mod for Int { define % (Int, Int -> Int) { _::mlatu::mod_int64 } }
 
 instance Mul for Double { define * (Double, Double -> Double) { _::mlatu::mul_float64 } }
 
@@ -91,9 +91,9 @@ instance Sub for Double { define - (Double, Double -> Double) { _::mlatu::sub_fl
 
 instance Sub for Int { define - (Int, Int -> Int) { _::mlatu::sub_int64 } }
 
-instance Div for Double { define / (Double, Double -> Double +Fail) { _::mlatu::div_float64 } }
+instance Div for Double { define / (Double, Double -> Double) { _::mlatu::div_float64 } }
 
-instance Div for Int { define / (Int, Int -> Int +Fail) { _::mlatu::div_int64 } }
+instance Div for Int { define / (Int, Int -> Int) { _::mlatu::div_int64 } }
 
 instance Lt for Int { define < (Int, Int -> Bool) { swap (>) } }
 
@@ -173,7 +173,7 @@ define cos (Double -> Double) { _::mlatu::cos_float64 }
 
 define cosh (Double -> Double) { _::mlatu::cosh_float64 }
 
-define div_mod [T] (T, T -> T, T +Fail) { -> x, y; (x y /) (x y %) }
+define div_mod [T] (T, T -> T, T) { -> x, y; (x y /) (x y %) }
 
 define exp (Double -> Double) { _::mlatu::exp_float64 }
 

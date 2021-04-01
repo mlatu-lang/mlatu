@@ -25,13 +25,12 @@ module Mlatu.Pretty
   )
 where
 
-import Data.Char (isLetter)
 import Data.List (findIndex)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.Class (Class (..), Method (..))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Definition (PermissionDefinition (..), WordDefinition (..), mainName)
+import Mlatu.Definition (WordDefinition (..), mainName)
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
@@ -46,7 +45,6 @@ import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..), floatVa
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Signature (..))
 import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
@@ -159,12 +157,9 @@ printType type0 = recur type0
   where
     context = buildContext type0
     recur typ = case typ of
-      Type.Fun _ a b p ->
+      Type.Fun _ a b ->
         parens $
-          recur a <+> "->" <> recur b <+> recur p
-      TypeConstructor _ "Fun" :@ a :@ b ->
-        parens $
-          recur a <+> "->" <+> recur b
+          recur a <+> "->" <> recur b
       TypeConstructor _ "Fun" :@ a ->
         parens $
           recur a <+> "->"
@@ -177,10 +172,6 @@ printType type0 = recur type0
         parens comma
       Type.Sum _ a b ->
         recur a <+> "|" <+> recur b
-      Type.Join _ a b ->
-        "+" <> recur a <+> recur b
-      TypeConstructor _ "Join" :@ a ->
-        parens $ "+" <> recur a
       a :@ b -> recur a <> brackets (recur b)
       TypeConstructor _ constructor -> printConstructor constructor
       TypeVar _ var@(Var name i k) ->
@@ -257,22 +248,20 @@ printSignature (Application firstA b _) =
     go l (Application x y _) = go (l ++ [y]) x
     go l x = (x, l)
 printSignature (Bottom _) = "<bottom>"
-printSignature (Function as bs es _) =
+printSignature (Function as bs _) =
   parens $
     mapNonEmpty "" (\sigs -> punctuateComma (printSignature <$> sigs) <> space) as
       <> "->"
       <> mapNonEmpty "" (\sigs -> space <> punctuateComma (printSignature <$> sigs)) bs
-      <> mapNonEmpty "" (\names -> space <> hsep ((\p -> "+" <> printGeneralName p) <$> names)) es
 printSignature (Quantified names typ _) =
   mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns)) <> flatAlt space "\n") names
     <> printSignature typ
 printSignature (Variable name _) = printGeneralName name
-printSignature (StackFunction r as s bs es _) =
+printSignature (StackFunction r as s bs _) =
   parens $
     punctuateComma ((printSignature r <> "...") : (printSignature <$> as))
       <+> "->"
       <+> punctuateComma ((printSignature s <> "...") : (printSignature <$> bs))
-      <> mapNonEmpty "" (\xs -> space <> hsep (("+" <>) . printGeneralName <$> xs)) es
 printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a
@@ -312,7 +301,6 @@ printToken = \case
   Token.Vocab -> "vocab"
   Token.VocabLookup -> "::"
   Token.Where -> "where"
-  Token.With -> "with"
   Token.Word name -> printUnqualified name
 
 -- Minor hack because Parsec requires 'Show'.
@@ -367,9 +355,6 @@ maybePrintTerms = \case
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ u)) _ _ : xs)
-    | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
-      Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
   (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
@@ -510,9 +495,6 @@ printMetadata metadata =
     )
       ++ [rbrace]
 
-printPermissionDefinition :: (Show a) => PermissionDefinition a -> Maybe (Doc b)
-printPermissionDefinition (PermissionDefinition name body _ _ signature) = Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-
 printWordDefinition :: (Show a) => WordDefinition a -> Maybe (Doc b)
 printWordDefinition (WordDefinition name body _ _ _ _ _)
   | name == mainName = maybePrintTerm body
@@ -529,13 +511,6 @@ printEntry (Entry.Word _ origin mSignature _) =
           hsep
             ["with signature", dquotes $ printSignature signature]
         Nothing -> "with no signature"
-    ]
-printEntry (Entry.Permission origin mSignature _) =
-  vsep
-    [ "permission",
-      hsep ["defined at", printOrigin origin],
-      hsep
-        ["with signature", dquotes $ printSignature mSignature]
     ]
 printEntry (Entry.Metadata origin term) =
   vsep
@@ -595,10 +570,6 @@ printFragment fragment =
         ++ mapMaybe
           (fmap (<> line) . printWordDefinition)
           ( sort (view Fragment.wordDefinitions fragment)
-          )
-        ++ mapMaybe
-          (fmap (<> line) . printPermissionDefinition)
-          ( sort (view Fragment.permissionDefinitions fragment)
           )
         ++ ( (\m -> printMetadata m <> line)
                <$> sort (view Fragment.metadata fragment)

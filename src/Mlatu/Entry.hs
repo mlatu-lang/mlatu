@@ -15,7 +15,6 @@ module Mlatu.Entry
     _ClassMethod,
     _Type,
     _InstantiatedType,
-    _Permission,
     _Constructor,
   )
 where
@@ -48,7 +47,6 @@ data Entry
       !(Maybe Signature)
       !(Maybe (Term Type))
   | Constructor !Origin !Qualified !Signature !(Maybe (ConstructorIndex, Int))
-  | Permission !Origin !Signature !(Maybe (Term Type))
   | -- | Untyped metadata from @about@ blocks. Used internally for operator
     -- precedence and associativity.
     Metadata !Origin !(Term ())

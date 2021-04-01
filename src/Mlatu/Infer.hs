@@ -145,13 +145,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Coercion hint@Term.IdentityCoercion _ origin ->
     while (Term.origin term0) context $ do
-      [a, p] <-
+      [a] <-
         fresh
           origin
-          [ ("S", Stack),
-            ("P", Permission)
+          [ ("S", Stack)
           ]
-      let typ = Type.Fun origin a a p
+      let typ = Type.Fun origin a a
       let type' = Zonk.typ tenvFinal typ
       pure (Coercion hint type' origin, typ, tenv0)
   Coercion hint@(Term.AnyCoercion sig) _ origin ->
@@ -166,15 +165,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   Compose _ term1 term2 -> do
     (term1', t1, tenv1) <- inferType' tenv0 term1
     (term2', t2, tenv2) <- inferType' tenv1 term2
-    (a, b, e1, tenv3) <- Unify.function tenv2 t1
-    (c, d, e2, tenv4) <- Unify.function tenv3 t2
+    (a, b, tenv3) <- Unify.function tenv2 t1
+    (c, d, tenv4) <- Unify.function tenv3 t2
     tenv5 <- Unify.typ tenv4 b c
-    tenv6 <- Unify.typ tenv5 e1 e2
     -- FIXME: Use range origin over whole composition?
     let origin = Term.origin term1
-    let typ = Type.Fun origin a d e1
+    let typ = Type.Fun origin a d
     let type' = Zonk.typ tenvFinal typ
-    pure (Compose type' term1' term2', typ, tenv6)
+    pure (Compose type' term1' term2', typ, tenv5)
 
   -- TODO: Verify that this is correct.
   Generic _name _ t _ -> inferType' tenv0 t
@@ -192,8 +190,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     let localEnv = over TypeEnv.vs (a :) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
     let tenv2 = set TypeEnv.vs oldLocals tenv1
-    (b, c, e, tenv3) <- Unify.function tenv2 t1
-    let typ = Type.Fun origin (Type.Prod origin b a) c e
+    (b, c, tenv3) <- Unify.function tenv2 t1
+    let typ = Type.Fun origin (Type.Prod origin b a) c
         type' = Zonk.typ tenvFinal typ
         varType' = Zonk.typ tenvFinal a
     pure
@@ -245,13 +243,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         --
         -- TODO: This should be considered a drop.
         unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
-        (a, b, e, tenv'') <- Unify.function tenv' bodyType
+        (a, b, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
                 elseOrigin
                 (Type.Prod elseOrigin a unusedScrutinee)
                 b
-                e
         pure (Else body' elseOrigin, elseType, tenv'')
       Else body elseOrigin -> do
         (body', bodyType, tenv') <- inferType' tenv1 body
@@ -267,13 +264,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         --
         -- TODO: This should be considered a drop.
         unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
-        (a, b, e, tenv'') <- Unify.function tenv' bodyType
+        (a, b, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
                 elseOrigin
                 (Type.Prod elseOrigin a unusedScrutinee)
                 b
-                e
         pure (Else body' elseOrigin, elseType, tenv'')
     (typ, tenv3) <- case constructors' of
       -- FIXME: Assumes caseTypes is non-empty.
@@ -317,22 +313,19 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               | i <- [1 :: Int ..]
             ]
             $ replicate size Value
-      [r, s, t, p1, p2] <-
+      [r, s, t] <-
         fresh
           origin
           [ ("R", Stack),
             ("ClosureIn", Stack),
-            ("ClosureOut", Stack),
-            ("ClosurePermissions", Permission),
-            ("P", Permission)
+            ("ClosureOut", Stack)
           ]
-      let f = Type.Fun origin s t p1
+      let f = Type.Fun origin s t
           typ =
             Type.Fun
               origin
               (foldl' (Type.Prod origin) r (as ++ [f]))
               (Type.Prod origin r f)
-              p2
           type' = Zonk.typ tenvFinal typ
       pure (NewClosure type' size origin, typ, tenv0)
 
@@ -343,19 +336,17 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   NewVector _ size _ origin ->
     while (Term.origin term0) context $ do
-      [a, b, e] <-
+      [a, b] <-
         fresh
           origin
           [ ("R", Stack),
-            ("Item", Value),
-            ("P", Permission)
+            ("Item", Value)
           ]
       let typ =
             Type.Fun
               origin
               (foldl' (Type.Prod origin) a (replicate size b))
               (Type.Prod origin a (TypeConstructor origin "List" :@ b))
-              e
           type' = Zonk.typ tenvFinal typ
           b' = Zonk.typ tenvFinal b
       pure (NewVector type' size b' origin, typ, tenv0)
@@ -364,14 +355,13 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Push _ value origin ->
     while (Term.origin term0) context $ do
-      [a, e] <-
+      [a] <-
         fresh
           origin
-          [ ("S", Stack),
-            ("P", Permission)
+          [ ("S", Stack)
           ]
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
-      let typ = Type.Fun origin a (Type.Prod origin a t) e
+      let typ = Type.Fun origin a (Type.Prod origin a t)
       let type' = Zonk.typ tenvFinal typ
       pure (Push type' value' origin, typ, tenv1)
 
@@ -409,15 +399,14 @@ inferCase
   dataConstructors
   (Case qualified@(QualifiedName name) body origin) = do
     (body', bodyType, tenv1) <- inferType dictionary tenvFinal tenv0 body
-    (a1, b1, e1, tenv2) <- Unify.function tenv1 bodyType
+    (a1, b1, tenv2) <- Unify.function tenv1 bodyType
     case Map.lookup name $ view TypeEnv.sigs tenv2 of
       Just signature -> do
-        (a2, b2, e2, tenv3) <- Unify.function tenv2 signature
+        (a2, b2, tenv3) <- Unify.function tenv2 signature
         -- Note that we swap the consumption and production of the constructor
         -- to get the type of the deconstructor. The body consumes the fields.
         tenv4 <- Unify.typ tenv3 a1 a2
-        tenv5 <- Unify.typ tenv4 e1 e2
-        let typ = Type.Fun origin b2 b1 e1
+        let typ = Type.Fun origin b2 b1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
         dataConstructors' <- case partition (\ctor -> view DataConstructor.name ctor == unqualifiedName name) dataConstructors of
@@ -425,7 +414,7 @@ inferCase
             report $ Report.makeError $ Report.RedundantCase origin
             pure remaining
           (_covered, remaining) -> pure remaining
-        pure (Case qualified body' origin, typ, dataConstructors', tenv5)
+        pure (Case qualified body' origin, typ, dataConstructors', tenv4)
       Nothing ->
         ice
           "Mlatu.Infer.inferCase - case constructor missing signature after name resolution"
@@ -535,13 +524,11 @@ typeFromSignature tenv signature0 = do
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
       Signature.Bottom origin -> pure $ Type.Bottom origin
-      Signature.Function as bs es origin -> do
+      Signature.Function as bs origin -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack
         let typeVar = TypeVar origin var
-        es' <- traverse (fromVar origin) es
-        (me, es'') <- lift $ permissionVar origin es'
-        Forall origin var <$> makeFunction origin typeVar as typeVar bs es'' me
+        Forall origin var <$> makeFunction origin typeVar as typeVar bs
       Signature.Quantified vars a origin -> do
         original <- get
         (envVars, vars') <-
@@ -564,13 +551,11 @@ typeFromSignature tenv signature0 = do
             let var = Var name x kind
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
-      Signature.StackFunction r as s bs es origin -> do
+      Signature.StackFunction r as s bs origin -> do
         let var = fromVar origin
         r' <- go r
         s' <- go s
-        es' <- traverse var es
-        (me, es'') <- lift $ permissionVar origin es'
-        makeFunction origin r' as s' bs es'' me
+        makeFunction origin r' as s' bs
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
 
@@ -606,22 +591,11 @@ typeFromSignature tenv signature0 = do
       [Signature] ->
       Type ->
       [Signature] ->
-      [Type] ->
-      Maybe Type ->
       StateT SignatureEnv M Type
-    makeFunction origin r as s bs es me = do
+    makeFunction origin r as s bs = do
       as' <- traverse go as
       bs' <- traverse go bs
-      e <- case me of
-        Just e -> pure e
-        Nothing -> do
-          ex <- lift $ freshTypeId tenv
-          let var = Var "P" ex Permission
-          modify $ \env -> env {sigEnvAnonymous = var : sigEnvAnonymous env}
-          pure $ TypeVar origin var
-      pure $
-        Type.Fun origin (stack r as') (stack s bs') $
-          foldr (Type.Join origin) e es
+      pure $ Type.Fun origin (stack r as') (stack s bs')
       where
         stack :: Type -> [Type] -> Type
         stack = foldl' $ Type.Prod origin

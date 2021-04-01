@@ -16,7 +16,7 @@ where
 import Data.Map.Strict qualified as Map
 import Mlatu.Class (Class, Method)
 import Mlatu.Class qualified as Class
-import Mlatu.Definition (ConstructorDefinition, PermissionDefinition, WordDefinition)
+import Mlatu.Definition (ConstructorDefinition, WordDefinition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Infix qualified as Infix
 import Mlatu.Desugar.Quotations qualified as Quotations
@@ -66,10 +66,8 @@ fragment f d0 = do
   d2 <- foldlM enterIntrinsic d1 (view Fragment.intrinsics f)
   -- We enter declarations of all classes
   d3 <- foldlM enterClass d2 (view Fragment.classes f)
-  -- We declare all permissions
-  d4 <- foldlM declarePermission d3 (view Fragment.permissionDefinitions f)
   -- We resolve intrinsic type signatures
-  d5 <- foldlM resolveSignature d4 (view Intrinsic.name <$> view Fragment.intrinsics f)
+  d5 <- foldlM resolveSignature d3 (view Intrinsic.name <$> view Fragment.intrinsics f)
   -- We resolve class type signatures
   d6 <- foldlM resolveSignature d5 (concatMap (fmap (view Class.name) . view Class.methods) (view Fragment.classes f))
   -- We declare all words
@@ -78,18 +76,14 @@ fragment f d0 = do
   d8 <- foldlM declareConstructor d7 (view Fragment.constructorDefinitions f)
   -- We resolve the signatures of all words
   d9 <- foldlM resolveSignature d8 (view Definition.wordName <$> view Fragment.wordDefinitions f)
-  -- We resolve the signatures of all permissions
-  d10 <- foldlM resolveSignature d9 (view Definition.permissionName <$> view Fragment.permissionDefinitions f)
   --  We add metadata
-  d11 <- foldlM addMetadata d10 (view Fragment.metadata f)
+  d11 <- foldlM addMetadata d9 (view Fragment.metadata f)
   -- We enter the definitions of instances
   d12 <- foldlM defineInstance d11 (concatMap (view Instance.methods) (view Fragment.instances f))
   -- We enter the definitions of words
   d13 <- foldlM defineWord d12 (view Fragment.wordDefinitions f)
-  -- We enter the definitions of permissions
-  d14 <- foldlM definePermission d13 (view Fragment.permissionDefinitions f)
   -- We enter the definitions of constructors
-  foldlM defineConstructor d14 (view Fragment.constructorDefinitions f)
+  foldlM defineConstructor d13 (view Fragment.constructorDefinitions f)
 
 addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
@@ -168,45 +162,6 @@ declareType dictionary typ =
                 [ "Mlatu.Enter.declareType - type",
                   dquotes $ printQualified name,
                   "already declared or defined differently"
-                ]
-
-declarePermission ::
-  Dictionary -> PermissionDefinition () -> M Dictionary
-declarePermission dictionary definition =
-  let name = view Definition.permissionName definition
-      signature = view Definition.permissionSignature definition
-   in case Dictionary.lookup (Instantiated name []) dictionary of
-        -- Not previously declared or defined.
-        Nothing -> do
-          let entry =
-                Entry.Permission
-                  (view Definition.permissionOrigin definition)
-                  signature
-                  Nothing
-          pure $ Dictionary.insert (Instantiated name []) entry dictionary
-        -- Already declared with the same signature.
-        Just (Entry.Permission originalOrigin mSignature _)
-          | mSignature == signature ->
-            pure dictionary
-          | otherwise ->
-            do
-              report $
-                Report.makeError $
-                  Report.WordRedeclaration
-                    (Signature.origin signature)
-                    name
-                    signature
-                    originalOrigin
-                    (Just mSignature)
-              pure dictionary
-        -- Already declared or defined with a different signature.
-        Just {} ->
-          ice $
-            show $
-              hsep
-                [ "Mlatu.Enter.declarePermission - permission",
-                  dquotes $ printQualified name,
-                  "already declared or defined without signature or as a non-permission"
                 ]
 
 declareWord ::
@@ -296,10 +251,6 @@ resolveSignature dictionary name = do
     Just (Entry.Word merge origin (Just signature) body) -> do
       signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
       let entry = Entry.Word merge origin (Just signature') body
-      pure $ Dictionary.insert (Instantiated name []) entry dictionary
-    Just (Entry.Permission origin signature body) -> do
-      signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
-      let entry = Entry.Permission origin signature' body
       pure $ Dictionary.insert (Instantiated name []) entry dictionary
     Just (Entry.ClassMethod origin signature) -> do
       signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
@@ -551,55 +502,8 @@ defineConstructor dictionary definition = do
               "not previously declared"
             ]
 
-definePermission ::
-  Dictionary ->
-  PermissionDefinition () ->
-  M Dictionary
-definePermission dictionary definition = do
-  let name = view Definition.permissionName definition
-  resolved <- resolveAndDesugarPermission dictionary definition
-  errorCheckpoint
-  let resolvedSignature = view Definition.permissionSignature resolved
-  -- Note that we use the resolved signature here.
-  (typecheckedBody, typ) <-
-    typecheck dictionary (Just resolvedSignature) $
-      view Definition.permissionBody resolved
-  errorCheckpoint
-  case Dictionary.lookup (Instantiated name []) dictionary of
-    -- Previously declared with same signature, but not defined.
-    Just (Entry.Permission origin' signature' Nothing)
-      | resolvedSignature == signature' -> do
-        (flattenedBody, dictionary') <-
-          Quotations.desugar
-            dictionary
-            (qualifierFromName name)
-            $ Quantify.term typ typecheckedBody
-        let entry = Entry.Permission origin' resolvedSignature $ Just flattenedBody
-        pure $ Dictionary.insert (Instantiated name []) entry dictionary'
-    -- Already defined, not concatenable.
-    Just (Entry.Permission originalOrigin _sig _) -> do
-      report $
-        Report.makeError $
-          Report.WordRedefinition
-            (view Definition.permissionOrigin definition)
-            name
-            originalOrigin
-
-      pure dictionary
-    -- Not previously declared as word.
-    _nonDeclared ->
-      ice $
-        show $
-          hsep
-            [ "Mlatu.Enter.definePermission - defining permission",
-              dquotes $ printQualified name,
-              "not previously declared"
-            ]
-
 -- | Parses a source file into a program fragment.
 fragmentFromSource ::
-  -- | List of permissions granted to @main@.
-  [GeneralName] ->
   -- | Override name of @main@.
   Maybe Qualified ->
   -- | Initial source line (e.g. for REPL offset).
@@ -610,7 +514,7 @@ fragmentFromSource ::
   Text ->
   -- | Parsed program fragment.
   M (Fragment ())
-fragmentFromSource mainPermissions mainName line path source = do
+fragmentFromSource mainName line path source = do
   -- Sources are lexed into a stream of tokens.
 
   tokenized <- tokenize line path source
@@ -620,35 +524,11 @@ fragmentFromSource mainPermissions mainName line path source = do
   -- Datatype definitions are desugared into regular definitions, so that name
   -- resolution can find their names.
 
-  parsed <- Parse.fragment line path mainPermissions mainName tokenized
+  parsed <- Parse.fragment line path mainName tokenized
 
   errorCheckpoint
 
   pure parsed
-
-resolveAndDesugarPermission :: Dictionary -> PermissionDefinition () -> M (PermissionDefinition ())
-resolveAndDesugarPermission dictionary definition = do
-  -- Name resolution rewrites unqualified names into fully qualified names, so
-  -- that it's evident from a name which program element it refers to.
-
-  -- needs dictionary for declared names
-  resolved <- Resolve.run $ Resolve.permissionDefinition dictionary definition
-
-  errorCheckpoint
-
-  -- After names have been resolved, the precedences of operators are known, so
-  -- infix operators can be desugared into postfix syntax.
-
-  -- needs dictionary for operator metadata
-  postfix <- Infix.desugarPermission dictionary resolved
-
-  errorCheckpoint
-
-  -- In addition, now that we know which names refer to local variables,
-  -- quotations can be rewritten into closures that explicitly capture the
-  -- variables they use from the enclosing scope.
-
-  pure $ over Definition.permissionBody scope postfix
 
 resolveAndDesugarWord :: Dictionary -> WordDefinition () -> M (WordDefinition ())
 resolveAndDesugarWord dictionary definition = do

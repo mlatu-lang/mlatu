@@ -4,18 +4,6 @@ vocab mlatu {
   intrinsic swap [A, B] (A, B -> B, A)
 }
 
-permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P) {
-  with (+Exit)
-}
-
-permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P) {
-  with (+Fail)
-}
-
-permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P) {
-  with (+IO)
-}
-
 define call [R..., S...] (R..., (R... -> S...) -> S...) {
   _::mlatu::call
 }
@@ -34,9 +22,9 @@ about call {
     """
     Applies a closure to the stack.
 
-    This denotes modus ponens: if we have a program state 'R...', a permission
-    '+P', and a closure '(R... -> S... +P)' as evidence that we can convert
-    'R...' to 'S...' given '+P', then we can invoke the closure to produce the
+    This denotes modus ponens: if we have a program state 'R...' and a closure
+    '(R... -> S...)' as evidence that we can convert 'R...' to 'S...', then we
+    can invoke the closure to produce the
     new state 'S...'.
     """
   }

@@ -15,14 +15,11 @@ import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Definition (ConstructorDefinition (..))
 import Mlatu.Definition qualified as Definition
-import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Optics
@@ -74,7 +71,6 @@ desugarConstructor definition index constructor =
         ( Signature.Function
             (view DataConstructor.fields constructor)
             [resultSignature]
-            []
             origin
         )
         origin
