@@ -60,7 +60,6 @@ desugarPermission dictionary definition = do
             origin <- getTermOrigin
             results <- Parsec.many1 $
               termSatisfy $ \case
-                Word _ Operator.Infix _ _ _ -> False
                 Lambda {} -> False
                 _otherTerm -> True
             pure $ Term.compose () origin results
@@ -153,7 +152,6 @@ desugarWord dictionary definition = do
             origin <- getTermOrigin
             results <- Parsec.many1 $
               termSatisfy $ \case
-                Word _ Operator.Infix _ _ _ -> False
                 Lambda {} -> False
                 _otherTerm -> True
             pure $ Term.compose () origin results
@@ -233,8 +231,6 @@ toOperator operator = Expr.Infix
 
 binaryOperator :: GeneralName -> Rewriter (Term () -> Term () -> Term ())
 binaryOperator name = mapTerm $ \case
-  Word _ Operator.Infix name' _ origin
-    | name == name' -> Just $ binary name origin
   _nonBinaryOperator -> Nothing
 
 binary :: GeneralName -> Origin -> Term () -> Term () -> Term ()
@@ -242,7 +238,7 @@ binary name origin x y =
   Term.compose
     ()
     origin
-    [x, y, Word () Operator.Postfix name [] origin]
+    [x, y, Word () name [] origin]
 
 getTermOrigin :: Rewriter Origin
 getTermOrigin =

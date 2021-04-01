@@ -365,9 +365,9 @@ maybePrintTerms = \case
   (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
   (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
-  (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
+  (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
+  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
@@ -378,9 +378,9 @@ maybePrintTerms = \case
   (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (vsep [printMatch Nothing cases Nothing] `justVertical` xs)
   (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (vsep [printMatch Nothing cases (Just elseBody)] `justVertical` xs)
   (Push _ value _ : xs) -> Just (printValue value `justHoriz` xs)
-  (Word _ Operator.Postfix (QualifiedName (Qualified _ "drop")) [] o : xs) ->
+  (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
-  (Word _ fixity name args _ : xs) -> Just (printWord fixity name args `justHoriz` xs)
+  (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
   (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
   where
@@ -463,10 +463,8 @@ printCase n (Lambda _ name _ body _) =
     go ns b = (ns, b)
 printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
 
-printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
-printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
-  | not (Text.any isLetter name) = parens $ pretty name
-printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (printType <$> xs)) args
+printWord :: GeneralName -> [Type] -> Doc a
+printWord word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (printType <$> xs)) args
 
 printValue :: Value a -> Doc b
 printValue value = case value of

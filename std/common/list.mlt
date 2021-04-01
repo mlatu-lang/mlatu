@@ -19,13 +19,13 @@ instance Ne for List[Int] { define <> (List[Int], List[Int] -> Bool) { (=) not }
 
 instance Eq for List[Int] { define = (List[Int], List[Int] -> Bool) {
   -> xs, ys;
-  if (xs length <> ys length) { false }
+  if (xs length ys length <>) { false }
   else {
     match (xs head_tail)
     case some {
       unpair -> x, xs_;
       match (ys head_tail)
-      case some { unpair -> y, ys_; if (x <> y) { false } else { xs_ = ys_ } }
+      case some { unpair -> y, ys_; if (x y <>) { false } else { xs_ ys_ =} }
       case none { true }
     }
     case none { true }
@@ -40,8 +40,8 @@ instance Gt for List[Int] { define > (List[Int], List[Int] -> Bool) {
     match (ys head_tail)
     case some {
       unpair -> y, ys_;
-      if (x > y) { true }
-      else { if (x < y) { false } else { xs_ > ys_ } }
+      if (x y >) { true }
+      else { if (x y <) { false } else { xs_ ys_ >} }
     }
     case none { true }
   }
@@ -158,7 +158,7 @@ define init_last [T] (List[T] -> Optional[Pair[List[T], T]]) {
 
 define insert_nth [T] (List[T], T, Int -> List[T]) {
   -> element, index;
-  { -> x, i; if (i = index) { [element, x] } else { [x] } } map_index concat
+  { -> x, i; if (i index =) { [element, x] } else { [x] } } map_index concat
 }
 
 define join [T] (List[List[T]], List[T] -> List[T]) {
@@ -245,16 +245,16 @@ define or (List[Bool] -> Bool) { true \(|) fold_left }
 
 define pad_head [T] (List[T], Int, T -> List[T]) {
   -> list, min_length, elt;
-  if (list length < min_length) {
-    list (elt (min_length - list length) replicate) prepend
+  if (list length min_length <) {
+    list (elt (min_length list length -) replicate) prepend
   }
   else { list }
 }
 
 define pad_tail [T] (List[T], Int, T -> List[T]) {
   -> list, min_length, elt;
-  if (list length < min_length) {
-    (elt (min_length - list length) replicate) list prepend
+  if (list length min_length <) {
+    (elt (min_length list length -) replicate) list prepend
   }
   else { list }
 }
@@ -287,13 +287,13 @@ define remove [T] (List[T], T -> List[T]) { -> x; { x (=) } filter_out }
 
 define remove_nth [T] (List[T], Int -> List[T]) {
   -> index;
-  { -> x, i; if (i = index) { [] } else { [x] } } map_index concat
+  { -> x, i; if (i index =) { [] } else { [x] } } map_index concat
 }
 
 define replicate [T] (T, Int -> List[T]) {
   -> value, count;
-  if (count <= 0) { [] }
-  else { value (count - 1) replicate value suffix }
+  if (count 0 <=) { [] }
+  else { value (count 1 -) replicate value suffix }
 }
 
 define reverse [T] (List[T] -> List[T]) {
@@ -308,7 +308,7 @@ define rights [A, B] (List[Either[A, B]] -> List[B]) {
 
 define set [T] (List[T], T, Int -> List[T]) {
   -> element, index;
-  do  (map_index) { -> x, i; if (i = index) { element } else { x } }
+  do  (map_index) { -> x, i; if (i index =) { element } else { x } }
 }
 
 define suffix [T] (List[T], T -> List[T]) { once append }
@@ -351,6 +351,6 @@ define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
 define _::map_index::helper [A, B, +P] (List[A], (A, Int -> B +P), Int -> List[B] +P) {
   -> f, i;
   match (head_tail)
-  case some { unpair -> h, t; (t f (i + 1) helper) (h i f call) prefix }
+  case some { unpair -> h, t; (t f (i 1 +) helper) (h i f call) prefix }
   case none { [] }
 }

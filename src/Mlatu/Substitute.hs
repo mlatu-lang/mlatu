@@ -80,9 +80,8 @@ term tenv x a = recur
           <*> go elemType
           <*> pure origin
       Push tref value origin -> Push <$> go tref <*> pure value <*> pure origin
-      Word tref fixity name args origin ->
+      Word tref name args origin ->
         Word <$> go tref
-          <*> pure fixity
           <*> pure name
           <*> traverse go args
           <*> pure origin

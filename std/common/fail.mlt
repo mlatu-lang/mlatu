@@ -14,7 +14,7 @@ define assert [+P] (String, (-> Bool +P) -> +Fail +P) {
 
 define assert_eq [T] (String, T, T -> +Fail) {
   -> message, x, y;
-  message { x = y } assert
+  message { x y = } assert
 }
 
 define exit [R..., S...] (R..., Int -> S... +Exit) { _::mlatu::exit }

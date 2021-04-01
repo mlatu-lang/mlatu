@@ -33,8 +33,8 @@ instance Ge for String { define >= (String, String -> Bool) { (<) not } }
 
 instance Read for Bool { define read (String -> Optional[Bool]) {
   -> s;
-  if (s = "true") { true some }
-  else { if (s = "false") { false some } else { none } }
+  if (s "true" =) { true some }
+  else { if (s "false" =) { false some } else { none } }
 }}
 
 instance Read for Double { define read (String -> Optional[Double]) { _::mlatu::read_float64 } }
@@ -43,7 +43,7 @@ instance Read for Int { define read (String -> Optional[Int]) { _::mlatu::read_i
 
 instance Read for Char { define read (String -> Optional[Char]) {
   chars -> cs;
-  if (cs length = 1) { cs head }
+  if (cs length 1 =) { cs head }
   else { none }
 }}
 

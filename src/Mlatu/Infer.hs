@@ -376,7 +376,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       pure (Push type' value' origin, typ, tenv1)
 
   -- FIXME: Should generic parameters be restricted to none?
-  Word _ _fixity name _ origin ->
+  Word _ name _ origin ->
     while (Term.origin term0) context $
       inferCall dictionary tenvFinal tenv0 name origin
   where
@@ -495,7 +495,6 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
       pure
         ( Word
             type''
-            Operator.Postfix
             mangled
             params''
             origin,

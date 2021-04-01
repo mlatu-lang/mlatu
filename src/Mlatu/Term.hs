@@ -35,13 +35,11 @@ import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Name
   ( Closed,
     ClosureIndex (..),
-    ConstructorIndex (..),
     GeneralName (..),
     LocalIndex (..),
     Qualified (..),
     Unqualified (..),
   )
-import Mlatu.Operator (Fixity (Postfix))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -81,7 +79,7 @@ data Term a
   | -- | @push v@: push of a value.
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
-    Word !a !Fixity !GeneralName ![Type] !Origin
+    Word !a !GeneralName ![Type] !Origin
   deriving (Ord, Eq, Show)
 
 -- | The type of coercion to perform.
@@ -112,7 +110,7 @@ data Else a
   deriving (Ord, Eq, Show)
 
 defaultElseBody :: a -> Origin -> Term a
-defaultElseBody a = Word a Postfix (QualifiedName (Qualified Vocabulary.global "abort")) []
+defaultElseBody a = Word a (QualifiedName (Qualified Vocabulary.global "abort")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
@@ -206,7 +204,7 @@ origin term = case term of
   NewVector _ _ _ o -> o
   Match _ _ _ _ o -> o
   Push _ _ o -> o
-  Word _ _ _ _ o -> o
+  Word _ _ _ o -> o
 
 quantifierCount :: Term a -> Int
 quantifierCount = countFrom 0
@@ -230,7 +228,7 @@ metadata term = case term of
   NewClosure t _ _ -> t
   NewVector t _ _ _ -> t
   Push t _ _ -> t
-  Word t _ _ _ _ -> t
+  Word t _ _ _ -> t
 
 stripMetadata :: Term a -> Term ()
 stripMetadata term = case term of
@@ -243,7 +241,7 @@ stripMetadata term = case term of
   NewClosure _ a b -> NewClosure () a b
   NewVector _ a _ b -> NewVector () a () b
   Push _ a b -> Push () (stripValue a) b
-  Word _ a b c d -> Word () a b c d
+  Word _ a b c -> Word () a b c
   where
     stripCase :: Case a -> Case ()
     stripCase case_ = case case_ of

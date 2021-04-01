@@ -143,15 +143,15 @@ instance Gt for Double { define >= (Double, Double -> Bool) { (<) not } }
 
 instance Gt for Bool { define >= (Bool, Bool -> Bool) { (<) not } }
 
-instance Neg for Double { define neg (Double -> Double) { -> x; 0.0 - x } }
+instance Neg for Double { define neg (Double -> Double) { -> x; 0.0 x -} }
 
-instance Neg for Int { define neg (Int -> Int) { -> x; 0 - x } }
+instance Neg for Int { define neg (Int -> Int) { -> x; 0 x -} }
 
 instance Zero for Double { define zero (-> Double) { 0.0 } }
 
 instance Zero for Int { define zero (-> Int) { 0 } }
 
-define abs [T] (T -> T) { -> x; if (x < zero) { x neg } else { x } }
+define abs [T] (T -> T) { -> x; if (x zero <) { x neg } else { x } }
 
 define acos (Double -> Double) { _::mlatu::acos_float64 }
 
@@ -173,7 +173,7 @@ define cos (Double -> Double) { _::mlatu::cos_float64 }
 
 define cosh (Double -> Double) { _::mlatu::cosh_float64 }
 
-define div_mod [T] (T, T -> T, T +Fail) { -> x, y; (x / y) (x % y) }
+define div_mod [T] (T, T -> T, T +Fail) { -> x, y; (x y /) (x y %) }
 
 define exp (Double -> Double) { _::mlatu::exp_float64 }
 
@@ -181,9 +181,9 @@ define floor (Double -> Double) { _::mlatu::floor_float64 }
 
 define log (Double -> Double) { _::mlatu::log_float64 }
 
-define max [T] (T, T -> T) { -> x, y; if (x > y) { x } else { y } }
+define max [T] (T, T -> T) { -> x, y; if (x y >) { x } else { y } }
 
-define min [T] (T, T -> T) { -> x, y; if (x < y) { x } else { y } }
+define min [T] (T, T -> T) { -> x, y; if (x y <) { x } else { y } }
 
 define pi (-> Double) { 3.141592653589793 }
 

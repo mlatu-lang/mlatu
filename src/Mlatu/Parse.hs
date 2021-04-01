@@ -539,7 +539,7 @@ instanceParser = (<?> "class instance") $ do
   origin <- getTokenOrigin <* parserMatch Token.Instance
   suffix <- unqualifiedNameParser <?> "class name"
   name <- Qualified <$> Parsec.getState <*> pure suffix
-  parserMatch Token.For
+  _ <- parserMatch Token.For
   target <- basicTypeParser
   methods <- blockedParser $ many basicDefinitionParser
   pure
@@ -603,7 +603,7 @@ reference =
     *> Parsec.choice
       [ do
           origin <- getTokenOrigin
-          Word () Operator.Postfix
+          Word ()
             <$> (fst <$> nameParser) <*> pure [] <*> pure origin,
         termParser
       ]
@@ -624,7 +624,7 @@ termParser = (<?> "expression") $ do
     [ Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
       do
         (name, fixity) <- nameParser
-        pure (Word () fixity name [] origin),
+        pure (Word () name [] origin),
       Parsec.try sectionParser,
       Parsec.try groupParser <?> "parenthesized expression",
       vectorParser,
@@ -659,7 +659,6 @@ sectionParser =
             let call =
                   Word
                     ()
-                    Operator.Postfix
                     (UnqualifiedName function)
                     []
                     origin
@@ -682,11 +681,10 @@ sectionParser =
                 operand
                   ++ [ Word
                          ()
-                         Operator.Postfix
                          (QualifiedName (Qualified Vocabulary.intrinsic "swap"))
                          []
                          origin,
-                       Word () Operator.Postfix (UnqualifiedName function) [] origin
+                       Word () (UnqualifiedName function) [] origin
                      ]
         ]
 
@@ -807,7 +805,6 @@ withParser = (<?> "'with' expression") $ do
       [ Term.permissionCoercion permits () origin,
         Word
           ()
-          Operator.Postfix
           (QualifiedName (Qualified Vocabulary.intrinsic "call"))
           []
           origin
@@ -854,7 +851,6 @@ makeLambda parsed body origin =
               ()
               ( Word
                   ()
-                  Operator.Postfix
                   (QualifiedName (Qualified Vocabulary.intrinsic "drop"))
                   []
                   origin

@@ -95,7 +95,7 @@ operatorMetadata dictionary =
             -- TODO: Avoid redundant decomposition.
             Just (Entry.Metadata _ term)
               -- Just associativity.
-              | [Term.Word _ _ (UnqualifiedName (Unqualified assoc)) _ _] <-
+              | [Term.Word _ (UnqualifiedName (Unqualified assoc)) _ _] <-
                   Term.decompose term,
                 Just associativity <- associativityFromName assoc ->
                 yield associativity defaultPrecedence
@@ -106,7 +106,7 @@ operatorMetadata dictionary =
                 yield defaultAssociativity $
                   Operator.Precedence $ fromInteger prec
               -- Associativity and precedence.
-              | [ Term.Word _ _ (UnqualifiedName (Unqualified assoc)) _ _,
+              | [ Term.Word _ (UnqualifiedName (Unqualified assoc)) _ _,
                   Term.Push _ (Term.Integer (IntegerLiteral prec _)) _
                   ] <-
                   Term.decompose term,

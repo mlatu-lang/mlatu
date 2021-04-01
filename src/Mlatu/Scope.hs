@@ -63,7 +63,7 @@ scope = scopeTerm [0]
         recur term@NewClosure {} = term
         recur term@NewVector {} = term
         recur (Push _ value origin) = Push () (scopeValue stack value) origin
-        recur (Word _ _ (LocalName index) _ origin) =
+        recur (Word _ (LocalName index) _ origin) =
           Push () (scopeValue stack (Local index)) origin
         recur term@Word {} = term
 

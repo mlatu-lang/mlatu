@@ -71,8 +71,8 @@ term tenv0 = go
         NewVector (zonk tref) size (zonk elemType) origin
       Push tref value' origin ->
         Push (zonk tref) (value tenv0 value') origin
-      Word tref fixity name params origin ->
-        Word (zonk tref) fixity name params origin
+      Word tref name params origin ->
+        Word (zonk tref) name params origin
 
 value :: TypeEnv -> Value Type -> Value Type
 value tenv0 = go
