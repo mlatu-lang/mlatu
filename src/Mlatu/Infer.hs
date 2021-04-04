@@ -37,7 +37,6 @@ import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Monad (M)
 import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Regeneralize (regeneralize)
@@ -176,8 +175,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   -- TODO: Verify that this is correct.
   Generic _name _ t _ -> inferType' tenv0 t
-  Group {} ->
-    ice "Mlatu.Infer.inferType - group expression should not appear during type inference"
+  Group term1 -> inferType' tenv0 term1
   -- A local variable binding in Mlatu is in fact a lambda term in the ordinary
   -- lambda-calculus sense. We infer the type of its body in the environment
   -- extended with a fresh local bound to a fresh type variable, and produce a
@@ -551,11 +549,6 @@ typeFromSignature tenv signature0 = do
             let var = Var name x kind
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
-      Signature.StackFunction r as s bs origin -> do
-        let var = fromVar origin
-        r' <- go r
-        s' <- go s
-        makeFunction origin r' as s' bs
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
 
@@ -638,15 +631,9 @@ typeKind dictionary = go
             Qualified qualifier unqualified
               | qualifier == Vocabulary.global -> case unqualified of
                 "Bottom" -> pure Stack
-                "Fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
+                "Fun" -> pure $ Stack :-> Stack :-> Value
                 "Prod" -> pure $ Stack :-> Value :-> Stack
                 "Sum" -> pure $ Value :-> Value :-> Value
-                "Unsafe" -> pure Label
-                "Void" -> pure Value
-                "IO" -> pure Label
-                "Fail" -> pure Label
-                "Join" -> pure $ Label :-> Permission :-> Permission
-                "List" -> pure $ Value :-> Value
                 _noKind ->
                   ice $
                     show $
@@ -665,7 +652,6 @@ typeKind dictionary = go
                       "in dictionary",
                       Dictionary.printDictionary dictionary
                     ]
-      TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> pure k
       TypeConstant _origin (Var _name _ k) -> pure k
       Forall _origin _ t' -> go t'

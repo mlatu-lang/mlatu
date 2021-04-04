@@ -1,3 +1,4 @@
+/*
 class And[T] { method & (T, T -> T) }
 
 class LazyAnd[T] { method && (T, (-> T) -> T) }
@@ -11,19 +12,20 @@ class Or[T] { method | (T, T -> T) }
 class LazyOr[T] { method || (T, (-> T) -> T) }
 
 class Xor[A] { method ~ (A, A -> A) }
-
+*/
 
 type Bool {   case false case true }
 
+/*
 instance And for Int { define & (Int, Int -> Int) { _::mlatu::and_int64 } }
 
-instance And for Bool { define & (Bool, Bool -> Bool) { swap (not) if { drop false } else {} } }
+instance And for Bool { define & (Bool, Bool -> Bool) { not if { drop false } else {} } }
 
 instance LazyAnd for Bool { define && (Bool, (-> Bool) -> Bool) { swap if { call } else { drop false } } }
 
-instance Implies for Bool { define --> (Bool, Bool -> Bool) { swap (not) if { drop true } else {} } }
+instance Implies for Bool { define --> (Bool, Bool -> Bool) { not if { drop true } else {} } }
 
-instance Implies for Bool { define --> (Int, Int -> Int) { swap not (|) } }
+instance Implies for Int { define --> (Int, Int -> Int) { swap not (|) } }
 
 instance Not for Bool { define not (Bool -> Bool) { if { false } else { true } } }
 
@@ -38,20 +40,21 @@ instance LazyOr for Bool { define || (Bool, (-> Bool) -> Bool) { swap if { drop 
 instance Xor for Int { define ~ (Int, Int -> Int) { _::mlatu::xor_int64 } }
 
 instance Xor for Bool { define ~ (Bool, Bool -> Bool) { swap if { not } else {} } }
+*/
 
 define ---> (Bool, (-> Bool) -> Bool) {
-  swap (not)
+  swap not
   if { drop true }
   else { call }
 }
 
-define until [R...] (R..., (R... -> R..., Bool) -> R...) {
+define until (forall (R : Stack) . R, (R -> R, Bool) -> R) {
   -> f;
   if (f call not) { f until }
   else {}
 }
 
-define while [R...] (R..., (R... -> R..., Bool) -> R...) {
+define while (forall (R : Stack) . R, (R -> R, Bool) -> R) {
   -> f;
   if (f call) { f while }
   else {}

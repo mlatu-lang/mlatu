@@ -36,4 +36,3 @@ tvks tenv x = go (Zonk.typ tenv x)
     go (a :@ b) = Map.union (go a) (go b)
     go TypeConstructor {} = Map.empty
     go TypeConstant {} = Map.empty
-    go TypeValue {} = Map.empty

@@ -25,7 +25,7 @@ import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
 import Mlatu.Monad (M, runMlatu, runMlatuExceptT)
-import Mlatu.Name (GeneralName, Qualified)
+import Mlatu.Name (Qualified)
 import Mlatu.Tokenize (tokenize)
 import Relude
 

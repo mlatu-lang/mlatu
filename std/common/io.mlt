@@ -15,9 +15,9 @@ define get_line (-> String) { _::mlatu::get_line }
 
 define newline (->) { "\n" print }
 
-define print [T] (T ->) { show _::mlatu::print }
+define print (forall T . T ->) { show _::mlatu::print }
 
-define println [T] (T ->) { print newline }
+define println (forall T . T ->) { print newline }
 
 define read_file (String -> String) { _::mlatu::read_file }
 

@@ -1,9 +1,9 @@
 vocab mlatu {
-  intrinsic abort [R..., S...] (R..., String -> S...)
-  intrinsic exit [R..., S...] (R..., Int -> S...)
+  intrinsic abort (forall (R S : Stack) . R, String -> S)
+  intrinsic exit (forall (R S : Stack) . R, Int -> S)
 }
 
-define abort [R..., S...] (R... -> S...) { "abort called" fail }
+define abort (forall (R S : Stack) . R -> S) { "abort called" fail }
 
 define assert (String, (-> Bool) ->) {
   -> message, test;
@@ -12,11 +12,11 @@ define assert (String, (-> Bool) ->) {
   else {}
 }
 
-define assert_eq [T] (String, T, T ->) {
+define assert_eq (forall T . String, T, T ->) {
   -> message, x, y;
   message { x y = } assert
 }
 
-define exit [R..., S...] (R..., Int -> S...) { _::mlatu::exit }
+define exit (forall (R S : Stack) . R, Int -> S) { _::mlatu::exit }
 
-define fail [R..., S...] (R..., String -> S...) { _::mlatu::abort }
+define fail (forall (R S : Stack) . R, String -> S) { _::mlatu::abort }

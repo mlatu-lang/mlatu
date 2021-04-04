@@ -16,7 +16,6 @@ module Mlatu.Dictionary
     insert,
     lookup,
     member,
-    operatorMetadata,
     signatures,
     toList,
     typeNames,
@@ -28,9 +27,7 @@ where
 import Data.Map.Strict qualified as Map
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
-import Mlatu.Informer (Informer (..))
 import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Literal (IntegerLiteral (IntegerLiteral))
 import Mlatu.Name
   ( GeneralName (UnqualifiedName),
     Qualified (Qualified),
@@ -38,12 +35,8 @@ import Mlatu.Name
     isOperatorName,
     qualifierFromName,
   )
-import Mlatu.Operator (Operator (Operator))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Pretty (printInstantiated)
-import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
-import Mlatu.Term qualified as Term
 import Optics
 import Prettyprinter (Doc, vsep)
 import Relude hiding (empty, fromList, toList)
@@ -77,72 +70,6 @@ lookup name dictionary = Map.lookup name (view entries dictionary)
 -- | Whether a name is present in the dictionary.
 member :: Instantiated -> Dictionary -> Bool
 member = (. view entries) . Map.member
-
--- | Compiles all operator metadata for infix desugaring.
-operatorMetadata ::
-  (Informer m) => Dictionary -> m (Map Qualified Operator)
-operatorMetadata dictionary =
-  Map.fromList
-    <$> traverse
-      getMetadata
-      (filter isOperatorName $ wordNames dictionary)
-  where
-    getMetadata :: (Informer m) => Qualified -> m (Qualified, Operator)
-    getMetadata name =
-      let key = Qualified (qualifierFromName name) (Unqualified "operator")
-       in case lookup (Instantiated key []) dictionary of
-            -- TODO: Report invalid metadata.
-            -- TODO: Avoid redundant decomposition.
-            Just (Entry.Metadata _ term)
-              -- Just associativity.
-              | [Term.Word _ (UnqualifiedName (Unqualified assoc)) _ _] <-
-                  Term.decompose term,
-                Just associativity <- associativityFromName assoc ->
-                yield associativity defaultPrecedence
-              -- Just precedence.
-              | [Term.Push _ (Term.Integer (IntegerLiteral prec _)) _] <-
-                  Term.decompose term,
-                validPrecedence prec ->
-                yield defaultAssociativity $
-                  Operator.Precedence $ fromInteger prec
-              -- Associativity and precedence.
-              | [ Term.Word _ (UnqualifiedName (Unqualified assoc)) _ _,
-                  Term.Push _ (Term.Integer (IntegerLiteral prec _)) _
-                  ] <-
-                  Term.decompose term,
-                Just associativity <- associativityFromName assoc,
-                validPrecedence prec ->
-                yield associativity $
-                  Operator.Precedence $ fromInteger prec
-              | otherwise -> do
-                report $
-                  Report.makeWarning $
-                    Report.InvalidOperatorMetadata
-                      (Term.origin term)
-                      name
-                      term
-
-                yield defaultAssociativity defaultPrecedence
-            _noMetadata -> yield defaultAssociativity defaultPrecedence
-      where
-        associativityFromName "left" = Just Operator.Leftward
-        associativityFromName "right" = Just Operator.Rightward
-        associativityFromName _ = Nothing
-
-        validPrecedence = liftA2 (&&) (>= 0) (<= 9)
-
-        defaultPrecedence = Operator.Precedence 6
-        defaultAssociativity = Operator.Nonassociative
-
-        yield associativity precedence =
-          pure
-            ( name,
-              Operator
-                { Operator.associativity = associativity,
-                  Operator.name = name,
-                  Operator.precedence = precedence
-                }
-            )
 
 -- | All type signatures (for words or traits) in the dictionary.
 signatures :: Dictionary -> [(Qualified, Signature)]

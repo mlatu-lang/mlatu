@@ -21,7 +21,6 @@ module Mlatu.Definition
     mainName,
     wordName,
     wordBody,
-    wordFixity,
     wordInferSignature,
     wordMerge,
     wordOrigin,
@@ -34,8 +33,6 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (ConstructorIndex, Qualified (..))
-import Mlatu.Operator (Fixity)
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -48,7 +45,6 @@ import Relude hiding (Type)
 data WordDefinition a = WordDefinition
   { _wordName :: !Qualified,
     _wordBody :: !(Term a),
-    _wordFixity :: !Fixity,
     _wordInferSignature :: !Bool,
     _wordMerge :: !Merge,
     _wordOrigin :: !Origin,
@@ -80,7 +76,6 @@ main ::
 main mName term =
   WordDefinition
     { _wordBody = term,
-      _wordFixity = Operator.Postfix,
       _wordInferSignature = True,
       _wordMerge = Merge.Compose,
       _wordName = fromMaybe mainName mName,
@@ -88,11 +83,9 @@ main mName term =
       _wordSignature =
         Signature.Quantified
           [Parameter o "R" Stack Nothing]
-          ( Signature.StackFunction
-              (Signature.Variable "R" o)
-              []
-              (Signature.Variable "R" o)
-              []
+          ( Signature.Function
+              [Signature.Variable "R" o]
+              [Signature.Variable "R" o]
               o
           )
           o

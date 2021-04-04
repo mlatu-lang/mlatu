@@ -42,6 +42,7 @@ vocab mlatu {
   intrinsic xor_int64 (Int, Int -> Int)
 }
 
+/*
 class Mod[T] { method % (T, T -> T) }
 
 class Mul[T] { method * (T, T -> T) }
@@ -67,7 +68,7 @@ class Ge[T] { method >= (T, T -> Bool) }
 class Neg[T] { method neg (T -> T) }
 
 class Zero[T] { method zero (-> T) }
-
+*/
 
 type Char {}
 
@@ -75,6 +76,7 @@ type Double {}
 
 type Int {}
 
+/*
 instance Mod for Double { define % (Double, Double -> Double) { _::mlatu::mod_float64 } }
 
 instance Mod for Int { define % (Int, Int -> Int) { _::mlatu::mod_int64 } }
@@ -150,8 +152,9 @@ instance Neg for Int { define neg (Int -> Int) { -> x; 0 x -} }
 instance Zero for Double { define zero (-> Double) { 0.0 } }
 
 instance Zero for Int { define zero (-> Int) { 0 } }
+*/
 
-define abs [T] (T -> T) { -> x; if (x zero <) { x neg } else { x } }
+define abs (forall T . T -> T) { dup if (zero <) { neg } else {} }
 
 define acos (Double -> Double) { _::mlatu::acos_float64 }
 
@@ -173,7 +176,7 @@ define cos (Double -> Double) { _::mlatu::cos_float64 }
 
 define cosh (Double -> Double) { _::mlatu::cosh_float64 }
 
-define div_mod [T] (T, T -> T, T) { -> x, y; (x y /) (x y %) }
+define div_mod (forall T . T, T -> T, T) { -> x, y; (x y /) (x y %) }
 
 define exp (Double -> Double) { _::mlatu::exp_float64 }
 
@@ -181,9 +184,9 @@ define floor (Double -> Double) { _::mlatu::floor_float64 }
 
 define log (Double -> Double) { _::mlatu::log_float64 }
 
-define max [T] (T, T -> T) { -> x, y; if (x y >) { x } else { y } }
+define max (forall T . T, T -> T) { dup2 if (>) { drop } else { nip } }
 
-define min [T] (T, T -> T) { -> x, y; if (x y <) { x } else { y } }
+define min (forall T . T, T -> T) { dup2 if (<) { drop } else { nip } }
 
 define pi (-> Double) { 3.141592653589793 }
 

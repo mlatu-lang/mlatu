@@ -15,7 +15,6 @@ module Mlatu.Signature
     _Function,
     _Quantified,
     _Variable,
-    _StackFunction,
     _Type,
     origin,
   )
@@ -41,13 +40,6 @@ data Signature
     Quantified ![Parameter] !Signature !Origin
   | -- | @T@
     Variable !GeneralName !Origin
-  | -- | @R..., A, B -> S..., C, D +P +Q@
-    StackFunction
-      !Signature
-      ![Signature]
-      !Signature
-      ![Signature]
-      !Origin
   | -- | Produced when generating signatures for lifted quotations after
     -- typechecking.
     Type !Type
@@ -61,8 +53,6 @@ instance Eq Signature where
   Function a b _ == Function c d _ = (a, b) == (c, d)
   Quantified a b _ == Quantified c d _ = (a, b) == (c, d)
   Variable a _ == Variable b _ = a == b
-  StackFunction a b c d _ == StackFunction e f g h _ =
-    (a, b, c, d) == (e, f, g, h)
   _ == _ = False
 
 deriving instance Ord Signature
@@ -74,5 +64,4 @@ origin signature = case signature of
   Function _ _ o -> o
   Quantified _ _ o -> o
   Variable _ o -> o
-  StackFunction _ _ _ _ o -> o
   Type t -> Type.origin t

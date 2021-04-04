@@ -128,12 +128,6 @@ signature dictionary vocabulary = go
     go (Signature.Variable name origin) =
       Signature.Variable
         <$> typeName dictionary vocabulary name origin <*> pure origin
-    go (Signature.StackFunction r as s bs origin) =
-      Signature.StackFunction r
-        <$> traverse go as
-        <*> pure s
-        <*> traverse go bs
-        <*> pure origin
     go sig@Signature.Type {} = pure sig
 
 definitionName,

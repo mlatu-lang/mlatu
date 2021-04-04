@@ -175,7 +175,7 @@ word name args = do
                       pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
-        Just (e@(Entry.Constructor origin n sig (Just (ConstructorIndex index, size))), b) -> do
+        Just (e@Entry.Constructor {}, b) -> do
           when b $ addToDo (Instantiated name args) e
           pure $ "(stack, closures) = " <> rustifyInstantiated (Instantiated name args) <> "(stack, closures);"
         Just (Entry.Word _ _ _ Nothing, _) -> case name of

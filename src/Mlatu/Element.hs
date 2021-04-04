@@ -11,18 +11,14 @@
 module Mlatu.Element
   ( Element (..),
     _Intrinsic,
-    _Class,
     _WordDefinition,
     _Metadata,
     _Term,
     _TypeDefinition,
-    _Instance,
   )
 where
 
-import Mlatu.Class (Class)
 import Mlatu.Definition (WordDefinition)
-import Mlatu.Instance (Instance)
 import Mlatu.Intrinsic (Intrinsic)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Term (Term)
@@ -33,10 +29,6 @@ import Optics.TH (makePrisms)
 data Element a
   = -- | @intrinsic@
     Intrinsic !Intrinsic
-  | -- | @instance@
-    Instance !(Instance a)
-  | -- | @class@
-    Class !Class
   | -- | @define@
     WordDefinition !(WordDefinition a)
   | -- | @about@

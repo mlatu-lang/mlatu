@@ -33,9 +33,7 @@ scope = scopeTerm [0]
         recur Generic {} =
           ice
             "Mlatu.Scope.scope - generic expression should not appear before scope resolution"
-        recur Group {} =
-          ice
-            "Mlatu.Scope.scope - group expression should not appear after infix desugaring"
+        recur term@Group {} = term
         recur (Lambda _ name _ a origin) =
           Lambda
             ()

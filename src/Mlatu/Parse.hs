@@ -16,8 +16,6 @@ where
 
 import Data.List (findIndex)
 import Data.Map.Strict qualified as Map
-import Mlatu.Class (Class (..), Method (..))
-import Mlatu.Class qualified as Class
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Definition (WordDefinition (..))
@@ -31,8 +29,6 @@ import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..), errorCheckpoint)
-import Mlatu.Instance (Instance (..))
-import Mlatu.Instance qualified as Instance
 import Mlatu.Intrinsic (Intrinsic (..))
 import Mlatu.Intrinsic qualified as Intrinsic
 import Mlatu.Kind (Kind (..))
@@ -48,7 +44,6 @@ import Mlatu.Name
     Root (Absolute, Relative),
     Unqualified (..),
   )
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
@@ -118,7 +113,7 @@ generalName line path text = do
     Left parseError -> do
       report $ Report.parseError parseError
       halt
-    Right (name, _) -> pure name
+    Right name -> pure name
 
 fragmentParser ::
   Maybe Qualified -> Parser (Fragment ())
@@ -138,17 +133,13 @@ partitionElements mainName = rev . foldr go mempty
     rev :: Fragment () -> Fragment ()
     rev f =
       over Fragment.intrinsics reverse $
-        over Fragment.instances reverse $
-          over Fragment.classes reverse $
-            over Fragment.wordDefinitions reverse $
-              over Fragment.metadata reverse $
-                over Fragment.types reverse f
+        over Fragment.wordDefinitions reverse $
+          over Fragment.metadata reverse $
+            over Fragment.types reverse f
 
     go :: Element () -> Fragment () -> Fragment ()
     go e acc = case e of
       Element.Intrinsic x -> over Fragment.intrinsics (x :) acc
-      Element.Instance x -> over Fragment.instances (x :) acc
-      Element.Class x -> over Fragment.classes (x :) acc
       Element.WordDefinition x -> over Fragment.wordDefinitions (x :) acc
       Element.Metadata x -> over Fragment.metadata (x :) acc
       Element.TypeDefinition x -> over Fragment.types (x :) acc
@@ -189,7 +180,7 @@ vocabularyParser :: Parser [Element ()]
 vocabularyParser = (<?> "vocabulary definition") $ do
   parserMatch_ Token.Vocab
   original@(Qualifier _ outer) <- Parsec.getState
-  (vocabularyName, _) <- nameParser <?> "vocabulary name"
+  vocabularyName <- nameParser <?> "vocabulary name"
   let (inner, name) = case vocabularyName of
         QualifiedName
           (Qualified (Qualifier _root qualifier) (Unqualified unqualified)) ->
@@ -228,7 +219,7 @@ bracketedParser =
     (parserMatch Token.VectorBegin)
     (parserMatch Token.VectorEnd)
 
-nameParser :: Parser (GeneralName, Operator.Fixity)
+nameParser :: Parser GeneralName
 nameParser = (<?> "name") $ do
   global <-
     isJust
@@ -236,30 +227,26 @@ nameParser = (<?> "name") $ do
         (parserMatch Token.Ignore <* parserMatch Token.VocabLookup)
   parts <-
     Parsec.choice
-      [ (,) Operator.Postfix <$> wordNameParser,
-        (,) Operator.Infix <$> operatorNameParser
+      [ wordNameParser,
+        operatorNameParser
       ]
       `Parsec.sepBy1` parserMatch Token.VocabLookup
   pure $ case parts of
-    [(fixity, unqualified)] ->
-      ( ( if global
-            then QualifiedName . Qualified Vocabulary.global
-            else UnqualifiedName
-        )
-          unqualified,
-        fixity
+    [unqualified] ->
+      ( if global
+          then QualifiedName . Qualified Vocabulary.global
+          else UnqualifiedName
       )
+        unqualified
     _list ->
-      let parts' = (\(Unqualified part) -> part) . snd <$> parts
+      let parts' = (\(Unqualified part) -> part) <$> parts
           qualifier = Unsafe.fromJust (viaNonEmpty init parts')
-          (fixity, unqualified) = Unsafe.fromJust (viaNonEmpty last parts)
-       in ( QualifiedName
-              ( Qualified
-                  (Qualifier (if global then Absolute else Relative) qualifier)
-                  unqualified
-              ),
-            fixity
-          )
+          unqualified = Unsafe.fromJust (viaNonEmpty last parts)
+       in QualifiedName
+            ( Qualified
+                (Qualifier (if global then Absolute else Relative) qualifier)
+                unqualified
+            )
 
 unqualifiedNameParser :: Parser Unqualified
 unqualifiedNameParser =
@@ -292,8 +279,6 @@ elementParser =
   (<?> "top-level program element") $
     Parsec.choice
       [ Element.WordDefinition <$> basicDefinitionParser,
-        Element.Instance <$> instanceParser,
-        Element.Class <$> classParser,
         Element.Intrinsic <$> intrinsicParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
@@ -330,11 +315,14 @@ metadataParser = (<?> "metadata block") $ do
 typeDefinitionParser :: Parser TypeDefinition
 typeDefinitionParser = (<?> "type definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Type
-  (name, fixity) <- qualifiedNameParser <?> "type definition name"
-  case fixity of
-    Operator.Infix -> Parsec.unexpected "type-level operator"
-    Operator.Postfix -> pass
-  parameters <- Parsec.option [] quantifierParser
+  name <- qualifiedNameParser <?> "type definition name"
+  parameters <-
+    Parsec.many
+      ( (<?> "parameter") $ do
+          origin <- getTokenOrigin
+          name <- wordNameParser <?> "parameter name"
+          pure $ Parameter origin name Value Nothing
+      )
   constructors <- blockedParser $ many constructorParser
   pure
     TypeDefinition
@@ -367,135 +355,67 @@ typeParser = Parsec.try functionTypeParser <|> basicTypeParser <?> "type"
 
 functionTypeParser :: Parser Signature
 functionTypeParser = (<?> "function type") $ do
-  (effect, origin) <-
-    Parsec.choice
-      [ stackSignature,
-        arrowSignature
-      ]
-  pure (effect origin)
-  where
-    stackSignature :: Parser (Origin -> Signature, Origin)
-    stackSignature = (<?> "stack function type") $ do
-      leftparameter <- UnqualifiedName <$> stack
-      leftTypes <- Parsec.option [] (commaParser *> left)
-      origin <- arrow
-      rightparameter <- UnqualifiedName <$> stack
-      rightTypes <- Parsec.option [] (commaParser *> right)
-      pure
-        ( Signature.StackFunction
-            (Signature.Variable leftparameter origin)
-            leftTypes
-            (Signature.Variable rightparameter origin)
-            rightTypes,
-          origin
-        )
-      where
-        stack :: Parser Unqualified
-        stack = Parsec.try $ wordNameParser <* parserMatch Token.Ellipsis
-
-    arrowSignature :: Parser (Origin -> Signature, Origin)
-    arrowSignature = (<?> "arrow function type") $ do
-      leftTypes <- left
-      origin <- arrow
-      rightTypes <- right
-      pure (Signature.Function leftTypes rightTypes, origin)
-
-    left, right :: Parser [Signature]
-    left = basicTypeParser `Parsec.sepEndBy` commaParser
-    right = typeParser `Parsec.sepEndBy` commaParser
-
-    arrow :: Parser Origin
-    arrow = getTokenOrigin <* parserMatch Token.Arrow
+  leftTypes <- basicTypeParser `Parsec.sepEndBy` commaParser
+  origin <- getTokenOrigin <* parserMatch Token.Arrow
+  rightTypes <- typeParser `Parsec.sepEndBy` commaParser
+  pure $ Signature.Function leftTypes rightTypes origin
 
 commaParser :: Parser ()
 commaParser = void $ parserMatch Token.Comma
+
+quantifiedParser :: Parser Signature -> Parser Signature
+quantifiedParser thing = do
+  origin <- getTokenOrigin <* parserMatch Token.Forall
+  params <-
+    ( asum <$> (groupedParser (Parsec.sepEndBy1 kindParameters commaParser))
+        <|> Parsec.many1
+          ( do
+              origin <- getTokenOrigin
+              name <- wordNameParser <?> "parameter name"
+              pure (Parameter origin name Value Nothing)
+          )
+      )
+      <?> "parameters"
+  parserMatch_ Token.Dot
+  Signature.Quantified params <$> thing <*> pure origin
+  where
+    kindParameters :: Parser [Parameter]
+    kindParameters = do
+      names <-
+        Parsec.many1
+          ( do
+              origin <- getTokenOrigin
+              name <- wordNameParser <?> "parameter name"
+              pure (Parameter origin name)
+          )
+      parserMatch_ Token.Colon
+      kind <- kindParser
+      pure $ fmap (\name -> name kind Nothing) names
 
 basicTypeParser :: Parser Signature
 basicTypeParser = (<?> "basic type") $ do
   prefix <-
     Parsec.choice
-      [ quantifiedParser $ groupedParser typeParser,
+      [ quantifiedParser typeParser,
         Parsec.try $ do
           origin <- getTokenOrigin
-          (name, fixity) <- nameParser
-          -- Must be a word, not an operator, but may be qualified.
-          guard $ fixity == Operator.Postfix
+          name <- nameParser
           pure $ Signature.Variable name origin,
         groupedParser typeParser
       ]
   let apply a b = Signature.Application a b $ Signature.origin prefix
-  mSuffix <-
-    Parsec.optionMaybe $
-      asum
-        <$> Parsec.many1
-          ( typeListParser basicTypeParser
-          )
+  mSuffix <- Parsec.optionMaybe (Parsec.many1 basicTypeParser)
   pure $ case mSuffix of
     Just suffix -> foldl' apply prefix suffix
     Nothing -> prefix
 
-quantifierParser :: Parser [Parameter]
-quantifierParser = typeListParser parameter
-
-parameter :: Parser Parameter
-parameter = do
-  origin <- getTokenOrigin
-  Parsec.choice
-    [ (\unqualified -> Parameter origin unqualified Permission Nothing)
-        <$> (parserMatchOperator "+" *> wordNameParser),
-      do
-        name <- wordNameParser
-        Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <*> pure Nothing
-    ]
-
-typeListParser :: Parser a -> Parser [a]
-typeListParser e =
-  bracketedParser
-    (e `Parsec.sepEndBy1` commaParser)
-
-quantifiedParser :: Parser Signature -> Parser Signature
-quantifiedParser thing = do
-  origin <- getTokenOrigin
-  params <- quantifierParser
-  Signature.Quantified params <$> thing <*> pure origin
-
-classParser :: Parser Class
-classParser =
-  (<?> "type class declaration") $ do
-    origin <- getTokenOrigin <* parserMatch Token.Class
-    suffix <- unqualifiedNameParser <?> "type class name"
-    name <- Qualified <$> Parsec.getState <*> pure suffix
-    parameters <- Parsec.option [] quantifierParser
-    methods <- blockedParser $ many methodParser
-    pure
-      Class
-        { Class._className = name,
-          Class._classOrigin = origin,
-          Class._parameters = parameters,
-          Class._methods = methods
-        }
-
-methodParser :: Parser Method
-methodParser = (<?> "method") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Method
-  suffix <- unqualifiedNameParser <?> "method name"
-  name <- Qualified <$> Parsec.getState <*> pure suffix
-  sig <- signatureParser
-  pure
-    Method
-      { Class._signature = sig,
-        Class._name = name,
-        Class._origin = origin
-      }
-
 intrinsicParser :: Parser Intrinsic
 intrinsicParser =
-  (<?> "intrinsic declaration") $ do
+  (<?> "intrinsic") $ do
     origin <- getTokenOrigin <* parserMatch Token.Intrinsic
     suffix <- unqualifiedNameParser <?> "intrinsic name"
     name <- Qualified <$> Parsec.getState <*> pure suffix
-    sig <- signatureParser <?> "declaration signature"
+    sig <- signatureParser <?> "intrinsic signature"
     pure
       Intrinsic
         { Intrinsic._name = name,
@@ -507,13 +427,12 @@ basicDefinitionParser :: Parser (WordDefinition ())
 basicDefinitionParser =
   (<?> "word definition") $ do
     origin <- getTokenOrigin <* parserMatch Token.Define
-    (name, fixity) <- qualifiedNameParser <?> "word definition name"
+    name <- qualifiedNameParser <?> "word definition name"
     sig <- signatureParser <?> "word definition signature"
     body <- blockLikeParser <?> "word definition body"
     pure
       WordDefinition
         { Definition._wordBody = body,
-          Definition._wordFixity = fixity,
           Definition._wordInferSignature = False,
           Definition._wordMerge = Merge.Deny,
           Definition._wordName = name,
@@ -521,28 +440,12 @@ basicDefinitionParser =
           Definition._wordSignature = sig
         }
 
-instanceParser :: Parser (Instance ())
-instanceParser = (<?> "class instance") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Instance
-  suffix <- unqualifiedNameParser <?> "class name"
-  name <- Qualified <$> Parsec.getState <*> pure suffix
-  _ <- parserMatch Token.For
-  target <- basicTypeParser
-  methods <- blockedParser $ many basicDefinitionParser
-  pure
-    Instance
-      { Instance._name = name,
-        Instance._origin = origin,
-        Instance._target = target,
-        Instance._methods = methods
-      }
-
 -- | Unqualified or partially qualified name, implicitly qualified by the
 -- current vocabulary, or fully qualified (global) name.
-qualifiedNameParser :: Parser (Qualified, Operator.Fixity)
+qualifiedNameParser :: Parser Qualified
 qualifiedNameParser = (<?> "optionally qualified name") $ do
-  (suffix, fixity) <- nameParser
-  name <- case suffix of
+  suffix <- nameParser
+  case suffix of
     QualifiedName qualified@(Qualified (Qualifier root parts) unqualified) ->
       case root of
         -- Fully qualified name: pure it as-is.
@@ -555,13 +458,27 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
     UnqualifiedName unqualified ->
       Qualified <$> Parsec.getState <*> pure unqualified
     LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only pure qualified or unqualified name"
-  pure (name, fixity)
 
 signatureParser :: Parser Signature
-signatureParser = quantifiedParser signature <|> signature <?> "type signature"
+signatureParser =
+  groupedParser
+    ( quantifiedParser functionTypeParser
+        <|> functionTypeParser
+    )
+    <?> "type signature"
 
-signature :: Parser Signature
-signature = groupedParser functionTypeParser
+kindParser :: Parser Kind
+kindParser =
+  ( ( do
+        _ <- parserMatch_ Token.Value
+        pure Value
+    )
+      <|> ( do
+              _ <- parserMatch_ Token.Stack
+              pure Stack
+          )
+  )
+    <?> "kind"
 
 blockParser :: Parser (Term ())
 blockParser =
@@ -574,8 +491,7 @@ reference =
     *> Parsec.choice
       [ do
           origin <- getTokenOrigin
-          Word ()
-            <$> (fst <$> nameParser) <*> pure [] <*> pure origin,
+          Word () <$> nameParser <*> pure [] <*> pure origin,
         termParser
       ]
 
@@ -594,7 +510,7 @@ termParser = (<?> "expression") $ do
   Parsec.choice
     [ Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
       do
-        (name, fixity) <- nameParser
+        name <- nameParser
         pure (Word () name [] origin),
       Parsec.try sectionParser,
       Parsec.try groupParser <?> "parenthesized expression",
@@ -602,7 +518,6 @@ termParser = (<?> "expression") $ do
       lambdaParser,
       matchParser,
       ifParser,
-      doParser,
       Push () <$> blockValue <*> pure origin,
       asParser
     ]
@@ -695,7 +610,7 @@ matchParser = (<?> "match") $ do
         (<?> "case") $
           parserMatch Token.Case *> do
             origin <- getTokenOrigin
-            (name, _) <- nameParser
+            name <- nameParser
             body <- blockLikeParser
             pure $ Case name body origin
     mElse' <- Parsec.optionMaybe $ do
@@ -734,25 +649,6 @@ ifParser = (<?> "if-else expression") $ do
           (DefaultElse () ifOrigin)
           ifOrigin
       ]
-
-doParser :: Parser (Term ())
-doParser = (<?> "do expression") $ do
-  doOrigin <- getTokenOrigin <* parserMatch Token.Do
-  term <- groupParser <?> "parenthesized expression"
-  Parsec.choice
-    -- do (f) { x y z } => { x y z } f
-    [ do
-        body <- blockLikeParser
-        pure $
-          compose
-            ()
-            doOrigin
-            [Push () (Quotation body) (Term.origin body), term],
-      -- do (f) [x, y, z] => [x, y, z] f
-      do
-        body <- vectorParser
-        pure $ compose () doOrigin [body, term]
-    ]
 
 blockValue :: Parser (Value ())
 blockValue = (<?> "quotation") $ Quotation <$> blockParser

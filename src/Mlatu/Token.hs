@@ -33,24 +33,20 @@ data Token
     Case
   | -- | @'x'@
     Character !Char
-  | -- | @class@
-    Class
   | -- | @:@
     Colon
   | -- | @,@
     Comma
   | -- | @define@
     Define
-  | -- | @do@
-    Do
-  | -- | @...@
-    Ellipsis
+  | -- | @.@
+    Dot
   | -- | @else@
     Else
   | -- | See note [Float Literals].
     Float !FloatLiteral
-  | -- | @for@
-    For
+  | -- | @forall@
+    Forall
   | -- | @(@
     GroupBegin
   | -- | @)@
@@ -59,26 +55,24 @@ data Token
     If
   | -- | @_@
     Ignore
-  | -- | @instance@
-    Instance
   | -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
     Integer !IntegerLiteral
   | -- | @intrinsic@
     Intrinsic
   | -- | @match@
     Match
-  | -- | @method@
-    Method
   | -- | @+@
     Operator !Unqualified
-  | -- | @permission@
-    Permission
   | -- | @\@
     Reference
+  | -- | @stack@
+    Stack
   | -- | @"..."@
     Text !Text
   | -- | @trait@
     Type
+  | -- | @value@
+    Value
   | -- | @[@
     VectorBegin
   | -- | @]@
@@ -100,30 +94,27 @@ instance Eq Token where
   BlockEnd == BlockEnd = True
   Case == Case = True
   Character a == Character b = a == b
-  Class == Class = True
   Colon == Colon = True
   Comma == Comma = True
   Define == Define = True
-  Do == Do = True
-  Ellipsis == Ellipsis = True
+  Dot == Dot = True
   Else == Else = True
   -- See note [Float Literals].
   Float a == Float b = a == b
-  For == For = True
+  Forall == Forall = True
   GroupBegin == GroupBegin = True
   GroupEnd == GroupEnd = True
   If == If = True
   Ignore == Ignore = True
-  Instance == Instance = True
   Integer a == Integer b = a == b
   Intrinsic == Intrinsic = True
   Match == Match = True
-  Method == Method = True
   Operator a == Operator b = a == b
-  Permission == Permission = True
   Reference == Reference = True
+  Stack == Stack = True
   Text a == Text b = a == b
   Type == Type = True
+  Value == Value = True
   VectorBegin == VectorBegin = True
   VectorEnd == VectorEnd = True
   Vocab == Vocab = True

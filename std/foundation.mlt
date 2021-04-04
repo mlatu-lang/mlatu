@@ -1,20 +1,19 @@
 vocab mlatu {
-  intrinsic call [R..., S...] (R..., (R... -> S...) -> S...)
-  intrinsic drop [A] (A ->)
-  intrinsic swap [A, B] (A, B -> B, A)
+  intrinsic call (forall (R S : Stack) . R, (R -> S) -> S)
+  intrinsic drop (forall A . A ->)
+  intrinsic swap (forall A B . A, B -> B, A)
 }
 
-define call [R..., S...] (R..., (R... -> S...) -> S...) {
+define call (forall (R S : Stack) . R, (R -> S) -> S) {
   _::mlatu::call
 }
 
-define drop [T] (T ->) {
-  -> _;
+define drop (forall T . T ->) {
+  _::mlatu::drop
 }
 
-define swap [A, B] (A, B -> B, A) {
-  -> x, y;
-  y x
+define swap (forall A B . A, B -> B, A) {
+  _::mlatu::swap
 }
 
 about call {

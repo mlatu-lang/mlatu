@@ -12,8 +12,6 @@ module Mlatu.Kind
   ( Kind (..),
     _Value,
     _Stack,
-    _Label,
-    _Permission,
     (.:->),
   )
 where
@@ -33,7 +31,7 @@ import Relude
 --  • The \"permission\" kind (ε), denoting a set of permissions.
 --
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
-data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
+data Kind = Value | Stack | !Kind :-> !Kind
   deriving (Ord, Eq, Show)
 
 makePrisms ''Kind
@@ -41,6 +39,4 @@ makePrisms ''Kind
 instance Hashable Kind where
   hashWithSalt s Value = hashWithSalt s (0 :: Int)
   hashWithSalt s Stack = hashWithSalt s (1 :: Int)
-  hashWithSalt s Label = hashWithSalt s (2 :: Int)
-  hashWithSalt s Permission = hashWithSalt s (3 :: Int)
-  hashWithSalt s (a :-> b) = hashWithSalt s (4 :: Int, a, b)
+  hashWithSalt s (a :-> b) = hashWithSalt s (2 :: Int, a, b)

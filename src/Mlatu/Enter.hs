@@ -14,11 +14,8 @@ module Mlatu.Enter
 where
 
 import Data.Map.Strict qualified as Map
-import Mlatu.Class (Class, Method)
-import Mlatu.Class qualified as Class
 import Mlatu.Definition (ConstructorDefinition, WordDefinition)
 import Mlatu.Definition qualified as Definition
-import Mlatu.Desugar.Infix qualified as Infix
 import Mlatu.Desugar.Quotations qualified as Quotations
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
@@ -27,9 +24,8 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
-import Mlatu.Infer (mangleInstance, typecheck)
+import Mlatu.Infer (typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
-import Mlatu.Instance qualified as Instance
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Intrinsic (Intrinsic)
 import Mlatu.Intrinsic qualified as Intrinsic
@@ -64,24 +60,18 @@ fragment f d0 = do
   d1 <- foldlM declareType d0 (view Fragment.types f)
   -- We enter declarations of all intrinsics
   d2 <- foldlM enterIntrinsic d1 (view Fragment.intrinsics f)
-  -- We enter declarations of all classes
-  d3 <- foldlM enterClass d2 (view Fragment.classes f)
   -- We resolve intrinsic type signatures
-  d5 <- foldlM resolveSignature d3 (view Intrinsic.name <$> view Fragment.intrinsics f)
-  -- We resolve class type signatures
-  d6 <- foldlM resolveSignature d5 (concatMap (fmap (view Class.name) . view Class.methods) (view Fragment.classes f))
+  d5 <- foldlM resolveSignature d2 (view Intrinsic.name <$> view Fragment.intrinsics f)
   -- We declare all words
-  d7 <- foldlM declareWord d6 (view Fragment.wordDefinitions f)
+  d7 <- foldlM declareWord d5 (view Fragment.wordDefinitions f)
   -- We declare all words
   d8 <- foldlM declareConstructor d7 (view Fragment.constructorDefinitions f)
   -- We resolve the signatures of all words
   d9 <- foldlM resolveSignature d8 (view Definition.wordName <$> view Fragment.wordDefinitions f)
   --  We add metadata
   d11 <- foldlM addMetadata d9 (view Fragment.metadata f)
-  -- We enter the definitions of instances
-  d12 <- foldlM defineInstance d11 (concatMap (view Instance.methods) (view Fragment.instances f))
   -- We enter the definitions of words
-  d13 <- foldlM defineWord d12 (view Fragment.wordDefinitions f)
+  d13 <- foldlM defineWord d11 (view Fragment.wordDefinitions f)
   -- We enter the definitions of constructors
   foldlM defineConstructor d13 (view Fragment.constructorDefinitions f)
 
@@ -119,22 +109,6 @@ enterIntrinsic dictionary declaration = do
               origin
               (Just signature)
               Nothing
-      pure $ Dictionary.insert (Instantiated name []) entry dictionary
-
-enterClass :: Dictionary -> Class -> M Dictionary
-enterClass dictionary c =
-  foldlM (`enterClassMethod` c) dictionary (view Class.methods c)
-
-enterClassMethod :: Dictionary -> Class -> Method -> M Dictionary
-enterClassMethod dictionary c method = do
-  let name = view Class.name method
-      origin = view Class.origin method
-      signature = Signature.Quantified (view Class.parameters c) (view Class.signature method) origin
-  case Dictionary.lookup (Instantiated name []) dictionary of
-    -- TODO: Check signatures.
-    Just _existing -> pure dictionary
-    Nothing -> do
-      let entry = Entry.ClassMethod origin signature
       pure $ Dictionary.insert (Instantiated name []) entry dictionary
 
 -- declare type, declare & define constructors
@@ -258,125 +232,6 @@ resolveSignature dictionary name = do
       pure $ Dictionary.insert (Instantiated name []) entry dictionary
     _noResolution -> pure dictionary
 
-defineInstance ::
-  Dictionary ->
-  WordDefinition () ->
-  M Dictionary
-defineInstance dictionary definition = do
-  let name = view Definition.wordName definition
-  resolved <- resolveAndDesugarWord dictionary definition
-  errorCheckpoint
-  let resolvedSignature = view Definition.wordSignature resolved
-  -- Note that we use the resolved signature here.
-  (typecheckedBody, typ) <-
-    typecheck
-      dictionary
-      ( if view Definition.wordInferSignature definition
-          then Nothing
-          else Just resolvedSignature
-      )
-      $ view Definition.wordBody resolved
-  errorCheckpoint
-  case Dictionary.lookup (Instantiated name []) dictionary of
-    -- Already declared or defined as a trait.
-    Just (Entry.ClassMethod _origin traitSignature) ->
-      do
-        mangledName <-
-          mangleInstance
-            dictionary
-            name
-            resolvedSignature
-            traitSignature
-        -- Should this use the mangled name?
-        (flattenedBody, dictionary') <-
-          Quotations.desugar
-            dictionary
-            (qualifierFromName name)
-            $ Quantify.term typ typecheckedBody
-        let entry =
-              Entry.Word
-                (view Definition.wordMerge definition)
-                (view Definition.wordOrigin definition)
-                (Just resolvedSignature)
-                (Just flattenedBody)
-        pure $ Dictionary.insert mangledName entry dictionary'
-    -- Previously declared with same signature, but not defined.
-    Just (Entry.Word merge origin' signature' Nothing)
-      | maybe True (resolvedSignature ==) signature' -> do
-        (flattenedBody, dictionary') <-
-          Quotations.desugar
-            dictionary
-            (qualifierFromName name)
-            $ Quantify.term typ typecheckedBody
-        let entry =
-              Entry.Word
-                merge
-                origin'
-                ( Just $
-                    if view Definition.wordInferSignature definition
-                      then Signature.Type typ
-                      else resolvedSignature
-                )
-                $ Just flattenedBody
-        pure $ Dictionary.insert (Instantiated name []) entry dictionary'
-    -- Already defined as concatenable.
-    Just
-      ( Entry.Word
-          merge@Merge.Compose
-          origin'
-          mSignature
-          body
-        )
-        | view Definition.wordInferSignature definition
-            || Just resolvedSignature == mSignature -> do
-          composedBody <- case body of
-            Just existing -> do
-              let strippedBody = Term.stripMetadata existing
-              pure $ Term.Compose () strippedBody $ view Definition.wordBody resolved
-            Nothing -> pure $ view Definition.wordBody resolved
-          (composed, composedType) <-
-            typecheck
-              dictionary
-              ( if view Definition.wordInferSignature definition
-                  then Nothing
-                  else Just resolvedSignature
-              )
-              composedBody
-          (flattenedBody, dictionary') <-
-            Quotations.desugar
-              dictionary
-              (qualifierFromName name)
-              $ Quantify.term composedType composed
-          let entry =
-                Entry.Word
-                  merge
-                  origin'
-                  ( if view Definition.wordInferSignature definition
-                      then Nothing -- Just (Signature.Type composedType)
-                      else mSignature
-                  )
-                  $ Just flattenedBody
-          pure $ Dictionary.insert (Instantiated name []) entry dictionary'
-    -- Already defined, not concatenable.
-    Just (Entry.Word Merge.Deny originalOrigin (Just _sig) _) -> do
-      report $
-        Report.makeError $
-          Report.WordRedefinition
-            (view Definition.wordOrigin definition)
-            name
-            originalOrigin
-
-      pure dictionary
-    -- Not previously declared as word.
-    _nonDeclared ->
-      ice $
-        show $
-          hsep
-            [ "Mlatu.Enter.defineInstance - defining word",
-              dquotes $ printQualified name,
-              "not previously declared"
-            ]
-
 defineWord ::
   Dictionary ->
   WordDefinition () ->
@@ -481,7 +336,7 @@ defineConstructor dictionary definition = do
   let name = view Definition.constructorName definition
   case Dictionary.lookup (Instantiated name []) dictionary of
     -- Previously declared with same signature, but not defined.
-    Just (Entry.Constructor origin' parent signature' Nothing) -> do
+    Just (Entry.Constructor origin' parent _ Nothing) -> do
       pure $
         Dictionary.insert
           (Instantiated name [])
@@ -540,16 +395,8 @@ resolveAndDesugarWord dictionary definition = do
 
   errorCheckpoint
 
-  -- After names have been resolved, the precedences of operators are known, so
-  -- infix operators can be desugared into postfix syntax.
-
-  -- needs dictionary for operator metadata
-  postfix <- Infix.desugarWord dictionary resolved
-
-  errorCheckpoint
-
   -- In addition, now that we know which names refer to local variables,
   -- quotations can be rewritten into closures that explicitly capture the
   -- variables they use from the enclosing scope.
 
-  pure $ over Definition.wordBody scope postfix
+  pure $ over Definition.wordBody scope resolved

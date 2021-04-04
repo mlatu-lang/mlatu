@@ -177,11 +177,8 @@ special = Parsec.oneOf "\"'(),:[\\]_{}"
 comma :: Tokenizer Token
 comma = Comma <$ Parsec.char ','
 
-ellipsis :: Tokenizer Token
-ellipsis =
-  Parsec.try $
-    Ellipsis
-      <$ Parsec.choice (fmap Parsec.string ["...", "\x2026"])
+dot :: Tokenizer Token
+dot = Dot <$ Parsec.char '.'
 
 ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
@@ -301,18 +298,15 @@ alphanumeric =
           "about" -> About
           "as" -> As
           "case" -> Case
-          "class" -> Class
           "define" -> Define
-          "do" -> Do
           "else" -> Else
-          "for" -> For
+          "forall" -> Forall
           "if" -> If
-          "instance" -> Instance
           "intrinsic" -> Intrinsic
           "match" -> Match
-          "method" -> Method
-          "permission" -> Permission
+          "Stack" -> Stack
           "type" -> Type
+          "Value" -> Value
           "vocab" -> Vocab
           "where" -> Where
           _ -> Word (Unqualified name),
@@ -330,7 +324,7 @@ tokenTokenizer =
         blockEnd,
         characterLiteral,
         comma,
-        ellipsis,
+        dot,
         groupBegin,
         groupEnd,
         ignore,

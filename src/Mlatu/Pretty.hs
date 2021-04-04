@@ -25,10 +25,9 @@ module Mlatu.Pretty
   )
 where
 
-import Data.List (findIndex)
+import Data.List (findIndex, groupBy)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
-import Mlatu.Class (Class (..), Method (..))
 import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Definition (WordDefinition (..), mainName)
 import Mlatu.Entry (Entry)
@@ -37,7 +36,6 @@ import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
-import Mlatu.Instance (Instance (..))
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Intrinsic (Intrinsic (..))
 import Mlatu.Kind (Kind (..))
@@ -93,9 +91,7 @@ printFloatLiteral literal =
 
 printParameter :: Parameter -> Doc a
 printParameter (Parameter _ name Value _) = printUnqualified name
-printParameter (Parameter _ name Stack _) = printUnqualified name <> "..."
-printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
-printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
+printParameter (Parameter _ name Stack _) = printUnqualified name
 printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
 
 printQualified :: Qualified -> Doc a
@@ -125,8 +121,6 @@ printOrigin origin =
 printKind :: Kind -> Doc a
 printKind Value = "value"
 printKind Stack = "stack"
-printKind Label = "label"
-printKind Permission = "permission"
 printKind (a :-> b) =
   parens $
     printKind a <+> "->" <+> printKind b
@@ -174,14 +168,14 @@ printType type0 = recur type0
         recur a <+> "|" <+> recur b
       a :@ b -> recur a <> brackets (recur b)
       TypeConstructor _ constructor -> printConstructor constructor
-      TypeVar _ var@(Var name i k) ->
+      TypeVar _ var@(Var name i _) ->
         -- The default cases here shouldn't happen if the context was built
         -- correctly, so it's fine if we fall back to something ugly.
         fromMaybe (printVar var) $ do
           ids <- Map.lookup name context
           case ids of
             -- Only one variable with this name: print without index.
-            [(i', _)] | i == i' -> pure $ prettyKinded name k
+            [(i', _)] | i == i' -> pure $ printUnqualified name
             -- No variables with this name: ugly-print.
             [] -> pure $ printVar var
             -- Multiple variables with this name: print with index.
@@ -189,11 +183,10 @@ printType type0 = recur type0
               index <- findIndex ((== i) . fst) ids
               let Unqualified unqualified = name
               pure $
-                prettyKinded
+                printUnqualified
                   ( Unqualified
                       (unqualified <> "_" <> show (index + 1))
                   )
-                  k
       TypeConstant o var -> "∃" <> recur (TypeVar o var)
       Forall {} -> prettyForall typ []
         where
@@ -201,7 +194,6 @@ printType type0 = recur type0
           prettyForall t vars =
             list (recur . TypeVar (Type.origin t) <$> vars)
               <> parens (recur t)
-      TypeValue _ value -> pretty value
 
 type PrettyContext = Map Unqualified [(TypeId, Kind)]
 
@@ -215,7 +207,6 @@ buildContext = go mempty
       TypeVar _ (Var name i k) -> record name i k context
       TypeConstant _ (Var name i k) -> record name i k context
       Forall _ (Var name i k) t -> go (record name i k context) t
-      TypeValue {} -> context
       where
         record name i k = Map.insertWith (<>) name [(i, k)]
 
@@ -223,8 +214,8 @@ printTypeId :: TypeId -> Doc a
 printTypeId (TypeId i) = "T" <> pretty i
 
 printVar :: Var -> Doc a
-printVar (Var (Unqualified unqualified) i k) =
-  prettyKinded
+printVar (Var (Unqualified unqualified) i _) =
+  printUnqualified
     ( Unqualified $
         mconcat
           [ unqualified,
@@ -232,13 +223,6 @@ printVar (Var (Unqualified unqualified) i k) =
             show $ printTypeId i
           ]
     )
-    k
-
-prettyKinded :: Unqualified -> Kind -> Doc a
-prettyKinded name k = case k of
-  Permission -> "+" <> printUnqualified name
-  Stack -> printUnqualified name <> "..."
-  _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
 printSignature (Application firstA b _) =
@@ -254,14 +238,11 @@ printSignature (Function as bs _) =
       <> "->"
       <> mapNonEmpty "" (\sigs -> space <> punctuateComma (printSignature <$> sigs)) bs
 printSignature (Quantified names typ _) =
-  mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns)) <> flatAlt space "\n") names
-    <> printSignature typ
+  "forall" <+> parens (punctuateComma (printParameterGroup <$> groups)) <+> "." <+> printSignature typ
+  where
+    printParameterGroup params@((Parameter _ _ k _) : _) = hsep (printParameter <$> params) <+> ":" <+> printKind k
+    groups = groupBy (\(Parameter _ _ k1 _) (Parameter _ _ k2 _) -> k1 == k2) names
 printSignature (Variable name _) = printGeneralName name
-printSignature (StackFunction r as s bs _) =
-  parens $
-    punctuateComma ((printSignature r <> "...") : (printSignature <$> as))
-      <+> "->"
-      <+> punctuateComma ((printSignature s <> "...") : (printSignature <$> bs))
 printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a
@@ -273,29 +254,26 @@ printToken = \case
   Token.BlockEnd -> "}"
   Token.Case -> "case"
   Token.Character c -> squotes $ pretty c
-  Token.Class -> "class"
   Token.Colon -> ":"
   Token.Comma -> ","
   Token.Define -> "define"
-  Token.Do -> "do"
-  Token.Ellipsis -> "..."
+  Token.Dot -> "."
   Token.Else -> "else"
   Token.Float a -> pretty (floatValue a :: Double)
-  Token.For -> "for"
+  Token.Forall -> "forall"
   Token.GroupBegin -> "("
   Token.GroupEnd -> ")"
   Token.If -> "if"
   Token.Ignore -> "_"
-  Token.Instance -> "instance"
   Token.Integer literal -> printIntegerLiteral literal
   Token.Intrinsic -> "intrinsic"
   Token.Match -> "match"
-  Token.Method -> "method"
   Token.Operator name -> printUnqualified name
-  Token.Permission -> "permission"
   Token.Reference -> "\\"
+  Token.Stack -> "Stack"
   Token.Text t -> dquotes $ pretty t
   Token.Type -> "type"
+  Token.Value -> "Value"
   Token.VectorBegin -> "["
   Token.VectorEnd -> "]"
   Token.Vocab -> "vocab"
@@ -322,16 +300,6 @@ printDataConstructor (DataConstructor.DataConstructor fields name _) =
 
 printIntrinsic :: Intrinsic -> Doc a
 printIntrinsic (Intrinsic name _ signature) = "intrinsic" <+> printQualified name <+> printSignature signature
-
-printClass :: Class -> Doc a
-printClass (Class name _ methods parameters) = group $ blockMulti ("class" <+> className) printMethod methods
-  where
-    className =
-      printQualified name
-        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
-
-printMethod :: Method -> Doc a
-printMethod (Method name _ signature) = "method" <+> printQualified name <+> printSignature signature
 
 printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
@@ -496,9 +464,9 @@ printMetadata metadata =
       ++ [rbrace]
 
 printWordDefinition :: (Show a) => WordDefinition a -> Maybe (Doc b)
-printWordDefinition (WordDefinition name body _ _ _ _ _)
+printWordDefinition (WordDefinition name body _ _ _ _)
   | name == mainName = maybePrintTerm body
-printWordDefinition (WordDefinition name body _ _ _ _ signature) =
+printWordDefinition (WordDefinition name body _ _ _ signature) =
   Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
 printEntry :: Entry -> Doc a
@@ -549,23 +517,14 @@ printEntry (Entry.InstantiatedType origin size) =
       hsep ["with size", pretty size]
     ]
 
-printInstance :: (Show a) => Instance a -> Doc b
-printInstance (Instance name _ methods target) = group $ blockMulti ("instance" <+> printQualified name <+> "for" <+> printSignature target) (fromMaybe "" . printWordDefinition) methods
-
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
   vcat
     ( ( (\t -> printIntrinsic t <> line)
           <$> sort (view Fragment.intrinsics fragment)
       )
-        ++ ( (\t -> printClass t <> line)
-               <$> sort (view Fragment.classes fragment)
-           )
         ++ ( (\t -> printTypeDefinition t <> line)
                <$> sort (view Fragment.types fragment)
-           )
-        ++ ( (\t -> printInstance t <> line)
-               <$> sort (view Fragment.instances fragment)
            )
         ++ mapMaybe
           (fmap (<> line) . printWordDefinition)
