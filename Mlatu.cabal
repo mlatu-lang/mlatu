@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 518eb6d6b3f94b29071c52acaa0e5c25b31370967d6eb09d5c79fa1e8bd24d35
+-- hash: c4e417083b7435fc4d83472deb74e84b99bcfb84c6ae04b98554946c32905f47
 
 name:           mlatu
 version:        0.1.0.0
@@ -58,6 +58,8 @@ library
       Mlatu.Pretty
       Mlatu.Quantify
       Mlatu.Queue
+      Mlatu.RecordDefinition
+      Mlatu.RecordField
       Mlatu.Regeneralize
       Mlatu.Report
       Mlatu.Resolve

@@ -300,10 +300,12 @@ alphanumeric =
           "case" -> Case
           "define" -> Define
           "else" -> Else
+          "field" -> Field
           "forall" -> Forall
           "if" -> If
           "intrinsic" -> Intrinsic
           "match" -> Match
+          "record" -> Record
           "Stack" -> Stack
           "type" -> Type
           "Value" -> Value

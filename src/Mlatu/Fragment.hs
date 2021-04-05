@@ -13,6 +13,7 @@ module Mlatu.Fragment
     intrinsics,
     wordDefinitions,
     constructorDefinitions,
+    records,
     metadata,
     types,
   )
@@ -21,6 +22,7 @@ where
 import Mlatu.Definition (ConstructorDefinition, WordDefinition)
 import Mlatu.Intrinsic (Intrinsic (..))
 import Mlatu.Metadata (Metadata)
+import Mlatu.RecordDefinition (RecordDefinition)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics
 import Relude
@@ -31,7 +33,8 @@ data Fragment a = Fragment
     _wordDefinitions :: ![WordDefinition a],
     _constructorDefinitions :: ![ConstructorDefinition a],
     _metadata :: ![Metadata],
-    _types :: ![TypeDefinition]
+    _types :: ![TypeDefinition],
+    _records :: ![RecordDefinition]
   }
   deriving (Show)
 
@@ -44,7 +47,8 @@ instance Monoid (Fragment a) where
         _wordDefinitions = mempty,
         _metadata = mempty,
         _constructorDefinitions = mempty,
-        _types = mempty
+        _types = mempty,
+        _records = mempty
       }
 
 instance Semigroup (Fragment a) where
@@ -54,5 +58,6 @@ instance Semigroup (Fragment a) where
         _wordDefinitions = _wordDefinitions a <> _wordDefinitions b,
         _metadata = _metadata a <> _metadata b,
         _constructorDefinitions = _constructorDefinitions a <> _constructorDefinitions b,
-        _types = _types a <> _types b
+        _types = _types a <> _types b,
+        _records = _records a <> _records b
       }

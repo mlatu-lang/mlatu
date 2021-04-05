@@ -15,12 +15,14 @@ module Mlatu.Element
     _Metadata,
     _Term,
     _TypeDefinition,
+    _RecordDefinition,
   )
 where
 
 import Mlatu.Definition (WordDefinition)
 import Mlatu.Intrinsic (Intrinsic)
 import Mlatu.Metadata (Metadata)
+import Mlatu.RecordDefinition (RecordDefinition)
 import Mlatu.Term (Term)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics.TH (makePrisms)
@@ -37,5 +39,7 @@ data Element a
     Term !(Term a)
   | -- | @type@
     TypeDefinition !TypeDefinition
+  | -- | @record@
+    RecordDefinition !RecordDefinition
 
 makePrisms ''Element

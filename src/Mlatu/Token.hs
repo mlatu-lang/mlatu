@@ -43,6 +43,8 @@ data Token
     Dot
   | -- | @else@
     Else
+  | -- | @field@
+    Field
   | -- | See note [Float Literals].
     Float !FloatLiteral
   | -- | @forall@
@@ -63,6 +65,8 @@ data Token
     Match
   | -- | @+@
     Operator !Unqualified
+  | -- | @record@
+    Record
   | -- | @\@
     Reference
   | -- | @stack@
@@ -99,7 +103,7 @@ instance Eq Token where
   Define == Define = True
   Dot == Dot = True
   Else == Else = True
-  -- See note [Float Literals].
+  Field == Field = True
   Float a == Float b = a == b
   Forall == Forall = True
   GroupBegin == GroupBegin = True
@@ -110,6 +114,7 @@ instance Eq Token where
   Intrinsic == Intrinsic = True
   Match == Match = True
   Operator a == Operator b = a == b
+  Record == Record = True
   Reference == Reference = True
   Stack == Stack = True
   Text a == Text b = a == b

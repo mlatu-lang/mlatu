@@ -19,6 +19,9 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
+import Mlatu.RecordDefinition (RecordDefinition)
+import Mlatu.RecordDefinition qualified as RecordDefinition
+import Mlatu.RecordField (RecordField)
 import Mlatu.Signature qualified as Signature
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
@@ -36,12 +39,27 @@ import Relude
 -- > define none<T> (-> Optional<T>) { ... }
 -- > define some<T> (T -> Optional<T>) { ... }
 desugar :: Fragment () -> Fragment ()
-desugar fragment = over Fragment.constructorDefinitions (\defs -> defs ++ concatMap desugarTypeDefinition (view Fragment.types fragment)) fragment
+desugar fragment =
+  over
+    Fragment.constructorDefinitions
+    ( \defs ->
+        defs
+          ++ concatMap
+            desugarTypeDefinition
+            (view Fragment.types fragment)
+          ++ concatMap
+            (const [])
+            (view Fragment.records fragment)
+    )
+    fragment
 
 desugarTypeDefinition :: TypeDefinition -> [ConstructorDefinition ()]
 desugarTypeDefinition definition =
   zipWith (desugarConstructor definition) [0 ..] $
     view TypeDefinition.constructors definition
+
+desugarRecordDefinition :: RecordDefinition -> [ConstructorDefinition ()]
+desugarRecordDefinition _definition = []
 
 desugarConstructor :: TypeDefinition -> Int -> DataConstructor -> ConstructorDefinition ()
 desugarConstructor definition index constructor =

@@ -41,6 +41,8 @@ import Mlatu.Name
 import Mlatu.Parse qualified as Parse
 import Mlatu.Pretty (printQualified)
 import Mlatu.Quantify qualified as Quantify
+import Mlatu.RecordDefinition (RecordDefinition)
+import Mlatu.RecordDefinition qualified as RecordDefinition
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
 import Mlatu.Scope (scope)
@@ -58,22 +60,23 @@ import Relude
 fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f d0 = do
   d1 <- foldlM declareType d0 (view Fragment.types f)
+  d2 <- foldlM declareRecord d1 (view Fragment.records f)
   -- We enter declarations of all intrinsics
-  d2 <- foldlM enterIntrinsic d1 (view Fragment.intrinsics f)
+  d3 <- foldlM enterIntrinsic d2 (view Fragment.intrinsics f)
   -- We resolve intrinsic type signatures
-  d5 <- foldlM resolveSignature d2 (view Intrinsic.name <$> view Fragment.intrinsics f)
+  d4 <- foldlM resolveSignature d3 (view Intrinsic.name <$> view Fragment.intrinsics f)
   -- We declare all words
-  d7 <- foldlM declareWord d5 (view Fragment.wordDefinitions f)
+  d5 <- foldlM declareWord d4 (view Fragment.wordDefinitions f)
   -- We declare all words
-  d8 <- foldlM declareConstructor d7 (view Fragment.constructorDefinitions f)
+  d6 <- foldlM declareConstructor d5 (view Fragment.constructorDefinitions f)
   -- We resolve the signatures of all words
-  d9 <- foldlM resolveSignature d8 (view Definition.wordName <$> view Fragment.wordDefinitions f)
+  d7 <- foldlM resolveSignature d6 (view Definition.wordName <$> view Fragment.wordDefinitions f)
   --  We add metadata
-  d11 <- foldlM addMetadata d9 (view Fragment.metadata f)
+  d8 <- foldlM addMetadata d7 (view Fragment.metadata f)
   -- We enter the definitions of words
-  d13 <- foldlM defineWord d11 (view Fragment.wordDefinitions f)
+  d9 <- foldlM defineWord d8 (view Fragment.wordDefinitions f)
   -- We enter the definitions of constructors
-  foldlM defineConstructor d13 (view Fragment.constructorDefinitions f)
+  foldlM defineConstructor d9 (view Fragment.constructorDefinitions f)
 
 addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
@@ -134,6 +137,33 @@ declareType dictionary typ =
             show $
               hsep
                 [ "Mlatu.Enter.declareType - type",
+                  dquotes $ printQualified name,
+                  "already declared or defined differently"
+                ]
+
+-- declare type, declare & define constructors
+declareRecord :: Dictionary -> RecordDefinition -> M Dictionary
+declareRecord dictionary record =
+  let name = view RecordDefinition.name record
+   in case Dictionary.lookup (Instantiated name []) dictionary of
+        -- Not previously declared.
+        Nothing -> do
+          let entry =
+                Entry.Record
+                  (view RecordDefinition.origin record)
+                  (view RecordDefinition.parameters record)
+                  (view RecordDefinition.fields record)
+          pure $ Dictionary.insert (Instantiated name []) entry dictionary
+        -- Previously declared with the same parameters.
+        Just (Entry.Record _origin parameters _)
+          | parameters == view RecordDefinition.parameters record ->
+            pure dictionary
+        -- Already declared or defined differently.
+        Just {} ->
+          ice $
+            show $
+              hsep
+                [ "Mlatu.Enter.declareRecord - record",
                   dquotes $ printQualified name,
                   "already declared or defined differently"
                 ]

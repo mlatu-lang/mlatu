@@ -47,6 +47,10 @@ import Mlatu.Name
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
+import Mlatu.RecordDefinition (RecordDefinition (..))
+import Mlatu.RecordDefinition qualified as RecordDefinition
+import Mlatu.RecordField (RecordField (..))
+import Mlatu.RecordField qualified as RecordField
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -282,6 +286,7 @@ elementParser =
         Element.Intrinsic <$> intrinsicParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
+        Element.RecordDefinition <$> recordDefinitionParser,
         do
           origin <- getTokenOrigin
           Element.Term . compose () origin <$> Parsec.many1 termParser
@@ -347,6 +352,38 @@ constructorParser = (<?> "constructor definition") $ do
         DataConstructor._origin = origin
       }
 
+recordDefinitionParser :: Parser RecordDefinition
+recordDefinitionParser = (<?> "record definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Record
+  name <- qualifiedNameParser <?> "record definition name"
+  parameters <-
+    Parsec.many
+      ( (<?> "parameter") $ do
+          origin <- getTokenOrigin
+          name <- wordNameParser <?> "parameter name"
+          pure $ Parameter origin name Value Nothing
+      )
+  fields <- blockedParser $ many fieldParser
+  pure
+    RecordDefinition
+      { RecordDefinition._fields = fields,
+        RecordDefinition._name = name,
+        RecordDefinition._origin = origin,
+        RecordDefinition._parameters = parameters
+      }
+
+fieldParser :: Parser RecordField
+fieldParser = (<?> "field definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Field
+  name <- wordNameParser <?> "field name"
+  signature <- groupedParser typeParser
+  pure
+    RecordField
+      { RecordField._signature = signature,
+        RecordField._name = name,
+        RecordField._origin = origin
+      }
+
 constructorFieldsParser :: Parser [Signature]
 constructorFieldsParser = typeParser `Parsec.sepEndBy` commaParser
 
@@ -367,7 +404,7 @@ quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
   origin <- getTokenOrigin <* parserMatch Token.Forall
   params <-
-    ( asum <$> (groupedParser (Parsec.sepEndBy1 kindParameters commaParser))
+    ( asum <$> groupedParser (Parsec.sepEndBy1 kindParameters commaParser)
         <|> Parsec.many1
           ( do
               origin <- getTokenOrigin

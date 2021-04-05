@@ -24,6 +24,7 @@ import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Name (ConstructorIndex, Qualified)
 import Mlatu.Origin (Origin)
+import Mlatu.RecordField (RecordField)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Type (Type)
@@ -54,6 +55,8 @@ data Entry
     ClassMethod !Origin !Signature
   | -- | A data type with some generic parameters.
     Type !Origin ![Parameter] ![DataConstructor]
+  | -- | A record
+    Record !Origin ![Parameter] ![RecordField]
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show, Ord, Eq)
