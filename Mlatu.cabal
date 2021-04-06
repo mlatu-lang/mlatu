@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c4e417083b7435fc4d83472deb74e84b99bcfb84c6ae04b98554946c32905f47
+-- hash: e7e190177a2a894de69e9d100eb42e0c59ce14a862898e1d5ca54edf9011b6ce
 
 name:           mlatu
 version:        0.1.0.0
@@ -95,7 +95,6 @@ library
     , text
     , transformers
     , unordered-containers
-    , vector
   if false
     other-modules:
         Paths_name
@@ -131,7 +130,6 @@ executable mlatu
     , transformers
     , typed-process
     , unordered-containers
-    , vector
   default-language: Haskell2010
 
 test-suite test
@@ -169,5 +167,4 @@ test-suite test
     , text
     , transformers
     , unordered-containers
-    , vector
   default-language: Haskell2010

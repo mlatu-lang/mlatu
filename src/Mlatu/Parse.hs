@@ -615,12 +615,9 @@ vectorParser = (<?> "vector literal") $ do
   vectorOrigin <- getTokenOrigin
   es <-
     bracketedParser $
-      (compose () vectorOrigin <$> Parsec.many1 termParser)
+      ((\ts -> compose () vectorOrigin (ts ++ [Word () "cons" [] vectorOrigin])) <$> Parsec.many1 termParser)
         `Parsec.sepEndBy` commaParser
-  pure $
-    compose () vectorOrigin $
-      (Group <$> es)
-        ++ [NewVector () (length es) () vectorOrigin]
+  pure $ compose () vectorOrigin $ Word () "nil" [] vectorOrigin : es
 
 lambdaParser :: Parser (Term ())
 lambdaParser = (<?> "parameteriable introduction") $ do

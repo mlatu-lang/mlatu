@@ -66,8 +66,6 @@ term tenv0 = go
             Else (go body) elseOrigin
       NewClosure tref index origin ->
         NewClosure (zonk tref) index origin
-      NewVector tref size elemType origin ->
-        NewVector (zonk tref) size (zonk elemType) origin
       Push tref value' origin ->
         Push (zonk tref) (value tenv0 value') origin
       Word tref name params origin ->

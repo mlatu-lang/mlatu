@@ -74,11 +74,6 @@ term tenv x a = recur
         NewClosure <$> go tref
           <*> pure size
           <*> pure origin
-      NewVector tref size elemType origin ->
-        NewVector <$> go tref
-          <*> pure size
-          <*> go elemType
-          <*> pure origin
       Push tref value origin -> Push <$> go tref <*> pure value <*> pure origin
       Word tref name args origin ->
         Word <$> go tref

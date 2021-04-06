@@ -86,7 +86,6 @@ term dictionary vocabulary = recur
         resolveElse (Else t elseOrigin) =
           Else <$> recur t <*> pure elseOrigin
     recur unresolved@NewClosure {} = pure unresolved
-    recur unresolved@NewVector {} = pure unresolved
     recur (Push _ v origin) =
       Push ()
         <$> value dictionary vocabulary v <*> pure origin

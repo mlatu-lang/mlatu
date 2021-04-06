@@ -69,8 +69,6 @@ data Term a
     Match !MatchHint !a ![Case a] !(Else a) !Origin
   | -- | @new.closure.n@: closure allocation.
     NewClosure !a !Int !Origin
-  | -- | @new.vec.n@: vector allocation.
-    NewVector !a !Int !a !Origin
   | -- | @push v@: push of a value.
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
@@ -158,7 +156,6 @@ origin term = case term of
   Group a -> origin a
   Lambda _ _ _ _ o -> o
   NewClosure _ _ o -> o
-  NewVector _ _ _ o -> o
   Match _ _ _ _ o -> o
   Push _ _ o -> o
   Word _ _ _ o -> o
@@ -183,7 +180,6 @@ metadata term = case term of
   Lambda t _ _ _ _ -> t
   Match _ t _ _ _ -> t
   NewClosure t _ _ -> t
-  NewVector t _ _ _ -> t
   Push t _ _ -> t
   Word t _ _ _ -> t
 
@@ -196,7 +192,6 @@ stripMetadata term = case term of
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
   Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
   NewClosure _ a b -> NewClosure () a b
-  NewVector _ a _ b -> NewVector () a () b
   Push _ a b -> Push () (stripValue a) b
   Word _ a b c -> Word () a b c
   where

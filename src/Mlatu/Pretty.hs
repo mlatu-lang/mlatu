@@ -240,6 +240,7 @@ printSignature (Function as bs _) =
 printSignature (Quantified names typ _) =
   "forall" <+> parens (punctuateComma (printParameterGroup <$> groups)) <+> "." <+> printSignature typ
   where
+    printParameterGroup [] = ""
     printParameterGroup params@((Parameter _ _ k _) : _) = hsep (printParameter <$> params) <+> ":" <+> printKind k
     groups = groupBy (\(Parameter _ _ k1 _) (Parameter _ _ k2 _) -> k1 == k2) names
 printSignature (Variable name _) = printGeneralName name
@@ -259,6 +260,7 @@ printToken = \case
   Token.Define -> "define"
   Token.Dot -> "."
   Token.Else -> "else"
+  Token.Field -> "field"
   Token.Float a -> pretty (floatValue a :: Double)
   Token.Forall -> "forall"
   Token.GroupBegin -> "("
@@ -269,6 +271,7 @@ printToken = \case
   Token.Intrinsic -> "intrinsic"
   Token.Match -> "match"
   Token.Operator name -> printUnqualified name
+  Token.Record -> "record"
   Token.Reference -> "\\"
   Token.Stack -> "Stack"
   Token.Text t -> dquotes $ pretty t
@@ -318,9 +321,6 @@ maybePrintTerms = \case
   (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
-  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
-  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
-  (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
@@ -334,7 +334,6 @@ maybePrintTerms = \case
   (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
   (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
-  (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
   where
     horiz :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
@@ -486,9 +485,9 @@ printEntry (Entry.Metadata origin term) =
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
     ]
-printEntry (Entry.ClassMethod origin signature) =
+printEntry (Entry.Constructor origin _ signature _) =
   vsep
-    [ "type class function",
+    [ "data constructor",
       hsep ["defined at", printOrigin origin],
       hsep ["with signature", printSignature signature]
     ]

@@ -256,10 +256,6 @@ resolveSignature dictionary name = do
       signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
       let entry = Entry.Word merge origin (Just signature') body
       pure $ Dictionary.insert (Instantiated name []) entry dictionary
-    Just (Entry.ClassMethod origin signature) -> do
-      signature' <- Resolve.run $ Resolve.signature dictionary qualifier signature
-      let entry = Entry.ClassMethod origin signature'
-      pure $ Dictionary.insert (Instantiated name []) entry dictionary
     _noResolution -> pure dictionary
 
 defineWord ::

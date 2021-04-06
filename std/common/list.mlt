@@ -1,15 +1,15 @@
 vocab mlatu {
   intrinsic cat (forall T . List T, List T -> List T)
-  intrinsic empty (forall T . List T -> Bool)
   intrinsic get (forall T . List T, Int -> Optional T)
-  intrinsic head (forall T . List T -> Optional T)
-  intrinsic init (forall T . List T -> Optional List T)
   intrinsic last (forall T . List T -> Optional T)
   intrinsic set (forall T . List T, T, Int -> Optional List T)
   intrinsic tail (forall T .  List T -> Optional List T)
 }
 
-type List T {}
+type List T {
+  case nil
+  case cons (T, List T)
+}
 
 /*
 instance Lt for List[Int] { define < (List[Int], List[Int] -> Bool) { swap (>) } }
@@ -22,14 +22,13 @@ instance Eq for List[Int] { define = (List[Int], List[Int] -> Bool) {
   -> xs, ys;
   if (xs length ys length <>) { false }
   else {
-    match (xs head_tail)
-    case some {
-      unpair -> x, xs_;
-      match (ys head_tail)
-      case some { unpair -> y, ys_; if (x y <>) { false } else { xs_ ys_ =} }
-      case none { true }
+    match (xs)
+    case cons -> x, xs_ {
+      match (ys)
+      case cons -> y, ys_ { if (x y <>) { false } else { xs_ ys_ =} }
+      case nil { true }
     }
-    case none { true }
+    case nil { true }
   }
 } }
 
@@ -74,7 +73,12 @@ define any2 (forall A B . List A, List B, (A, B -> Bool) -> Bool) {
   zip { unpair f call } any
 }
 
-define append (forall T . List T, List T -> List T) { _::mlatu::cat }
+define append (forall T . List T, List T -> List T) {
+ -> first, second;
+  match (first)
+  case nil { second }
+  case cons -> h, t { t second append h cons}
+}
 
 define append3 (forall T . List T, List T, List T -> List T) { append append }
 
@@ -95,9 +99,9 @@ define concat_optionals (forall T . List Optional T -> List T) {
 
 define each (forall T . List T, (T ->) ->) {
   -> f;
-  match (head_tail)
-  case some { unpair -> h, t; h f call t f each }
-  case none {}
+  match
+  case cons -> h, t {h f call t f each }
+  case nil {}
 }
 
 define each2 (forall A B . List A, List B, (A, B ->) ->) {
@@ -105,15 +109,15 @@ define each2 (forall A B . List A, List B, (A, B ->) ->) {
   zip { unpair f call } each
 }
 
-define elem (forall T . T, List T -> Bool) { swap -> x; { x (=) } any }
+define elem (forall T . T, List T -> Bool) { swap -> x; { x = } any }
 
-define empty (forall T . List T -> Bool) { _::mlatu::empty }
+define empty (forall T . List T -> Bool) { match case nil {true} case cons -> _, _ { false } }
 
 define filter_in (forall T . List T, (T -> Bool) -> List T) {
   -> f;
-  match (tail_head)
-  case some { unpair -> t, h; t f filter_in (h f call) if { h prefix } else {} }
-  case none { [] }
+  match
+  case cons { swap -> t, h; t f filter_in h f call if { h prefix } else {} }
+  case nil { nil }
 }
 
 define filter_out (forall T . List T, (T -> Bool) -> List T) {
@@ -124,9 +128,9 @@ define filter_out (forall T . List T, (T -> Bool) -> List T) {
 define find (forall T . List T, (T -> Bool) -> Optional T) { filter_in head }
 
 define fold_left (forall A B . List B, A, (A, B -> A) -> A) {
-  -> xs, z, k;
-  match (xs tail_head)
-  case some { unpair -> h; (z h k call) k fold_left }
+  -> z, k;
+  match
+  case some -> h { z h k call k fold_left }
   case none { z }
 }
 
@@ -146,13 +150,17 @@ define get_all (forall T . List T, List Int -> List Optional T) {
 
 define glue (forall T . List T, List T, List T -> List T) { prepend append }
 
-define head (forall T . List T -> Optional T) { _::mlatu::head }
-
-define head_tail (forall T . List T -> Optional Pair T List T) {
-  \head \tail bi \pair lift_optional_2
+define head (forall T . List T -> Optional T) {
+  match
+    case nil { none }
+    case cons -> _ { some }
 }
 
-define init (forall T . List T -> Optional List T) { _::mlatu::init }
+define init (forall T . List T -> Optional List T) {
+  match
+  case nil { none }
+  case cons { init prefix }
+}
 
 define init_last (forall T . List T -> Optional Pair (List T) T) {
   \init \last bi \pair lift_optional_2
@@ -168,7 +176,15 @@ define join (forall T . List List T, List T -> List T) {
   [] { g glue } fold_left
 }
 
-define last (forall T . List T -> Optional T) { _::mlatu::last }
+define last (forall T . List T -> Optional T) {
+  match
+  case nil { none }
+  case cons -> h, t {
+    match (t)
+      case nil { h some}
+      case cons -> _, t { t last }
+  }
+}
 
 define last_init (forall T . List T -> Optional Pair T List T) {
   \last \init bi \pair lift_optional_2
@@ -180,9 +196,9 @@ define length (forall T . List T -> Int) { 0 { drop 1 (+) } fold_left }
 
 define map (forall A B . List A, (A -> B) -> List B) {
   -> f;
-  match (head_tail)
-  case some { unpair -> h, t; (t f map) (h f call) prefix }
-  case none { [] }
+  match
+  case cons -> h, t { t f map h f call prefix }
+  case nil { nin }
 }
 
 define map2 (forall A B C . List A, List B, (A, B -> C) -> List C) {
@@ -198,14 +214,13 @@ define map_index (forall A B . List A, (A, Int -> B) -> List B) {
 
 define map_optionally (forall A B . List A, (A -> Optional B) -> List B) {
   -> f;
-  match (head_tail)
-  case some {
-    unpair -> h, t;
+  match
+  case cons -> h, t {
     match (h f call)
     case some -> x { (t f map_optionally) x prefix }
     case none { t f map_optionally }
   }
-  case none { [] }
+  case nil { nil }
 }
 
 define map_reduce_left (forall A B . List A, (A -> B), (B, B -> B) -> Optional B) {
@@ -271,7 +286,7 @@ define partition_eithers (forall A B . List Either A B -> List A, List B) {
   (xs lefts) (xs rights)
 }
 
-define prefix (forall T . List T, T -> List T) { once prepend }
+define prefix (forall T . List T, T -> List T) { swap cons }
 
 define prepend (forall T . List T, List T -> List T) { swap append }
 
@@ -299,9 +314,9 @@ define replicate (forall T . T, Int -> List T) {
 }
 
 define reverse (forall T . List T -> List T) {
-  match (head_tail)
-  case some { unpair reverse swap suffix }
-  case none { [] }
+  match
+  case cons -> h, t { t reverse h suffix }
+  case nil { nil }
 }
 
 define rights (forall A B . List Either A B -> List B) {
@@ -310,7 +325,7 @@ define rights (forall A B . List Either A B -> List B) {
 
 define set (forall T . List T, T, Int -> List T) {
   -> element, index;
-  do  (map_index) { -> i; if (i index =) { drop element } else {} }
+  { -> i; if (i index =) { drop element } else {} } map_index
 }
 
 define suffix (forall T . List T, T -> List T ) { once append }
@@ -327,32 +342,31 @@ define tail_head (forall T . List T  -> Optional Pair (List T) T) {
 }
 
 define unzip (forall A B . List Pair A B -> List A, List B) {
-  match (head_tail)
-  case some {
-    unpair -> h, t;
+  match
+  case cons -> h, t {
     h unpair -> m, n;
     t unzip -> ms, ns;
     ms m prefix ns n prefix
   }
-  case none { [] [] }
+  case nil { nil nil }
 }
 
 define zip (forall A B . List A, List B -> List Pair A B) {
   -> a, b;
-  match (a head_tail)
-  case some -> x_pair {
-    match (b head_tail)
-    case some -> y_pair {
-      (x_pair second) (y_pair second) zip (x_pair first) (y_pair first) pair prefix
+  match (a)
+  case cons -> a_head, a_tail {
+    match (b)
+    case cons -> b_head, b_tail {
+      a_tail b_tail zip a_head b_head pair prefix
     }
-    case none { [] }
+    case nil { nil }
   }
-  case none { [] }
+  case nil { nil }
 }
 
 define _::map_index::helper (forall A B . List A, (A, Int -> B), Int -> List B) {
   -> f, i;
-  match (head_tail)
-  case some { unpair -> h, t; (t f (i 1 +) helper) (h i f call) prefix }
-  case none { [] }
+  match
+  case cons -> h, t { t f i 1 + helper h i f call prefix }
+  case nil { nil }
 }

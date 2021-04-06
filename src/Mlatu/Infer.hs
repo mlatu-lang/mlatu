@@ -326,29 +326,6 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               (Type.Prod origin r f)
           type' = Zonk.typ tenvFinal typ
       pure (NewClosure type' size origin, typ, tenv0)
-
-  -- This is similar for 'new vector' expressions, which we type as:
-  --
-  --     ∀ρα. ρ × α₀ × … × αₓ → ρ × vector<α>
-  --
-
-  NewVector _ size _ origin ->
-    while (Term.origin term0) context $ do
-      [a, b] <-
-        fresh
-          origin
-          [ ("R", Stack),
-            ("Item", Value)
-          ]
-      let typ =
-            Type.Fun
-              origin
-              (foldl' (Type.Prod origin) a (replicate size b))
-              (Type.Prod origin a (TypeConstructor origin "List" :@ b))
-          type' = Zonk.typ tenvFinal typ
-          b' = Zonk.typ tenvFinal b
-      pure (NewVector type' size b' origin, typ, tenv0)
-
   -- Pushing a value results in a stack with that value on top.
 
   Push _ value origin ->
@@ -552,18 +529,6 @@ typeFromSignature tenv signature0 = do
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
 
-    permissionVar :: Origin -> [Type] -> M (Maybe Type, [Type])
-    permissionVar origin types = case splitFind isTypeVar types of
-      Just (preceding, typ, following) -> case find isTypeVar following of
-        Nothing -> pure (Just typ, preceding ++ following)
-        Just type' -> do
-          report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
-          halt
-      Nothing -> pure (Nothing, types)
-      where
-        isTypeVar TypeVar {} = True
-        isTypeVar _ = False
-
     fromVar :: Origin -> GeneralName -> StateT SignatureEnv M Type
     fromVar origin (UnqualifiedName name) = do
       existing <- gets $ Map.lookup name . sigEnvVars
@@ -592,14 +557,6 @@ typeFromSignature tenv signature0 = do
       where
         stack :: Type -> [Type] -> Type
         stack = foldl' $ Type.Prod origin
-
-splitFind :: (Eq a) => (a -> Bool) -> [a] -> Maybe ([a], a, [a])
-splitFind f = go []
-  where
-    go acc (x : xs)
-      | f x = Just (reverse acc, x, xs)
-      | otherwise = go (x : acc) xs
-    go _ [] = Nothing
 
 data SignatureEnv = SignatureEnv
   { sigEnvAnonymous :: ![Var],

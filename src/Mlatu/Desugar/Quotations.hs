@@ -83,7 +83,6 @@ desugar dictionary qualifier term0 = do
             pure (Else a' elseOrigin, tenv')
         pure (Match hint typ cases' else' origin, tenv2)
       NewClosure {} -> done
-      NewVector {} -> done
       Push _type (Capture closed a) origin -> do
         let types = mapMaybe (TypeEnv.getClosed tenv0) closed
             oldClosure = view TypeEnv.closure tenv0

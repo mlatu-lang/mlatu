@@ -22,8 +22,6 @@ import Data.Bits
   )
 import Data.Fixed (mod')
 import Data.Text qualified as Text
-import Data.Vector (Vector, (!))
-import Data.Vector qualified as Vector
 import Mlatu.Definition (mainName)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
@@ -63,7 +61,6 @@ import Text.Show qualified
 -- | Representation of a runtime value.
 data Rep
   = Algebraic !ConstructorIndex ![Rep]
-  | Array !(Vector Rep)
   | Character !Char
   | Closure !Qualified ![Rep]
   | Float64 !Double
@@ -86,9 +83,6 @@ printRep :: Rep -> Doc a
 printRep (Algebraic (ConstructorIndex index) values) =
   hsep $
     (printRep <$> values) ++ [hcat ["#", pretty index]]
-printRep (Array values) =
-  list $
-    Vector.toList $ printRep <$> values
 printRep (Character c) = squotes $ pretty c
 printRep (Closure name closure) =
   hsep $
@@ -207,11 +201,6 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           r <- readIORef stackRef
           let (Name name : closure, r') = Stack.pops (size + 1) r
           writeIORef stackRef (Closure name (reverse closure) ::: r')
-        NewVector _ size _ _ -> do
-          r <- readIORef stackRef
-          let (values, r') = Stack.pops size r
-          writeIORef stackRef $
-            Array (Vector.reverse $ Vector.fromList values) ::: r'
         Push _ value _ -> push value
         Word _ (QualifiedName name) args _ ->
           word callStack name args
@@ -316,72 +305,9 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "show_float64" -> showFloat (show :: Double -> Text)
         "read_int64" -> readInteger ((readIO :: String -> IO Int64) . toString) Int64
         "read_float64" -> readFloat ((readIO :: String -> IO Double) . toString) Float64
-        "empty" -> do
-          Array xs ::: r <- readIORef stackRef
-          writeIORef stackRef r
-          if Vector.null xs
-            then word callStack (Qualified Vocabulary.global "true") []
-            else word callStack (Qualified Vocabulary.global "false") []
-        "head" -> do
-          Array xs ::: r <- readIORef stackRef
-          if Vector.null xs
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              let x = xs ! 0
-              writeIORef stackRef $ x ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
-        "last" -> do
-          Array xs ::: r <- readIORef stackRef
-          if Vector.null xs
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              let x = xs ! (Vector.length xs - 1)
-              writeIORef stackRef $ x ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
-        "cat" -> do
-          Array ys ::: Array xs ::: r <- readIORef stackRef
-          writeIORef stackRef $ Array (xs <> ys) ::: r
         "string_concat" -> do
           Text y ::: Text x ::: r <- readIORef stackRef
           writeIORef stackRef $ Text (Text.concat [x, y]) ::: r
-        "string_from_list" -> do
-          Array cs ::: r <- readIORef stackRef
-          let string = (\(Character c) -> c) <$> Vector.toList cs
-          writeIORef stackRef $ Text (toText string) ::: r
-        "string_to_list" -> do
-          Text txt ::: r <- readIORef stackRef
-          let string = Array (Vector.fromList (Character <$> toString txt))
-          writeIORef stackRef $ string ::: r
-        "get" -> do
-          Int64 i ::: Array xs ::: r <- readIORef stackRef
-          if i < 0 || i >= fromIntegral (length xs)
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              writeIORef stackRef $ (xs ! fromIntegral i) ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
-        "set" -> do
-          Int64 i ::: x ::: Array xs ::: r <- readIORef stackRef
-          if i < 0 || i >= fromIntegral (length xs)
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              let (before, after) = Vector.splitAt (fromIntegral i) xs
-              writeIORef stackRef $
-                Array
-                  (before <> Vector.singleton x <> Vector.tail after)
-                  ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
         "print" -> do
           Text txt ::: r <- readIORef stackRef
           writeIORef stackRef r
@@ -408,28 +334,6 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           catchFileAccessErrors $
             appendFile (toString cs) $
               toString bs
-        "tail" -> do
-          Array xs ::: r <- readIORef stackRef
-          if Vector.null xs
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              let xs' = Vector.tail xs
-              writeIORef stackRef $ Array xs' ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
-        "init" -> do
-          Array xs ::: r <- readIORef stackRef
-          if Vector.null xs
-            then do
-              writeIORef stackRef r
-              word callStack (Qualified Vocabulary.global "none") []
-            else do
-              let xs' = Vector.init xs
-              writeIORef stackRef $ Array xs' ::: r
-              -- FIXME: Use right args.
-              word callStack (Qualified Vocabulary.global "some") []
         _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
         where
           unaryInt64 :: (Int64 -> Int64) -> IO ()

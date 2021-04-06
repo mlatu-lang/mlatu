@@ -12,7 +12,6 @@ module Mlatu.Entry
   ( Entry (..),
     _Word,
     _Metadata,
-    _ClassMethod,
     _Type,
     _InstantiatedType,
     _Constructor,
@@ -51,8 +50,6 @@ data Entry
   | -- | Untyped metadata from @about@ blocks. Used internally for operator
     -- precedence and associativity.
     Metadata !Origin !(Term ())
-  | -- | A trait to which other entries can link.
-    ClassMethod !Origin !Signature
   | -- | A data type with some generic parameters.
     Type !Origin ![Parameter] ![DataConstructor]
   | -- | A record

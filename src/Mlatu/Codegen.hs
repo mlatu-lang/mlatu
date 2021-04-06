@@ -42,7 +42,7 @@ generate dict = do
   bs <- evalCodegen (untilM entryRs (Map.null <$> use _1)) (Map.filterWithKey (\(Instantiated name args) _ -> null args && name == mainName) (view entries dict), Map.empty) dict
   pure
     ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
-        <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>),Algebraic(i64, Vec<Rep>), Char(char), Text(String), Int(i64), Float(f64), List(Vec<Rep>) } use Rep::*;"
+        <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>),Algebraic(i64, Vec<Rep>), Char(char), Text(String), Int(i64), Float(f64) } use Rep::*;"
         <> "#[inline] fn convertBool(b: bool, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if b { mtrue(stack, closures) } else { mfalse(stack, closures) } }"
         <> "#[inline] fn convertOption(o: Option<Rep>, mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { if let Some(x) = o { stack.push(x); msome(stack, closures) } else { mnone(stack, closures) } }"
         <> ByteString.concat bs
@@ -83,25 +83,23 @@ entryRs =
         )
 
 termRs :: Term Type -> Codegen ByteString
-termRs x = goTerms $ decompose x
+termRs = goTerms . decompose
   where
     goTerms = \case
       [] -> pure ""
-      (Group a : Match _ _ cases els _ : xs) -> do
-        cond <- termRs a
-        cs <- traverse caseRs cases
-        e <- case els of
-          (Else body _) -> termRs body
-          (DefaultElse _ _) -> word (Qualified Vocabulary.global "abort") []
-        rest <- goTerms xs
-        pure $ matchStmt cond (catMaybes cs ++ [("_", e)]) <> rest
+      (Group x : xs) -> goTerms (x : xs)
+      (Word _ name _ _ : Match _ _ cases _ _ : xs)
+        | length (filter (\(Case n _ _) -> name == n) cases) == 1 -> case filter (\(Case n _ _) -> name == n) cases of
+          [Case _ body _] -> do
+            a <- termRs body
+            b <- goTerms xs
+            pure $ a <> b
+          _ -> error "Shouldn't happen"
       (y : ys) -> do
         a <- goTerm y
         b <- goTerms ys
         pure $ a <> b
     goTerm = \case
-      Group a -> termRs a
-      NewVector _ size _ _ -> pure $ letStmt "v" (vecBuilder size) <> stackPush "List(v)"
       Push _ (Character c) _ -> pure $ stackPush $ "Char('" <> show c <> "')"
       Push _ (Float f) _ -> pure $ stackPushFloat $ show val
         where
@@ -124,7 +122,7 @@ termRs x = goTerms $ decompose x
       Push _ (Name name) _ -> pure $ stackPush $ "Name(" <> rustifyQualified name <> ")"
       Push _ (Local (LocalIndex 0)) _ -> pure $ stackPush "locals.last().unwrap().clone()"
       Push _ (Local (LocalIndex i)) _ -> pure $ stackPush $ "locals[locals.len() - " <> show (1 + i) <> "].clone()"
-      Push _ (Closed (ClosureIndex i)) _ -> pure $ stackPush $ "closures.last().unwrap().clone()[" <> show i <> "].clone()"
+      Push _ (Closed (ClosureIndex i)) _ -> pure $ stackPush $ "closures.last().cloned().unwrap().[" <> show i <> "].clone()"
       Word _ (QualifiedName name) args _ -> word name args
       Lambda _ _ _ body _ -> do
         a <- termRs body
@@ -182,7 +180,6 @@ word name args = do
           (Qualified v unqualified)
             | v == Vocabulary.intrinsic -> intrinsic unqualified
           _ -> error "No such intrinsic"
-        Just (Entry.ClassMethod {}, _) -> pure "/* an error occurred here during instantiation of instances */"
         Just (e, _) -> error $ show e
         Nothing -> error "Nothing"
 
@@ -242,17 +239,6 @@ intrinsic = \case
   "empty" -> pure $ ifLetPop "List(a)" $ convertBool "a.is_empty()"
   "cat" -> pure $ ifLetPop2 ("List(a)", "List(b)") (letStmt "mut new_vec" "b.clone()" <> "new_vec.extend(a.into_iter());" <> stackPush "List(new_vec)")
   "string_concat" -> pure $ ifLetPop2 ("Text(a)", "Text(b)") (letStmt "mut new_string" "b" <> "new_string.push_str(&a);" <> stackPushText "new_string")
-  "string_from_list" -> pure $ ifLetPop "List(a)" $ stackPushText "a.iter().filter_map(|e| if let Char(c) = e { Some(c) } else { None } ).collect::<String>()"
-  "string_to_list" -> pure $ ifLetPop "Text(a)" $ stackPush "List(a.chars().map(Char).collect::<Vec<_>>())"
-  "get" -> pure $ ifLetPop2 ("Int(a)", "List(b)") $ convertOption "b.get(a as usize).cloned()"
-  "set" -> do
-    s <- word (Qualified Vocabulary.global "some") []
-    n <- word (Qualified Vocabulary.global "none") []
-    pure $ ifLetPop3 ("Int(a)", "x", "List(b)") ("if a < 0 || (a as usize) >= b.len() { b[a as usize] = x;" <> stackPush "List(b)" <> s <> " } else {" <> n <> "}")
-  "head" -> pure $ ifLetPop "List(a)" $ convertOption "a.first().cloned()"
-  "last" -> pure $ ifLetPop "List(a)" $ convertOption "a.last().cloned()"
-  "tail" -> pure $ ifLetPop "List(a)" $ convertOption "a.split_first().map(|(_, t)| List(t.to_vec()))"
-  "init" -> pure $ ifLetPop "List(a)" $ convertOption "a.split_last().map(|(_, i)| List(i.to_vec()))"
   "print" -> pure $ ifLetPop "Text(a)" "println!(\"{}\", a);"
   "get_line" -> pure $ letStmt "mut buf" "String::new()" <> "std::io::stdin().read_line(&mut buf).unwrap();" <> stackPushText "buf"
   "flush_stdout" -> pure "use std::io::Write; std::io::stdout().flush().unwrap();"
@@ -315,9 +301,6 @@ ifLetPop binding body = matchStmt "stack.pop()" [("Some(" <> binding <> ")", bod
 
 ifLetPop2 :: (ByteString, ByteString) -> ByteString -> ByteString
 ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)
-
-ifLetPop3 :: (ByteString, ByteString, ByteString) -> ByteString -> ByteString
-ifLetPop3 (b1, b2, b3) body = ifLetPop b1 (ifLetPop b2 (ifLetPop b3 body))
 
 matchStmt :: ByteString -> [(ByteString, ByteString)] -> ByteString
 matchStmt target cases = "match " <> target <> " { " <> ByteString.concat ((\(binding, block) -> binding <> " => {" <> block <> "},") <$> cases) <> " };"

@@ -59,7 +59,6 @@ scope = scopeTerm [0]
             )
             origin
         recur term@NewClosure {} = term
-        recur term@NewVector {} = term
         recur (Push _ value origin) = Push () (scopeValue stack value) origin
         recur (Word _ (LocalName index) _ origin) =
           Push () (scopeValue stack (Local index)) origin
@@ -131,7 +130,6 @@ captureTerm term = case term of
       captureElse (Else a elseOrigin) =
         Else <$> captureTerm a <*> pure elseOrigin
   NewClosure {} -> pure term
-  NewVector {} -> pure term
   Push _ value origin -> Push () <$> captureValue value <*> pure origin
   Word {} -> pure term
 
