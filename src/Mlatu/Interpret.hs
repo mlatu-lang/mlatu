@@ -209,9 +209,9 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           writeIORef stackRef $
             Array (Vector.reverse $ Vector.fromList values) ::: r'
         Push _ value _ -> push value
-        Word _ _ (QualifiedName name) args _ ->
+        Word _ (QualifiedName name) args _ ->
           word callStack name args
-        Word _ _ name _ _ ->
+        Word _ name _ _ ->
           ice $
             show $
               hsep

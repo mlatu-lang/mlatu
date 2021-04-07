@@ -22,7 +22,6 @@ import Mlatu.Name
     Qualifier (..),
     Root (Absolute, Relative),
   )
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Pretty (printEntry, printGeneralName, printInstantiated, printQualified, printQualifier, printSignature)
 import Mlatu.Report (human)
@@ -159,9 +158,8 @@ testWord contextSource viewpoint name expected = do
             Fragment.definitions
             ( one
                 Definition
-                  { Definition._body = Term.Word () Operator.Postfix name [] origin,
+                  { Definition._body = Term.Word () name [] origin,
                     Definition._category = Category.Word,
-                    Definition._fixity = Operator.Postfix,
                     Definition._inferSignature = False,
                     Definition._merge = Merge.Deny,
                     Definition._name = Qualified viewpoint "test",
@@ -186,7 +184,7 @@ testWord contextSource viewpoint name expected = do
   case Dictionary.toList <$> dictionary of
     Right definitions -> case find matching definitions of
       Just (_, Entry.Word _ _ _ _ _ (Just term))
-        | [Term.Word _ _ name' _ _] <- Term.decompose term ->
+        | [Term.Word _ name' _ _] <- Term.decompose term ->
           let message =
                 show $
                   hsep

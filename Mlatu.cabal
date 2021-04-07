@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5080fa2422e7b6d5fdd55ae34043638779e6d157a0d33c9dd339e693b09b77a1
+-- hash: 843da2285f39b81d0369114419760c6fad2fcbc6b541ac367bd28bf658a05362
 
 name:           mlatu
 version:        0.1.0.0
@@ -39,8 +39,6 @@ library
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
-      Mlatu.Entry.Type
-      Mlatu.Entry.Word
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Hint
@@ -58,7 +56,6 @@ library
       Mlatu.Monad
       Mlatu.Name
       Mlatu.Occurrences
-      Mlatu.Operator
       Mlatu.Origin
       Mlatu.Parse
       Mlatu.Parser

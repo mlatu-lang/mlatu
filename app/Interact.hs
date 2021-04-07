@@ -115,7 +115,7 @@ cmd input = do
       -- right generic args.
       let lastEntry = viaNonEmpty last (Term.decompose mainBody)
       case lastEntry of
-        Just (Term.Word _ _ _ args _) ->
+        Just (Term.Word _ _ args _) ->
           ( do
               oldStack <- lift $ lift get
               stack <-

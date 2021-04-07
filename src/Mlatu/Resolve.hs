@@ -91,8 +91,8 @@ term dictionary vocabulary = recur
     recur (Push _ v origin) =
       Push ()
         <$> value dictionary vocabulary v <*> pure origin
-    recur (Word _ fixity name params origin) =
-      Word () fixity
+    recur (Word _ name params origin) =
+      Word ()
         <$> definitionName dictionary vocabulary name origin
         <*> pure params
         <*> pure origin

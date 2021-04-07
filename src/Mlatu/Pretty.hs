@@ -25,7 +25,6 @@ module Mlatu.Pretty
   )
 where
 
-import Data.Char (isLetter)
 import Data.List (findIndex, groupBy)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
@@ -47,7 +46,6 @@ import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..), floatVa
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Signature (..))
 import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
@@ -284,43 +282,43 @@ printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a
 printToken = \case
-  Token.About -> "about"
-  Token.AngleBegin -> "<"
-  Token.AngleEnd -> ">"
-  Token.Arrow -> "->"
-  Token.As -> "as"
-  Token.BlockBegin -> "{"
-  Token.BlockEnd -> "}"
-  Token.Case -> "case"
+  Token.About -> "`about`"
+  Token.AngleBegin -> "`<`"
+  Token.AngleEnd -> "`>`"
+  Token.Arrow -> "`->`"
+  Token.As -> "`as`"
+  Token.BlockBegin -> "`{`"
+  Token.BlockEnd -> "`}`"
+  Token.Case -> "`case`"
   Token.Character c -> squotes $ pretty c
-  Token.Colon -> ":"
-  Token.Comma -> ","
-  Token.Define -> "define"
-  Token.Do -> "do"
-  Token.Ellipsis -> "..."
-  Token.Else -> "else"
+  Token.Colon -> "`:`"
+  Token.Comma -> "`,`"
+  Token.Define -> "`define`"
+  Token.Do -> "`do`"
+  Token.Ellipsis -> "`...`"
+  Token.Else -> "`else`"
   Token.Float a -> pretty (floatValue a :: Double)
-  Token.GroupBegin -> "("
-  Token.GroupEnd -> ")"
-  Token.If -> "if"
-  Token.Ignore -> "_"
-  Token.Instance -> "instance"
+  Token.GroupBegin -> "`(`"
+  Token.GroupEnd -> "`)`"
+  Token.If -> "`if`"
+  Token.Ignore -> "`_`"
+  Token.Instance -> "`instance`"
   Token.Integer literal -> printIntegerLiteral literal
-  Token.Intrinsic -> "intrinsic"
-  Token.Match -> "match"
+  Token.Intrinsic -> "`intrinsic`"
+  Token.Match -> "`match`"
   Token.Operator name -> printUnqualified name
-  Token.Permission -> "permission"
-  Token.Reference -> "\\"
-  Token.Return -> "return"
+  Token.Permission -> "`permission`"
+  Token.Reference -> "`\\`"
+  Token.Return -> "`return`"
   Token.Text t -> dquotes $ pretty t
-  Token.Trait -> "trait"
-  Token.Type -> "type"
-  Token.VectorBegin -> "["
-  Token.VectorEnd -> "]"
-  Token.Vocab -> "vocab"
-  Token.VocabLookup -> "::"
-  Token.Where -> "where"
-  Token.With -> "with"
+  Token.Trait -> "`trait`"
+  Token.Type -> "`type`"
+  Token.VectorBegin -> "`[`"
+  Token.VectorEnd -> "`]`"
+  Token.Vocab -> "`vocab`"
+  Token.VocabLookup -> "`::`"
+  Token.Where -> "`where`"
+  Token.With -> "`with`"
   Token.Word name -> printUnqualified name
 
 -- Minor hack because Parsec requires 'Show'.
@@ -369,9 +367,9 @@ maybePrintTerms = \case
   (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
   (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
-  (Push _ (Quotation (Word _ fixity name args _)) _ : Group a : xs) -> Just ((backslash <> printWord fixity name args) `justHoriz` (Group a : xs))
+  (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ _ (QualifiedName (Qualified _ u)) _ _ : xs)
+  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ u)) _ _ : xs)
     | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
       Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
@@ -382,9 +380,9 @@ maybePrintTerms = \case
   (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (vsep [printMatch Nothing cases Nothing] `justVertical` xs)
   (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (vsep [printMatch Nothing cases (Just elseBody)] `justVertical` xs)
   (Push _ value _ : xs) -> Just (printValue value `justHoriz` xs)
-  (Word _ Operator.Postfix (QualifiedName (Qualified _ "drop")) [] o : xs) ->
+  (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
-  (Word _ fixity name args _ : xs) -> Just (printWord fixity name args `justHoriz` xs)
+  (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
   (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
   where
@@ -467,10 +465,9 @@ printCase n (Lambda _ name _ body _) =
     go ns b = (ns, b)
 printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
 
-printWord :: Operator.Fixity -> GeneralName -> [Type] -> Doc a
-printWord Operator.Postfix (UnqualifiedName (Unqualified name)) []
-  | not (Text.any isLetter name) = parens $ pretty name
-printWord _ word args = printGeneralName word <> mapNonEmpty "" (\xs -> "::" <> list (printType <$> xs)) args
+printWord :: GeneralName -> [Type] -> Doc a
+printWord word [] = printGeneralName word
+printWord word args = printGeneralName word <> "::" <> list (printType <$> args)
 
 printValue :: Value a -> Doc b
 printValue value = case value of
@@ -517,14 +514,14 @@ printMetadata metadata =
       ++ [rbrace]
 
 printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
-printDefinition (Definition Category.Constructor _ _ _ _ _ _ _ _) = Nothing
-printDefinition (Definition Category.Permission name body _ _ _ _ signature _) =
+printDefinition (Definition Category.Constructor _ _ _ _ _ _ _) = Nothing
+printDefinition (Definition Category.Permission name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-printDefinition (Definition Category.Instance name body _ _ _ _ signature _) =
+printDefinition (Definition Category.Instance name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("instance" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-printDefinition (Definition Category.Word name body _ _ _ _ _ _)
+printDefinition (Definition Category.Word name body _ _ _ _ _)
   | name == mainName = maybePrintTerm body
-printDefinition (Definition Category.Word name body _ _ _ _ signature _) =
+printDefinition (Definition Category.Word name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
 printEntry :: Entry -> Doc a
