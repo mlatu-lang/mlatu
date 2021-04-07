@@ -38,7 +38,6 @@ import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Monad (M)
 import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Regeneralize (regeneralize)
@@ -395,7 +394,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       pure (Push type' value' origin, typ, tenv1)
 
   -- FIXME: Should generic parameters be restricted to none?
-  Word _ _fixity name _ origin ->
+  Word _ name _ origin ->
     while (Term.origin term0) context $
       inferCall dictionary tenvFinal tenv0 name origin
   where
@@ -514,7 +513,6 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
       pure
         ( Word
             type''
-            Operator.Postfix
             mangled
             params''
             origin,

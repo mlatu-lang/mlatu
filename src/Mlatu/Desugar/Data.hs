@@ -22,7 +22,6 @@ import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
-import Mlatu.Operator qualified as Operator
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
@@ -58,7 +57,6 @@ desugarConstructor definition index constructor =
           (length $ view DataConstructor.fields constructor)
           $ view DataConstructor.origin constructor,
       Definition._category = Category.Constructor,
-      Definition._fixity = Operator.Postfix,
       Definition._inferSignature = False,
       Definition._merge = Merge.Deny,
       Definition._name =

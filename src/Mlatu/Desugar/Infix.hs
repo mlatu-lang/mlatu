@@ -20,8 +20,6 @@ import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Monad (M)
 import Mlatu.Name (GeneralName (..))
-import Mlatu.Operator (Operator)
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
@@ -40,26 +38,13 @@ type Rewriter a = Parsec [Term ()] () a
 -- according to the definitions and operator metadata in the 'Dictionary'.
 desugar :: Dictionary -> Definition () -> M (Definition ())
 desugar dictionary definition = do
-  operatorMetadata <- Dictionary.operatorMetadata dictionary
-  let operatorTable :: [[Expr.Operator [Term ()] () Identity (Term ())]]
-      operatorTable = toOperator <<$>> rawOperatorTable
-
-      rawOperatorTable :: [[Operator]]
-      rawOperatorTable =
-        ( \p ->
-            Map.elems $
-              Map.filter ((== p) . Operator.precedence) operatorMetadata
-        )
-          <$> reverse universe
-
-      expression :: Rewriter (Term ())
-      expression = Expr.buildExpressionParser operatorTable operand
+  let expression :: Rewriter (Term ())
+      expression = Expr.buildExpressionParser [] operand
         where
           operand = (<?> "operand") $ do
             origin <- getTermOrigin
             results <- Parsec.many1 $
               termSatisfy $ \case
-                Word _ Operator.Infix _ _ _ -> False
                 Lambda {} -> False
                 _otherTerm -> True
             pure $ Term.compose () origin results
@@ -130,26 +115,12 @@ desugar dictionary definition = do
   desugared <- desugarTerms' $ view Definition.body definition
   pure $ set Definition.body desugared definition
 
-toOperator :: Operator -> Expr.Operator [Term ()] () Identity (Term ())
-toOperator operator = Expr.Infix
-  (binaryOperator (QualifiedName (Operator.name operator)))
-  $ case Operator.associativity operator of
-    Operator.Nonassociative -> Expr.AssocNone
-    Operator.Leftward -> Expr.AssocRight
-    Operator.Rightward -> Expr.AssocLeft
-
-binaryOperator :: GeneralName -> Rewriter (Term () -> Term () -> Term ())
-binaryOperator name = mapTerm $ \case
-  Word _ Operator.Infix name' _ origin
-    | name == name' -> Just $ binary name origin
-  _nonBinaryOperator -> Nothing
-
 binary :: GeneralName -> Origin -> Term () -> Term () -> Term ()
 binary name origin x y =
   Term.compose
     ()
     origin
-    [x, y, Word () Operator.Postfix name [] origin]
+    [x, y, Word () name [] origin]
 
 getTermOrigin :: Rewriter Origin
 getTermOrigin =

@@ -16,7 +16,6 @@ module Mlatu.Definition
     category,
     name,
     body,
-    fixity,
     inferSignature,
     merge,
     origin,
@@ -33,8 +32,6 @@ import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Entry.Parent (Parent (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (GeneralName (..), Qualified (..))
-import Mlatu.Operator (Fixity)
-import Mlatu.Operator qualified as Operator
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -48,7 +45,6 @@ data Definition a = Definition
   { _category :: !Category,
     _name :: !Qualified,
     _body :: !(Term a),
-    _fixity :: !Fixity,
     _inferSignature :: !Bool,
     _merge :: !Merge,
     _origin :: !Origin,
@@ -73,7 +69,6 @@ main permissions mName term =
   Definition
     { _body = term,
       _category = Category.Word,
-      _fixity = Operator.Postfix,
       _inferSignature = True,
       _merge = Merge.Compose,
       _name = fromMaybe mainName mName,
