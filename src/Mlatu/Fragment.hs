@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -26,10 +27,10 @@ import Relude
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
-  { _declarations :: ![Declaration],
-    _definitions :: ![Definition a],
-    _metadata :: ![Metadata],
-    _types :: ![TypeDefinition]
+  { _declarations :: [Declaration],
+    _definitions :: [Definition a],
+    _metadata :: [Metadata],
+    _types :: [TypeDefinition]
   }
   deriving (Show)
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Entry.Parameter
 -- Description : Type parameters
@@ -17,9 +19,9 @@ import Mlatu.Origin (Origin)
 import Relude
 
 -- | A generic type parameter for a data type, like @T@ in @List[T]@.
-data Parameter = Parameter !Origin !Unqualified !Kind !(Maybe Unqualified)
+data Parameter = Parameter Origin Unqualified Kind
   deriving (Ord, Show)
 
 -- | Parameters are compared regardless of origin.
 instance Eq Parameter where
-  Parameter _ a b c == Parameter _ d e f = (a, b, c) == (d, e, f)
+  Parameter _ a b == Parameter _ c d = (a, b) == (c, d)

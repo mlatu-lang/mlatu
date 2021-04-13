@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Queue
 -- Description : Queue utilities
@@ -15,7 +17,7 @@ where
 import Relude hiding (fromList)
 
 -- | A generic queue with amortized O(1) enqueue/dequeue.
-data Queue a = Queue ![a] ![a]
+data Queue a = Queue [a] [a]
 
 fromList :: [a] -> Queue a
 fromList = Queue [] . reverse

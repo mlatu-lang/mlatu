@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -24,9 +25,9 @@ import Relude
 
 -- | Untyped metadata from @about@ blocks.
 data Metadata = Metadata
-  { _fields :: !(Map Unqualified (Term ())),
-    _name :: !GeneralName,
-    _origin :: !Origin
+  { _fields :: (Map Unqualified (Term ())),
+    _name :: GeneralName,
+    _origin :: Origin
   }
   deriving (Ord, Eq, Show)
 

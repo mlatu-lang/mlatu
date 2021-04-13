@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -32,26 +33,20 @@ import Relude hiding (Constraint, Type)
 -- | A parsed type signature.
 data Signature
   = -- | @List\<T\>@
-    Application !Signature !Signature !Origin
+    Application Signature Signature Origin
   | -- | An empty stack.
-    Bottom !Origin
+    Bottom Origin
   | -- | @A, B -> C, D +P +Q@
-    Function ![Signature] ![Signature] ![GeneralName] !Origin
+    Function [Signature] [Signature] [GeneralName] Origin
   | -- | @\<R..., T, +P\> (...)@
-    Quantified ![Parameter] !Signature !Origin
+    Quantified [Parameter] Signature Origin
   | -- | @T@
-    Variable !GeneralName !Origin
+    Variable GeneralName Origin
   | -- | @R..., A, B -> S..., C, D +P +Q@
-    StackFunction
-      !Signature
-      ![Signature]
-      !Signature
-      ![Signature]
-      ![GeneralName]
-      !Origin
+    StackFunction Signature [Signature] Signature [Signature] [GeneralName] Origin
   | -- | Produced when generating signatures for lifted quotations after
     -- typechecking.
-    Type !Type
+    Type Type
   deriving (Show)
 
 makePrisms ''Signature

@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -37,10 +38,10 @@ data Category
 makePrisms ''Category
 
 data Declaration = Declaration
-  { _category :: !Category,
-    _name :: !Qualified,
-    _origin :: !Origin,
-    _signature :: !Signature
+  { _category :: Category,
+    _name :: Qualified,
+    _origin :: Origin,
+    _signature :: Signature
   }
   deriving (Eq, Ord, Show)
 

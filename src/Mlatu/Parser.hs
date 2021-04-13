@@ -24,6 +24,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Pretty ()
 import Mlatu.Token (Token)
+import Optics
 import Relude
 import Text.Parsec (ParsecT, (<?>))
 import Text.Parsec qualified as Parsec
@@ -35,7 +36,7 @@ type GeneralParser a = ParsecT [Located Token] Qualifier Identity a
 
 getTokenOrigin :: GeneralParser Origin
 getTokenOrigin =
-  Located.origin
+  view Located.origin
     <$> Parsec.lookAhead (tokenSatisfy (const True))
 
 tokenSatisfy ::
@@ -52,11 +53,11 @@ tokenSatisfy predicate =
       Located Token ->
       [Located Token] ->
       SourcePos
-    advance _ _ (token : _) = Origin.begin (Located.origin token)
+    advance _ _ (token : _) = Origin.begin (view Located.origin token)
     advance sourcePos _ _ = sourcePos
 
 parserMatch :: Token -> GeneralParser (Located Token)
-parserMatch token = tokenSatisfy ((== token) . Located.item) <?> show token
+parserMatch token = tokenSatisfy ((== token) . view Located.item) <?> show token
 
 parserMatch_ :: Token -> GeneralParser ()
 parserMatch_ = void . parserMatch

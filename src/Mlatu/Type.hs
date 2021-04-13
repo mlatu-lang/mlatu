@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE StrictData #-}
 
 -- |
 -- Module      : Mlatu.Type
@@ -36,11 +37,11 @@ import Relude hiding (Sum, Type, void)
 -- there are semantic restrictions on this, discussed in the presentation of the
 -- inference algorithm. Type variables have explicit kinds.
 data Type
-  = !Type :@ !Type
-  | TypeConstructor !Origin !Constructor
-  | TypeVar !Origin !Var
-  | TypeConstant !Origin !Var
-  | Forall !Origin !Var !Type
+  = (:@) Type Type
+  | TypeConstructor Origin Constructor
+  | TypeVar Origin Var
+  | TypeConstant Origin Var
+  | Forall Origin Var Type
   deriving (Ord, Show)
 
 infixl 1 :@
@@ -63,11 +64,7 @@ pattern Sum o a b = TypeConstructor o "Sum" :@ a :@ b
 newtype Constructor = Constructor Qualified
   deriving (Ord, Eq, Hashable, Show)
 
-data Var = Var
-  { varNameHint :: !Unqualified,
-    varTypeId :: !TypeId,
-    varKind :: !Kind
-  }
+data Var = Var Unqualified TypeId Kind
   deriving (Ord, Show)
 
 instance Eq Var where

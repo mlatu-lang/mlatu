@@ -93,11 +93,11 @@ printFloatLiteral literal =
     value = floatValue literal
 
 printParameter :: Parameter -> Doc a
-printParameter (Parameter _ name Value _) = printUnqualified name
-printParameter (Parameter _ name Stack _) = printUnqualified name <> "..."
-printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
-printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
-printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
+printParameter (Parameter _ name Value) = printUnqualified name
+printParameter (Parameter _ name Stack) = printUnqualified name <> "..."
+printParameter (Parameter _ name Label) = "+" <> printUnqualified name
+printParameter (Parameter _ name Permission) = "+" <> printUnqualified name
+printParameter (Parameter _ name (_ :-> _)) = printUnqualified name <> "[_]"
 
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
@@ -367,9 +367,8 @@ maybePrintTerms = \case
   (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ u)) _ _ : xs)
-    | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
-      Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
+  (Coercion (AnyCoercion (Quantified [Parameter _ "R" Stack, Parameter _ "S" Stack] (Function [StackFunction (Variable "R" _) [] (Variable "S" _) [] grantNames _] [StackFunction (Variable "R" _) [] (Variable "S" _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ "call")) _ _ : xs) ->
+    Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
   (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs

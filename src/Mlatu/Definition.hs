@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -42,14 +43,14 @@ import Optics
 import Relude
 
 data Definition a = Definition
-  { _category :: !Category,
-    _name :: !Qualified,
-    _body :: !(Term a),
-    _inferSignature :: !Bool,
-    _merge :: !Merge,
-    _origin :: !Origin,
-    _signature :: !Signature,
-    _parent :: !(Maybe Parent)
+  { _category :: Category,
+    _name :: Qualified,
+    _body :: Term a,
+    _inferSignature :: Bool,
+    _merge :: Merge,
+    _origin :: Origin,
+    _signature :: Signature,
+    _parent :: Maybe Parent
   }
   deriving (Ord, Eq, Show)
 
@@ -76,7 +77,7 @@ main permissions mName term =
       _parent = Nothing,
       _signature =
         Signature.Quantified
-          [Parameter o "R" Stack Nothing]
+          [Parameter o "R" Stack]
           ( Signature.StackFunction
               (Signature.Variable "R" o)
               []

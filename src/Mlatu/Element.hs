@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -28,14 +29,14 @@ import Optics.TH (makePrisms)
 -- | A top-level program element.
 data Element a
   = -- | @intrinsic@, @trait@
-    Declaration !Declaration
+    Declaration Declaration
   | -- | @define@, @instance@
-    Definition !(Definition a)
+    Definition (Definition a)
   | -- | @about@
-    Metadata !Metadata
+    Metadata Metadata
   | -- | Top-level (@main@) code.
-    Term !(Term a)
+    Term (Term a)
   | -- | @type@
-    TypeDefinition !TypeDefinition
+    TypeDefinition TypeDefinition
 
 makePrisms ''Element

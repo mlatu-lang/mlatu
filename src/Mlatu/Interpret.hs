@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -62,14 +63,14 @@ import Text.Show qualified
 
 -- | Representation of a runtime value.
 data Rep
-  = Algebraic !ConstructorIndex ![Rep]
-  | Array !(Vector Rep)
-  | Character !Char
-  | Closure !Qualified ![Rep]
-  | Float64 !Double
-  | Int64 !Int64
-  | Name !Qualified
-  | Text !Text
+  = Algebraic ConstructorIndex [Rep]
+  | Array (Vector Rep)
+  | Character Char
+  | Closure Qualified [Rep]
+  | Float64 Double
+  | Int64 Int64
+  | Name Qualified
+  | Text Text
   deriving (Eq, Show, Generic)
 
 makePrisms ''Rep

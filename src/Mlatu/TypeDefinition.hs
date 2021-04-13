@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -25,10 +26,10 @@ import Optics.TH (makeLenses)
 import Relude hiding (Constraint)
 
 data TypeDefinition = TypeDefinition
-  { _constructors :: ![DataConstructor],
-    _name :: !Qualified,
-    _origin :: !Origin,
-    _parameters :: ![Parameter]
+  { _constructors :: [DataConstructor],
+    _name :: Qualified,
+    _origin :: Origin,
+    _parameters :: [Parameter]
   }
   deriving (Eq, Ord, Show)
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Term
 -- Description : The core language
@@ -61,28 +63,28 @@ import Relude hiding (Compose, Type)
 -- have a type like @'Term' 'Type'@.
 data Term a
   = -- | @id@, @as (T)@, @with (+A -B)@: coerces the stack to a particular type.
-    Coercion !CoercionHint !a !Origin
+    Coercion CoercionHint a Origin
   | -- | @e1 e2@: composes two terms.
-    Compose !a !(Term a) !(Term a)
+    Compose a (Term a) (Term a)
   | -- | @Λx. e@: generic terms that can be specialized.
-    Generic !Unqualified !TypeId !(Term a) !Origin
+    Generic Unqualified TypeId (Term a) Origin
   | -- | @(e)@: precedence grouping for infix operators.
-    Group !(Term a)
+    Group (Term a)
   | -- | @→ x; e@: local variable introductions.
-    Lambda !a !Unqualified !a !(Term a) !Origin
+    Lambda a Unqualified a (Term a) Origin
   | -- | @match { case C {...}... else {...} }@, @if {...} else {...}@:
     -- pattern-matching.
-    Match !MatchHint !a ![Case a] !(Else a) !Origin
+    Match MatchHint a [Case a] (Else a) Origin
   | -- | @new.n@: ADT allocation.
-    New !a !ConstructorIndex !Int !Origin
+    New a ConstructorIndex Int Origin
   | -- | @new.closure.n@: closure allocation.
-    NewClosure !a !Int !Origin
+    NewClosure a Int Origin
   | -- | @new.vec.n@: vector allocation.
-    NewVector !a !Int !a !Origin
+    NewVector a Int a Origin
   | -- | @push v@: push of a value.
-    Push !a !(Value a) !Origin
+    Push a (Value a) Origin
   | -- | @f@: an invocation of a word.
-    Word !a !GeneralName ![Type] !Origin
+    Word a GeneralName [Type] Origin
   deriving (Ord, Eq, Show)
 
 -- | The type of coercion to perform.
@@ -103,13 +105,13 @@ data MatchHint
 
 -- | A case branch in a @match@ expression.
 data Case a
-  = Case !GeneralName !(Term a) !Origin
+  = Case GeneralName (Term a) !Origin
   deriving (Ord, Eq, Show)
 
 -- | An @else@ branch in a @match@ (or @if@) expression.
 data Else a
-  = DefaultElse !a !Origin
-  | Else !(Term a) !Origin
+  = DefaultElse a Origin
+  | Else (Term a) Origin
   deriving (Ord, Eq, Show)
 
 defaultElseBody :: a -> Origin -> Term a
@@ -126,23 +128,23 @@ data Permit = Permit
 -- values in the interpreter.
 data Value a
   = -- | A quotation with explicit variable capture; see "Mlatu.Scope".
-    Capture ![Closed] !(Term a)
+    Capture [Closed] (Term a)
   | -- | A character literal.
-    Character !Char
+    Character Char
   | -- | A captured variable.
-    Closed !ClosureIndex
+    Closed ClosureIndex
   | -- | A floating-point literal.
-    Float !FloatLiteral
+    Float FloatLiteral
   | -- | An integer literal.
-    Integer !IntegerLiteral
+    Integer IntegerLiteral
   | -- | A local variable.
-    Local !LocalIndex
+    Local LocalIndex
   | -- | A reference to a name.
-    Name !Qualified
+    Name Qualified
   | -- | A parsed quotation.
-    Quotation !(Term a)
+    Quotation (Term a)
   | -- | A text literal.
-    Text !Text
+    Text Text
   deriving (Ord, Eq, Show)
 
 -- FIXME: 'compose' should work on 'Term ()'.
@@ -162,8 +164,8 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
   where
     signature =
       Signature.Quantified
-        [ Parameter o "R" Kind.Stack Nothing,
-          Parameter o "S" Kind.Stack Nothing
+        [ Parameter o "R" Kind.Stack,
+          Parameter o "S" Kind.Stack
         ]
         ( Signature.Function
             [ Signature.StackFunction

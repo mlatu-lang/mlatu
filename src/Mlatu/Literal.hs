@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -40,8 +41,8 @@ data Base
 makePrisms ''Base
 
 data IntegerLiteral = IntegerLiteral
-  { _integerValue :: !Integer,
-    _integerBase :: !Base
+  { _integerValue :: Integer,
+    _integerBase :: Base
   }
   deriving (Show)
 
@@ -54,9 +55,9 @@ instance Eq IntegerLiteral where
 deriving instance Ord IntegerLiteral
 
 data FloatLiteral = FloatLiteral
-  { _floatSignificand :: !Integer,
-    _floatFractional :: !Int,
-    _floatExponent :: !Int
+  { _floatSignificand :: Integer,
+    _floatFractional :: Int,
+    _floatExponent :: Int
   }
   deriving (Show)
 

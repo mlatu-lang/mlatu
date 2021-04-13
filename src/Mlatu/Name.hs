@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Name
 -- Description : Program identifiers
@@ -28,9 +30,9 @@ import Relude
 
 -- | A dynamic name, which might be 'Qualified', 'Unqualified', or local.
 data GeneralName
-  = QualifiedName !Qualified
-  | UnqualifiedName !Unqualified
-  | LocalName !LocalIndex
+  = QualifiedName Qualified
+  | UnqualifiedName Unqualified
+  | LocalName LocalIndex
   deriving (Eq, Ord, Show)
 
 instance IsString GeneralName where
@@ -38,14 +40,14 @@ instance IsString GeneralName where
 
 -- | A qualified name is an unqualified name (@x@) plus a qualifier (@q::@).
 data Qualified = Qualified
-  { qualifierName :: !Qualifier,
-    unqualifiedName :: !Unqualified
+  { qualifierName :: Qualifier,
+    unqualifiedName :: Unqualified
   }
   deriving (Eq, Ord, Show)
 
 -- | A qualifier is a list of vocabulary names, rooted globally or within the
 -- current vocabulary.
-data Qualifier = Qualifier !Root ![Text]
+data Qualifier = Qualifier Root [Text]
   deriving (Eq, Ord, Show)
 
 -- | A 'Relative' qualifier refers to a sub-vocabulary of the current one. An
@@ -61,8 +63,8 @@ newtype Unqualified = Unqualified Text
 -- quotation. FIXME: this can be removed if closure variables are rewritten into
 -- implicit locals.
 data Closed
-  = ClosedLocal !LocalIndex
-  | ClosedClosure !ClosureIndex
+  = ClosedLocal LocalIndex
+  | ClosedClosure ClosureIndex
   deriving (Ord, Eq, Show)
 
 -- | An index into a closure.

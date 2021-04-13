@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -23,7 +24,7 @@ import Optics
 import Relude hiding (fromList)
 
 -- | A stack with strictly evaluated elements and spine.
-data Stack a = Bottom | !a ::: !(Stack a)
+data Stack a = Bottom | (:::) a (Stack a)
   deriving (Functor, Foldable)
 
 infixr 5 :::

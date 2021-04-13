@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -10,21 +11,23 @@
 -- Portability : GHC
 module Mlatu.Located
   ( Located (..),
+    origin,
+    item,
   )
 where
 
 import Mlatu.Origin (Origin)
-import Optics.TH (makeLenses)
+import Optics
 import Relude
 import Text.Show qualified
 
 -- | Imbues a value (such as a 'Token') with an origin and indent level.
 data Located a = At
-  { origin :: !Origin,
-    item :: !a
+  { _origin :: Origin,
+    _item :: a
   }
 
 makeLenses ''Located
 
 instance (Show a) => Show (Located a) where
-  show = show . item
+  show = show . view item

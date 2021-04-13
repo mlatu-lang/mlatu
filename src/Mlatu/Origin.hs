@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -38,11 +39,11 @@ import Text.Parsec.Pos
 -- | A source location, in the form of an origin name (typically a file path)
 -- and source span between two ('Line', 'Column') pairs.
 data Origin = Origin
-  { _name :: !Text,
-    _beginLine :: !Line,
-    _beginColumn :: !Column,
-    _endLine :: !Line,
-    _endColumn :: !Column
+  { _name :: Text,
+    _beginLine :: Line,
+    _beginColumn :: Column,
+    _endLine :: Line,
+    _endColumn :: Column
   }
   deriving (Ord, Eq, Show)
 

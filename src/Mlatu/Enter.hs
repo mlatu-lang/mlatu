@@ -27,7 +27,6 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Hint qualified as Hint
 import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
@@ -402,10 +401,6 @@ fragmentFromSource mainPermissions mainName line path source = do
   -- resolution can find their names.
 
   parsed <- Parse.fragment line path mainPermissions mainName tokenized
-
-  errorCheckpoint
-
-  _ <- Hint.fragment parsed
 
   errorCheckpoint
 

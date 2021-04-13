@@ -260,18 +260,18 @@ unqualifiedNameParser =
 wordNameParser :: Parser Unqualified
 wordNameParser = (<?> "word name") $
   parseOne $
-    \token -> case Located.item token of
+    \token -> case view Located.item token of
       Token.Word name -> Just name
       _nonWord -> Nothing
 
 operatorNameParser :: Parser Unqualified
 operatorNameParser = (<?> "operator name") $ do
   angles <- many $
-    parseOne $ \token -> case Located.item token of
+    parseOne $ \token -> case view Located.item token of
       Token.AngleBegin -> Just "<"
       Token.AngleEnd -> Just ">"
       _nonAngle -> Nothing
-  rest <- parseOne $ \token -> case Located.item token of
+  rest <- parseOne $ \token -> case view Located.item token of
     Token.Operator (Unqualified name) -> Just name
     _nonUnqualifiedOperator -> Nothing
   pure $ Unqualified $ Text.concat $ angles ++ [rest]
@@ -280,7 +280,7 @@ parseOne :: (Located Token -> Maybe a) -> Parser a
 parseOne = Parsec.tokenPrim show advance
   where
     advance :: SourcePos -> t -> [Located Token] -> SourcePos
-    advance _ _ (token : _) = Origin.begin $ Located.origin token
+    advance _ _ (token : _) = Origin.begin $ view Located.origin token
     advance sourcePos _ _ = sourcePos
 
 elementParser :: Parser (Element ())
@@ -445,12 +445,12 @@ parameter :: Parser Parameter
 parameter = do
   origin <- getTokenOrigin
   Parsec.choice
-    [ (\unqualified -> Parameter origin unqualified Permission Nothing)
+    [ (\unqualified -> Parameter origin unqualified Permission)
         <$> (parserMatchOperator "+" *> wordNameParser),
       do
         name <- wordNameParser
         Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <*> pure Nothing
+          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis)
     ]
 
 typeListParser :: Parser a -> Parser [a]
@@ -597,7 +597,7 @@ termParser = (<?> "expression") $ do
     ]
 
 toLiteral :: Located Token -> Maybe (Value (), Origin)
-toLiteral token = case Located.item token of
+toLiteral token = case view Located.item token of
   Token.Character x -> Just (Character x, origin)
   Token.Float x -> Just (Float x, origin)
   Token.Integer x -> Just (Integer x, origin)
@@ -605,7 +605,7 @@ toLiteral token = case Located.item token of
   _nonLiteral -> Nothing
   where
     origin :: Origin
-    origin = Located.origin token
+    origin = view Located.origin token
 
 sectionParser :: Parser (Term ())
 sectionParser =

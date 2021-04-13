@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -24,9 +25,9 @@ import Relude
 
 -- | A single data constructor case, e.g., @case some (T)@.
 data DataConstructor = DataConstructor
-  { _fields :: ![Signature],
-    _name :: !Unqualified,
-    _origin :: !Origin
+  { _fields :: [Signature],
+    _name :: Unqualified,
+    _origin :: Origin
   }
   deriving (Eq, Ord, Show)
 

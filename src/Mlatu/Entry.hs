@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -43,22 +44,16 @@ data Entry
     -- they are generated for lifted lambdas, as those have already been
     -- typechecked by the time quotations are flattened into top-level definitions
     -- ("Mlatu.Desugar.Quotations").
-    Word
-      !Category
-      !Merge
-      !Origin
-      !(Maybe Parent)
-      !(Maybe Signature)
-      !(Maybe (Term Type))
+    Word Category Merge Origin (Maybe Parent) (Maybe Signature) (Maybe (Term Type))
   | -- | Untyped metadata from @about@ blocks. Used internally for operator
     -- precedence and associativity.
-    Metadata !Origin !(Term ())
+    Metadata Origin (Term ())
   | -- | A trait to which other entries can link.
-    Trait !Origin !Signature
+    Trait Origin Signature
   | -- | A data type with some generic parameters.
-    Type !Origin ![Parameter] ![DataConstructor]
+    Type Origin [Parameter] [DataConstructor]
   | -- | An instantiation of a data type, with the given size.
-    InstantiatedType !Origin !Int
+    InstantiatedType Origin Int
   deriving (Show)
 
 makePrisms ''Entry

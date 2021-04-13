@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StrictData #-}
 
 -- |
 -- Module      : Mlatu.Token
@@ -36,7 +37,7 @@ data Token
   | -- | @case@
     Case
   | -- | @'x'@
-    Character !Char
+    Character Char
   | -- | @:@
     Colon
   | -- | @,@
@@ -50,7 +51,7 @@ data Token
   | -- | @else@
     Else
   | -- | See note [Float Literals].
-    Float !FloatLiteral
+    Float FloatLiteral
   | -- | @(@
     GroupBegin
   | -- | @)@
@@ -62,13 +63,13 @@ data Token
   | -- | @instance@
     Instance
   | -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
-    Integer !IntegerLiteral
+    Integer IntegerLiteral
   | -- | @intrinsic@
     Intrinsic
   | -- | @match@
     Match
   | -- | @+@
-    Operator !Unqualified
+    Operator Unqualified
   | -- | @permission@
     Permission
   | -- | @\@
@@ -76,7 +77,7 @@ data Token
   | -- | @return@
     Return
   | -- | @"..."@
-    Text !Text
+    Text Text
   | -- | @trait@
     Trait
   | -- | @type@
@@ -94,7 +95,7 @@ data Token
   | -- | @with@
     With
   | -- | @word@
-    Word !Unqualified
+    Word Unqualified
 
 instance Eq Token where
   About == About = True

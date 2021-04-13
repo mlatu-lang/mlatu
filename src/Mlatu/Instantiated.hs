@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Instantiated
 -- Description : Fully qualified instantiated names
@@ -16,8 +18,8 @@ import Mlatu.Type (Type)
 import Relude hiding (Type)
 
 data Instantiated = Instantiated
-  { name :: !Qualified,
-    types :: ![Type]
+  { name :: Qualified,
+    types :: [Type]
   }
   deriving (Ord, Eq, Show)
 

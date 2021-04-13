@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -33,7 +34,7 @@ import Relude
 --  • The \"permission\" kind (ε), denoting a set of permissions.
 --
 --  • The \"function\" kind (κ → κ), used to describe type constructors.
-data Kind = Value | Stack | Label | Permission | !Kind :-> !Kind
+data Kind = Value | Stack | Label | Permission | (:->) Kind Kind
   deriving (Ord, Eq, Show)
 
 makePrisms ''Kind

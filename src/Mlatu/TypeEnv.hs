@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -18,7 +19,7 @@ module Mlatu.TypeEnv
     vs,
     closure,
     sigs,
-    currentType
+    currentType,
   )
 where
 
@@ -34,10 +35,10 @@ import Mlatu.Name
   )
 import Mlatu.Origin (Origin)
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
+import Optics
 import Relude hiding (Type, empty)
 import Relude.Extra (next)
 import System.IO.Unsafe (unsafePerformIO)
-import Optics
 
 -- The typing environment tracks the state of inference. It answers the
 -- following questions:
@@ -50,11 +51,11 @@ import Optics
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { _tvs :: ! (Map TypeId Type),
-    _vs :: ![Type],
-    _closure :: ![Type],
-    _sigs :: ! (Map Qualified Type),
-    _currentType :: !(IORef TypeId)
+  { _tvs :: (Map TypeId Type),
+    _vs :: [Type],
+    _closure :: [Type],
+    _sigs :: (Map Qualified Type),
+    _currentType :: (IORef TypeId)
   }
 
 makeLenses ''TypeEnv
