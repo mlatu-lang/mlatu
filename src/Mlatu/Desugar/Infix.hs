@@ -11,15 +11,12 @@ module Mlatu.Desugar.Infix
   )
 where
 
-import Data.Map.Strict qualified as Map
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
-import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
 import Mlatu.Monad (M)
-import Mlatu.Name (GeneralName (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
@@ -27,7 +24,6 @@ import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Optics
 import Relude hiding (Compose)
-import Relude.Extra (universe)
 import Text.Parsec (Parsec, SourcePos, (<?>))
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Expr qualified as Expr
@@ -37,7 +33,7 @@ type Rewriter a = Parsec [Term ()] () a
 -- | Desugars infix operators into postfix calls in the body of a 'Definition',
 -- according to the definitions and operator metadata in the 'Dictionary'.
 desugar :: Dictionary -> Definition () -> M (Definition ())
-desugar dictionary definition = do
+desugar _ definition = do
   let expression :: Rewriter (Term ())
       expression = Expr.buildExpressionParser [] operand
         where
@@ -115,13 +111,6 @@ desugar dictionary definition = do
   desugared <- desugarTerms' $ view Definition.body definition
   pure $ set Definition.body desugared definition
 
-binary :: GeneralName -> Origin -> Term () -> Term () -> Term ()
-binary name origin x y =
-  Term.compose
-    ()
-    origin
-    [x, y, Word () name [] origin]
-
 getTermOrigin :: Rewriter Origin
 getTermOrigin =
   Term.origin
@@ -144,6 +133,3 @@ termSatisfy predicate =
 advanceTerm :: SourcePos -> t -> [Term a] -> SourcePos
 advanceTerm _ _ (term : _) = Origin.begin $ Term.origin term
 advanceTerm sourcePos _ _ = sourcePos
-
-mapTerm :: (Term () -> Maybe a) -> Rewriter a
-mapTerm = Parsec.tokenPrim show advanceTerm

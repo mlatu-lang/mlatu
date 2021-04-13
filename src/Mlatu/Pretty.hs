@@ -215,7 +215,6 @@ printType type0 = recur type0
           prettyForall t vars =
             list (recur . TypeVar (Type.origin t) <$> vars)
               <> parens (recur t)
-      TypeValue _ value -> pretty value
 
 type PrettyContext = Map Unqualified [(TypeId, Kind)]
 
@@ -229,7 +228,6 @@ buildContext = go mempty
       TypeVar _ (Var name i k) -> record name i k context
       TypeConstant _ (Var name i k) -> record name i k context
       Forall _ (Var name i k) t -> go (record name i k context) t
-      TypeValue {} -> context
       where
         record name i k = Map.insertWith (<>) name [(i, k)]
 

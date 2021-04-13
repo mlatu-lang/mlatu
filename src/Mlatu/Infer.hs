@@ -709,7 +709,6 @@ typeKind dictionary = go
                       "in dictionary",
                       Dictionary.printDictionary dictionary
                     ]
-      TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> pure k
       TypeConstant _origin (Var _name _ k) -> pure k
       Forall _origin _ t' -> go t'

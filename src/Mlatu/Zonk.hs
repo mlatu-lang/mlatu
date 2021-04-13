@@ -31,7 +31,6 @@ typ tenv0 = recur
   where
     recur t = case t of
       TypeConstructor {} -> t
-      TypeValue {} -> error "TODO: zonk type value"
       TypeVar _origin (Var _name x _k) -> maybe t recur (Map.lookup x (view TypeEnv.tvs tenv0))
       TypeConstant {} -> t
       Forall origin var@(Var _ i _) t' ->
