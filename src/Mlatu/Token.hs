@@ -70,8 +70,6 @@ data Token
     Match
   | -- | @+@
     Operator Unqualified
-  | -- | @permission@
-    Permission
   | -- | @\@
     Reference
   | -- | @return@
@@ -92,8 +90,6 @@ data Token
     VocabLookup
   | -- | @where@
     Where
-  | -- | @with@
-    With
   | -- | @word@
     Word Unqualified
 
@@ -124,7 +120,6 @@ instance Eq Token where
   Intrinsic == Intrinsic = True
   Match == Match = True
   Operator a == Operator b = a == b
-  Permission == Permission = True
   Reference == Reference = True
   Return == Return = True
   Text a == Text b = a == b
@@ -135,7 +130,6 @@ instance Eq Token where
   Vocab == Vocab = True
   VocabLookup == VocabLookup = True
   Where == Where = True
-  With == With = True
   Word a == Word b = a == b
   _ == _ = False
 

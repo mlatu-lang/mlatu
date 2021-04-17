@@ -31,10 +31,10 @@ typ tenv0 = recur
   where
     recur t = case t of
       TypeConstructor {} -> t
-      TypeVar _origin (Var _name x _k) -> maybe t recur (Map.lookup x (view TypeEnv.tvs tenv0))
+      TypeVar _origin _uses (Var _name x _k) -> maybe t recur (Map.lookup x (view TypeEnv.tvs tenv0))
       TypeConstant {} -> t
-      Forall origin var@(Var _ i _) t' ->
-        Forall origin var $
+      Forall origin uses var@(Var _ i _) t' ->
+        Forall origin uses var $
           typ (over TypeEnv.tvs (Map.delete i) tenv0) t'
       a :@ b -> recur a :@ recur b
 

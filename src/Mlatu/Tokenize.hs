@@ -314,12 +314,10 @@ alphanumeric =
           "instance" -> Instance
           "intrinsic" -> Intrinsic
           "match" -> Match
-          "permission" -> Permission
           "return" -> Return
           "trait" -> Trait
           "type" -> Type
           "vocab" -> Vocab
-          "with" -> With
           "where" -> Where
           _ -> Word (Unqualified name),
       -- See note [Angle Brackets].

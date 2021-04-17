@@ -4,18 +4,6 @@ vocab mlatu {
   intrinsic swap [A, B] (A, B -> B, A)
 }
 
-permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P) {
-  with (+Exit)
-}
-
-permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P) {
-  with (+Fail)
-}
-
-permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P) {
-  with (+IO)
-}
-
 define call [R..., S...] (R..., (R... -> S...) -> S...) {
   _::mlatu::call
 }

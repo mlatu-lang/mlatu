@@ -21,6 +21,7 @@ import Mlatu.Occurrences (occurrences)
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv)
+import Mlatu.Uses (Uses (..))
 import Relude hiding (Type)
 
 -- | Because all functions are polymorphic with respect to the part of the stack
@@ -52,29 +53,28 @@ regeneralize tenv t =
           vars
   where
     addForall :: (TypeId, (Unqualified, Kind)) -> Type -> Type
-    addForall (i, (name, k)) = Forall (Type.origin t) (Var name i k)
+    addForall (i, (name, k)) = Forall (Type.origin t) Once (Var name i k)
 
     go :: Type -> Writer [(TypeId, (Unqualified, Kind))] Type
     go t' = case t' of
-      Type.Fun _ a b e
-        | TypeVar origin (Var name c k) <- bottommost a,
-          TypeVar _ (Var _name d _) <- bottommost b,
+      Type.Fun _ uses a b
+        | TypeVar origin _ (Var name c k) <- bottommost a,
+          TypeVar _ _ (Var _name d _) <- bottommost b,
           c == d ->
           do
             when (occurrences tenv c t == 2) $ tell [(c, (name, k))]
             a' <- go a
             b' <- go b
-            e' <- go e
-            pure $ Forall origin (Var name c k) $ Type.Fun origin a' b' e'
-      Type.Prod o a b -> do
+            pure $ Forall origin uses (Var name c k) $ Type.Fun origin uses a' b'
+      Type.Prod o uses a b -> do
         a' <- go a
         b' <- go b
-        pure $ Type.Prod o a' b'
+        pure $ Type.Prod o uses a' b'
       -- FIXME: This should descend into the quantified type.
       Forall {} -> pure t'
       a :@ b -> (:@) <$> go a <*> go b
       _alreadyGeneralized -> pure t'
 
 bottommost :: Type -> Type
-bottommost (Type.Prod _ a _) = bottommost a
+bottommost (Type.Prod _ _ a _) = bottommost a
 bottommost a = a

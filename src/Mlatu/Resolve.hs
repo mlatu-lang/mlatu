@@ -117,11 +117,10 @@ signature dictionary vocabulary = go
       Signature.Application
         <$> go a <*> go b <*> pure origin
     go sig@Signature.Bottom {} = pure sig
-    go (Signature.Function as bs es origin) =
+    go (Signature.Function as bs origin) =
       Signature.Function
         <$> traverse go as
         <*> traverse go bs
-        <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go (Signature.Quantified vars a origin) =
       Signature.Quantified vars
@@ -130,12 +129,11 @@ signature dictionary vocabulary = go
     go (Signature.Variable name origin) =
       Signature.Variable
         <$> typeName dictionary vocabulary name origin <*> pure origin
-    go (Signature.StackFunction r as s bs es origin) =
+    go (Signature.StackFunction r as s bs origin) =
       Signature.StackFunction r
         <$> traverse go as
         <*> pure s
         <*> traverse go bs
-        <*> zipWithM (typeName dictionary vocabulary) es (repeat origin)
         <*> pure origin
     go sig@Signature.Type {} = pure sig
 

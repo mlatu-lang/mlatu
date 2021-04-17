@@ -32,7 +32,7 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Entry.Parent (Parent (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -59,14 +59,12 @@ makeLenses ''Definition
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
 main ::
-  -- | List of permissions implicitly granted.
-  [GeneralName] ->
   -- | Override default name.
   Maybe Qualified ->
   -- | Body.
   Term a ->
   Definition a
-main permissions mName term =
+main mName term =
   Definition
     { _body = term,
       _category = Category.Word,
@@ -83,7 +81,6 @@ main permissions mName term =
               []
               (Signature.Variable "R" o)
               []
-              permissions
               o
           )
           o

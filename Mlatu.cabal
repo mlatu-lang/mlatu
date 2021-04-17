@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f3295cb56df8d6648be7d72ee492456f19a96b3d8f444f4c9d97e2393a1a0109
+-- hash: fa786beff00edc2fdd2622f341499f8923f709b6cc3a7195eb7bf7648cd494bb
 
 name:           mlatu
 version:        0.1.0.0
@@ -75,6 +75,7 @@ library
       Mlatu.TypeDefinition
       Mlatu.TypeEnv
       Mlatu.Unify
+      Mlatu.Uses
       Mlatu.Vocabulary
       Mlatu.Zonk
   other-modules:

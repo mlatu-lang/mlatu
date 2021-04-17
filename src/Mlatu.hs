@@ -40,8 +40,6 @@ foundation = ("./std/foundation.mlt", $(embedFile "./std/foundation.mlt"))
 -- stage, errors and warnings (\"reports\") are accumulated, and reported to the
 -- programmer at the next checkpoint; see "Mlatu.Monad" for details.
 compile ::
-  -- | List of permissions to grant to @main@.
-  [GeneralName] ->
   -- | Override the default name of @main@.
   Maybe Qualified ->
   -- | List of source file paths.
@@ -49,30 +47,30 @@ compile ::
   Maybe Dictionary ->
   -- | Resulting dictionary.
   M Dictionary
-compile mainPermissions mainName paths mDict = do
+compile mainName paths mDict = do
   -- Source files must be encoded in UTF-8.
 
   sources <- liftIO $ traverse (fmap decodeUtf8 . readFileBS) paths
   parsed <-
     mconcat
       <$> zipWithM
-        (Enter.fragmentFromSource mainPermissions mainName 1)
+        (Enter.fragmentFromSource mainName 1)
         paths
         sources
   -- dictionary <-
   Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
-compileWithPrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> [FilePath] -> M Dictionary
-compileWithPrelude prelude mainPermissions mainName paths = do
-  commonDictionary <- compilePrelude prelude mainPermissions mainName
-  compile mainPermissions mainName paths (Just commonDictionary)
+compileWithPrelude :: Prelude -> Maybe Qualified -> [FilePath] -> M Dictionary
+compileWithPrelude prelude mainName paths = do
+  commonDictionary <- compilePrelude prelude mainName
+  compile mainName paths (Just commonDictionary)
 
-compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> M Dictionary
-compilePrelude prelude mainPermissions mainName = do
+compilePrelude :: Prelude -> Maybe Qualified -> M Dictionary
+compilePrelude prelude mainName = do
   parsed <-
     mconcat
       <$> zipWithM
-        (Enter.fragmentFromSource mainPermissions mainName 1)
+        (Enter.fragmentFromSource mainName 1)
         preludePaths
         (decodeUtf8 <$> preludeSources)
   -- dictionary <-

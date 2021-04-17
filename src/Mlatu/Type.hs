@@ -17,7 +17,6 @@ module Mlatu.Type
     pattern Bottom,
     pattern Fun,
     pattern Prod,
-    pattern Join,
     pattern Sum,
     setOrigin,
     origin,
@@ -27,6 +26,7 @@ where
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
+import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Sum, Type, void)
 
@@ -38,28 +38,25 @@ import Relude hiding (Sum, Type, void)
 -- inference algorithm. Type variables have explicit kinds.
 data Type
   = (:@) Type Type
-  | TypeConstructor Origin Constructor
-  | TypeVar Origin Var
-  | TypeConstant Origin Var
-  | Forall Origin Var Type
+  | TypeConstructor Origin Uses Constructor
+  | TypeVar Origin Uses Var
+  | TypeConstant Origin Uses Var
+  | Forall Origin Uses Var Type
   deriving (Ord, Show)
 
 infixl 1 :@
 
-pattern Bottom :: Origin -> Type
-pattern Bottom o = TypeConstructor o "Bottom"
+pattern Bottom :: Origin -> Uses -> Type
+pattern Bottom o u = TypeConstructor o u "Bottom"
 
-pattern Fun :: Origin -> Type -> Type -> Type -> Type
-pattern Fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
+pattern Fun :: Origin -> Uses -> Type -> Type -> Type
+pattern Fun o u a b = TypeConstructor o u "Fun" :@ a :@ b
 
-pattern Prod :: Origin -> Type -> Type -> Type
-pattern Prod o a b = TypeConstructor o "Prod" :@ a :@ b
+pattern Prod :: Origin -> Uses -> Type -> Type -> Type
+pattern Prod o u a b = TypeConstructor o u "Prod" :@ a :@ b
 
-pattern Join :: Origin -> Type -> Type -> Type
-pattern Join o a b = TypeConstructor o "Join" :@ a :@ b
-
-pattern Sum :: Origin -> Type -> Type -> Type
-pattern Sum o a b = TypeConstructor o "Sum" :@ a :@ b
+pattern Sum :: Origin -> Uses -> Type -> Type -> Type
+pattern Sum o u a b = TypeConstructor o u "Sum" :@ a :@ b
 
 newtype Constructor = Constructor Qualified
   deriving (Ord, Eq, Hashable, Show)
@@ -74,20 +71,20 @@ instance Eq Var where
 origin :: Type -> Origin
 origin = \case
   a :@ _ -> origin a
-  TypeConstructor o _ -> o
-  TypeVar o _ -> o
-  TypeConstant o _ -> o
-  Forall o _ _ -> o
+  TypeConstructor o _ _ -> o
+  TypeVar o _ _ -> o
+  TypeConstant o _ _ -> o
+  Forall o _ _ _ -> o
 
 setOrigin :: Origin -> Type -> Type
 setOrigin o = go
   where
     go = \case
       a :@ b -> go a :@ go b
-      TypeConstructor _ constructor -> TypeConstructor o constructor
-      TypeVar _ var -> TypeVar o var
-      TypeConstant _ var -> TypeConstant o var
-      Forall _ var t -> Forall o var $ go t
+      TypeConstructor _ uses constructor -> TypeConstructor o uses constructor
+      TypeVar _ uses var -> TypeVar o uses var
+      TypeConstant _ uses var -> TypeConstant o uses var
+      Forall _ uses var t -> Forall o uses var $ go t
 
 -- | Type variables are distinguished by globally unique identifiers. This makes
 -- it easier to support capture-avoiding substitution on types.
@@ -96,19 +93,19 @@ newtype TypeId = TypeId Int
 
 instance Eq Type where
   (a :@ b) == (c :@ d) = (a, b) == (c, d)
-  TypeConstructor _ a == TypeConstructor _ b = a == b
-  TypeVar _ a == TypeVar _ b = a == b
-  TypeConstant _ a == TypeConstant _ b = a == b
-  Forall _ a b == Forall _ c d = (a, b) == (c, d)
+  TypeConstructor _ a b == TypeConstructor _ c d = (a, b) == (c, d)
+  TypeVar _ a b == TypeVar _ c d = (a, b) == (c, d)
+  TypeConstant _ a b == TypeConstant _ c d = (a, b) == (c, d)
+  Forall _ a b c == Forall _ d e f = (a, b, c) == (d, e, f)
   _ == _ = False
 
 instance Hashable Type where
   hashWithSalt s = \case
     a :@ b -> hashWithSalt s (0 :: Int, a, b)
-    TypeConstructor _ a -> hashWithSalt s (1 :: Int, a)
-    TypeVar _ a -> hashWithSalt s (2 :: Int, a)
-    TypeConstant _ a -> hashWithSalt s (3 :: Int, a)
-    Forall _ a b -> hashWithSalt s (4 :: Int, a, b)
+    TypeConstructor _ a b -> hashWithSalt s (1 :: Int, a, b)
+    TypeVar _ a b -> hashWithSalt s (2 :: Int, a, b)
+    TypeConstant _ a b -> hashWithSalt s (3 :: Int, a, b)
+    Forall _ a b c -> hashWithSalt s (4 :: Int, a, b, c)
 
 instance Hashable Var where
   -- We ignore the name hint when hashing.

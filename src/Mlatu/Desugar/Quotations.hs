@@ -29,6 +29,7 @@ import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
+import Mlatu.Uses (Uses (..))
 import Optics
 import Relude hiding (Compose, Type)
 import Relude.Extra (next)
@@ -101,7 +102,7 @@ desugar dictionary qualifier term0 = do
             typ =
               foldr addForall deducedType $
                 Map.toList $ Free.tvks tenv2 deducedType
-            addForall (i, (n, k)) = Forall origin (Var n i k)
+            addForall (i, (n, k)) = Forall origin Once (Var n i k)
         modify $ \(l, d) ->
           let entry =
                 Entry.Word

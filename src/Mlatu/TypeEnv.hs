@@ -35,6 +35,7 @@ import Mlatu.Name
   )
 import Mlatu.Origin (Origin)
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
+import Mlatu.Uses (Uses (..))
 import Optics
 import Relude hiding (Type, empty)
 import Relude.Extra (next)
@@ -51,11 +52,11 @@ import System.IO.Unsafe (unsafePerformIO)
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { _tvs :: (Map TypeId Type),
+  { _tvs :: Map TypeId Type,
     _vs :: [Type],
     _closure :: [Type],
-    _sigs :: (Map Qualified Type),
-    _currentType :: (IORef TypeId)
+    _sigs :: Map Qualified Type,
+    _currentType :: IORef TypeId
   }
 
 makeLenses ''TypeEnv
@@ -74,9 +75,9 @@ currentTypeId :: IORef TypeId
 currentTypeId = unsafePerformIO (newIORef (TypeId 0))
 {-# NOINLINE currentTypeId #-}
 
-freshTv :: TypeEnv -> Unqualified -> Origin -> Kind -> M Type
-freshTv tenv name origin k =
-  TypeVar origin <$> (Var name <$> freshTypeId tenv <*> pure k)
+freshTv :: TypeEnv -> Unqualified -> Origin -> Uses -> Kind -> M Type
+freshTv tenv name origin uses k =
+  TypeVar origin uses <$> (Var name <$> freshTypeId tenv <*> pure k)
 
 freshTypeId :: TypeEnv -> M TypeId
 freshTypeId tenv = liftIO $ do
