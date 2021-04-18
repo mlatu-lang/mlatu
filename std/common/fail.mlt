@@ -6,14 +6,14 @@ vocab mlatu {
 define abort [R..., S...] (R... -> S...) { "abort called" fail }
 
 define assert (String, (-> Bool) ->) {
-  test call not
+  call not
   if { fail }
   else {  drop }
 }
 
 define assert_eq [T] (String, T, T ->) {
-  => message, x, y;
-  message { x = y } assert
+  => x, y;
+  { x y = } assert
 }
 
 define exit [R..., S...] (R..., Int -> S...) { _::mlatu::exit }

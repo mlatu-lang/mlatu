@@ -11,45 +11,6 @@ vocab mlatu {
 
 type List[T] {   case _list (Pointer[T], Pointer[T], Pointer[T]) }
 
-instance < (List[Int], List[Int] -> Bool) { swap > }
-
-instance <= (List[Int], List[Int] -> Bool) { > not }
-
-instance <> (List[Int], List[Int] -> Bool) { = not }
-
-instance = (List[Int], List[Int] -> Bool) {
-  => xs, ys;
-  if (xs length <> ys length) { false }
-  else {
-    match (xs head_tail)
-    case some {
-      unpair => x, xs_;
-      match (ys head_tail)
-      case some { unpair => y, ys_; if (x <> y) { false } else { xs_ = ys_ } }
-      case none { true }
-    }
-    case none { true }
-  }
-}
-
-instance > (List[Int], List[Int] -> Bool) {
-  => xs, ys;
-  match (xs head_tail)
-  case some {
-    unpair => x, xs_;
-    match (ys head_tail)
-    case some {
-      unpair => y, ys_;
-      if (x > y) { true }
-      else { if (x < y) { false } else { xs_ > ys_ } }
-    }
-    case none { true }
-  }
-  case none { false }
-}
-
-instance >= (List[Int], List[Int] -> Bool) { (<) not }
-
 define all [T] (List[T], (T -> Bool) -> Bool) {
   => f;
   true do (fold_left) { f call (&) }
@@ -275,12 +236,12 @@ define remove [T] (List[T], T -> List[T]) { => x; { x (=) } filter_out }
 
 define remove_nth [T] (List[T], Int -> List[T]) {
   => index;
-  { => x, i; if (i = index) { [] } else { [x] } } map_index concat
+  { if (index =) { drop [] } else { => x; [x] } } map_index concat
 }
 
 define replicate [T] (T, Int -> List[T]) {
-  if (0 <=) { drop [] }
-  else { => value; value (count - 1) replicate value suffix }
+  => count; if (count 0 <=) { drop [] }
+  else { => value; value count 1 - replicate value suffix }
 }
 
 define reverse [T] (List[T] -> List[T]) {
@@ -295,7 +256,7 @@ define rights [A, B] (List[Either[A, B]] -> List[B]) {
 
 define set [T] (List[T], T, Int -> List[T]) {
   => element, index;
-   { => x, i; if (i = index) { element } else { x } } map_index
+  { if (index =) { drop element } else {} } map_index
 }
 
 define suffix [T] (List[T], T -> List[T]) { once append }

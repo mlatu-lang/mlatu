@@ -32,9 +32,9 @@ instance > (String, String -> Bool) { _::mlatu::gt_string }
 instance >= (String, String -> Bool) { (<) not }
 
 instance read (String -> Optional[Bool]) {
-  => s;
-  if (s = "true") { true some }
-  else { if (s = "false") { false some } else { none } }
+  dup
+  if ("true" =) { drop true some }
+  else { if ("false" =) { false some } else { none } }
 }
 
 instance read (String -> Optional[Double]) { _::mlatu::read_float64 }
@@ -42,9 +42,9 @@ instance read (String -> Optional[Double]) { _::mlatu::read_float64 }
 instance read (String -> Optional[Int]) { _::mlatu::read_int64 }
 
 instance read (String -> Optional[Char]) {
-  chars => cs;
-  if (cs length = 1) { cs head }
-  else { none }
+  chars dup
+  if (length 1 =) { head }
+  else { drop none }
 }
 
 instance read (String -> Optional[String]) { some }
@@ -61,7 +61,7 @@ instance show [A, B] (Either[A, B] -> String) {
 
 instance show [T] (Optional[T] -> String) {
   match
-  case some => x { "some " + x show }
+  case some => x { "some " x show + }
   case none { "none" }
 }
 
