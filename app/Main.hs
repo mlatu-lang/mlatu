@@ -34,12 +34,6 @@ main = do
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
 
-mainPermissions :: [GeneralName]
-mainPermissions =
-  [ QualifiedName $ Qualified Vocabulary.global "IO",
-    QualifiedName $ Qualified Vocabulary.global "Fail"
-  ]
-
 handleReports :: [Report] -> IO ()
 handleReports reports = do
   reportAll reports
@@ -50,7 +44,7 @@ formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
-  result <- runMlatuExceptT $ fragmentFromSource mainPermissions Nothing 0 path text
+  result <- runMlatuExceptT $ fragmentFromSource Nothing 0 path text
   case result of
     Left reports -> handleReports reports
     Right fragment -> do
@@ -64,13 +58,13 @@ formatFiles paths = for_ paths $ \relativePath -> do
 checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
-    >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
+    >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude Nothing paths) >>= (`whenLeft_` handleReports))
 
 runFiles :: Prelude -> [FilePath] -> IO ()
 runFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= ( \paths ->
-            runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths)
+            runMlatuExceptT (compileWithPrelude prelude Nothing paths)
               >>= ( \case
                       Left reports -> handleReports reports
                       Right program -> void (interpret program Nothing [] stdin stdout stderr [])
@@ -80,7 +74,7 @@ runFiles prelude relativePaths =
 compileFiles :: Prelude -> [FilePath] -> IO ()
 compileFiles prelude relativePaths = do
   forM relativePaths makeAbsolute
-    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= (runMlatuExceptT . compileWithPrelude prelude Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->

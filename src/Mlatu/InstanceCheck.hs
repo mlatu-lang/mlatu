@@ -64,9 +64,9 @@ skolemize tenv0 t = case t of
     (c', t'') <- skolemize tenv0 substituted
     pure (Set.insert c c', t'')
   -- TForall _ t' -> skolemize tenv0 t'
-  Type.Fun origin a b e -> do
+  Type.Fun origin a b -> do
     (ids, b') <- skolemize tenv0 b
-    pure (ids, Type.Fun origin a b' e)
+    pure (ids, Type.Fun origin a b')
   _nonQuantified -> pure (Set.empty, t)
 
 -- | Subsumption checking is largely the same as unification, accounting for
@@ -76,27 +76,16 @@ subsumptionCheck :: TypeEnv -> Type -> Type -> M TypeEnv
 subsumptionCheck tenv0 (Forall origin (Var name x k) t) t2 = do
   (t1, _, tenv1) <- Instantiate.typ tenv0 origin name x k t
   subsumptionCheck tenv1 t1 t2
-subsumptionCheck tenv0 t1 (Type.Fun _ a' b' e') = do
-  (a, b, e, tenv1) <- Unify.function tenv0 t1
-  subsumptionCheckFun tenv1 a b e a' b' e'
-subsumptionCheck tenv0 (Type.Fun _ a b e) t2 = do
-  (a', b', e', tenv1) <- Unify.function tenv0 t2
-  subsumptionCheckFun tenv1 a b e a' b' e'
+subsumptionCheck tenv0 t1 (Type.Fun _ a' b') = do
+  (a, b, tenv1) <- Unify.function tenv0 t1
+  subsumptionCheckFun tenv1 a b a' b'
+subsumptionCheck tenv0 (Type.Fun _ a b) t2 = do
+  (a', b', tenv1) <- Unify.function tenv0 t2
+  subsumptionCheckFun tenv1 a b a' b'
 subsumptionCheck tenv0 t1 t2 = Unify.typ tenv0 t1 t2
 
 subsumptionCheckFun ::
-  TypeEnv -> Type -> Type -> Type -> Type -> Type -> Type -> M TypeEnv
-subsumptionCheckFun tenv0 a b e a' b' e' = do
+  TypeEnv -> Type -> Type -> Type -> Type -> M TypeEnv
+subsumptionCheckFun tenv0 a b a' b' = do
   tenv1 <- subsumptionCheck tenv0 a' a
-  tenv2 <- subsumptionCheck tenv1 b b'
-  let labels = permissionList $ Zonk.typ tenv2 e
-      labels' = permissionList $ Zonk.typ tenv2 e'
-  for_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
-    Just {} -> pass
-    Nothing -> report $ Report.makeError $ Report.MissingPermissionLabel e e' origin label
-  pure tenv2
-  where
-    permissionList :: Type -> [(Origin, Constructor)]
-    permissionList (Type.Join _ (TypeConstructor origin label) es) =
-      (origin, label) : permissionList es
-    permissionList _ = []
+  subsumptionCheck tenv1 b b'

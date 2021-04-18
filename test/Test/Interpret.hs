@@ -24,7 +24,7 @@ import Test.Hspec (Spec, describe, it, runIO)
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
+    mDictionary <- runMlatuExceptT $ compilePrelude Common Nothing
     case mDictionary of
       Left reports ->
         error $
@@ -163,7 +163,7 @@ testInterpretFull
   input
   expectedStack = do
     result <- runMlatuExceptT $ do
-      fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
+      fragment <- fragmentFromSource Nothing 1 "<test>" input
       Enter.fragment fragment commonDictionary
     (_stdinKnob, stdin) <- do
       knob <- Knob.newKnob standardInput

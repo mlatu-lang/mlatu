@@ -28,7 +28,6 @@ where
 import Data.Map.Strict qualified as Map
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Category qualified as Category
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Name
   ( Qualified,
@@ -87,8 +86,6 @@ toList = Map.toList . view entries
 typeNames :: Dictionary -> [Qualified]
 typeNames = mapMaybe typeName . toList
   where
-    typeName (Instantiated name _, Entry.Word Category.Permission _ _ _ _ _) =
-      Just name
     typeName (Instantiated name _, Entry.Type {}) = Just name
     typeName _ = Nothing
 

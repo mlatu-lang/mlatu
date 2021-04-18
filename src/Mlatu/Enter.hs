@@ -63,22 +63,12 @@ fragment f =
   foldlMx declareType (view Fragment.types f)
     -- We enter declarations of all traits and intrinsics.
     >=> foldlMx enterDeclaration (view Fragment.declarations f)
-    -- Then declare all permissions.
-    >=> foldlMx
-      declareWord
-      ( filter ((== Category.Permission) . view Definition.category) $
-          view Fragment.definitions f
-      )
     -- With everything type-level declared, we can resolve type signatures.
     >=> foldlMx
       resolveSignature
       (view Declaration.name <$> view Fragment.declarations f)
     -- And declare regular words.
-    >=> foldlMx
-      declareWord
-      ( filter ((/= Category.Permission) . view Definition.category) $
-          view Fragment.definitions f
-      )
+    >=> foldlMx declareWord (view Fragment.definitions f)
     -- Then resolve their signatures.
     >=> foldlMx
       resolveSignature
@@ -378,8 +368,6 @@ defineWord dictionary definition = do
 
 -- | Parses a source file into a program fragment.
 fragmentFromSource ::
-  -- | List of permissions granted to @main@.
-  [GeneralName] ->
   -- | Override name of @main@.
   Maybe Qualified ->
   -- | Initial source line (e.g. for REPL offset).
@@ -390,7 +378,7 @@ fragmentFromSource ::
   Text ->
   -- | Parsed program fragment.
   M (Fragment ())
-fragmentFromSource mainPermissions mainName line path source = do
+fragmentFromSource mainName line path source = do
   -- Sources are lexed into a stream of tokens.
 
   tokenized <- tokenize line path source
@@ -400,7 +388,7 @@ fragmentFromSource mainPermissions mainName line path source = do
   -- Datatype definitions are desugared into regular definitions, so that name
   -- resolution can find their names.
 
-  parsed <- Parse.fragment line path mainPermissions mainName tokenized
+  parsed <- Parse.fragment line path mainName tokenized
 
   errorCheckpoint
 

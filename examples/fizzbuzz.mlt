@@ -1,4 +1,4 @@
-define divisible (Int, Int -> Bool +Fail) { (%) 0 (=) }
+define divisible (Int, Int -> Bool) { (%) 0 (=) }
 
 define fizzbuzz (Int -> String) {
   -> n;
@@ -7,7 +7,7 @@ define fizzbuzz (Int -> String) {
   else { if { "Buzz" } else { n show } }
 }
 
-define fizzbuzzes (Int, Int -> +IO) {
+define fizzbuzzes (Int, Int ->) {
   -> c, m;
   c fizzbuzz println (c < m)
   if { (c + 1) m fizzbuzzes }

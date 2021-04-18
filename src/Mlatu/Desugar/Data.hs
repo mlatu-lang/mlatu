@@ -86,7 +86,6 @@ desugarConstructor definition index constructor =
         ( Signature.Function
             (view DataConstructor.fields constructor)
             [resultSignature]
-            []
             origin
         )
         origin

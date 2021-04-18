@@ -150,7 +150,7 @@ spec = do
 testWord :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testWord contextSource viewpoint name expected = do
   dictionary <- runMlatuExceptT $ do
-    context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
+    context <- fragmentFromSource Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
         fragment =
@@ -167,12 +167,11 @@ testWord contextSource viewpoint name expected = do
                     Definition._parent = Nothing,
                     Definition._signature =
                       Signature.Quantified
-                        [Parameter origin "R" Stack Nothing]
+                        [Parameter origin "R" Stack]
                         ( Signature.StackFunction
                             (Signature.Variable "R" origin)
                             []
                             (Signature.Variable "R" origin)
-                            []
                             []
                             origin
                         )
@@ -214,7 +213,7 @@ testWord contextSource viewpoint name expected = do
 testType :: Text -> Qualifier -> GeneralName -> Qualified -> IO ()
 testType contextSource viewpoint name expected = do
   resolved <- runMlatuExceptT $ do
-    context <- fragmentFromSource [] Nothing 1 "<common>" contextSource
+    context <- fragmentFromSource Nothing 1 "<common>" contextSource
     contextDictionary <- Enter.fragment context Dictionary.empty
     let origin = Origin.point "<test>" 0 0
     Resolve.run $

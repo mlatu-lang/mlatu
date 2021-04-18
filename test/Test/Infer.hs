@@ -33,24 +33,24 @@ spec = do
       testTypecheck
         Positive
         "define test (->) {}"
-        $ Type.Fun o r r e
+        $ Type.Fun o r r
 
     it "typechecks single literals" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 0 }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
       testTypecheck
         Positive
         "define test (-> Double) { 1.0 }"
-        $ Type.Fun o r (Type.Prod o r float) e
+        $ Type.Fun o r (Type.Prod o r float)
 
     it "typechecks compound literals" $ do
       testTypecheck
         Positive
         "define test (-> List[Pair[Int, Int]]) { [1 1 pair, 2 2 pair, 3 3 pair] }"
-        $ Type.Fun o r (Type.Prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int))) e
+        $ Type.Fun o r (Type.Prod o r (ctor "List" :@ (ctor "Pair" :@ int :@ int)))
 
     it "typechecks intrinsics" $ do
       testTypecheck
@@ -59,52 +59,52 @@ spec = do
         \ intrinsic magic[R..., S...] (R... -> S...)\
         \}\
         \define test [R..., S..., +P] (R... -> S... +P) { _::mlatu::magic }"
-        $ Type.Fun o r s e
+        $ Type.Fun o r s
 
       testTypecheck
         Positive
         "define test (-> Int) { 1 2 _::mlatu::add_int64 }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
     it "typechecks data types" $ do
       testTypecheck
         Positive
         "type Unit { case unit }\n\
         \define test (-> Unit) { unit }"
-        $ Type.Fun o r (Type.Prod o r (ctor "Unit")) e
+        $ Type.Fun o r (Type.Prod o r (ctor "Unit"))
 
       testTypecheck
         Positive
         "type Unit { case unit () }\n\
         \define test (-> Unit) { unit }"
-        $ Type.Fun o r (Type.Prod o r (ctor "Unit")) e
+        $ Type.Fun o r (Type.Prod o r (ctor "Unit"))
 
     it "typechecks definitions" $ do
       testTypecheck
         Positive
         "define one (-> Int) { 1 }\n\
         \define test (-> Int) { one }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
       testTypecheck
         Positive
         "define one (-> Int) { 1 }\n\
         \define two (-> Int) { 2 }\n\
         \define test (-> Int) { one two _::mlatu::add_int64 }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
       testTypecheck
         Positive
         "define up (Int -> Int) { 1 _::mlatu::add_int64 }\n\
         \define down (Int -> Int) { -1 _::mlatu::add_int64 }\n\
         \define test (-> Int) { 1 up 2 down _::mlatu::add_int64 }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
     it "typechecks operators" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 1 + 1 }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
 
     it "typechecks nested scopes" $ do
       testTypecheck
@@ -135,7 +135,7 @@ spec = do
         \    } call\n\
         \  } call\n\
         \}"
-        $ Type.Fun o r (Type.Prod o (Type.Prod o r int) int) e
+        $ Type.Fun o r (Type.Prod o (Type.Prod o r int) int)
 
     it "typechecks closures with multiple types" $ do
       testTypecheck
@@ -150,9 +150,8 @@ spec = do
           ( Type.Prod
               o
               r
-              (Type.Fun o r (Type.Prod o (Type.Prod o r int) float) e)
+              (Type.Fun o r (Type.Prod o (Type.Prod o r int) float))
           )
-          e
 
   describe "with instance checking" $ do
     it "rejects invalid signature" $ do
@@ -163,53 +162,7 @@ spec = do
         \  match case pair -> x, y { y x pair }\n\
         \}\n\
         \define test (-> Pair[Char, Double]) { 1 '1' pair flip }"
-        $ Type.Fun o r (Type.Prod o r (ctor "Pair" :@ char :@ int)) e
-
-    it "accepts valid permissions" $ do
-      testTypecheck
-        Positive
-        "define test (-> +Fail) { abort }"
-        $ Type.Fun o r r (Type.Join o fail_ e)
-
-      testTypecheck
-        Positive
-        "intrinsic launch_missiles (-> +IO)\n\
-        \define test (-> +Fail +IO) { launch_missiles abort }"
-        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
-
-      testTypecheck
-        Positive
-        "intrinsic launch_missiles (-> +IO)\n\
-        \define test (-> +IO +Fail) { launch_missiles abort }"
-        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
-
-    it "accepts redundant permissions" $ do
-      testTypecheck
-        Positive
-        "define test (-> +Fail) {}"
-        $ Type.Fun o r r (Type.Join o fail_ e)
-
-      testTypecheck
-        Positive
-        "define test (-> +Fail +IO) {}"
-        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
-
-      testTypecheck
-        Positive
-        "define test (-> +IO +Fail) {}"
-        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
-
-    it "rejects missing permissions" $ do
-      testTypecheck
-        Negative
-        "define test (->) { abort }"
-        $ Type.Fun o r r e
-
-      testTypecheck
-        Negative
-        "intrinsic launch_missiles (-> +IO)\n\
-        \define test (->) { launch_missiles abort }"
-        $ Type.Fun o r r e
+        $ Type.Fun o r (Type.Prod o r (ctor "Pair" :@ char :@ int))
 
   describe "with higher-order functions" $ do
     it "typechecks curried functions" $ do
@@ -219,27 +172,18 @@ spec = do
         \  -> x; { -> y; x y _::mlatu::add_int64 }\n\
         \}\n\
         \define test (-> Int) { 1 2 curried_add call }"
-        $ Type.Fun o r (Type.Prod o r int) e
-
-    it "typechecks permissions of higher-order functions" $ do
-      testTypecheck
-        Positive
-        "intrinsic launch_missiles (-> +IO)\n\
-        \intrinsic map[A, B, +P] (List[A], (A -> B +P) -> List[B] +P)\n\
-        \define test (-> List[Int] +IO) { [1, 2, 3] \\launch_missiles map }"
-        $ Type.Fun o r (Type.Prod o r (ctor "List" :@ int)) (Type.Join o io e)
+        $ Type.Fun o r (Type.Prod o r int)
 
   describe "with coercions" $ do
     it "typechecks identity coercions" $ do
       testTypecheck
         Positive
         "define test (-> Int) { 1 as (Int) }"
-        $ Type.Fun o r (Type.Prod o r int) e
+        $ Type.Fun o r (Type.Prod o r int)
   where
     o = Origin.point "" 0 0
     r = TypeVar o $ Var "R" (TypeId 0) Stack
     s = TypeVar o $ Var "S" (TypeId 1) Stack
-    e = TypeVar o $ Var "P" (TypeId 2) Permission
     ctor =
       TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
@@ -251,13 +195,13 @@ spec = do
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do
-  mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
+  mDictionary <- runMlatuExceptT $ compilePrelude Common Nothing
   case mDictionary of
     Left reports ->
       error $ show $ vcat $ pretty ("unable to set up inference tests:" :: Text) : (human <$> reports)
     Right dictionary -> do
       result <- runMlatuExceptT $ do
-        fragment <- fragmentFromSource ioPermission Nothing 1 "<test>" input
+        fragment <- fragmentFromSource Nothing 1 "<test>" input
         Enter.fragment fragment dictionary
       case Dictionary.toList <$> result of
         Right definitions -> case find matching definitions of

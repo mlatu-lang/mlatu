@@ -15,6 +15,7 @@ import Mlatu.Report (Report)
 import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
 import Mlatu.Tokenize (tokenize)
+import Optics
 import Relude
 import Test.HUnit (assertFailure)
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -254,5 +255,5 @@ floatLiteral v f e = Float (FloatLiteral v f e)
 
 testTokenize :: Text -> Either [Report] [Token]
 testTokenize =
-  fmap (fmap Located.item) . runIdentity . runMlatuExceptT
+  fmap (fmap (view Located.item)) . runIdentity . runMlatuExceptT
     . tokenize 1 ""

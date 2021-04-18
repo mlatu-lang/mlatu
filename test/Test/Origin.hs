@@ -8,6 +8,7 @@ import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Origin (Origin (Origin))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Tokenize (tokenize)
+import Optics
 import Relude
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Parsec.Pos (Column, Line)
@@ -90,7 +91,7 @@ spec = do
 testOrigin :: [Text] -> Expectation
 testOrigin test =
   let (input, origins) = deinterleave test
-   in (Located.origin <<$>> runIdentity (runMlatuExceptT $ tokenize 1 "test" $ unlines input))
+   in (view Located.origin <<$>> runIdentity (runMlatuExceptT $ tokenize 1 "test" $ unlines input))
         `shouldBe` Right (parseOrigins origins)
 
 deinterleave :: [a] -> ([a], [a])

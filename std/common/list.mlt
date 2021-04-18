@@ -52,14 +52,14 @@ define concat_optionals [T] (List[Optional[T]] -> List[T]) {
   [] do (fold_left) { match case some { suffix } else {} }
 }
 
-define each [T, +P] (List[T], (T -> +P) -> +P) {
+define each [T] (List[T], (T ->) ->) {
   -> f;
   match (head_tail)
   case some { unpair -> h, t; h f call t f each }
   case none {}
 }
 
-define each2 [A, B, +P] (List[A], List[B], (A, B -> +P) -> +P) {
+define each2 [A, B] (List[A], List[B], (A, B ->) ->) {
   -> f;
   zip { unpair f call } each
 }
@@ -119,7 +119,7 @@ define init_last [T] (List[T] -> Optional[Pair[List[T], T]]) {
 
 define insert_nth [T] (List[T], T, Int -> List[T]) {
   -> element, index;
-  { -> x, i; if (i = index) { [element, x] } else { [x] } } map_index concat
+  { if (index =) { -> x; [element, x] } else { -> x; [x] } } map_index concat
 }
 
 define join [T] (List[List[T]], List[T] -> List[T]) {
@@ -137,21 +137,21 @@ define lefts [A, B] (List[Either[A, B]] -> List[A]) { \get_left map_optionally }
 
 define length [T] (List[T] -> Int) { 0 { drop 1 (+) } fold_left }
 
-define map [A, B, +P] (List[A], (A -> B +P) -> List[B] +P) {
+define map [A, B] (List[A], (A -> B) -> List[B]) {
   -> f;
   match (head_tail)
   case some { unpair -> h, t; (t f map) (h f call) prefix }
   case none { [] }
 }
 
-define map2 [A, B, C, +P] (List[A], List[B], (A, B -> C +P) -> List[C] +P) {
+define map2 [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
   -> f;
   zip (\unpair f compose) map
 }
 
 define map_concat [A, B] (List[A], (A -> List[B]) -> List[B]) { map concat }
 
-define map_index [A, B, +P] (List[A], (A, Int -> B +P) -> List[B] +P) {
+define map_index [A, B] (List[A], (A, Int -> B) -> List[B]) {
   0 map_index::helper
 }
 
@@ -205,19 +205,19 @@ define once [T] (T -> List[T]) { -> x; [x] }
 define or (List[Bool] -> Bool) { true \(|) fold_left }
 
 define pad_head [T] (List[T], Int, T -> List[T]) {
-  -> list, min_length, elt;
-  if (list length < min_length) {
-    list (elt (min_length - list length) replicate) prepend
+  -> min_length, elt; dup
+  if (length min_length <) {
+    dup -> list; elt min_length list length - replicate prepend
   }
-  else { list }
+  else { }
 }
 
 define pad_tail [T] (List[T], Int, T -> List[T]) {
-  -> list, min_length, elt;
-  if (list length < min_length) {
-    (elt (min_length - list length) replicate) list prepend
+  -> min_length, elt; dup
+  if (length min_length <) {
+    -> list; elt min_length list length - replicate list prepend
   }
-  else { list }
+  else { }
 }
 
 define partition [T] (List[T], (T -> Bool) -> List[T], List[T]) {
@@ -247,13 +247,13 @@ define reduce_right [T] (List[T], (T, T -> T) -> Optional[T]) {
 define remove [T] (List[T], T -> List[T]) { -> x; { x (=) } filter_out }
 
 define remove_nth [T] (List[T], Int -> List[T]) {
-  => index;
-  { if (index =) { drop [] } else { => x; [x] } } map_index concat
+  -> index;
+  { if (index =) { drop [] } else { -> x; [x] } } map_index concat
 }
 
 define replicate [T] (T, Int -> List[T]) {
-  => count; if (count 0 <=) { drop [] }
-  else { => value; value count 1 - replicate value suffix }
+  -> count; if (count 0 <=) { drop [] }
+  else { -> value; value count 1 - replicate value suffix }
 }
 
 define reverse [T] (List[T] -> List[T]) {
@@ -267,7 +267,7 @@ define rights [A, B] (List[Either[A, B]] -> List[B]) {
 }
 
 define set [T] (List[T], T, Int -> List[T]) {
-  => element, index;
+  -> element, index;
   { if (index =) { drop element } else {} } map_index
 }
 
@@ -308,9 +308,9 @@ define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
   case none { [] }
 }
 
-define _::map_index::helper [A, B, +P] (List[A], (A, Int -> B +P), Int -> List[B] +P) {
+define _::map_index::helper [A, B] (List[A], (A, Int -> B), Int -> List[B]) {
   -> f, i;
   match (head_tail)
-  case some { unpair -> h, t; (t f (i + 1) helper) (h i f call) prefix }
+  case some { unpair -> h, t; t f i 1 + helper h i f call prefix }
   case none { [] }
 }

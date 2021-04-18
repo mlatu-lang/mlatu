@@ -59,14 +59,12 @@ makeLenses ''Definition
 -- | The main definition, created implicitly from top-level code in program
 -- fragments.
 main ::
-  -- | List of permissions implicitly granted.
-  [GeneralName] ->
   -- | Override default name.
   Maybe Qualified ->
   -- | Body.
   Term a ->
   Definition a
-main permissions mName term =
+main mName term =
   Definition
     { _body = term,
       _category = Category.Word,
@@ -83,7 +81,6 @@ main permissions mName term =
               []
               (Signature.Variable "R" o)
               []
-              permissions
               o
           )
           o

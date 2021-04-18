@@ -16,6 +16,5 @@ import Relude
 data Category
   = Constructor
   | Instance
-  | Permission
   | Word
   deriving (Ord, Eq, Show)

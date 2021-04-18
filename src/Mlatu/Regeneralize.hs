@@ -56,7 +56,7 @@ regeneralize tenv t =
 
     go :: Type -> Writer [(TypeId, (Unqualified, Kind))] Type
     go t' = case t' of
-      Type.Fun _ a b e
+      Type.Fun _ a b
         | TypeVar origin (Var name c k) <- bottommost a,
           TypeVar _ (Var _name d _) <- bottommost b,
           c == d ->
@@ -64,8 +64,7 @@ regeneralize tenv t =
             when (occurrences tenv c t == 2) $ tell [(c, (name, k))]
             a' <- go a
             b' <- go b
-            e' <- go e
-            pure $ Forall origin (Var name c k) $ Type.Fun origin a' b' e'
+            pure $ Forall origin (Var name c k) $ Type.Fun origin a' b'
       Type.Prod o a b -> do
         a' <- go a
         b' <- go b

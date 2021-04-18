@@ -61,7 +61,7 @@ instance show [A, B] (Either[A, B] -> String) {
 
 instance show [T] (Optional[T] -> String) {
   match
-  case some => x { "some " x show + }
+  case some -> x { "some " x show + }
   case none { "none" }
 }
 

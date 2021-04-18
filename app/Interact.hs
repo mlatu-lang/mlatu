@@ -58,7 +58,6 @@ cmd input = do
       -- be executed individually, and later conveniently referred to.
       fragment <-
         Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "IO"]
           (Just entryName)
           lineNumber
           "<interactive>"
@@ -67,7 +66,6 @@ cmd input = do
       _ <- warnCheckpoint
       callFragment <-
         Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "IO"]
           Nothing
           lineNumber
           "<interactive>"
@@ -86,15 +84,13 @@ cmd input = do
       stackScheme <-
         typeFromSignature tenv $
           Signature.Quantified
-            [ Parameter currentOrigin "R" Stack,
-              Parameter currentOrigin "E" Permission
+            [ Parameter currentOrigin "R" Stack
             ]
             ( Signature.StackFunction
                 (Signature.Bottom currentOrigin)
                 []
                 (Signature.Variable "R" currentOrigin)
                 []
-                ["E"]
                 currentOrigin
             )
             currentOrigin
@@ -173,7 +169,6 @@ typeCmd expression = do
     runMlatuExceptT $ do
       fragment <-
         Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "IO"]
           Nothing
           lineNumber
           "<interactive>"
@@ -206,7 +201,7 @@ final = do
 
 run :: Prelude -> IO Int
 run prelude = do
-  mResult <- runMlatuExceptT $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "IO"] Nothing
+  mResult <- runMlatuExceptT $ compilePrelude prelude Nothing
   case mResult of
     Left reports -> do
       reportAll reports
