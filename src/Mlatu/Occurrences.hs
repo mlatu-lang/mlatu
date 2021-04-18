@@ -28,11 +28,11 @@ occurrences tenv0 x = recur
   where
     recur t = case t of
       TypeConstructor {} -> 0
-      TypeVar _ _uses (Var _name y _) -> case Map.lookup y (view TypeEnv.tvs tenv0) of
+      TypeVar _ (Var _name y _) -> case Map.lookup y (view TypeEnv.tvs tenv0) of
         Nothing -> if x == y then 1 else 0
         Just t' -> recur t'
       TypeConstant {} -> 0
-      Forall _ _uses (Var _name x' _) t' -> if x == x' then 0 else recur t'
+      Forall _ (Var _name x' _) t' -> if x == x' then 0 else recur t'
       a :@ b -> recur a + recur b
 
 occurs :: TypeEnv -> TypeId -> Type -> Bool

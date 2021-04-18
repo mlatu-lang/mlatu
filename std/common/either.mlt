@@ -7,14 +7,14 @@ define either [R..., S..., A, B] (R..., Either[A, B], (R..., A -> S...), (R..., 
   case right { g call }
 }
 
-define from_left [A, B] (Either[A, B], String -> A) {
+define from_left [A, B] (Either[A, B], String -> A +Fail) {
   -> message;
   match
   case left {}
   else { message fail }
 }
 
-define from_right [A, B] (Either[A, B], String -> B) {
+define from_right [A, B] (Either[A, B], String -> B +Fail) {
   -> message;
   match
   case right {}

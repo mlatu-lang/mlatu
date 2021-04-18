@@ -165,6 +165,52 @@ spec = do
         \define test (-> Pair[Char, Double]) { 1 '1' pair flip }"
         $ Type.Fun o r (Type.Prod o r (ctor "Pair" :@ char :@ int)) e
 
+    it "accepts valid permissions" $ do
+      testTypecheck
+        Positive
+        "define test (-> +Fail) { abort }"
+        $ Type.Fun o r r (Type.Join o fail_ e)
+
+      testTypecheck
+        Positive
+        "intrinsic launch_missiles (-> +IO)\n\
+        \define test (-> +Fail +IO) { launch_missiles abort }"
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
+
+      testTypecheck
+        Positive
+        "intrinsic launch_missiles (-> +IO)\n\
+        \define test (-> +IO +Fail) { launch_missiles abort }"
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
+
+    it "accepts redundant permissions" $ do
+      testTypecheck
+        Positive
+        "define test (-> +Fail) {}"
+        $ Type.Fun o r r (Type.Join o fail_ e)
+
+      testTypecheck
+        Positive
+        "define test (-> +Fail +IO) {}"
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
+
+      testTypecheck
+        Positive
+        "define test (-> +IO +Fail) {}"
+        $ Type.Fun o r r (Type.Join o fail_ (Type.Join o io e))
+
+    it "rejects missing permissions" $ do
+      testTypecheck
+        Negative
+        "define test (->) { abort }"
+        $ Type.Fun o r r e
+
+      testTypecheck
+        Negative
+        "intrinsic launch_missiles (-> +IO)\n\
+        \define test (->) { launch_missiles abort }"
+        $ Type.Fun o r r e
+
   describe "with higher-order functions" $ do
     it "typechecks curried functions" $ do
       testTypecheck

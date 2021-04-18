@@ -19,7 +19,6 @@ import Mlatu.Monad (M)
 import Mlatu.Term (Case (..), Else (..), Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
-import Mlatu.Uses (Uses (..))
 import Relude hiding (Compose, Type)
 
 -- | Capture-avoiding substitution of a type variable α with a type τ throughout
@@ -28,14 +27,14 @@ typ :: TypeEnv -> TypeId -> Type -> Type -> M Type
 typ tenv0 x a = recur
   where
     recur t = case t of
-      Forall origin uses var@(Var name x' k) t'
+      Forall origin var@(Var name x' k) t'
         | x == x' -> pure t
-        | x' `Set.notMember` Free.tvs tenv0 t' -> Forall origin uses var <$> recur t'
+        | x' `Set.notMember` Free.tvs tenv0 t' -> Forall origin var <$> recur t'
         | otherwise -> do
           z <- freshTypeId tenv0
-          t'' <- typ tenv0 x' (TypeVar origin uses $ Var name z k) t'
-          Forall origin uses (Var name z k) <$> recur t''
-      TypeVar _ _uses (Var _name x' _) | x == x' -> pure a
+          t'' <- typ tenv0 x' (TypeVar origin $ Var name z k) t'
+          Forall origin (Var name z k) <$> recur t''
+      TypeVar _ (Var _name x' _) | x == x' -> pure a
       m :@ n -> (:@) <$> recur m <*> recur n
       _noSubst -> pure t
 
@@ -49,7 +48,7 @@ term tenv x a = recur
         -- FIXME: Generics could eventually quantify over non-value kinds.
         let k = Kind.Value
         z <- freshTypeId tenv
-        body' <- term tenv x' (TypeVar origin Once $ Var name z k) body
+        body' <- term tenv x' (TypeVar origin $ Var name z k) body
         Generic name z <$> recur body' <*> pure origin
       Group body -> recur body
       Lambda tref name varType body origin ->

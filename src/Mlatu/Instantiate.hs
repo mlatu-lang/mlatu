@@ -24,7 +24,6 @@ import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
-import Mlatu.Uses (Uses (..))
 import Mlatu.Zonk qualified as Zonk
 import Prettyprinter (hsep, squotes)
 import Relude hiding (Type)
@@ -36,24 +35,23 @@ import Relude hiding (Type)
 typ ::
   TypeEnv ->
   Origin ->
-  Uses ->
   Unqualified ->
   TypeId ->
   Kind ->
   Type ->
   M (Type, Type, TypeEnv)
-typ tenv0 origin uses name x k t = do
+typ tenv0 origin name x k t = do
   ia <- freshTypeId tenv0
-  let a = TypeVar origin uses $ Var name ia k
+  let a = TypeVar origin $ Var name ia k
   replaced <- Substitute.typ tenv0 x a t
   pure (replaced, a, tenv0)
 
 -- | When generating an instantiation of a generic definition, we only want to
 -- instantiate the rank-1 quantifiers; all other quantifiers are irrelevant.
 prenex :: TypeEnv -> Type -> M (Type, [Type], TypeEnv)
-prenex tenv0 q@(Forall origin uses (Var name x k) t) =
+prenex tenv0 q@(Forall origin (Var name x k) t) =
   while origin (hsep ["instantiating", squotes $ printType q]) $ do
-    (t', a, tenv1) <- typ tenv0 origin uses name x k t
+    (t', a, tenv1) <- typ tenv0 origin name x k t
     (t'', as, tenv2) <- prenex tenv1 t'
     pure (t'', a : as, tenv2)
 prenex tenv0 t = pure (t, [], tenv0)

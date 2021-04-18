@@ -18,12 +18,12 @@ define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T.
   { f call g call }
 }
 
-define curry [R..., S..., T] (T, (R..., T -> S...) -> (R... -> S...)) {
+define curry [R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)) {
   -> x, f;
   { x f call }
 }
 
-define curry2 [R..., S..., A, B] (A, B, (R..., A, B -> S...) -> (R... -> S...)) {
+define curry2 [R..., S..., A, B, +P] (A, B, (R..., A, B -> S... +P) -> (R... -> S... +P)) {
   -> x, y, f;
   { x y f call }
 }

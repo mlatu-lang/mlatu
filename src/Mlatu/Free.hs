@@ -31,8 +31,8 @@ tvks :: TypeEnv -> Type -> Map TypeId (Unqualified, Kind)
 tvks tenv x = go (Zonk.typ tenv x)
   where
     go :: Type -> Map TypeId (Unqualified, Kind)
-    go (TypeVar _ _uses (Var name i k)) = one (i, (name, k))
-    go (Forall _ _uses (Var _name i _) t') = Map.delete i $ go t'
+    go (TypeVar _ (Var name i k)) = one (i, (name, k))
+    go (Forall _ (Var _name i _) t') = Map.delete i $ go t'
     go (a :@ b) = Map.union (go a) (go b)
     go TypeConstructor {} = Map.empty
     go TypeConstant {} = Map.empty

@@ -51,7 +51,6 @@ import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Mlatu.Zonk qualified as Zonk
 import Optics
@@ -146,13 +145,13 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Coercion hint@Term.IdentityCoercion _ origin ->
     while (Term.origin term0) context $ do
-      [a] <-
+      [a, p] <-
         fresh
           origin
-          Once
-          [ ("S", Stack)
+          [ ("S", Stack),
+            ("P", Permission)
           ]
-      let typ = Type.Fun origin Once a a
+      let typ = Type.Fun origin a a p
       let type' = Zonk.typ tenvFinal typ
       pure (Coercion hint type' origin, typ, tenv0)
   Coercion hint@(Term.AnyCoercion sig) _ origin ->
@@ -167,14 +166,15 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   Compose _ term1 term2 -> do
     (term1', t1, tenv1) <- inferType' tenv0 term1
     (term2', t2, tenv2) <- inferType' tenv1 term2
-    (_, a, b, tenv3) <- Unify.function tenv2 t1
-    (_, c, d, tenv4) <- Unify.function tenv3 t2
+    (a, b, e1, tenv3) <- Unify.function tenv2 t1
+    (c, d, e2, tenv4) <- Unify.function tenv3 t2
     tenv5 <- Unify.typ tenv4 b c
+    tenv6 <- Unify.typ tenv5 e1 e2
     -- FIXME: Use range origin over whole composition?
     let origin = Term.origin term1
-    let typ = Type.Fun origin Once a d
+    let typ = Type.Fun origin a d e1
     let type' = Zonk.typ tenvFinal typ
-    pure (Compose type' term1' term2', typ, tenv5)
+    pure (Compose type' term1' term2', typ, tenv6)
 
   -- TODO: Verify that this is correct.
   Generic _name _ t _ -> inferType' tenv0 t
@@ -187,13 +187,13 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Lambda _ name@(Unqualified unqualified) _ term origin -> do
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
-    a <- TypeEnv.freshTv tenv0 varTypeName origin Once Value
+    a <- TypeEnv.freshTv tenv0 varTypeName origin Value
     let oldLocals = view TypeEnv.vs tenv0
     let localEnv = over TypeEnv.vs (a :) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
     let tenv2 = set TypeEnv.vs oldLocals tenv1
-    (_, b, c, tenv3) <- Unify.function tenv2 t1
-    let typ = Type.Fun origin Once (Type.Prod origin Once b a) c
+    (b, c, e, tenv3) <- Unify.function tenv2 t1
+    let typ = Type.Fun origin (Type.Prod origin b a) c e
         type' = Zonk.typ tenvFinal typ
         varType' = Zonk.typ tenvFinal a
     pure
@@ -244,14 +244,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Once Value
-        (_, a, b, tenv'') <- Unify.function tenv' bodyType
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        (a, b, e, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
                 elseOrigin
-                Once
-                (Type.Prod elseOrigin Once a unusedScrutinee)
+                (Type.Prod elseOrigin a unusedScrutinee)
                 b
+                e
         pure (Else body' elseOrigin, elseType, tenv'')
       Else body elseOrigin -> do
         (body', bodyType, tenv') <- inferType' tenv1 body
@@ -266,14 +266,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Once Value
-        (_, a, b, tenv'') <- Unify.function tenv' bodyType
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        (a, b, e, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
                 elseOrigin
-                Once
-                (Type.Prod elseOrigin Once a unusedScrutinee)
+                (Type.Prod elseOrigin a unusedScrutinee)
                 b
+                e
         pure (Else body' elseOrigin, elseType, tenv'')
     (typ, tenv3) <- case constructors' of
       -- FIXME: Assumes caseTypes is non-empty.
@@ -308,14 +308,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   New _ constructor size origin ->
     while (Term.origin term0) context $ do
-      [a, b] <-
+      [a, b, e] <-
         fresh
           origin
-          Once
           [ ("R", Stack),
-            ("S", Stack)
+            ("S", Stack),
+            ("P", Permission)
           ]
-      let typ = Type.Fun origin Once a b
+      let typ = Type.Fun origin a b e
       let type' = Zonk.typ tenvFinal typ
       pure (New type' constructor size origin, typ, tenv0)
 
@@ -329,27 +329,28 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   NewClosure _ size origin ->
     while (Term.origin term0) context $ do
       as <-
-        fresh origin Once $
+        fresh origin $
           zip
             [ Unqualified ("Capture" <> show i)
               | i <- [1 :: Int ..]
             ]
             $ replicate size Value
-      [r, s, t] <-
+      [r, s, t, p1, p2] <-
         fresh
           origin
-          Once
           [ ("R", Stack),
             ("ClosureIn", Stack),
-            ("ClosureOut", Stack)
+            ("ClosureOut", Stack),
+            ("ClosurePermissions", Permission),
+            ("P", Permission)
           ]
-      let f = Type.Fun origin Once s t
+      let f = Type.Fun origin s t p1
           typ =
             Type.Fun
               origin
-              Once
-              (foldl' (Type.Prod origin Once) r (as ++ [f]))
-              (Type.Prod origin Once r f)
+              (foldl' (Type.Prod origin) r (as ++ [f]))
+              (Type.Prod origin r f)
+              p2
           type' = Zonk.typ tenvFinal typ
       pure (NewClosure type' size origin, typ, tenv0)
 
@@ -360,19 +361,19 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   NewVector _ size _ origin ->
     while (Term.origin term0) context $ do
-      [a, b] <-
+      [a, b, e] <-
         fresh
           origin
-          Once
           [ ("R", Stack),
-            ("Item", Value)
+            ("Item", Value),
+            ("P", Permission)
           ]
       let typ =
             Type.Fun
               origin
-              Once
-              (foldl' (Type.Prod origin Once) a (replicate size b))
-              (Type.Prod origin Once a (TypeConstructor origin Once "List" :@ b))
+              (foldl' (Type.Prod origin) a (replicate size b))
+              (Type.Prod origin a (TypeConstructor origin "List" :@ b))
+              e
           type' = Zonk.typ tenvFinal typ
           b' = Zonk.typ tenvFinal b
       pure (NewVector type' size b' origin, typ, tenv0)
@@ -381,14 +382,14 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Push _ value origin ->
     while (Term.origin term0) context $ do
-      [a] <-
+      [a, e] <-
         fresh
           origin
-          Once
-          [ ("S", Stack)
+          [ ("S", Stack),
+            ("P", Permission)
           ]
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
-      let typ = Type.Fun origin Once a (Type.Prod origin Once a t)
+      let typ = Type.Fun origin a (Type.Prod origin a t) e
       let type' = Zonk.typ tenvFinal typ
       pure (Push type' value' origin, typ, tenv1)
 
@@ -398,9 +399,9 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       inferCall dictionary tenvFinal tenv0 name origin
   where
     inferType' = inferType dictionary tenvFinal
-    fresh origin uses =
+    fresh origin =
       foldrM
-        (\(name, k) ts -> (: ts) <$> TypeEnv.freshTv tenv0 name origin uses k)
+        (\(name, k) ts -> (: ts) <$> TypeEnv.freshTv tenv0 name origin k)
         []
 
     context :: Doc ()
@@ -426,14 +427,15 @@ inferCase
   dataConstructors
   (Case qualified@(QualifiedName name) body origin) = do
     (body', bodyType, tenv1) <- inferType dictionary tenvFinal tenv0 body
-    (_, a1, b1, tenv2) <- Unify.function tenv1 bodyType
+    (a1, b1, e1, tenv2) <- Unify.function tenv1 bodyType
     case Map.lookup name $ view TypeEnv.sigs tenv2 of
       Just signature -> do
-        (_, a2, b2, tenv3) <- Unify.function tenv2 signature
+        (a2, b2, e2, tenv3) <- Unify.function tenv2 signature
         -- Note that we swap the consumption and production of the constructor
         -- to get the type of the deconstructor. The body consumes the fields.
         tenv4 <- Unify.typ tenv3 a1 a2
-        let typ = Type.Fun origin Once b2 b1
+        tenv5 <- Unify.typ tenv4 e1 e2
+        let typ = Type.Fun origin b2 b1 e1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
         dataConstructors' <- case partition (\ctor -> view DataConstructor.name ctor == unqualifiedName name) dataConstructors of
@@ -441,7 +443,7 @@ inferCase
             report $ Report.makeError $ Report.RedundantCase origin
             pure remaining
           (_covered, remaining) -> pure remaining
-        pure (Case qualified body' origin, typ, dataConstructors', tenv4)
+        pure (Case qualified body' origin, typ, dataConstructors', tenv5)
       Nothing ->
         ice
           "Mlatu.Infer.inferCase - case constructor missing signature after name resolution"
@@ -463,12 +465,12 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
     let tenv2 = set TypeEnv.closure oldClosure tenv1
     pure (Capture names term', t1, tenv2)
-  Character x -> pure (Character x, TypeConstructor origin Once "Char", tenv0)
+  Character x -> pure (Character x, TypeConstructor origin "Char", tenv0)
   Closed (ClosureIndex index) ->
     pure
       (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x -> pure (Float x, TypeConstructor origin Once "Double", tenv0)
-  Integer x -> pure (Integer x, TypeConstructor origin Once "Int", tenv0)
+  Float x -> pure (Float x, TypeConstructor origin "Double", tenv0)
+  Integer x -> pure (Integer x, TypeConstructor origin "Int", tenv0)
   Local (LocalIndex index) ->
     pure
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
@@ -488,7 +490,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Text x ->
     pure
       ( Text x,
-        TypeConstructor origin Once "String",
+        TypeConstructor origin "String",
         tenv0
       )
 
@@ -539,8 +541,8 @@ typeFromSignature tenv signature0 = do
           sigEnvVars = Map.empty
         }
       $ go signature0
-  let forallAnonymous = Forall (Signature.origin signature0) Once
-      forallVar (var, origin) = Forall origin Once var
+  let forallAnonymous = Forall (Signature.origin signature0)
+      forallVar (var, origin) = Forall origin var
   pure $
     foldr
       forallAnonymous
@@ -550,12 +552,14 @@ typeFromSignature tenv signature0 = do
     go :: Signature -> StateT SignatureEnv M Type
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
-      Signature.Bottom origin -> pure $ Type.Bottom origin Once
-      Signature.Function as bs origin -> do
+      Signature.Bottom origin -> pure $ Type.Bottom origin
+      Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack
-        let typeVar = TypeVar origin Once var
-        Forall origin Once var <$> makeFunction origin typeVar as typeVar bs
+        let typeVar = TypeVar origin var
+        es' <- traverse (fromVar origin) es
+        (me, es'') <- lift $ permissionVar origin es'
+        Forall origin var <$> makeFunction origin typeVar as typeVar bs es'' me
       Signature.Quantified vars a origin -> do
         original <- get
         (envVars, vars') <-
@@ -565,7 +569,7 @@ typeFromSignature tenv signature0 = do
             vars
         modify $ \env -> env {sigEnvVars = envVars}
         a' <- go a
-        let result = foldr (Forall origin Once) a' vars'
+        let result = foldr (Forall origin) a' vars'
         put original
         pure result
         where
@@ -578,23 +582,38 @@ typeFromSignature tenv signature0 = do
             let var = Var name x kind
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
-      Signature.StackFunction r as s bs origin -> do
+      Signature.StackFunction r as s bs es origin -> do
+        let var = fromVar origin
         r' <- go r
         s' <- go s
-        makeFunction origin r' as s' bs
+        es' <- traverse var es
+        (me, es'') <- lift $ permissionVar origin es'
+        makeFunction origin r' as s' bs es'' me
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
+
+    permissionVar :: Origin -> [Type] -> M (Maybe Type, [Type])
+    permissionVar origin types = case splitFind isTypeVar types of
+      Just (preceding, typ, following) -> case find isTypeVar following of
+        Nothing -> pure (Just typ, preceding ++ following)
+        Just type' -> do
+          report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
+          halt
+      Nothing -> pure (Nothing, types)
+      where
+        isTypeVar TypeVar {} = True
+        isTypeVar _ = False
 
     fromVar :: Origin -> GeneralName -> StateT SignatureEnv M Type
     fromVar origin (UnqualifiedName name) = do
       existing <- gets $ Map.lookup name . sigEnvVars
       case existing of
-        Just (var, varOrigin) -> pure $ TypeVar varOrigin Once var
+        Just (var, varOrigin) -> pure $ TypeVar varOrigin var
         Nothing -> lift $ do
           report $ Report.makeError $ Report.CannotResolveType origin $ UnqualifiedName name
           halt
     fromVar origin (QualifiedName name) =
-      pure $ TypeConstructor origin Once $ Constructor name
+      pure $ TypeConstructor origin $ Constructor name
     fromVar _ name =
       ice $
         "Mlatu.Infer.typeFromSignature - incorrectly resolved name in signature: " ++ show name
@@ -605,14 +624,33 @@ typeFromSignature tenv signature0 = do
       [Signature] ->
       Type ->
       [Signature] ->
+      [Type] ->
+      Maybe Type ->
       StateT SignatureEnv M Type
-    makeFunction origin r as s bs = do
+    makeFunction origin r as s bs es me = do
       as' <- traverse go as
       bs' <- traverse go bs
-      pure $ Type.Fun origin Once (stack r as') (stack s bs')
+      e <- case me of
+        Just e -> pure e
+        Nothing -> do
+          ex <- lift $ freshTypeId tenv
+          let var = Var "P" ex Permission
+          modify $ \env -> env {sigEnvAnonymous = var : sigEnvAnonymous env}
+          pure $ TypeVar origin var
+      pure $
+        Type.Fun origin (stack r as') (stack s bs') $
+          foldr (Type.Join origin) e es
       where
         stack :: Type -> [Type] -> Type
-        stack = foldl' $ Type.Prod origin Once
+        stack = foldl' $ Type.Prod origin
+
+splitFind :: (Eq a) => (a -> Bool) -> [a] -> Maybe ([a], a, [a])
+splitFind f = go []
+  where
+    go acc (x : xs)
+      | f x = Just (reverse acc, x, xs)
+      | otherwise = go (x : acc) xs
+    go _ [] = Nothing
 
 data SignatureEnv = SignatureEnv
   { sigEnvAnonymous :: ![Var],
@@ -630,7 +668,7 @@ typeKind dictionary = go
   where
     go :: Type -> M Kind
     go t = case t of
-      TypeConstructor _origin _ (Constructor qualified) ->
+      TypeConstructor _origin (Constructor qualified) ->
         case Dictionary.lookup (Instantiated qualified []) dictionary of
           Just (Entry.Type _origin parameters _ctors) -> case parameters of
             [] -> pure Value
@@ -644,9 +682,15 @@ typeKind dictionary = go
             Qualified qualifier unqualified
               | qualifier == Vocabulary.global -> case unqualified of
                 "Bottom" -> pure Stack
-                "Fun" -> pure $ Stack :-> Stack :-> Value
+                "Fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
                 "Prod" -> pure $ Stack :-> Value :-> Stack
                 "Sum" -> pure $ Value :-> Value :-> Value
+                "Unsafe" -> pure Label
+                "Void" -> pure Value
+                "IO" -> pure Label
+                "Fail" -> pure Label
+                "Join" -> pure $ Label :-> Permission :-> Permission
+                "List" -> pure $ Value :-> Value
                 _noKind ->
                   ice $
                     show $
@@ -665,9 +709,9 @@ typeKind dictionary = go
                       "in dictionary",
                       Dictionary.printDictionary dictionary
                     ]
-      TypeVar _origin _uses (Var _name _ k) -> pure k
-      TypeConstant _origin _uses (Var _name _ k) -> pure k
-      Forall _origin _ _ t' -> go t'
+      TypeVar _origin (Var _name _ k) -> pure k
+      TypeConstant _origin (Var _name _ k) -> pure k
+      Forall _origin _ t' -> go t'
       a :@ b -> do
         ka <- go a
         case ka of
