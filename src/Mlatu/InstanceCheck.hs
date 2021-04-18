@@ -17,7 +17,6 @@ import Mlatu.Free qualified as Free
 import Mlatu.Informer (Informer (..))
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Monad (M, attempt)
-import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Type (Constructor (..), Type (..), TypeId, Var (..))
@@ -25,7 +24,6 @@ import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Zonk qualified as Zonk
 import Optics
 import Prettyprinter (Doc)
 import Relude hiding (Type)

@@ -1,21 +1,21 @@
 type Either[A, B] {   case left (A) case right (B) }
 
 define either [R..., S..., A, B] (R..., Either[A, B], (R..., A -> S...), (R..., B -> S...) -> S...) {
-  -> f, g;
+  => f, g;
   match
   case left { f call }
   case right { g call }
 }
 
 define from_left [A, B] (Either[A, B], String -> A) {
-  -> message;
+  => message;
   match
   case left {}
   else { message fail }
 }
 
 define from_right [A, B] (Either[A, B], String -> B) {
-  -> message;
+  => message;
   match
   case right {}
   else { message fail }
@@ -35,25 +35,25 @@ define get_right [A, B] (Either[A, B] -> Optional[B]) {
 
 define is_left [A, B] (Either[A, B] -> Bool) {
   match
-  case left { -> _; true }
+  case left { => _; true }
   else { false }
 }
 
 define is_right [A, B] (Either[A, B] -> Bool) {
   match
-  case right { -> _; true }
+  case right { => _; true }
   else { false }
 }
 
 define map_left [A, B, C] (Either[A, B], (A -> C) -> Either[C, B]) {
-  -> f;
+  => f;
   match
   case left { f call left }
   case right { right }
 }
 
 define map_right [A, B, C] (Either[A, B], (B -> C) -> Either[A, C]) {
-  -> f;
+  => f;
   match
   case right { f call right }
   case left { left }

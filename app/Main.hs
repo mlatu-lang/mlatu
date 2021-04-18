@@ -8,7 +8,6 @@ import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
-import Mlatu.Vocabulary qualified as Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Relude
 import Report (reportAll)

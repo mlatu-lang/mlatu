@@ -43,6 +43,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
+import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Relude hiding (Compose, Type)
 
@@ -150,7 +151,7 @@ compose x o = foldr (Compose x) (identityCoercion x o)
 asCoercion :: a -> Origin -> [Signature] -> Term a
 asCoercion x o ts = Coercion (AnyCoercion signature) x o
   where
-    signature = Signature.Quantified [] (Signature.Function ts ts o) o
+    signature = Signature.Quantified [] (Signature.Function ts ts o Once) o
 
 identityCoercion :: a -> Origin -> Term a
 identityCoercion = Coercion IdentityCoercion

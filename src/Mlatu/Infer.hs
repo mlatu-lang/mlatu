@@ -550,12 +550,12 @@ typeFromSignature tenv signature0 = do
     go :: Signature -> StateT SignatureEnv M Type
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
-      Signature.Bottom origin -> pure $ Type.Bottom origin Once
-      Signature.Function as bs origin -> do
+      Signature.Bottom origin uses -> pure $ Type.Bottom origin uses
+      Signature.Function as bs origin uses -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack
         let typeVar = TypeVar origin Once var
-        Forall origin Once var <$> makeFunction origin typeVar as typeVar bs
+        Forall origin Once var <$> makeFunction origin uses typeVar as typeVar bs
       Signature.Quantified vars a origin -> do
         original <- get
         (envVars, vars') <-
@@ -577,11 +577,11 @@ typeFromSignature tenv signature0 = do
             x <- freshTypeId tenv
             let var = Var name x kind
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
-      Signature.Variable name origin -> fromVar origin name
-      Signature.StackFunction r as s bs origin -> do
+      Signature.Variable name origin _ -> fromVar origin name
+      Signature.StackFunction r as s bs origin uses -> do
         r' <- go r
         s' <- go s
-        makeFunction origin r' as s' bs
+        makeFunction origin uses r' as s' bs
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
 
@@ -601,15 +601,16 @@ typeFromSignature tenv signature0 = do
 
     makeFunction ::
       Origin ->
+      Uses ->
       Type ->
       [Signature] ->
       Type ->
       [Signature] ->
       StateT SignatureEnv M Type
-    makeFunction origin r as s bs = do
+    makeFunction origin uses r as s bs = do
       as' <- traverse go as
       bs' <- traverse go bs
-      pure $ Type.Fun origin Once (stack r as') (stack s bs')
+      pure $ Type.Fun origin uses (stack r as') (stack s bs')
       where
         stack :: Type -> [Type] -> Type
         stack = foldl' $ Type.Prod origin Once

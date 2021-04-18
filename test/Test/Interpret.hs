@@ -24,7 +24,7 @@ import Test.Hspec (Spec, describe, it, runIO)
 spec :: Spec
 spec = do
   testInterpretWithHandles <- runIO $ do
-    mDictionary <- runMlatuExceptT $ compilePrelude Common ioPermission Nothing
+    mDictionary <- runMlatuExceptT $ compilePrelude Common Nothing
     case mDictionary of
       Left reports ->
         error $

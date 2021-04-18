@@ -17,6 +17,7 @@ where
 
 import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Name (Unqualified)
+import Mlatu.Uses (Uses (..))
 import Relude
 
 data Token
@@ -27,7 +28,7 @@ data Token
   | -- | @>@ See note [Angle Brackets].
     AngleEnd
   | -- | @->@
-    Arrow
+    Arrow Uses
   | -- | @as@
     As
   | -- | @{@, @:@
@@ -46,6 +47,7 @@ data Token
     Define
   | -- | @do@
     Do
+  | DoubleArrow
   | -- | @...@
     Ellipsis
   | -- | @else@
@@ -97,7 +99,7 @@ instance Eq Token where
   About == About = True
   AngleBegin == AngleBegin = True
   AngleEnd == AngleEnd = True
-  Arrow == Arrow = True
+  Arrow a == Arrow b = a == b
   As == As = True
   BlockBegin == BlockBegin = True
   BlockEnd == BlockEnd = True
@@ -107,6 +109,7 @@ instance Eq Token where
   Comma == Comma = True
   Define == Define = True
   Do == Do = True
+  DoubleArrow == DoubleArrow = True
   Ellipsis == Ellipsis = True
   Else == Else = True
   -- See note [Float Literals].

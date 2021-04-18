@@ -61,6 +61,7 @@ import Mlatu.Token qualified as Token
 import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
+import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Relude hiding (Compose, Constraint)
@@ -370,16 +371,17 @@ functionTypeParser = (<?> "function type") $ do
     stackSignature = (<?> "stack function type") $ do
       leftparameter <- UnqualifiedName <$> stack
       leftTypes <- Parsec.option [] (commaParser *> left)
-      origin <- arrow
+      (origin, uses) <- arrow
       rightparameter <- UnqualifiedName <$> stack
       rightTypes <- Parsec.option [] (commaParser *> right)
       pure
         ( Signature.StackFunction
-            (Signature.Variable leftparameter origin)
+            (Signature.Variable leftparameter origin Once)
             leftTypes
-            (Signature.Variable rightparameter origin)
+            (Signature.Variable rightparameter origin Once)
             rightTypes
             origin
+            uses
         )
       where
         stack :: Parser Unqualified
@@ -388,16 +390,24 @@ functionTypeParser = (<?> "function type") $ do
     arrowSignature :: Parser Signature
     arrowSignature = (<?> "arrow function type") $ do
       leftTypes <- left
-      origin <- arrow
+      (origin, uses) <- arrow
       rightTypes <- right
-      pure (Signature.Function leftTypes rightTypes origin)
+      pure (Signature.Function leftTypes rightTypes origin uses)
 
     left, right :: Parser [Signature]
     left = basicTypeParser `Parsec.sepEndBy` commaParser
     right = typeParser `Parsec.sepEndBy` commaParser
 
-    arrow :: Parser Origin
-    arrow = getTokenOrigin <* parserMatch Token.Arrow
+    arrow :: Parser (Origin, Uses)
+    arrow = do
+      origin <- getTokenOrigin
+      uses <-
+        parseOne
+          ( \token -> case view Located.item token of
+              Token.Arrow uses -> Just uses
+              _ -> Nothing
+          )
+      pure (origin, uses)
 
 commaParser :: Parser ()
 commaParser = void $ parserMatch Token.Comma
@@ -410,7 +420,7 @@ basicTypeParser = (<?> "basic type") $ do
         Parsec.try $ do
           origin <- getTokenOrigin
           name <- nameParser
-          pure $ Signature.Variable name origin,
+          pure $ Signature.Variable name origin Once,
         groupedParser typeParser
       ]
   let apply a b = Signature.Application a b $ Signature.origin prefix
@@ -635,7 +645,7 @@ vectorParser = (<?> "vector literal") $ do
 
 lambdaParser :: Parser (Term ())
 lambdaParser = (<?> "parameteriable introduction") $ do
-  names <- parserMatch Token.Arrow *> lambdaNamesParser
+  names <- parserMatch Token.DoubleArrow *> lambdaNamesParser
   Parsec.choice
     [ parserMatchOperator ";" *> do
         origin <- getTokenOrigin
@@ -726,15 +736,6 @@ asParser = (<?> "'as' expression") $ do
   signatures <- groupedParser $ basicTypeParser `Parsec.sepEndBy` commaParser
   pure $ Term.asCoercion () origin signatures
 
-permitParser :: Parser Term.Permit
-permitParser =
-  Term.Permit
-    <$> Parsec.choice
-      [ True <$ parserMatchOperator "+",
-        False <$ parserMatchOperator "-"
-      ]
-    <*> (UnqualifiedName <$> wordNameParser)
-
 parserMatchOperator :: Text -> Parser (Located Token)
 parserMatchOperator = parserMatch . Token.Operator . Unqualified
 
@@ -751,7 +752,7 @@ blockLikeParser :: Parser (Term ())
 blockLikeParser =
   Parsec.choice
     [ blockParser,
-      parserMatch Token.Arrow *> do
+      parserMatch Token.DoubleArrow *> do
         names <- lambdaNamesParser
         origin <- getTokenOrigin
         body <- blockParser
