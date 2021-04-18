@@ -1,14 +1,14 @@
 type Optional[T] {   case none case some (T) }
 
 define from_optional [T] (Optional[T], T -> T) {
-  => default;
+  -> default;
   match
   case some {}
   else { default }
 }
 
 define from_some [T] (Optional[T], String -> T) {
-  => message;
+  -> message;
   match
   case some {}
   else { message fail }
@@ -27,21 +27,21 @@ define is_some [T] (Optional[T] -> Bool) {
 }
 
 define lift_optional_2 [A, B, C] (Optional[A], Optional[B], (A, B -> C) -> Optional[C]) {
-  => mx, my, f;
+  -> mx, my, f;
   match (mx)
-  case some => x { match (my) case some => y { x y f call some } else { none } }
+  case some -> x { match (my) case some -> y { x y f call some } else { none } }
   else { none }
 }
 
 define map_optional [A, B] (Optional[A], (A -> B) -> Optional[B]) {
-  => opt, f;
+  -> opt, f;
   match (opt)
-  case some => x { x f call some }
+  case some -> x { x f call some }
   else { none }
 }
 
 define optional [R..., S..., A] (R..., Optional[A], (R..., A -> S...), (R... -> S...) -> S...) {
-  => f, g;
+  -> f, g;
   match
   case some { f call }
   case none { g call }

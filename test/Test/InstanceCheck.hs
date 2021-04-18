@@ -12,7 +12,6 @@ import Mlatu.Origin qualified as Origin
 import Mlatu.Pretty (printType)
 import Mlatu.Type (Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
-import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Prettyprinter (hsep)
 import Relude hiding (Type)
@@ -35,8 +34,8 @@ spec = do
     -- <: [R..., +P]    (R... -> R..., Int +P)
     testInstanceCheck
       Positive
-      (fr $ fe $ fx $ Type.Fun o Once r (Type.Prod o Once r x) e)
-      (fr $ fe $ Type.Fun o Once r (Type.Prod o Once r int) e)
+      (fr $ fe $ fx $ Type.Fun o r (Type.Prod o r x) e)
+      (fr $ fe $ Type.Fun o r (Type.Prod o r int) e)
 
   it "with parameterized types" $ do
     --    [A, B] (Pair[A, B])
@@ -56,9 +55,8 @@ spec = do
               fe $
                 Type.Fun
                   o
-                  Once
-                  (Type.Prod o Once r (pair :@ x :@ y))
-                  (Type.Prod o Once r (pair :@ y :@ x))
+                  (Type.Prod o r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ y :@ x))
                   e
       )
       ( fr $
@@ -67,27 +65,26 @@ spec = do
               fe $
                 Type.Fun
                   o
-                  Once
-                  (Type.Prod o Once r (pair :@ x :@ y))
-                  (Type.Prod o Once r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ x :@ y))
+                  (Type.Prod o r (pair :@ x :@ y))
                   e
       )
   where
     o = Origin.point "" 0 0
-    r = TypeVar o Once rv
-    x = TypeVar o Once xv
-    y = TypeVar o Once yv
-    e = TypeVar o Once ev
+    r = TypeVar o rv
+    x = TypeVar o xv
+    y = TypeVar o yv
+    e = TypeVar o ev
     rv = Var "R" (TypeId 0) Stack
     xv = Var "X" (TypeId 2) Value
     yv = Var "Y" (TypeId 3) Value
     ev = Var "P" (TypeId 4) Permission
-    fr = Type.Forall o Once rv
-    fx = Type.Forall o Once xv
-    fy = Type.Forall o Once yv
-    fe = Type.Forall o Once ev
+    fr = Type.Forall o rv
+    fx = Type.Forall o xv
+    fy = Type.Forall o yv
+    fe = Type.Forall o ev
     ctor =
-      TypeConstructor o Once . Type.Constructor
+      TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
     int = ctor "Int"
     pair = ctor "Pair"

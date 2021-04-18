@@ -33,7 +33,6 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Prettyprinter (vcat)
@@ -88,12 +87,11 @@ cmd input = do
             [ Parameter currentOrigin "R" Stack
             ]
             ( Signature.StackFunction
-                (Signature.Bottom currentOrigin Once)
+                (Signature.Bottom currentOrigin)
                 []
-                (Signature.Variable "R" currentOrigin Once)
+                (Signature.Variable "R" currentOrigin)
                 []
                 currentOrigin
-                Once
             )
             currentOrigin
       -- Checking that the main definition is able to operate on an

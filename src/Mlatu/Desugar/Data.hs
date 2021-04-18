@@ -26,7 +26,6 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
-import Mlatu.Uses (Uses (..))
 import Optics
 import Relude
 
@@ -74,13 +73,11 @@ desugarConstructor definition index constructor =
     resultSignature =
       foldl'
         (\a b -> Signature.Application a b origin)
-        ( Signature.Variable
-            (QualifiedName $ view TypeDefinition.name definition)
-            (view TypeDefinition.origin definition)
-            Once
+        ( Signature.Variable (QualifiedName $ view TypeDefinition.name definition) $
+            view TypeDefinition.origin definition
         )
         $ ( \(Parameter parameterOrigin parameter _kind) ->
-              Signature.Variable (UnqualifiedName parameter) parameterOrigin Once
+              Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
           <$> view TypeDefinition.parameters definition
     constructorSignature =
@@ -90,7 +87,6 @@ desugarConstructor definition index constructor =
             (view DataConstructor.fields constructor)
             [resultSignature]
             origin
-            Once
         )
         origin
     origin = view DataConstructor.origin constructor

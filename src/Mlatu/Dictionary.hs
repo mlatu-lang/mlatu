@@ -28,6 +28,7 @@ where
 import Data.Map.Strict qualified as Map
 import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
+import Mlatu.Entry.Category qualified as Category
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Name
   ( Qualified,

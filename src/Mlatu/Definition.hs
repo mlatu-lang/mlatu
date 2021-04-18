@@ -38,7 +38,6 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
-import Mlatu.Uses (Uses (..))
 import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Relude
@@ -78,12 +77,11 @@ main mName term =
         Signature.Quantified
           [Parameter o "R" Stack]
           ( Signature.StackFunction
-              (Signature.Variable "R" o Once)
+              (Signature.Variable "R" o)
               []
-              (Signature.Variable "R" o Once)
+              (Signature.Variable "R" o)
               []
               o
-              Once
           )
           o
     }

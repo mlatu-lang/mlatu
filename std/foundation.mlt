@@ -9,11 +9,12 @@ define call [R..., S...] (R..., (R... -> S...) -> S...) {
 }
 
 define drop [T] (T ->) {
-  _::mlatu::drop
+  -> _;
 }
 
 define swap [A, B] (A, B -> B, A) {
-  _::mlatu::swap
+  -> x, y;
+  y x
 }
 
 about call {

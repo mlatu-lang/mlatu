@@ -20,7 +20,7 @@ import Mlatu.Monad (M)
 import Mlatu.Occurrences (occurs)
 import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
-import Mlatu.Type (Type (..), Var (..))
+import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTv)
 import Mlatu.TypeEnv qualified as TypeEnv

@@ -63,8 +63,7 @@ import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
 
 punctuateComma :: [Doc a] -> Doc a
-punctuateComma [] = ""
-punctuateComma xs = hsep (punctuate comma xs)
+punctuateComma = hsep . punctuate comma
 
 printIntegerLiteral :: IntegerLiteral -> Doc a
 printIntegerLiteral literal =
@@ -248,30 +247,20 @@ printSignature (Application firstA b _) =
     (finalA, as) = go [] firstA
     go l (Application x y _) = go (l ++ [y]) x
     go l x = (x, l)
-printSignature (Bottom _ _) = "<bottom>"
-printSignature (Function as bs _ uses) =
+printSignature (Bottom _) = "<bottom>"
+printSignature (Function as bs _) =
   parens $
     mapNonEmpty "" (\sigs -> punctuateComma (printSignature <$> sigs) <> space) as
-      <+> ( case uses of
-              None -> "-0>"
-              Once -> "->"
-              Affi -> "-&>"
-              Many -> "-+>"
-          )
-      <+> mapNonEmpty "" (\sigs -> punctuateComma (printSignature <$> sigs)) bs
+      <> "->"
+      <> mapNonEmpty "" (\sigs -> space <> punctuateComma (printSignature <$> sigs)) bs
 printSignature (Quantified names typ _) =
-  mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns))) names
-    <+> printSignature typ
-printSignature (Variable name _ _) = printGeneralName name
-printSignature (StackFunction r as s bs _ uses) =
+  mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns)) <> flatAlt space "\n") names
+    <> printSignature typ
+printSignature (Variable name _) = printGeneralName name
+printSignature (StackFunction r as s bs _) =
   parens $
     punctuateComma ((printSignature r <> "...") : (printSignature <$> as))
-      <+> ( case uses of
-              None -> "-0>"
-              Once -> "->"
-              Affi -> "-&>"
-              Many -> "-+>"
-          )
+      <+> "->"
       <+> punctuateComma ((printSignature s <> "...") : (printSignature <$> bs))
 printSignature (Type t) = printType t
 
@@ -280,11 +269,7 @@ printToken = \case
   Token.About -> "`about`"
   Token.AngleBegin -> "`<`"
   Token.AngleEnd -> "`>`"
-  Token.Arrow a -> case a of
-    None -> "`-0->`"
-    Once -> "`->`"
-    Affi -> "`-&->`"
-    Many -> "`-+->`"
+  Token.Arrow -> "`->`"
   Token.As -> "`as`"
   Token.BlockBegin -> "`{`"
   Token.BlockEnd -> "`}`"
@@ -294,7 +279,6 @@ printToken = \case
   Token.Comma -> "`,`"
   Token.Define -> "`define`"
   Token.Do -> "`do`"
-  Token.DoubleArrow -> "`=>`"
   Token.Ellipsis -> "`...`"
   Token.Else -> "`else`"
   Token.Float a -> pretty (floatValue a :: Double)
@@ -417,7 +401,7 @@ printGroup a = parens <$> maybePrintTerm a
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
-  let lambda = "=>" <+> punctuateComma (printUnqualified <$> names) <> semi
+  let lambda = printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names) <> semi
    in case maybePrintTerm newBody of
         Nothing -> lambda
         Just a -> vsep [lambda, a]
@@ -452,7 +436,7 @@ printCase :: GeneralName -> Term a -> Doc b
 printCase n (Lambda _ name _ body _) =
   group $
     blockMaybe
-      ("case" <+> printGeneralName n <+> "=>" <+> punctuateComma (printUnqualified <$> names))
+      ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names))
       (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body

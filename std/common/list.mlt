@@ -12,24 +12,24 @@ vocab mlatu {
 type List[T] {   case _list (Pointer[T], Pointer[T], Pointer[T]) }
 
 define all [T] (List[T], (T -> Bool) -> Bool) {
-  => f;
+  -> f;
   true do (fold_left) { f call (&) }
 }
 
 define all2 [A, B] (List[A], List[B], (A, B -> Bool) -> Bool) {
-  => f;
+  -> f;
   zip { unpair f call } all
 }
 
 define and (List[Bool] -> Bool) { true \(&) fold_left }
 
 define any [T] (List[T], (T -> Bool) -> Bool) {
-  => f;
+  -> f;
   true do (fold_left) { f call (|) }
 }
 
 define any2 [A, B] (List[A], List[B], (A, B -> Bool) -> Bool) {
-  => f;
+  -> f;
   zip { unpair f call } any
 }
 
@@ -42,8 +42,8 @@ define cartesian [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
 }
 
 define cartesian_with [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
-  => ys, f;
-  { => x; ys { x swap f call } map } map_concat
+  -> ys, f;
+  { -> x; ys { x swap f call } map } map_concat
 }
 
 define concat [T] (List[List[T]] -> List[T]) { [] \append fold_left }
@@ -52,33 +52,33 @@ define concat_optionals [T] (List[Optional[T]] -> List[T]) {
   [] do (fold_left) { match case some { suffix } else {} }
 }
 
-define elem [T] (T, List[T] -> Bool) { swap => x; { x (=) } any }
+define elem [T] (T, List[T] -> Bool) { swap -> x; { x (=) } any }
 
 define empty [T] (List[T] -> Bool) { _::mlatu::empty }
 
 define filter_in [T] (List[T], (T -> Bool) -> List[T]) {
-  => f;
+  -> f;
   match (tail_head)
-  case some { unpair => t, h; t f filter_in (h f call) if { h prefix } else {} }
+  case some { unpair -> t, h; t f filter_in (h f call) if { h prefix } else {} }
   case none { [] }
 }
 
 define filter_out [T] (List[T], (T -> Bool) -> List[T]) {
-  => f;
+  -> f;
   { f call not } filter_in
 }
 
 define find [T] (List[T], (T -> Bool) -> Optional[T]) { filter_in head }
 
 define fold_left [A, B] (List[B], A, (A, B -> A) -> A) {
-  => xs, z, k;
+  -> xs, z, k;
   match (xs tail_head)
-  case some { unpair => h; (z h k call) k fold_left }
+  case some { unpair -> h; (z h k call) k fold_left }
   case none { z }
 }
 
 define fold_right [A, B] (List[A], B, (A, B -> B) -> B) {
-  => xs, z, k;
+  -> xs, z, k;
   match (xs init_last)
   case some { unpair z k call k fold_right }
   case none { z }
@@ -87,7 +87,7 @@ define fold_right [A, B] (List[A], B, (A, B -> B) -> B) {
 define get [T] (List[T], Int -> Optional[T]) { _::mlatu::get }
 
 define get_all [T] (List[T], List[Int] -> List[Optional[T]]) {
-  swap => list;
+  swap -> list;
   { list swap get } map
 }
 
@@ -106,12 +106,12 @@ define init_last [T] (List[T] -> Optional[Pair[List[T], T]]) {
 }
 
 define insert_nth [T] (List[T], T, Int -> List[T]) {
-  => element, index;
-  { if (index =) { => x; [element, x] } else { => x; [x] } } map_index concat
+  -> element, index;
+  { -> x, i; if (i = index) { [element, x] } else { [x] } } map_index concat
 }
 
 define join [T] (List[List[T]], List[T] -> List[T]) {
-  => g;
+  -> g;
   [] { g glue } fold_left
 }
 
@@ -123,17 +123,17 @@ define last_init [T] (List[T] -> Optional[Pair[T, List[T]]]) {
 
 define lefts [A, B] (List[Either[A, B]] -> List[A]) { \get_left map_optionally }
 
-define length [T] (List[T] -> Int) { 0 { drop 1 + } fold_left }
+define length [T] (List[T] -> Int) { 0 { drop 1 (+) } fold_left }
 
 define map [A, B] (List[A], (A -> B) -> List[B]) {
-  => f;
+  -> f;
   match (head_tail)
-  case some { unpair => h, t; (t f map) (h f call) prefix }
+  case some { unpair -> h, t; (t f map) (h f call) prefix }
   case none { [] }
 }
 
 define map2 [A, B, C] (List[A], List[B], (A, B -> C) -> List[C]) {
-  => f;
+  -> f;
   zip (\unpair f compose) map
 }
 
@@ -144,34 +144,34 @@ define map_index [A, B] (List[A], (A, Int -> B) -> List[B]) {
 }
 
 define map_optionally [A, B] (List[A], (A -> Optional[B]) -> List[B]) {
-  => f;
+  -> f;
   match (head_tail)
   case some {
-    unpair => h, t;
+    unpair -> h, t;
     match (h f call)
-    case some => x { (t f map_optionally) x prefix }
+    case some -> x { (t f map_optionally) x prefix }
     case none { t f map_optionally }
   }
   case none { [] }
 }
 
 define map_reduce_left [A, B] (List[A], (A -> B), (B, B -> B) -> Optional[B]) {
-  => f;
+  -> f;
   map f reduce_left
 }
 
 define map_reduce_left2 [A, B, C] (List[A], List[B], (A, B -> C), (C, C -> C) -> Optional[C]) {
-  => f;
+  -> f;
   map2 f reduce_left
 }
 
 define map_reduce_right [A, B] (List[A], (A -> B), (B, B -> B) -> Optional[B]) {
-  => f;
+  -> f;
   map f reduce_right
 }
 
 define map_reduce_right2 [A, B, C] (List[A], List[B], (A, B -> C), (C, C -> C) -> Optional[C]) {
-  => f;
+  -> f;
   map2 f reduce_right
 }
 
@@ -180,41 +180,41 @@ define maximum [T] (List[T] -> Optional[T]) { \max reduce_left }
 define minimum [T] (List[T] -> Optional[T]) { \min reduce_left }
 
 define modify [T] (List[T], (T -> T), Int -> List[T]) {
-  => xs, f, i;
+  -> xs, f, i;
   match (xs i get)
-  case some => x { xs (x f call) i set }
+  case some -> x { xs (x f call) i set }
   case none { xs }
 }
 
 define not_elem [T] (T, List[T] -> Bool) { elem not }
 
-define once [T] (T -> List[T]) { => x; [x] }
+define once [T] (T -> List[T]) { -> x; [x] }
 
 define or (List[Bool] -> Bool) { true \(|) fold_left }
 
 define pad_head [T] (List[T], Int, T -> List[T]) {
-  => list, min_length, elt;
-  if (list length min_length <) {
-    list elt min_length list length - replicate prepend
+  -> list, min_length, elt;
+  if (list length < min_length) {
+    list (elt (min_length - list length) replicate) prepend
   }
   else { list }
 }
 
 define pad_tail [T] (List[T], Int, T -> List[T]) {
-  => list, min_length, elt;
-  if (list length min_length <) {
-    elt min_length list length - replicate list prepend
+  -> list, min_length, elt;
+  if (list length < min_length) {
+    (elt (min_length - list length) replicate) list prepend
   }
   else { list }
 }
 
 define partition [T] (List[T], (T -> Bool) -> List[T], List[T]) {
-  => f;
+  -> f;
   { f filter_in } { f filter_out } bi
 }
 
 define partition_eithers [A, B] (List[Either[A, B]] -> List[A], List[B]) {
-  => xs;
+  -> xs;
   (xs lefts) (xs rights)
 }
 
@@ -223,16 +223,16 @@ define prefix [T] (List[T], T -> List[T]) { once prepend }
 define prepend [T] (List[T], List[T] -> List[T]) { swap append }
 
 define reduce_left [T] (List[T], (T, T -> T) -> Optional[T]) {
-  => f;
+  -> f;
   tail_head { unpair f fold_left } map_optional
 }
 
 define reduce_right [T] (List[T], (T, T -> T) -> Optional[T]) {
-  => f;
+  -> f;
   init_last { unpair f fold_right } map_optional
 }
 
-define remove [T] (List[T], T -> List[T]) { => x; { x (=) } filter_out }
+define remove [T] (List[T], T -> List[T]) { -> x; { x (=) } filter_out }
 
 define remove_nth [T] (List[T], Int -> List[T]) {
   => index;
@@ -262,7 +262,7 @@ define set [T] (List[T], T, Int -> List[T]) {
 define suffix [T] (List[T], T -> List[T]) { once append }
 
 define surround [T] (List[T], List[T], List[T] -> List[T]) {
-  => x;
+  -> x;
   prepend x append
 }
 
@@ -275,20 +275,20 @@ define tail_head [T] (List[T] -> Optional[Pair[List[T], T]]) {
 define unzip [A, B] (List[Pair[A, B]] -> List[A], List[B]) {
   match (head_tail)
   case some {
-    unpair => h, t;
-    h unpair => m, n;
-    t unzip => ms, ns;
+    unpair -> h, t;
+    h unpair -> m, n;
+    t unzip -> ms, ns;
     ms m prefix ns n prefix
   }
   case none { [] [] }
 }
 
 define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
-  => a, b;
+  -> a, b;
   match (a head_tail)
-  case some => x_pair {
+  case some -> x_pair {
     match (b head_tail)
-    case some => y_pair {
+    case some -> y_pair {
       (x_pair second) (y_pair second) zip (x_pair first) (y_pair first) pair prefix
     }
     case none { [] }
@@ -297,8 +297,8 @@ define zip [A, B] (List[A], List[B] -> List[Pair[A, B]]) {
 }
 
 define _::map_index::helper [A, B] (List[A], (A, Int -> B), Int -> List[B]) {
-  => f, i;
+  -> f, i;
   match (head_tail)
-  case some { unpair => h, t; t f i 1 + helper h i f call prefix }
+  case some { unpair -> h, t; (t f (i + 1) helper) (h i f call) prefix }
   case none { [] }
 }

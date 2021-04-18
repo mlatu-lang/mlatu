@@ -24,7 +24,6 @@ import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
-import Mlatu.Uses (Uses (..))
 import Numeric (readHex, readOct)
 import Prettyprinter (dquotes)
 import Prettyprinter.Internal (Pretty (pretty))
@@ -284,10 +283,10 @@ stringLiteral = doubleQuoteStringLiteral <|> smartQuoteStringLiteral
 
 arrow :: Tokenizer Token
 arrow =
-  Parsec.try $ Parsec.choice [Arrow Once <$ Parsec.string "->", Arrow None <$ Parsec.string "-0>", Arrow Affi <$ Parsec.string "-&>", Arrow Many <$ Parsec.string "-+>"]
-
-doubleArrow :: Tokenizer Token
-doubleArrow = Parsec.try $ DoubleArrow <$ Parsec.string "=>" <* Parsec.notFollowedBy symbol
+  Parsec.try $
+    Arrow
+      <$ Parsec.choice (fmap Parsec.string ["->", "\x2192"])
+      <* Parsec.notFollowedBy symbol
 
 angleBegin :: Tokenizer Token
 angleBegin = AngleBegin <$ Parsec.char '<'
@@ -356,7 +355,6 @@ tokenTokenizer =
         stringLiteral,
         num,
         arrow,
-        doubleArrow,
         alphanumeric
       ]
 
