@@ -1,205 +1,205 @@
 vocab mlatu {
-  intrinsic acos_float64 (Double -> Double)
-  intrinsic acosh_float64 (Double -> Double)
-  intrinsic add_float64 (Double, Double -> Double)
-  intrinsic add_int64 (Int, Int -> Int)
-  intrinsic and_int64 (Int, Int -> Int)
-  intrinsic asin_float64 (Double -> Double)
-  intrinsic asinh_float64 (Double -> Double)
-  intrinsic atan2_float64 (Double, Double -> Double)
-  intrinsic atan_float64 (Double -> Double)
-  intrinsic atanh_float64 (Double -> Double)
-  intrinsic ceil_float64 (Double -> Double)
-  intrinsic cos_float64 (Double -> Double)
-  intrinsic cosh_float64 (Double -> Double)
-  intrinsic div_float64 (Double, Double -> Double)
-  intrinsic div_int64 (Int, Int -> Int)
-  intrinsic eq_char (Char, Char -> Bool)
-  intrinsic eq_float64 (Double, Double -> Bool)
-  intrinsic eq_int64 (Int, Int -> Bool)
-  intrinsic exp_float64 (Double -> Double)
-  intrinsic floor_float64 (Double -> Double)
-  intrinsic gt_char (Char, Char -> Bool)
-  intrinsic gt_float64 (Double, Double -> Bool)
-  intrinsic gt_int64 (Int, Int -> Bool)
-  intrinsic log_float64 (Double -> Double)
-  intrinsic mod_float64 (Double, Double -> Double)
-  intrinsic mod_int64 (Int, Int -> Int)
-  intrinsic mul_float64 (Double, Double -> Double)
-  intrinsic mul_int64 (Int, Int -> Int)
-  intrinsic neg_int64 (Int -> Int)
-  intrinsic not_int64 (Int -> Int)
-  intrinsic or_int64 (Int, Int -> Int)
-  intrinsic round_float64 (Double -> Double)
-  intrinsic sin_float64 (Double -> Double)
-  intrinsic sinh_float64 (Double -> Double)
-  intrinsic sqrt_float64 (Double -> Double)
-  intrinsic sub_float64 (Double, Double -> Double)
-  intrinsic sub_int64 (Int, Int -> Int)
-  intrinsic tan_float64 (Double -> Double)
-  intrinsic tanh_float64 (Double -> Double)
-  intrinsic trunc_float64 (Double -> Double)
-  intrinsic xor_int64 (Int, Int -> Int)
+  intrinsic acos-float64 (double -> double)
+  intrinsic acosh-float64 (double -> double)
+  intrinsic add-float64 (double, double -> double)
+  intrinsic add-int64 (int, int -> int)
+  intrinsic and-int64 (int, int -> int)
+  intrinsic asin-float64 (double -> double)
+  intrinsic asinh-float64 (double -> double)
+  intrinsic atan2-float64 (double, double -> double)
+  intrinsic atan-float64 (double -> double)
+  intrinsic atanh-float64 (double -> double)
+  intrinsic ceil-float64 (double -> double)
+  intrinsic cos-float64 (double -> double)
+  intrinsic cosh-float64 (double -> double)
+  intrinsic div-float64 (double, double -> double)
+  intrinsic div-int64 (int, int -> int)
+  intrinsic eq-char (char, char -> bool)
+  intrinsic eq-float64 (double, double -> bool)
+  intrinsic eq-int64 (int, int -> bool)
+  intrinsic exp-float64 (double -> double)
+  intrinsic floor-float64 (double -> double)
+  intrinsic gt-char (char, char -> bool)
+  intrinsic gt-float64 (double, double -> bool)
+  intrinsic gt-int64 (int, int -> bool)
+  intrinsic log-float64 (double -> double)
+  intrinsic mod-float64 (double, double -> double)
+  intrinsic mod-int64 (int, int -> int)
+  intrinsic mul-float64 (double, double -> double)
+  intrinsic mul-int64 (int, int -> int)
+  intrinsic neg-int64 (int -> int)
+  intrinsic not-int64 (int -> int)
+  intrinsic or-int64 (int, int -> int)
+  intrinsic round-float64 (double -> double)
+  intrinsic sin-float64 (double -> double)
+  intrinsic sinh-float64 (double -> double)
+  intrinsic sqrt-float64 (double -> double)
+  intrinsic sub-float64 (double, double -> double)
+  intrinsic sub-int64 (int, int -> int)
+  intrinsic tan-float64 (double -> double)
+  intrinsic tanh-float64 (double -> double)
+  intrinsic trunc-float64 (double -> double)
+  intrinsic xor-int64 (int, int -> int)
 }
 
-trait % [T] (T, T -> T)
+trait % (∀ t . t, t -> t)
 
-trait * [T] (T, T -> T)
+trait * (∀ t . t, t -> t)
 
-trait + [T] (T, T -> T)
+trait + (∀ t . t, t -> t)
 
-trait - [T] (T, T -> T)
+trait - (∀ t . t, t -> t)
 
-trait / [T] (T, T -> T)
+trait / (∀ t . t, t -> t)
 
-trait < [T] (T, T -> Bool)
+trait < (∀ t . t, t -> bool)
 
-trait <= [T] (T, T -> Bool)
+trait <= (∀ t . t, t -> bool)
 
-trait <> [T] (T, T -> Bool)
+trait <> (∀ t . t, t -> bool)
 
-trait = [T] (T, T -> Bool)
+trait = (∀ t . t, t -> bool)
 
-trait > [T] (T, T -> Bool)
+trait > (∀ t . t, t -> bool)
 
-trait >= [T] (T, T -> Bool)
+trait >= (∀ t . t, t -> bool)
 
-trait neg [T] (T -> T)
+trait neg (∀ t . t -> t)
 
-trait zero [T] (-> T)
+trait zero (∀ t . -> t)
 
 
-type Char {}
+type char {}
 
-type Double {}
+type double {}
 
-type Int {}
+type int {}
 
-instance % (Double, Double -> Double) { _::mlatu::mod_float64 }
+instance % (double, double -> double) { mlatu::mod-float64 }
 
-instance % (Int, Int -> Int) { _::mlatu::mod_int64 }
+instance % (int, int -> int) { mlatu::mod-int64 }
 
-instance * (Double, Double -> Double) { _::mlatu::mul_float64 }
+instance * (double, double -> double) { mlatu::mul-float64 }
 
-instance * (Int, Int -> Int) { _::mlatu::mul_int64 }
+instance * (int, int -> int) { mlatu::mul-int64 }
 
-instance + (Double, Double -> Double) { _::mlatu::add_float64 }
+instance + (double, double -> double) { mlatu::add-float64 }
 
-instance + (Int, Int -> Int) { _::mlatu::add_int64 }
+instance + (int, int -> int) { mlatu::add-int64 }
 
-instance - (Double, Double -> Double) { _::mlatu::sub_float64 }
+instance - (double, double -> double) { mlatu::sub-float64 }
 
-instance - (Int, Int -> Int) { _::mlatu::sub_int64 }
+instance - (int, int -> int) { mlatu::sub-int64 }
 
-instance / (Double, Double -> Double) { _::mlatu::div_float64 }
+instance / (double, double -> double) { mlatu::div-float64 }
 
-instance / (Int, Int -> Int) { _::mlatu::div_int64 }
+instance / (int, int -> int) { mlatu::div-int64 }
 
-instance < (Int, Int -> Bool) { swap (>) }
+instance < (int, int -> bool) { swap (>) }
 
-instance < (Char, Char -> Bool) { swap (>) }
+instance < (char, char -> bool) { swap (>) }
 
-instance < (Double, Double -> Bool) { swap (>) }
+instance < (double, double -> bool) { swap (>) }
 
-instance < (Bool, Bool -> Bool) { swap not (&) }
+instance < (bool, bool -> bool) { swap not (&) }
 
-instance <= (Int, Int -> Bool) { (>) not }
+instance <= (int, int -> bool) { (>) not }
 
-instance <= (Char, Char -> Bool) { (>) not }
+instance <= (char, char -> bool) { (>) not }
 
-instance <= (Double, Double -> Bool) { (>) not }
+instance <= (double, double -> bool) { (>) not }
 
-instance <= (Bool, Bool -> Bool) { (>) not }
+instance <= (bool, bool -> bool) { (>) not }
 
-instance <> (Int, Int -> Bool) { (=) not }
+instance <> (int, int -> bool) { (=) not }
 
-instance <> (Char, Char -> Bool) { (=) not }
+instance <> (char, char -> bool) { (=) not }
 
-instance <> (Double, Double -> Bool) { (=) not }
+instance <> (double, double -> bool) { (=) not }
 
-instance <> (Bool, Bool -> Bool) { (=) not }
+instance <> (bool, bool -> bool) { (=) not }
 
-instance = (Bool, Bool -> Bool) { if {} else { not } }
+instance = (bool, bool -> bool) { if {} else { not } }
 
-instance = (Char, Char -> Bool) { _::mlatu::eq_char }
+instance = (char, char -> bool) { mlatu::eq-char }
 
-instance = (Double, Double -> Bool) { _::mlatu::eq_float64 }
+instance = (double, double -> bool) { mlatu::eq-float64 }
 
-instance = (Int, Int -> Bool) { _::mlatu::eq_int64 }
+instance = (int, int -> bool) { mlatu::eq-int64 }
 
-instance > (Char, Char -> Bool) { _::mlatu::gt_char }
+instance > (char, char -> bool) { mlatu::gt-char }
 
-instance > (Double, Double -> Bool) { _::mlatu::gt_float64 }
+instance > (double, double -> bool) { mlatu::gt-float64 }
 
-instance > (Int, Int -> Bool) { _::mlatu::gt_int64 }
+instance > (int, int -> bool) { mlatu::gt-int64 }
 
-instance > (Bool, Bool -> Bool) { (&) not }
+instance > (bool, bool -> bool) { (&) not }
 
-instance >= (Int, Int -> Bool) { (<) not }
+instance >= (int, int -> bool) { (<) not }
 
-instance >= (Char, Char -> Bool) { (<) not }
+instance >= (char, char -> bool) { (<) not }
 
-instance >= (Double, Double -> Bool) { (<) not }
+instance >= (double, double -> bool) { (<) not }
 
-instance >= (Bool, Bool -> Bool) { (<) not }
+instance >= (bool, bool -> bool) { (<) not }
 
-instance neg (Double -> Double) { 0.0 - }
+instance neg (double -> double) { 0.0 - }
 
-instance neg (Int -> Int) { 0 - }
+instance neg (int -> int) { 0 - }
 
-instance zero (-> Double) { 0.0 }
+instance zero (-> double) { 0.0 }
 
-instance zero (-> Int) { 0 }
+instance zero (-> int) { 0 }
 
-define abs [T] (T -> T) { dup if (zero <) { neg } else {} }
+define abs (∀ t . t -> t) { dup if (zero <) { neg } else {} }
 
-define acos (Double -> Double) { _::mlatu::acos_float64 }
+define acos (double -> double) { mlatu::acos-float64 }
 
-define acosh (Double -> Double) { _::mlatu::acosh_float64 }
+define acosh (double -> double) { mlatu::acosh-float64 }
 
-define asin (Double -> Double) { _::mlatu::asin_float64 }
+define asin (double -> double) { mlatu::asin-float64 }
 
-define asinh (Double -> Double) { _::mlatu::asinh_float64 }
+define asinh (double -> double) { mlatu::asinh-float64 }
 
-define atan (Double -> Double) { _::mlatu::atan_float64 }
+define atan (double -> double) { mlatu::atan-float64 }
 
-define atan2 (Double, Double -> Double) { _::mlatu::atan2_float64 }
+define atan2 (double, double -> double) { mlatu::atan2-float64 }
 
-define atanh (Double -> Double) { _::mlatu::atanh_float64 }
+define atanh (double -> double) { mlatu::atanh-float64 }
 
-define ceil (Double -> Double) { _::mlatu::ceil_float64 }
+define ceil (double -> double) { mlatu::ceil-float64 }
 
-define cos (Double -> Double) { _::mlatu::cos_float64 }
+define cos (double -> double) { mlatu::cos-float64 }
 
-define cosh (Double -> Double) { _::mlatu::cosh_float64 }
+define cosh (double -> double) { mlatu::cosh-float64 }
 
-define div_mod [T] (T, T -> T, T) { -> x, y; (x y /) (x y %) }
+define div-mod (∀ t . t, t -> t, t) { -> x, y; (x y /) (x y %) }
 
-define exp (Double -> Double) { _::mlatu::exp_float64 }
+define exp (double -> double) { mlatu::exp-float64 }
 
-define floor (Double -> Double) { _::mlatu::floor_float64 }
+define floor (double -> double) { mlatu::floor-float64 }
 
-define log (Double -> Double) { _::mlatu::log_float64 }
+define log (double -> double) { mlatu::log-float64 }
 
-define max [T] (T, T -> T) { -> x, y; if (x y >) { x } else { y } }
+define max (∀ t . t, t -> t) { -> x, y; if (x y >) { x } else { y } }
 
-define min [T] (T, T -> T) { -> x, y; if (x y <) { x } else { y } }
+define min (∀ t . t, t -> t) { -> x, y; if (x y <) { x } else { y } }
 
-define pi (-> Double) { 3.141592653589793 }
+define pi (-> double) { 3.141592653589793 }
 
-define round (Double -> Double) { _::mlatu::round_float64 }
+define round (double -> double) { mlatu::round-float64 }
 
-define sin (Double -> Double) { _::mlatu::sin_float64 }
+define sin (double -> double) { mlatu::sin-float64 }
 
-define sinh (Double -> Double) { _::mlatu::sinh_float64 }
+define sinh (double -> double) { mlatu::sinh-float64 }
 
-define sqrt (Double -> Double) { _::mlatu::sqrt_float64 }
+define sqrt (double -> double) { mlatu::sqrt-float64 }
 
-define tan (Double -> Double) { _::mlatu::tan_float64 }
+define tan (double -> double) { mlatu::tan-float64 }
 
-define tanh (Double -> Double) { _::mlatu::tanh_float64 }
+define tanh (double -> double) { mlatu::tanh-float64 }
 
-define trunc (Double -> Double) { _::mlatu::trunc_float64 }
+define trunc (double -> double) { mlatu::trunc-float64 }
 
 about + {
   docs {
@@ -270,7 +270,7 @@ about % {
   }
 }
 
-about Char {
+about char {
   alignment {
     4
   }
@@ -279,7 +279,7 @@ about Char {
   }
 }
 
-about Int {
+about int {
   alignment {
     8
   }
@@ -288,7 +288,7 @@ about Int {
   }
 }
 
-about Double {
+about double {
   alignment {
     8
   }

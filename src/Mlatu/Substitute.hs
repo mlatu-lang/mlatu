@@ -46,7 +46,7 @@ term tenv x a = recur
       Compose tref t1 t2 -> Compose <$> go tref <*> recur t1 <*> recur t2
       Generic name x' body origin -> do
         -- FIXME: Generics could eventually quantify over non-value kinds.
-        let k = Kind.Value
+        let k = Kind.Star
         z <- freshTypeId tenv
         body' <- term tenv x' (TypeVar origin $ Var name z k) body
         Generic name z <$> recur body' <*> pure origin

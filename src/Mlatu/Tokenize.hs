@@ -174,6 +174,15 @@ symbol =
 special :: Tokenizer Char
 special = Parsec.oneOf "\"'(),:[\\]_{}"
 
+forall :: Tokenizer Token
+forall = Forall <$ Parsec.char '∀'
+
+dot :: Tokenizer Token
+dot = Dot <$ Parsec.char '.'
+
+bang :: Tokenizer Token
+bang = Bang <$ Parsec.char '!'
+
 comma :: Tokenizer Token
 comma = Comma <$ Parsec.char ','
 
@@ -300,9 +309,9 @@ alphanumeric =
     [ do
         name <-
           (toText .) . (:)
-            <$> (letter <|> Parsec.char '_')
+            <$> (letter <|> Parsec.char '-')
             <*> (many . Parsec.choice)
-              [letter, Parsec.char '_', Parsec.digit]
+              [letter, Parsec.char '-', Parsec.digit]
         pure $ case name of
           "about" -> About
           "as" -> As
@@ -337,11 +346,13 @@ tokenTokenizer :: Tokenizer (Located Token)
 tokenTokenizer =
   rangedTokenizer $
     Parsec.choice
-      [ blockBegin,
+      [ forall,
+        bang,
+        blockBegin,
         blockEnd,
         characterLiteral,
         comma,
-        ellipsis,
+        Parsec.try ellipsis <|> dot,
         groupBegin,
         groupEnd,
         ignore,

@@ -142,7 +142,7 @@ spec = do
   it "resolves types in trait signatures" $ do
     testType
       "type Size {}\n\
-      \trait alignment[T] (T -> Size)"
+      \trait alignment (∀ T . T -> Size)"
       Vocabulary.global
       (UnqualifiedName "Size")
       (Qualified Vocabulary.global "Size")

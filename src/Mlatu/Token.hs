@@ -30,6 +30,7 @@ data Token
     Arrow
   | -- | @as@
     As
+  | Bang
   | -- | @{@, @:@
     BlockBegin
   | -- | @}@
@@ -46,12 +47,15 @@ data Token
     Define
   | -- | @do@
     Do
+  | Dot
   | -- | @...@
     Ellipsis
   | -- | @else@
     Else
   | -- | See note [Float Literals].
     Float FloatLiteral
+  | -- | @Forall
+    Forall
   | -- | @(@
     GroupBegin
   | -- | @)@
@@ -97,6 +101,7 @@ instance Eq Token where
   AngleEnd == AngleEnd = True
   Arrow == Arrow = True
   As == As = True
+  Bang == Bang = True
   BlockBegin == BlockBegin = True
   BlockEnd == BlockEnd = True
   Case == Case = True
@@ -105,10 +110,12 @@ instance Eq Token where
   Comma == Comma = True
   Define == Define = True
   Do == Do = True
+  Dot == Dot = True
   Ellipsis == Ellipsis = True
   Else == Else = True
   -- See note [Float Literals].
   Float a == Float b = a == b
+  Forall == Forall = True
   GroupBegin == GroupBegin = True
   GroupEnd == GroupEnd = True
   If == If = True

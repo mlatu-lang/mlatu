@@ -21,8 +21,7 @@ import Mlatu.Interpret (Failure, Rep, interpret, printRep)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
-  ( GeneralName (QualifiedName),
-    Qualified (Qualified),
+  ( Qualified (Qualified),
     Qualifier (Qualifier),
     Root (Absolute),
     Unqualified (Unqualified),
@@ -33,7 +32,6 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Prettyprinter (vcat)
 import Relude

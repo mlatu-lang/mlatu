@@ -1,76 +1,76 @@
-trait read [T] (String -> Optional[T])
+trait read (∀ t . string -> t optional)
 
-trait show [T] (T -> String)
+trait show (∀ t . t -> string)
 
 
 vocab mlatu {
-  intrinsic eq_string (String, String -> Bool)
-  intrinsic gt_string (String, String -> Bool)
-  intrinsic read_float64 (String -> Optional[Double])
-  intrinsic read_int64 (String -> Optional[Int])
-  intrinsic show_float64 (Double -> String)
-  intrinsic show_int64 (Int -> String)
-  intrinsic string_concat (String, String -> String)
-  intrinsic string_from_list (List[Char] -> String)
-  intrinsic string_to_list (String -> List[Char])
+  intrinsic eq-string (string, string -> bool)
+  intrinsic gt-string (string, string -> bool)
+  intrinsic read-float64 (string -> double optional)
+  intrinsic read-int64 (string -> int optional)
+  intrinsic show-float64 (double -> string)
+  intrinsic show-int64 (int -> string)
+  intrinsic string-concat (string, string -> string)
+  intrinsic string-from-list (char list -> string)
+  intrinsic string-to-list (string -> char list)
 }
 
-type String {}
+type string {}
 
-instance + (String, String -> String) { _::mlatu::string_concat }
+instance + (string, string -> string) { mlatu::string-concat }
 
-instance < (String, String -> Bool) { swap (>) }
+instance < (string, string -> bool) { swap (>) }
 
-instance <= (String, String -> Bool) { (>) not }
+instance <= (string, string -> bool) { (>) not }
 
-instance <> (String, String -> Bool) { (=) not }
+instance <> (string, string -> bool) { (=) not }
 
-instance = (String, String -> Bool) { _::mlatu::eq_string }
+instance = (string, string -> bool) { mlatu::eq-string }
 
-instance > (String, String -> Bool) { _::mlatu::gt_string }
+instance > (string, string -> bool) { mlatu::gt-string }
 
-instance >= (String, String -> Bool) { (<) not }
+instance >= (string, string -> bool) { (<) not }
 
-instance read (String -> Optional[Bool]) {
+instance read (string -> bool optional) {
   dup
   if ("true" =) { drop true some }
   else { if ("false" =) { false some } else { none } }
 }
 
-instance read (String -> Optional[Double]) { _::mlatu::read_float64 }
+instance read (string -> double optional) { mlatu::read-float64 }
 
-instance read (String -> Optional[Int]) { _::mlatu::read_int64 }
+instance read (string -> int optional) { mlatu::read-int64 }
 
-instance read (String -> Optional[Char]) {
+instance read (string -> char optional) {
   chars dup
   if (length 1 =) { head }
   else { drop none }
 }
 
-instance read (String -> Optional[String]) { some }
+instance read (string -> string optional) { some }
 
-instance show (String -> String) {}
+instance show (string -> string) {}
 
-instance show (Bool -> String) { if { "true" } else { "false" } }
+instance show (bool -> string) { if { "true" } else { "false" } }
 
-instance show [A, B] (Either[A, B] -> String) {
+instance show (∀ a b . b a either -> string) {
   match
   case left { show }
   case right { show }
 }
 
-instance show [T] (Optional[T] -> String) {
+instance show (∀ t . t optional -> string) {
   match
   case some -> x { "some " x show + }
   case none { "none" }
 }
 
-instance show (Double -> String) { _::mlatu::show_float64 }
+instance show (double -> string) { mlatu::show-float64 }
 
-instance show (Int -> String) { _::mlatu::show_int64 }
+instance show (int -> string) { mlatu::show-int64 }
 
-instance show (Char -> String) { once from_chars }
+instance show (char -> string) { once from-chars }
 
-define chars (String -> List[Char]) { _::mlatu::string_to_list }
+define chars (string -> char list) { mlatu::string-to-list }
 
-define from_chars (List[Char] -> String) { _::mlatu::string_from_list }
+define from-chars (char list -> string) { mlatu::string-from-list }

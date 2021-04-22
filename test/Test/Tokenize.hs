@@ -79,14 +79,6 @@ spec = do
     it "produces single token for ellipsis" $ do
       testTokenize "..." `shouldBe` Right [Ellipsis]
       testTokenize "\x2026" `shouldBe` Right [Ellipsis]
-    it "produces single token for operator beginning with arrow" $ do
-      testTokenize "->?"
-        `shouldBe` Right
-          [Operator (Unqualified "->?")]
-      testTokenize "\x2192?"
-        `shouldBe` Right
-          [Operator (Unqualified "\x2192?")]
-
     -- This is to support stack quantifiers, e.g., "[R...]" should be parsed as:
     --
     --     [

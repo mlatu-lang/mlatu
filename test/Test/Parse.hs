@@ -42,11 +42,6 @@ spec = do
     it "accepts qualified word as type name within vocab" $ do
       testParse Positive "vocab outer { type inner::Word {} }"
 
-    it "rejects unqualified operator as type name" $ do
-      testParse Negative "type + {}"
-    it "rejects qualified operator as type name" $ do
-      testParse Negative "type vocabulary::+ {}"
-
 testParse :: Sign -> Text -> Assertion
 testParse sign input = do
   result <-

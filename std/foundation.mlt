@@ -1,31 +1,17 @@
 vocab mlatu {
-  intrinsic call [R..., S...] (R..., (R... -> S...) -> S...)
-  intrinsic drop [A] (A ->)
-  intrinsic swap [A, B] (A, B -> B, A)
+  intrinsic call (∀ r... s... . r..., (r... -> s...) -> s...)
+  intrinsic drop (∀ a . a ->)
+  intrinsic swap (∀ a b . a, b -> b, a)
 }
 
-define call [R..., S...] (R..., (R... -> S...) -> S...) {
-  _::mlatu::call
+define call (∀ r... s... . r..., (r... -> s...) -> s...) {
+  mlatu::call
 }
 
-define drop [T] (T ->) {
-  -> _;
+define drop (∀ t . t ->) {
+  mlatu::drop
 }
 
-define swap [A, B] (A, B -> B, A) {
-  -> x, y;
-  y x
-}
-
-about call {
-  docs {
-    """
-    Applies a closure to the stack.
-
-    This denotes modus ponens: if we have a program state 'R...', a permission
-    '+P', and a closure '(R... -> S...)' as evidence that we can convert
-    'R...' to 'S...' given '+P', then we can invoke the closure to produce the
-    new state 'S...'.
-    """
-  }
+define swap (∀ a b . a, b -> b, a) {
+  mlatu::swap
 }

@@ -51,11 +51,11 @@ import System.IO.Unsafe (unsafePerformIO)
 -- It also provides access to the state of globally unique ID generation.
 
 data TypeEnv = TypeEnv
-  { _tvs :: (Map TypeId Type),
+  { _tvs :: Map TypeId Type,
     _vs :: [Type],
     _closure :: [Type],
-    _sigs :: (Map Qualified Type),
-    _currentType :: (IORef TypeId)
+    _sigs :: Map Qualified Type,
+    _currentType :: IORef TypeId
   }
 
 makeLenses ''TypeEnv

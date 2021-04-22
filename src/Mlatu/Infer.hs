@@ -91,7 +91,7 @@ mangleInstance dictionary name instanceSignature traitSignature = do
   instanceCheck "trait" traitType "instance" instanceType
   (traitType', args, tenv1) <- Instantiate.prenex tenv0 traitType
   tenv2 <- Unify.typ tenv1 instanceType traitType'
-  args' <- valueKinded dictionary $ Zonk.typ tenv2 <$> args
+  args' <- starKinded dictionary $ Zonk.typ tenv2 <$> args
   pure $ Instantiated name args'
 
 -- | Since type variables can be generalized if they do not depend on the
@@ -181,7 +181,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Lambda _ name@(Unqualified unqualified) _ term origin -> do
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
-    a <- TypeEnv.freshTv tenv0 varTypeName origin Value
+    a <- TypeEnv.freshTv tenv0 varTypeName origin Star
     let oldLocals = view TypeEnv.vs tenv0
     let localEnv = over TypeEnv.vs (a :) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
@@ -238,7 +238,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Star
         (a, b, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
@@ -259,7 +259,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Star
         (a, b, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
@@ -325,7 +325,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             [ Unqualified ("Capture" <> show i)
               | i <- [1 :: Int ..]
             ]
-            $ replicate size Value
+            $ replicate size Star
       [r, s, t] <-
         fresh
           origin
@@ -353,13 +353,13 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         fresh
           origin
           [ ("R", Stack),
-            ("Item", Value)
+            ("Item", Star)
           ]
       let typ =
             Type.Fun
               origin
               (foldl' (Type.Prod origin) a (replicate size b))
-              (Type.Prod origin a (TypeConstructor origin "List" :@ b))
+              (Type.Prod origin a (TypeConstructor origin "list" :@ b))
           type' = Zonk.typ tenvFinal typ
           b' = Zonk.typ tenvFinal b
       pure (NewVector type' size b' origin, typ, tenv0)
@@ -449,12 +449,12 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
     let tenv2 = set TypeEnv.closure oldClosure tenv1
     pure (Capture names term', t1, tenv2)
-  Character x -> pure (Character x, TypeConstructor origin "Char", tenv0)
+  Character x -> pure (Character x, TypeConstructor origin "char", tenv0)
   Closed (ClosureIndex index) ->
     pure
       (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x -> pure (Float x, TypeConstructor origin "Double", tenv0)
-  Integer x -> pure (Integer x, TypeConstructor origin "Int", tenv0)
+  Float x -> pure (Float x, TypeConstructor origin "double", tenv0)
+  Integer x -> pure (Integer x, TypeConstructor origin "int", tenv0)
   Local (LocalIndex index) ->
     pure
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
@@ -474,7 +474,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Text x ->
     pure
       ( Text x,
-        TypeConstructor origin "String",
+        TypeConstructor origin "string",
         tenv0
       )
 
@@ -490,7 +490,7 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
     Just t@Forall {} -> do
       (typ, params, tenv1) <- Instantiate.prenex tenv0 t
       let type' = Type.setOrigin origin typ
-      params' <- valueKinded dictionary params
+      params' <- starKinded dictionary params
       let type'' = Zonk.typ tenvFinal type'
           params'' = Zonk.typ tenvFinal <$> params'
       let mangled = QualifiedName name
@@ -565,24 +565,11 @@ typeFromSignature tenv signature0 = do
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
       Signature.Variable name origin -> fromVar origin name
       Signature.StackFunction r as s bs origin -> do
-        let var = fromVar origin
         r' <- go r
         s' <- go s
         makeFunction origin r' as s' bs
       -- TODO: Verify that the type contains no free variables.
       Signature.Type typ -> pure typ
-
-    permissionVar :: Origin -> [Type] -> M (Maybe Type, [Type])
-    permissionVar origin types = case splitFind isTypeVar types of
-      Just (preceding, typ, following) -> case find isTypeVar following of
-        Nothing -> pure (Just typ, preceding ++ following)
-        Just type' -> do
-          report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
-          halt
-      Nothing -> pure (Nothing, types)
-      where
-        isTypeVar TypeVar {} = True
-        isTypeVar _ = False
 
     fromVar :: Origin -> GeneralName -> StateT SignatureEnv M Type
     fromVar origin (UnqualifiedName name) = do
@@ -613,23 +600,15 @@ typeFromSignature tenv signature0 = do
         stack :: Type -> [Type] -> Type
         stack = foldl' $ Type.Prod origin
 
-splitFind :: (Eq a) => (a -> Bool) -> [a] -> Maybe ([a], a, [a])
-splitFind f = go []
-  where
-    go acc (x : xs)
-      | f x = Just (reverse acc, x, xs)
-      | otherwise = go (x : acc) xs
-    go _ [] = Nothing
-
 data SignatureEnv = SignatureEnv
   { sigEnvAnonymous :: ![Var],
     sigEnvVars :: !(Map Unqualified (Var, Origin))
   }
 
-valueKinded :: Dictionary -> [Type] -> M [Type]
-valueKinded dictionary =
+starKinded :: Dictionary -> [Type] -> M [Type]
+starKinded dictionary =
   filterM $
-    fmap (Value ==) . typeKind dictionary
+    fmap (Star ==) . typeKind dictionary
 
 -- | Infers the kind of a type.
 typeKind :: Dictionary -> Type -> M Kind
@@ -640,20 +619,20 @@ typeKind dictionary = go
       TypeConstructor _origin (Constructor qualified) ->
         case Dictionary.lookup (Instantiated qualified []) dictionary of
           Just (Entry.Type _origin parameters _ctors) -> case parameters of
-            [] -> pure Value
+            [] -> pure Star
             _list ->
               pure $
                 foldr
                   ((:->) . (\(Parameter _ _ k) -> k))
-                  Value
+                  Star
                   parameters
           _noParameters -> case qualified of
             Qualified qualifier unqualified
               | qualifier == Vocabulary.global -> case unqualified of
-                "Bottom" -> pure Stack
-                "Fun" -> pure $ Stack :-> Stack :-> Value
-                "Prod" -> pure $ Stack :-> Value :-> Stack
-                "Sum" -> pure $ Value :-> Value :-> Value
+                "BOTTOM" -> pure Stack
+                "FUN" -> pure $ Stack :-> Stack :-> Star
+                "PROD" -> pure $ Stack :-> Star :-> Stack
+                "SUM" -> pure $ Star :-> Star :-> Star
                 _noKind ->
                   ice $
                     show $

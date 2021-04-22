@@ -93,7 +93,8 @@ printFloatLiteral literal =
     value = floatValue literal
 
 printParameter :: Parameter -> Doc a
-printParameter (Parameter _ name Value) = printUnqualified name
+printParameter (Parameter _ name Star) = printUnqualified name
+printParameter (Parameter _ name Circle) = printUnqualified name
 printParameter (Parameter _ name Stack) = printUnqualified name <> "..."
 printParameter (Parameter _ name (_ :-> _)) = printUnqualified name <> "[_]"
 
@@ -127,8 +128,9 @@ printCategory Category.Instance = "instance"
 printCategory Category.Word = "word"
 
 printKind :: Kind -> Doc a
-printKind Value = "value"
-printKind Stack = "stack"
+printKind Star = "*"
+printKind Circle = "◦"
+printKind Stack = "..."
 printKind (a :-> b) =
   parens $
     printKind a <+> "->" <+> printKind b
@@ -162,19 +164,19 @@ printType type0 = recur type0
       Type.Fun _ a b ->
         parens $
           recur a <+> "->" <> recur b
-      TypeConstructor _ "Fun" :@ a ->
+      TypeConstructor _ "FUN" :@ a ->
         parens $
           recur a <+> "->"
-      TypeConstructor _ "Fun" -> parens "->"
+      TypeConstructor _ "FUN" -> parens "->"
       Type.Prod _ a b ->
         punctuateComma [recur a, recur b]
-      TypeConstructor _ "Prod" :@ a ->
+      TypeConstructor _ "PROD" :@ a ->
         parens $ recur a <> comma <> space
-      TypeConstructor _ "Prod" ->
+      TypeConstructor _ "PROD" ->
         parens comma
       Type.Sum _ a b ->
         recur a <+> "|" <+> recur b
-      a :@ b -> recur a <> brackets (recur b)
+      a :@ b -> recur b <+> recur a
       TypeConstructor _ constructor -> printConstructor constructor
       TypeVar _ var@(Var name i k) ->
         -- The default cases here shouldn't happen if the context was built
@@ -240,12 +242,8 @@ prettyKinded name k = case k of
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
-printSignature (Application firstA b _) =
-  printSignature finalA <> brackets (punctuateComma (printSignature <$> (as ++ [b])))
-  where
-    (finalA, as) = go [] firstA
-    go l (Application x y _) = go (l ++ [y]) x
-    go l x = (x, l)
+printSignature (Application a b _) =
+  printSignature b <+> printSignature a
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs _) =
   parens $
@@ -253,7 +251,7 @@ printSignature (Function as bs _) =
       <> "->"
       <> mapNonEmpty "" (\sigs -> space <> punctuateComma (printSignature <$> sigs)) bs
 printSignature (Quantified names typ _) =
-  mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns)) <> flatAlt space "\n") names
+  mapNonEmpty "" (\ns -> "∀" <+> hsep (printParameter <$> ns) <+> "." <> space) names
     <> printSignature typ
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs _) =
@@ -270,6 +268,7 @@ printToken = \case
   Token.AngleEnd -> "`>`"
   Token.Arrow -> "`->`"
   Token.As -> "`as`"
+  Token.Bang -> "`!`"
   Token.BlockBegin -> "`{`"
   Token.BlockEnd -> "`}`"
   Token.Case -> "`case`"
@@ -278,9 +277,11 @@ printToken = \case
   Token.Comma -> "`,`"
   Token.Define -> "`define`"
   Token.Do -> "`do`"
+  Token.Dot -> "`.`"
   Token.Ellipsis -> "`...`"
   Token.Else -> "`else`"
   Token.Float a -> pretty (floatValue a :: Double)
+  Token.Forall -> "`∀`"
   Token.GroupBegin -> "`(`"
   Token.GroupEnd -> "`)`"
   Token.If -> "`if`"

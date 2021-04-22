@@ -1,9 +1,9 @@
 type Unit {   case unit }
 
-type Pointer[T] {   case _pointer (Int) }
+type Pointer[t] {   case -pointer (int) }
 
 about Unit {
   docs {
-    "The unit type, with a single value `unit`, useful as a placeholder type that\ncarries no information."
+    "the unit type, with a single value `unit`, useful as a placeholder type that\ncarries no information."
   }
 }

@@ -1,57 +1,45 @@
-trait & [T] (T, T -> T)
+trait & (∀ t . t, t -> t)
 
-trait && [T] (T, (-> T) -> T)
+trait && (∀ t . t, (-> t) -> t)
 
-trait --> [T] (T, T -> T)
+trait not (∀ t . t -> t)
 
-trait not [T] (T -> T)
+trait | (∀ t . t, t -> t)
 
-trait | [T] (T, T -> T)
+trait || (∀ t . t, (-> t) -> t)
 
-trait || [T] (T, (-> T) -> T)
-
-trait ~ [A] (A, A -> A)
+trait ~ (∀ a . a, a -> a)
 
 
-type Bool {   case false case true }
+type bool {   case false case true }
 
-instance & (Int, Int -> Int) { _::mlatu::and_int64 }
+instance & (int, int -> int) { mlatu::and-int64 }
 
-instance & (Bool, Bool -> Bool) { swap (not) if { drop false } else {} }
+instance & (bool, bool -> bool) { swap (not) if { drop false } else {} }
 
-instance && (Bool, (-> Bool) -> Bool) { swap if { call } else { drop false } }
+instance && (bool, (-> bool) -> bool) { swap if { call } else { drop false } }
 
-instance --> (Bool, Bool -> Bool) { swap (not) if { drop true } else {} }
+instance not (bool -> bool) { if { false } else { true } }
 
-instance --> (Int, Int -> Int) { swap not (|) }
+instance not (int -> int) { mlatu::not-int64 }
 
-instance not (Bool -> Bool) { if { false } else { true } }
+instance | (int, int -> int) { mlatu::or-int64 }
 
-instance not (Int -> Int) { _::mlatu::not_int64 }
+instance | (bool, bool -> bool) { swap if { drop true } else {} }
 
-instance | (Int, Int -> Int) { _::mlatu::or_int64 }
+instance || (bool, (-> bool) -> bool) { swap if { drop true } else { call } }
 
-instance | (Bool, Bool -> Bool) { swap if { drop true } else {} }
+instance ~ (int, int -> int) { mlatu::xor-int64 }
 
-instance || (Bool, (-> Bool) -> Bool) { swap if { drop true } else { call } }
+instance ~ (bool, bool -> bool) { swap if { not } else {} }
 
-instance ~ (Int, Int -> Int) { _::mlatu::xor_int64 }
-
-instance ~ (Bool, Bool -> Bool) { swap if { not } else {} }
-
-define ---> (Bool, (-> Bool) -> Bool) {
-  swap (not)
-  if { drop true }
-  else { call }
-}
-
-define until [R...] (R..., (R... -> R..., Bool) -> R...) {
+define until (∀ r... . r..., (r... -> r..., bool) -> r...) {
   -> f;
   if (f call not) { f until }
   else {}
 }
 
-define while [R...] (R..., (R... -> R..., Bool) -> R...) {
+define while (∀ r... . r..., (r... -> r..., bool) -> r...) {
   -> f;
   if (f call) { f while }
   else {}
@@ -84,17 +72,5 @@ about | {
 about || {
   operator {
     right 2
-  }
-}
-
-about --> {
-  operator {
-    right 1
-  }
-}
-
-about ---> {
-  operator {
-    right 1
   }
 }

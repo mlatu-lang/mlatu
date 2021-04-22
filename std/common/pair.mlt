@@ -1,15 +1,15 @@
-type Pair[A, B] {   case pair (A, B) }
+type pair[a, b] {   case mk-pair (a, b) }
 
-define first [A, B] (Pair[A, B] -> A) { unpair drop }
+define first (∀ a b . b a pair -> a) { unpair drop }
 
-define flip [A, B] (Pair[A, B] -> Pair[B, A]) { unpair swap pair }
+define flip (∀ a b . b a pair -> a b pair) { unpair swap mk-pair }
 
-define map_pair [A, B, C, D] (Pair[A, B], (A -> C), (B -> D) -> Pair[C, D]) {
+define map-pair (∀ a b c d . b a pair, (a -> c), (b -> d) -> d c pair) {
   -> p, f, g;
   p unpair -> a, b;
-  (a f call) (b g call) pair
+  (a f call) (b g call) mk-pair
 }
 
-define second [A, B] (Pair[A, B] -> B) { unpair swap drop }
+define second (∀ a b . b a pair -> b) { unpair swap drop }
 
-define unpair [A, B] (Pair[A, B] -> A, B) { match case pair {} }
+define unpair (∀ a b . b a pair -> a, b) { match case mk-pair {} }

@@ -14,7 +14,7 @@ module Mlatu.Parse
   )
 where
 
-import Data.List (findIndex)
+import Data.List (findIndex, foldr1)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
@@ -397,32 +397,37 @@ basicTypeParser = (<?> "basic type") $ do
   prefix <-
     Parsec.choice
       [ quantifiedParser $ groupedParser typeParser,
-        Parsec.try $ do
-          origin <- getTokenOrigin
-          name <- nameParser
-          pure $ Signature.Variable name origin,
+        (<?> "type variable") $
+          Parsec.try $ do
+            origin <- getTokenOrigin
+            name <- nameParser
+            _ <- Parsec.optionMaybe (parserMatch_ Token.Bang)
+            pure $ Signature.Variable name origin,
         groupedParser typeParser
       ]
-  let apply a b = Signature.Application a b $ Signature.origin prefix
-  mSuffix <-
-    Parsec.optionMaybe $
-      asum
-        <$> Parsec.many1
-          ( typeListParser basicTypeParser
-          )
+  mSuffix <- Parsec.optionMaybe basicTypeParser
   pure $ case mSuffix of
-    Just suffix -> foldl' apply prefix suffix
-    Nothing -> prefix
+    Just suffix -> Signature.Application suffix prefix (Signature.origin prefix)
+    Nothing -> case go prefix [] of
+      [] -> prefix
+      (x : xs) -> foldl' (\a b -> Signature.Application a b (Signature.origin a)) x xs
+      where
+        go (Signature.Application a b _) xs = go a xs ++ go b xs
+        go x xs = x : xs
 
 quantifierParser :: Parser [Parameter]
 quantifierParser = typeListParser parameter
 
 parameter :: Parser Parameter
-parameter = do
+parameter = (<?> "parameter") $ do
   origin <- getTokenOrigin
   name <- wordNameParser
   Parameter origin name
-    <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis)
+    <$> Parsec.choice
+      [ Parsec.try (parserMatch_ Token.Ellipsis >> pure Stack),
+        Parsec.try (parserMatch_ Token.Bang >> pure Circle),
+        pure Star
+      ]
 
 typeListParser :: Parser a -> Parser [a]
 typeListParser e =
@@ -431,8 +436,9 @@ typeListParser e =
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
-  origin <- getTokenOrigin
-  params <- quantifierParser
+  origin <- getTokenOrigin <* parserMatch_ Token.Forall
+  params <- Parsec.many1 parameter
+  parserMatch_ Token.Dot
   Signature.Quantified params <$> thing <*> pure origin
 
 traitParser :: Parser Declaration
@@ -513,10 +519,7 @@ definitionParser keyword category = do
       }
 
 signatureParser :: Parser Signature
-signatureParser = quantifiedParser signature <|> signature <?> "type signature"
-
-signature :: Parser Signature
-signature = groupedParser functionTypeParser
+signatureParser = groupedParser (quantifiedParser functionTypeParser <|> functionTypeParser) <?> "type signature"
 
 blockParser :: Parser (Term ())
 blockParser =

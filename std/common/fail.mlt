@@ -1,21 +1,21 @@
 vocab mlatu {
-  intrinsic abort [R..., S...] (R..., String -> S...)
-  intrinsic exit [R..., S...] (R..., Int -> S...)
+  intrinsic abort (∀ r... s... . r..., string -> s...)
+  intrinsic exit (∀ r... s... . r..., int -> s...)
 }
 
-define abort [R..., S...] (R... -> S...) { "abort called" fail }
+define abort (∀ r... s... . r... -> s...) { "abort called" fail }
 
-define assert (String, (-> Bool) ->) {
+define assert (string, (-> bool) ->) {
   call not
   if { fail }
   else {  drop }
 }
 
-define assert_eq [T] (String, T, T ->) {
+define assert-eq (∀ t . string, t, t ->) {
   -> x, y;
   { x y = } assert
 }
 
-define exit [R..., S...] (R..., Int -> S...) { _::mlatu::exit }
+define exit (∀ r... s... . r..., int -> s...) { mlatu::exit }
 
-define fail [R..., S...] (R..., String -> S...) { _::mlatu::abort }
+define fail (∀ r... s... . r..., string -> s...) { mlatu::abort }
