@@ -64,8 +64,7 @@ term dictionary vocabulary = recur
     recur unresolved@Coercion {} = pure unresolved
     recur (Compose _ a b) = Compose () <$> recur a <*> recur b
     recur Generic {} =
-      ice
-        "Mlatu.Resolve.term - generic expression should not appear before name resolution"
+      ice "Mlatu.Resolve.term.recur" "generic expression should not appear before name resolution"
     recur (Group a) = Group <$> recur a
     recur (Lambda _ name _ t origin) =
       withLocal name $
@@ -98,12 +97,12 @@ term dictionary vocabulary = recur
         <*> pure origin
 
 value :: Dictionary -> Qualifier -> Value () -> Resolved (Value ())
-value _ _ Capture {} = ice "Mlatu.Resolve.value - closure should not appear before name resolution"
+value _ _ Capture {} = ice "Mlatu.Resolve.value" "closure should not appear before name resolution"
 value _ _ v@Character {} = pure v
-value _ _ Closed {} = ice "Mlatu.Resolve.value - closed name should not appear before name resolution"
+value _ _ Closed {} = ice "Mlatu.Resolve.value" "closed name should not appear before name resolution"
 value _ _ v@Float {} = pure v
 value _ _ v@Integer {} = pure v
-value _ _ Local {} = ice "Mlatu.Resolve.value - local name should not appear before name resolution"
+value _ _ Local {} = ice "Mlatu.Resolve.value" "local name should not appear before name resolution"
 -- FIXME: Maybe should be a GeneralName and require resolution.
 value _ _ v@Name {} = pure v
 value dictionary vocabulary (Quotation t) = Quotation <$> term dictionary vocabulary t
@@ -197,7 +196,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
             else do
               lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
               pure name
-    LocalName {} -> ice "Mlatu.Resolve.generalName - local name should not appear before name resolution"
+    LocalName {} -> ice "Mlatu.Resolve.generalName" "local name should not appear before name resolution"
 
 withLocal :: Unqualified -> Resolved a -> Resolved a
 withLocal name action = do

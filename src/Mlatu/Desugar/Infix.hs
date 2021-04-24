@@ -70,7 +70,8 @@ desugar _ definition = do
         Compose _ a b -> desugarTerms (Term.decompose a ++ Term.decompose b)
         Generic {} ->
           ice
-            "Mlatu.Desugar.Infix.desugar - generic expression should not appear before infix desugaring"
+            "Mlatu.Desugar.Infix.desugar.desugarTerm"
+            "generic expression should not appear before infix desugaring"
         Group a -> desugarTerms' a
         Lambda _ name _ body origin ->
           Lambda () name ()

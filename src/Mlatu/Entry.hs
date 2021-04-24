@@ -24,6 +24,7 @@ import Mlatu.Entry.Category (Category)
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Entry.Parent (Parent)
+import Mlatu.Kind (Kind)
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
@@ -51,7 +52,7 @@ data Entry
   | -- | A trait to which other entries can link.
     Trait Origin Signature
   | -- | A data type with some generic parameters.
-    Type Origin [Parameter] [DataConstructor]
+    Type Origin [Parameter] [DataConstructor] Kind
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType Origin Int
   deriving (Show)

@@ -32,10 +32,12 @@ scope = scopeTerm [0]
         recur (Compose _ a b) = Compose () (recur a) (recur b)
         recur Generic {} =
           ice
-            "Mlatu.Scope.scope - generic expression should not appear before scope resolution"
+            "Mlatu.Scope.scope"
+            "generic expression should not appear before scope resolution"
         recur Group {} =
           ice
-            "Mlatu.Scope.scope - group expression should not appear after infix desugaring"
+            "Mlatu.Scope.scope"
+            "group expression should not appear after infix desugaring"
         recur (Lambda _ name _ a origin) =
           Lambda
             ()
@@ -69,9 +71,9 @@ scope = scopeTerm [0]
         recur term@Word {} = term
 
     scopeValue :: [Int] -> Value () -> Value ()
-    scopeValue _ Capture {} = ice "Mlatu.Scope.scope - capture should not appear before scope resolution"
+    scopeValue _ Capture {} = ice "Mlatu.Scope.scope.scopeValue" "capture should not appear before scope resolution"
     scopeValue _ value@Character {} = value
-    scopeValue _ Closed {} = ice "Mlatu.Scope.scope - closed name should not appear before scope resolution"
+    scopeValue _ Closed {} = ice "Mlatu.Scope.scope.scopeValue" "closed name should not appear before scope resolution"
     scopeValue _ value@Float {} = value
     scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
@@ -109,10 +111,12 @@ captureTerm term = case term of
   Compose _ a b -> Compose () <$> captureTerm a <*> captureTerm b
   Generic {} ->
     ice
-      "Mlatu.Scope.captureTerm - generic expression should not appear before scope resolution"
+      "Mlatu.Scope.captureTerm"
+      "generic expression should not appear before scope resolution"
   Group {} ->
     ice
-      "Mlatu.Scope.captureTerm - group expression should not appear after infix desugaring"
+      "Mlatu.Scope.captureTerm"
+      "group expression should not appear after infix desugaring"
   Lambda _ name _ a origin ->
     let inside env =
           env

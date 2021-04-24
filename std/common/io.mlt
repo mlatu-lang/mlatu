@@ -1,13 +1,13 @@
 vocab mlatu {
-  intrinsic append-file (string, string ->)
-  intrinsic flush-stdout (->)
-  intrinsic get-line (-> string)
-  intrinsic print (string ->)
-  intrinsic read-file (string -> string)
-  intrinsic write-file (string, string ->)
+  intrinsic append-file (world, string, string -> world)
+  intrinsic flush-stdout (world -> world)
+  intrinsic get-line (world -> world, string)
+  intrinsic print (world, string -> world)
+  intrinsic read-file (world, string -> world, string)
+  intrinsic write-file (world, string, string -> world)
 }
 
-type world {}
+type world! {}
 
 define append-file (world, string, string -> world) { mlatu::append-file }
 

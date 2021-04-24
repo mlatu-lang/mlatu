@@ -41,7 +41,6 @@ import Mlatu.Name
     qualifierFromName,
   )
 import Mlatu.Parse qualified as Parse
-import Mlatu.Pretty (printQualified)
 import Mlatu.Quantify qualified as Quantify
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
@@ -53,7 +52,6 @@ import Mlatu.Tokenize (tokenize)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Optics
-import Prettyprinter (dquotes, hsep)
 import Relude
 
 -- | Enters a program fragment into a dictionary.
@@ -119,20 +117,15 @@ declareType dictionary typ =
                   (view TypeDefinition.origin typ)
                   (view TypeDefinition.parameters typ)
                   (view TypeDefinition.constructors typ)
+                  (view TypeDefinition.kind typ)
           pure $ Dictionary.insert (Instantiated name []) entry dictionary
         -- Previously declared with the same parameters.
-        Just (Entry.Type _origin parameters _ctors)
+        Just (Entry.Type _origin parameters _ctors _)
           | parameters == view TypeDefinition.parameters typ ->
             pure dictionary
         -- Already declared or defined differently.
         Just {} ->
-          ice $
-            show $
-              hsep
-                [ "Mlatu.Enter.declareType - type",
-                  dquotes $ printQualified name,
-                  "already declared or defined differently"
-                ]
+          ice "Mlatu.Enter.declareType" "type already declared or defined differently"
 
 declareWord ::
   Dictionary -> Definition () -> M Dictionary
@@ -195,13 +188,7 @@ declareWord dictionary definition =
               pure $ Dictionary.insert mangledName entry dictionary
         -- Already declared or defined with a different signature.
         Just {} ->
-          ice $
-            show $
-              hsep
-                [ "Mlatu.Enter.declareWord - word",
-                  dquotes $ printQualified name,
-                  "already declared or defined without signature or as a non-word"
-                ]
+          ice "Mlatu.Enter.declareWord" "word already declared or defined without signature or as a non-word"
 
 addMetadata :: Dictionary -> Metadata -> M Dictionary
 addMetadata dictionary0 metadata =
@@ -358,13 +345,7 @@ defineWord dictionary definition = do
       pure dictionary
     -- Not previously declared as word.
     _nonDeclared ->
-      ice $
-        show $
-          hsep
-            [ "Mlatu.Enter.defineWord - defining word",
-              dquotes $ printQualified name,
-              "not previously declared"
-            ]
+      ice "Mlatu.Enter.defineWord" "defining word not previously declared"
 
 -- | Parses a source file into a program fragment.
 fragmentFromSource ::

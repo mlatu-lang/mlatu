@@ -15,11 +15,13 @@ module Mlatu.TypeDefinition
     name,
     origin,
     parameters,
+    kind,
   )
 where
 
 import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
+import Mlatu.Kind (Kind)
 import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
 import Optics.TH (makeLenses)
@@ -29,7 +31,8 @@ data TypeDefinition = TypeDefinition
   { _constructors :: [DataConstructor],
     _name :: Qualified,
     _origin :: Origin,
-    _parameters :: [Parameter]
+    _parameters :: [Parameter],
+    _kind :: Kind
   }
   deriving (Eq, Ord, Show)
 

@@ -145,7 +145,7 @@ partitionElements mainName = rev . foldr go mempty
                     a
                       ++ over Definition.body (`composeUnderLambda` x) existing :
                     b
-                  _nonMain -> ice "Mlatu.Parse.partitionElements - cannot find main definition"
+                  _nonMain -> ice "Mlatu.Parse.partitionElements.go" "cannot find main definition"
                 Nothing ->
                   Definition.main mainName x : defs
           )
@@ -176,7 +176,7 @@ vocabularyParser = (<?> "vocabulary definition") $ do
           (Qualified (Qualifier _root qualifier) (Unqualified unqualified)) ->
             (qualifier, unqualified)
         UnqualifiedName (Unqualified unqualified) -> ([], unqualified)
-        LocalName {} -> ice "Mlatu.Parse.vocabularyParser - local name should not appear as vocabulary name"
+        LocalName {} -> ice "Mlatu.Parse.vocabularyParser" "local name should not appear as vocabulary name"
   Parsec.putState (Qualifier Absolute (outer ++ inner ++ [name]))
   Parsec.choice
     [ [] <$ parserMatchOperator ";",
@@ -319,6 +319,7 @@ typeDefinitionParser :: Parser TypeDefinition
 typeDefinitionParser = (<?> "type definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Type
   name <- qualifiedNameParser <?> "type definition name"
+  kind <- Parsec.optionMaybe $ parserMatch_ Token.Bang
   parameters <- Parsec.option [] quantifierParser
   constructors <- blockedParser $ many constructorParser
   pure
@@ -326,7 +327,10 @@ typeDefinitionParser = (<?> "type definition") $ do
       { TypeDefinition._constructors = constructors,
         TypeDefinition._name = name,
         TypeDefinition._origin = origin,
-        TypeDefinition._parameters = parameters
+        TypeDefinition._parameters = parameters,
+        TypeDefinition._kind = case kind of
+          Just _ -> Circle
+          Nothing -> Star
       }
 
 constructorParser :: Parser DataConstructor
@@ -495,7 +499,7 @@ qualifiedNameParser = (<?> "optionally qualified name") $ do
     -- Unqualified name: use current vocab prefix as qualifier.
     UnqualifiedName unqualified ->
       Qualified <$> Parsec.getState <*> pure unqualified
-    LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser - name parser should only pure qualified or unqualified name"
+    LocalName _ -> ice "Mlatu.Parse.qualifiedNameParser" "name parser should only pure qualified or unqualified name"
 
 definitionParser :: Token -> Category -> Parser (Definition ())
 definitionParser keyword category = do

@@ -392,7 +392,7 @@ readBin = go 0
       '0' : ds' -> go (2 * acc + 0) ds'
       '1' : ds' -> go (2 * acc + 1) ds'
       [] -> acc
-      _nonBinary -> ice "Mlatu.Tokenize.readBin non-binary digit"
+      _nonBinary -> ice "Mlatu.Tokenize.readBin" "non-binary digit"
 
 text :: Tokenizer Text
 text = toText . catMaybes <$> many (character '"')

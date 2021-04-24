@@ -77,7 +77,7 @@ cmd input = do
             dictionary'' of
             Just (Entry.Word _ _ _ _ _ (Just body)) ->
               body
-            _noEntryPoint -> ice "Interact.run - cannot get entry point"
+            _noEntryPoint -> ice "Interact.run" "cannot get entry point"
       let currentOrigin = Origin.point "<interactive>" lineNumber 1
       stackScheme <-
         typeFromSignature tenv $

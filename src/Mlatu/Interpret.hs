@@ -81,7 +81,7 @@ valueRep (Term.Float literal) = Float64 $ Literal.floatValue literal
 valueRep (Term.Integer literal) = Int64 $ fromInteger $ view Literal.integerValue literal
 valueRep (Term.Name name) = Name name
 valueRep (Term.Text text) = Text text
-valueRep value = ice $ "Mlatu.Interpret.valueRep - cannot convert value to rep: " ++ show value
+valueRep value = ice "Mlatu.Interpret.valueRep" $ "cannot convert value to rep: " <> show value
 
 printRep :: Rep -> Doc a
 printRep (Algebraic (ConstructorIndex index) values) =
@@ -149,7 +149,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               Qualified v unqualified
                 | v == Vocabulary.intrinsic ->
                   intrinsic (name : callStack) unqualified
-              _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
+              _nonIntrinsic -> ice "Mlatu.Interpret.interpret.word" "no such intrinsic"
             _noInstantiation ->
               throwIO $
                 Failure $
@@ -212,11 +212,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         Push _ value _ -> push value
         Word _ (QualifiedName name) args _ ->
           word callStack name args
-        Word _ name _ _ ->
-          ice $
-            show $
-              hsep
-                ["Mlatu.Interpret.interpret - unresolved word name", Pretty.printGeneralName name]
+        Word {} ->
+          ice "Mlatu.Interpret.interpret.term" "unresolved word name"
 
       call :: [Qualified] -> IO ()
       call callStack = do
@@ -427,7 +424,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
               writeIORef stackRef $ Array xs' ::: r
               -- FIXME: Use right args.
               word callStack (Qualified Vocabulary.global "some") []
-        _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
+        _nonIntrinsic -> ice "Mlatu.Interpret.interpret.intrinsic" "no such intrinsic"
         where
           unaryInt64 :: (Int64 -> Int64) -> IO ()
           unaryInt64 f = do

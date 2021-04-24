@@ -327,8 +327,8 @@ printDeclaration (Declaration category name _ signature) = printedCategory <+> p
       Declaration.Intrinsic -> "intrinsic"
 
 printTypeDefinition :: TypeDefinition -> Doc a
-printTypeDefinition (TypeDefinition constructors name _ parameters) =
-  group $ blockMulti ("type" <+> typeName) printDataConstructor constructors
+printTypeDefinition (TypeDefinition constructors name _ parameters k) =
+  group $ blockMulti ("type" <+> typeName <> if k == Circle then "!" else "") printDataConstructor constructors
   where
     typeName =
       printQualified name
@@ -362,7 +362,7 @@ maybePrintTerms = \case
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
   (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
   (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
-  (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
+  _ -> ice "Mlatu.Pretty.maybePrintTerms" "formatting failed with unexpected value"
   where
     horiz :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
     horiz = \case
@@ -415,7 +415,7 @@ printIf cond [Case _ trueBody _, Case _ falseBody _] =
     [ group $ blockMaybe (maybe "if" ("if" <+>) (cond >>= printGroup)) (maybePrintTerm trueBody),
       group $ blockMaybe "else" (maybePrintTerm falseBody)
     ]
-printIf _ _ = ice "Mlatu.Pretty.printIf - Expected a true and false case"
+printIf _ _ = ice "Mlatu.Pretty.printIf" "expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
@@ -532,10 +532,12 @@ printEntry (Entry.Trait origin signature) =
       hsep ["defined at", printOrigin origin],
       hsep ["with signature", printSignature signature]
     ]
-printEntry (Entry.Type origin parameters ctors) =
+printEntry (Entry.Type origin parameters ctors kind) =
   vsep
     [ "type",
       hsep ["defined at", printOrigin origin],
+      hsep
+        ["with kind", printKind kind],
       hsep $
         "with parameters [" :
         intersperse ", " (printParameter <$> parameters),
