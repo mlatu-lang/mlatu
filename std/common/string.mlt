@@ -1,4 +1,4 @@
-trait read (∀ t . string -> t optional)
+trait read (∀ t . string -> t option)
 
 trait show (∀ t . t -> string)
 
@@ -6,10 +6,10 @@ trait show (∀ t . t -> string)
 vocab mlatu {
   intrinsic eq-string (string, string -> bool)
   intrinsic gt-string (string, string -> bool)
-  intrinsic read-float64 (string -> double optional)
-  intrinsic read-int64 (string -> int optional)
-  intrinsic show-float64 (double -> string)
-  intrinsic show-int64 (int -> string)
+  intrinsic read-float (string -> float option)
+  intrinsic read-int (string -> int option)
+  intrinsic show-float (float -> string)
+  intrinsic show-int (int -> string)
   intrinsic string-concat (string, string -> string)
   intrinsic string-from-list (char list -> string)
   intrinsic string-to-list (string -> char list)
@@ -31,23 +31,23 @@ instance > (string, string -> bool) { mlatu::gt-string }
 
 instance >= (string, string -> bool) { (<) not }
 
-instance read (string -> bool optional) {
+instance read (string -> bool option) {
   dup
   if ("true" =) { drop true some }
   else { if ("false" =) { false some } else { none } }
 }
 
-instance read (string -> double optional) { mlatu::read-float64 }
+instance read (string -> float option) { mlatu::read-float }
 
-instance read (string -> int optional) { mlatu::read-int64 }
+instance read (string -> int option) { mlatu::read-int }
 
-instance read (string -> char optional) {
+instance read (string -> char option) {
   chars dup
-  if (length 1 =) { head }
+  if (length 1 =) { hd }
   else { drop none }
 }
 
-instance read (string -> string optional) { some }
+instance read (string -> string option) { some }
 
 instance show (string -> string) {}
 
@@ -59,15 +59,15 @@ instance show (∀ a b . b a either -> string) {
   case right { show }
 }
 
-instance show (∀ t . t optional -> string) {
+instance show (∀ t . t option -> string) {
   match
   case some -> x { "some " x show + }
   case none { "none" }
 }
 
-instance show (double -> string) { mlatu::show-float64 }
+instance show (float -> string) { mlatu::show-float }
 
-instance show (int -> string) { mlatu::show-int64 }
+instance show (int -> string) { mlatu::show-int }
 
 instance show (char -> string) { once from-chars }
 

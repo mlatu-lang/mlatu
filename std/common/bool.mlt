@@ -13,7 +13,7 @@ trait ~ (∀ a . a, a -> a)
 
 type bool {   case false case true }
 
-instance & (int, int -> int) { mlatu::and-int64 }
+instance & (int, int -> int) { mlatu::and-int }
 
 instance & (bool, bool -> bool) { swap (not) if { drop false } else {} }
 
@@ -21,15 +21,15 @@ instance && (bool, (-> bool) -> bool) { swap if { call } else { drop false } }
 
 instance not (bool -> bool) { if { false } else { true } }
 
-instance not (int -> int) { mlatu::not-int64 }
+instance not (int -> int) { mlatu::not-int }
 
-instance | (int, int -> int) { mlatu::or-int64 }
+instance | (int, int -> int) { mlatu::or-int }
 
 instance | (bool, bool -> bool) { swap if { drop true } else {} }
 
 instance || (bool, (-> bool) -> bool) { swap if { drop true } else { call } }
 
-instance ~ (int, int -> int) { mlatu::xor-int64 }
+instance ~ (int, int -> int) { mlatu::xor-int }
 
 instance ~ (bool, bool -> bool) { swap if { not } else {} }
 

@@ -12,6 +12,6 @@ define drop (∀ t . t ->) {
   mlatu::drop
 }
 
-define swap (∀ a b . a, b -> b, a) {
+define swap (∀ a! b! . a!, b! -> b!, a!) {
   mlatu::swap
 }

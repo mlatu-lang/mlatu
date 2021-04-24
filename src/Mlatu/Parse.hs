@@ -14,7 +14,7 @@ module Mlatu.Parse
   )
 where
 
-import Data.List (findIndex, foldr1)
+import Data.List (findIndex)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))

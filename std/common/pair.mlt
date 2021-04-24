@@ -1,4 +1,4 @@
-type pair[a, b] {   case mk-pair (a, b) }
+type pair[a, b] { case mk-pair (a, b) }
 
 define first (∀ a b . b a pair -> a) { unpair drop }
 

@@ -145,7 +145,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
 
   Coercion hint@Term.IdentityCoercion _ origin ->
     while (Term.origin term0) context $ do
-      [a] <- fresh origin [("S", Stack)]
+      [a] <- fresh origin [("s", Stack)]
       let typ = Type.Fun origin a a
       let type' = Zonk.typ tenvFinal typ
       pure (Coercion hint type' origin, typ, tenv0)
@@ -303,8 +303,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, b] <-
         fresh
           origin
-          [ ("R", Stack),
-            ("S", Stack)
+          [ ("r", Stack),
+            ("s", Stack)
           ]
       let typ = Type.Fun origin a b
       let type' = Zonk.typ tenvFinal typ
@@ -329,7 +329,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [r, s, t] <-
         fresh
           origin
-          [ ("R", Stack),
+          [ ("r", Stack),
             ("ClosureIn", Stack),
             ("ClosureOut", Stack)
           ]
@@ -352,7 +352,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, b] <-
         fresh
           origin
-          [ ("R", Stack),
+          [ ("r", Stack),
             ("Item", Star)
           ]
       let typ =
@@ -371,7 +371,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a] <-
         fresh
           origin
-          [ ("S", Stack)
+          [ ("s", Stack)
           ]
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
       let typ = Type.Fun origin a (Type.Prod origin a t)
@@ -453,7 +453,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Closed (ClosureIndex index) ->
     pure
       (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x -> pure (Float x, TypeConstructor origin "double", tenv0)
+  Float x -> pure (Float x, TypeConstructor origin "float", tenv0)
   Integer x -> pure (Integer x, TypeConstructor origin "int", tenv0)
   Local (LocalIndex index) ->
     pure
@@ -539,7 +539,7 @@ typeFromSignature tenv signature0 = do
       Signature.Bottom origin -> pure $ Type.Bottom origin
       Signature.Function as bs origin -> do
         r <- lift $ freshTypeId tenv
-        let var = Var "R" r Stack
+        let var = Var "r" r Stack
         let typeVar = TypeVar origin var
         Forall origin var <$> makeFunction origin typeVar as typeVar bs
       Signature.Quantified vars a origin -> do

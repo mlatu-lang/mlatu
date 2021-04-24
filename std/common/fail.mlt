@@ -8,7 +8,7 @@ define abort (∀ r... s... . r... -> s...) { "abort called" fail }
 define assert (string, (-> bool) ->) {
   call not
   if { fail }
-  else {  drop }
+  else { drop }
 }
 
 define assert-eq (∀ t . string, t, t ->) {

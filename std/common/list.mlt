@@ -1,36 +1,36 @@
 vocab mlatu {
   intrinsic cat (∀ t . t list, t list -> t list)
   intrinsic empty (∀ t . t list -> bool)
-  intrinsic get (∀ t . t list, int -> t optional)
-  intrinsic head (∀ t . t list -> t optional)
-  intrinsic init (∀ t . t list -> (t list) optional)
-  intrinsic last (∀ t . t list -> t optional)
-  intrinsic set (∀ t . t list, t, int -> (t list) optional)
-  intrinsic tail (∀ t . t list -> (t list) optional)
+  intrinsic get (∀ t . t list, int -> t option)
+  intrinsic hd (∀ t . t list -> t option)
+  intrinsic init (∀ t . t list -> (t list) option)
+  intrinsic last (∀ t . t list -> t option)
+  intrinsic set (∀ t . t list, t, int -> (t list) option)
+  intrinsic tl (∀ t . t list -> (t list) option)
 }
 
 type list[t] {}
 
-define all (∀ t . t list, (t -> bool) -> bool) {
+define for-all (∀ t . t list, (t -> bool) -> bool) {
   -> f;
   true do (fold-left) { f call (&) }
 }
 
-define all2 (∀ a b . a list, b list, (a, b -> bool) -> bool) {
+define for-all2 (∀ a b . a list, b list, (a, b -> bool) -> bool) {
   -> f;
-  zip { unpair f call } all
+  combine { unpair f call } for-all
 }
 
 define and (bool list -> bool) { true \(&) fold-left }
 
-define any (∀ t . t list, (t -> bool) -> bool) {
+define exists (∀ t . t list, (t -> bool) -> bool) {
   -> f;
   true do (fold-left) { f call (|) }
 }
 
-define any2 (∀ a b . a list, b list, (a, b -> bool) -> bool) {
+define exists2 (∀ a b . a list, b list, (a, b -> bool) -> bool) {
   -> f;
-  zip { unpair f call } any
+  combine { unpair f call } exists
 }
 
 define append (∀ t . t list, t list -> t list) { mlatu::cat }
@@ -48,43 +48,38 @@ define cartesian-with (∀ a b c . a list, b list, (a, b -> c) -> c list) {
 
 define concat (∀ t . (t list) list -> t list) { [] \append fold-left }
 
-define concat-optionals (∀ t . (t optional) list -> t list) {
+define concat-options (∀ t . (t option) list -> t list) {
   [] do (fold-left) { match case some { suffix } else {} }
 }
 
 define each (∀ t . t list, (t ->) ->) {
   -> f;
-  match (head-tail)
+  match (hd-tl)
   case some { unpair -> h, t; h f call t f each }
   case none {}
 }
 
 define each2 (∀ a b . a list, b list, (a, b ->) ->) {
   -> f;
-  zip { unpair f call } each
+  combine { unpair f call } each
 }
 
-define elem (∀ t . t, t list -> bool) { swap -> x; { x (=) } any }
+define mem (∀ t . t, t list -> bool) { swap -> x; { x (=) } exists }
 
 define empty (∀ t . t list -> bool) { mlatu::empty }
 
-define filter-in (∀ t . t list, (t -> bool) -> t list) {
+define filter (∀ t . t list, (t -> bool) -> t list) {
   -> f;
-  match (tail-head)
-  case some { unpair -> t, h; t f filter-in (h f call) if { h prefix } else {} }
+  match (tl-hd)
+  case some { unpair -> t, h; t f filter (h f call) if { h cons } else {} }
   case none { [] }
 }
 
-define filter-out (∀ t . t list, (t -> bool) -> t list) {
-  -> f;
-  { f call not } filter-in
-}
-
-define find (∀ t . t list, (t -> bool) -> t optional) { filter-in head }
+define find (∀ t . t list, (t -> bool) -> t option) { filter hd }
 
 define fold-left (∀ a b . b list, a, (a, b -> a) -> a) {
   -> xs, z, k;
-  match (xs tail-head)
+  match (xs tl-hd)
   case some { unpair -> h; (z h k call) k fold-left }
   case none { z }
 }
@@ -96,30 +91,30 @@ define fold-right (∀ a b . a list, b, (a, b -> b) -> b) {
   case none { z }
 }
 
-define get (∀ t . t list, int -> t optional) { mlatu::get }
+define get (∀ t . t list, int -> t option) { mlatu::get }
 
-define get-all (∀ t . t list, int list -> (t optional) list) {
+define get-all (∀ t . t list, int list -> (t option) list) {
   swap -> list;
   { list swap get } map
 }
 
 define glue (∀ t . t list, t list, t list -> t list) { prepend append }
 
-define head (∀ t . t list -> t optional) { mlatu::head }
+define hd (∀ t . t list -> t option) { mlatu::hd }
 
-define head-tail (∀ t . t list -> ((t list) t pair) optional) {
-  \head \tail bi \mk-pair lift-optional-2
+define hd-tl (∀ t . t list -> ((t list) t pair) option) {
+  \hd \tl bi \mk-pair lift-option-2
 }
 
-define init (∀ t . t list -> (t list) optional) { mlatu::init }
+define init (∀ t . t list -> (t list) option) { mlatu::init }
 
-define init-last (∀ t . t list -> (t (t list) pair) optional) {
-  \init \last bi \mk-pair lift-optional-2
+define init-last (∀ t . t list -> (t (t list) pair) option) {
+  \init \last bi \mk-pair lift-option-2
 }
 
 define insert-nth (∀ t . t list, t, int -> t list) {
   -> element, index;
-  { if (index =) { -> x; [element, x] } else { -> x; [x] } } map-index concat
+  { if (index =) { -> x; [element, x] } else { -> x; [x] } } mapi concat
 }
 
 define join (∀ t . (t list) list, t list -> t list) {
@@ -127,10 +122,10 @@ define join (∀ t . (t list) list, t list -> t list) {
   [] { g glue } fold-left
 }
 
-define last (∀ t . t list -> t optional) { mlatu::last }
+define last (∀ t . t list -> t option) { mlatu::last }
 
-define last-init (∀ t . t list -> ((t list) t pair) optional) {
-  \last \init bi \mk-pair lift-optional-2
+define last-init (∀ t . t list -> ((t list) t pair) option) {
+  \last \init bi \mk-pair lift-option-2
 }
 
 define lefts (∀ a b . (b a either) list -> a list) { \get-left map-optionally }
@@ -139,57 +134,57 @@ define length (∀ t . t list -> int) { 0 { drop 1 (+) } fold-left }
 
 define map (∀ a b . a list, (a -> b) -> b list) {
   -> f;
-  match (head-tail)
-  case some { unpair -> h, t; (t f map) (h f call) prefix }
+  match (hd-tl)
+  case some { unpair -> h, t; (t f map) (h f call) cons }
   case none { [] }
 }
 
 define map2 (∀ a b c . a list, b list, (a, b -> c) -> c list) {
   -> f;
-  zip (\unpair f compose) map
+  combine (\unpair f compose) map
 }
 
 define map-concat (∀ a b . a list, (a -> b list) -> b list) { map concat }
 
-define map-index (∀ a b . a list, (a, int -> b) -> b list) {
-  0 map-index::helper
+define mapi (∀ a b . a list, (a, int -> b) -> b list) {
+  0 mapi::helper
 }
 
-define map-optionally (∀ a b . a list, (a -> b optional) -> b list) {
+define map-optionally (∀ a b . a list, (a -> b option) -> b list) {
   -> f;
-  match (head-tail)
+  match (hd-tl)
   case some {
     unpair -> h, t;
     match (h f call)
-    case some -> x { (t f map-optionally) x prefix }
+    case some -> x { (t f map-optionally) x cons }
     case none { t f map-optionally }
   }
   case none { [] }
 }
 
-define map-reduce-left (∀ a b . a list, (a -> b), (b, b -> b) -> b optional) {
+define map-reduce-left (∀ a b . a list, (a -> b), (b, b -> b) -> b option) {
   -> f;
   map f reduce-left
 }
 
-define map-reduce-left2 (∀ a b c . a list, b list, (a, b -> c), (c, c -> c) -> c optional) {
+define map-reduce-left2 (∀ a b c . a list, b list, (a, b -> c), (c, c -> c) -> c option) {
   -> f;
   map2 f reduce-left
 }
 
-define map-reduce-right (∀ a b . a list, (a -> b), (b, b -> b) -> b optional) {
+define map-reduce-right (∀ a b . a list, (a -> b), (b, b -> b) -> b option) {
   -> f;
   map f reduce-right
 }
 
-define map-reduce-right2 (∀ a b c . a list, b list, (a, b -> c), (c, c -> c) -> c optional) {
+define map-reduce-right2 (∀ a b c . a list, b list, (a, b -> c), (c, c -> c) -> c option) {
   -> f;
   map2 f reduce-right
 }
 
-define maximum (∀ t . t list -> t optional) { \max reduce-left }
+define maximum (∀ t . t list -> t option) { \max reduce-left }
 
-define minimum (∀ t . t list -> t optional) { \min reduce-left }
+define minimum (∀ t . t list -> t option) { \min reduce-left }
 
 define modify (∀ t . t list, (t -> t), int -> t list) {
   -> xs, f, i;
@@ -198,13 +193,11 @@ define modify (∀ t . t list, (t -> t), int -> t list) {
   case none { xs }
 }
 
-define not-elem (∀ t . t, t list -> bool) { elem not }
-
 define once (∀ t . t -> t list) { -> x; [x] }
 
 define or (bool list -> bool) { true \(|) fold-left }
 
-define pad-head (∀ t . t list, int, t -> t list) {
+define pad-hd (∀ t . t list, int, t -> t list) {
   -> min-length, elt; dup
   if (length min-length <) {
     dup -> list; elt min-length list length - replicate prepend
@@ -212,7 +205,7 @@ define pad-head (∀ t . t list, int, t -> t list) {
   else { }
 }
 
-define pad-tail (∀ t . t list, int, t -> t list) {
+define pad-tl (∀ t . t list, int, t -> t list) {
   -> min-length, elt; dup
   if (length min-length <) {
     -> list; elt min-length list length - replicate list prepend
@@ -221,34 +214,34 @@ define pad-tail (∀ t . t list, int, t -> t list) {
 }
 
 define partition (∀ t . t list, (t -> bool) -> t list, t list) {
-  -> f;
-  { f filter-in } { f filter-out } bi
+  -> l, f;
+  l f filter l { f call not} filter
 }
 
-define partition-eithers (∀ a b . (b a either) list -> a list, b list) {
+define partition-map (∀ a b . (b a either) list -> a list, b list) {
   -> xs;
   xs lefts xs rights
 }
 
-define prefix (∀ t . t list, t -> t list) { once prepend }
+define cons (∀ t . t list, t -> t list) { once prepend }
 
 define prepend (∀ t . t list, t list -> t list) { swap append }
 
-define reduce-left (∀ t . t list, (t, t -> t) -> t optional) {
+define reduce-left (∀ t . t list, (t, t -> t) -> t option) {
   -> f;
-  tail-head { unpair f fold-left } map-optional
+  tl-hd { unpair f fold-left } map-option
 }
 
-define reduce-right (∀ t . t list, (t, t -> t) -> t optional) {
+define reduce-right (∀ t . t list, (t, t -> t) -> t option) {
   -> f;
-  init-last { unpair f fold-right } map-optional
+  init-last { unpair f fold-right } map-option
 }
 
-define remove (∀ t . t list, t -> t list) { -> x; { x (=) } filter-out }
+define remove (∀ t . t list, t -> t list) { -> x; { x <> } filter }
 
 define remove-nth (∀ t . t list, int -> t list) {
   -> index;
-  { if (index =) { drop [] } else { -> x; [x] } } map-index concat
+  { if (index =) { drop [] } else { -> x; [x] } } mapi concat
 }
 
 define replicate (∀ t . t, int -> t list) {
@@ -256,9 +249,9 @@ define replicate (∀ t . t, int -> t list) {
   else { -> value; value count 1 - replicate value suffix }
 }
 
-define reverse (∀ t . t list -> t list) {
-  match (head-tail)
-  case some { unpair reverse swap suffix }
+define rev (∀ t . t list -> t list) {
+  match (hd-tl)
+  case some { unpair rev swap suffix }
   case none { [] }
 }
 
@@ -268,7 +261,7 @@ define rights (∀ a b . (b a either) list -> b list) {
 
 define set (∀ t . t list, t, int -> t list) {
   -> element, index;
-  { if (index =) { drop element } else {} } map-index
+  { if (index =) { drop element } else {} } mapi
 }
 
 define suffix (∀ t . t list, t -> t list) { once append }
@@ -278,39 +271,39 @@ define surround (∀ t . t list, t list, t list -> t list) {
   prepend x append
 }
 
-define tail (∀ t . t list -> (t list) optional) { mlatu::tail }
+define tl (∀ t . t list -> (t list) option) { mlatu::tl }
 
-define tail-head (∀ t . t list -> (t (t list) pair) optional) {
-  \tail \head bi \mk-pair lift-optional-2
+define tl-hd (∀ t . t list -> (t (t list) pair) option) {
+  \tl \hd bi \mk-pair lift-option-2
 }
 
-define unzip (∀ a b . (b a pair) list -> a list, b list) {
-  match (head-tail)
+define split (∀ a b . (b a pair) list -> a list, b list) {
+  match (hd-tl)
   case some {
     unpair -> h, t;
     h unpair -> m, n;
-    t unzip -> ms, ns;
-    ms m prefix ns n prefix
+    t split -> ms, ns;
+    ms m cons ns n cons
   }
   case none { [] [] }
 }
 
-define zip (∀ a b . a list, b list -> (b a pair) list) {
+define combine (∀ a b . a list, b list -> (b a pair) list) {
   -> a, b;
-  match (a head-tail)
+  match (a hd-tl)
   case some -> x-pair {
-    match (b head-tail)
+    match (b hd-tl)
     case some -> y-pair {
-      (x-pair second) (y-pair second) zip (x-pair first) (y-pair first) mk-pair prefix
+      (x-pair second) (y-pair second) combine (x-pair first) (y-pair first) mk-pair cons
     }
     case none { [] }
   }
   case none { [] }
 }
 
-define map-index::helper (∀ a b . a list, (a, int -> b), int -> b list) {
+define mapi::helper (∀ a b . a list, (a, int -> b), int -> b list) {
   -> f, i;
-  match (head-tail)
-  case some { unpair -> h, t; t f i 1 + helper h i f call prefix }
+  match (hd-tl)
+  case some { unpair -> h, t; t f i 1 + helper h i f call cons }
   case none { [] }
 }

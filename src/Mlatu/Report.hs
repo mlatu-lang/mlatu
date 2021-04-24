@@ -41,7 +41,6 @@ module Mlatu.Report
   )
 where
 
-import GHC.List (span)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin

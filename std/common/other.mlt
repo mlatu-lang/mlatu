@@ -1,9 +1,0 @@
-type Unit {   case unit }
-
-type Pointer[t] {   case -pointer (int) }
-
-about Unit {
-  docs {
-    "the unit type, with a single value `unit`, useful as a placeholder type that\ncarries no information."
-  }
-}

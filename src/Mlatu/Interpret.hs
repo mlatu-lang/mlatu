@@ -57,7 +57,7 @@ import Prettyprinter (Doc, Pretty (pretty), dquotes, hcat, hsep, list, nest, squ
 import Relude hiding (Compose, Type, callStack)
 import Relude.Unsafe qualified as Unsafe
 import System.Exit (ExitCode (..))
-import System.IO (hFlush, hGetLine, hPrint, hPutStr, readIO)
+import System.IO (hGetLine, hPrint, hPutStr, readIO)
 import System.IO.Error (IOError, ioeGetErrorType)
 import Text.Show qualified
 
@@ -267,52 +267,52 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         "swap" -> do
           a ::: b ::: r <- readIORef stackRef
           writeIORef stackRef $ b ::: a ::: r
-        "add_int64" -> binaryInt64 (+)
-        "sub_int64" -> binaryInt64 (-)
-        "mul_int64" -> binaryInt64 (*)
-        "div_int64" -> catchDivideByZero $ binaryInt64 div
-        "mod_int64" -> catchDivideByZero $ binaryInt64 mod
-        "not_int64" -> unaryInt64 complement
-        "or_int64" -> binaryInt64 (.|.)
-        "and_int64" -> binaryInt64 (.&.)
-        "xor_int64" -> binaryInt64 xor
-        "gt_int64" -> boolInt64 (>)
-        "eq_int64" -> boolInt64 (==)
+        "add_int" -> binaryInt64 (+)
+        "sub_int" -> binaryInt64 (-)
+        "mul_int" -> binaryInt64 (*)
+        "div_int" -> catchDivideByZero $ binaryInt64 div
+        "mod_int" -> catchDivideByZero $ binaryInt64 mod
+        "not_int" -> unaryInt64 complement
+        "or_int" -> binaryInt64 (.|.)
+        "and_int" -> binaryInt64 (.&.)
+        "xor_int" -> binaryInt64 xor
+        "gt_int" -> boolInt64 (>)
+        "eq_int" -> boolInt64 (==)
         "gt_char" -> boolChar (>)
         "eq_char" -> boolChar (==)
-        "add_float64" -> binaryFloat64 (+)
-        "sub_float64" -> binaryFloat64 (-)
-        "mul_float64" -> binaryFloat64 (*)
-        "div_float64" -> binaryFloat64 (/)
-        "mod_float64" -> catchFloatModByZero $ binaryFloat64 mod'
-        "exp_float64" -> unaryFloat64 exp
-        "log_float64" -> unaryFloat64 log
-        "sqrt_float64" -> unaryFloat64 sqrt
-        "sin_float64" -> unaryFloat64 sin
-        "cos_float64" -> unaryFloat64 cos
-        "tan_float64" -> unaryFloat64 tan
-        "asin_float64" -> unaryFloat64 asin
-        "acos_float64" -> unaryFloat64 acos
-        "atan_float64" -> unaryFloat64 atan
-        "atan2_float64" -> binaryFloat64 atan2
-        "sinh_float64" -> unaryFloat64 sinh
-        "cosh_float64" -> unaryFloat64 cosh
-        "tanh_float64" -> unaryFloat64 tanh
-        "asinh_float64" -> unaryFloat64 asinh
-        "acosh_float64" -> unaryFloat64 acosh
-        "atanh_float64" -> unaryFloat64 atanh
-        "trunc_float64" -> unaryFloat64 $ fromInteger . truncate
-        "round_float64" -> unaryFloat64 $ fromInteger . round
-        "ceil_float64" -> unaryFloat64 $ fromInteger . ceiling
-        "floor_float64" -> unaryFloat64 $ fromInteger . floor
-        "gt_float64" -> boolFloat64 (>)
-        "eq_float64" -> boolFloat64 (==)
+        "add_float" -> binaryFloat64 (+)
+        "sub_float" -> binaryFloat64 (-)
+        "mul_float" -> binaryFloat64 (*)
+        "div_float" -> binaryFloat64 (/)
+        "mod_float" -> catchFloatModByZero $ binaryFloat64 mod'
+        "exp_float" -> unaryFloat64 exp
+        "log_float" -> unaryFloat64 log
+        "sqrt_float" -> unaryFloat64 sqrt
+        "sin_float" -> unaryFloat64 sin
+        "cos_float" -> unaryFloat64 cos
+        "tan_float" -> unaryFloat64 tan
+        "asin_float" -> unaryFloat64 asin
+        "acos_float" -> unaryFloat64 acos
+        "atan_float" -> unaryFloat64 atan
+        "atan2_float" -> binaryFloat64 atan2
+        "sinh_float" -> unaryFloat64 sinh
+        "cosh_float" -> unaryFloat64 cosh
+        "tanh_float" -> unaryFloat64 tanh
+        "asinh_float" -> unaryFloat64 asinh
+        "acosh_float" -> unaryFloat64 acosh
+        "atanh_float" -> unaryFloat64 atanh
+        "trunc_float" -> unaryFloat64 $ fromInteger . truncate
+        "round_float" -> unaryFloat64 $ fromInteger . round
+        "ceil_float" -> unaryFloat64 $ fromInteger . ceiling
+        "floor_float" -> unaryFloat64 $ fromInteger . floor
+        "gt_float" -> boolFloat64 (>)
+        "eq_float" -> boolFloat64 (==)
         "gt_string" -> boolString (>)
         "eq_string" -> boolString (==)
-        "show_int64" -> showInteger (show @Text @Int64)
-        "show_float64" -> showFloat (show :: Double -> Text)
-        "read_int64" -> readInteger ((readIO :: String -> IO Int64) . toString) Int64
-        "read_float64" -> readFloat ((readIO :: String -> IO Double) . toString) Float64
+        "show_int" -> showInteger (show @Text @Int64)
+        "show_float" -> showFloat (show :: Double -> Text)
+        "read_int" -> readInteger ((readIO :: String -> IO Int64) . toString) Int64
+        "read_float" -> readFloat ((readIO :: String -> IO Double) . toString) Float64
         "empty" -> do
           Array xs ::: r <- readIORef stackRef
           writeIORef stackRef r

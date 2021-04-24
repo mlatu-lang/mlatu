@@ -7,18 +7,20 @@ vocab mlatu {
   intrinsic write-file (string, string ->)
 }
 
-define append-file (string, string ->) { mlatu::append-file }
+type world {}
 
-define ask (string -> string) { print mlatu::flush-stdout get-line }
+define append-file (world, string, string -> world) { mlatu::append-file }
 
-define get-line (-> string) { mlatu::get-line }
+define ask (world, string -> world, string) { print mlatu::flush-stdout get-line }
 
-define newline (->) { "\n" print }
+define get-line (world -> world, string) { mlatu::get-line }
 
-define print (∀ t . t ->) { show mlatu::print }
+define newline (world -> world) { "\n" print }
 
-define println (∀ t . t ->) { print newline }
+define print (∀ t . world, t -> world) { show mlatu::print }
 
-define read-file (string -> string) { mlatu::read-file }
+define println (∀ t . world, t -> world) { print newline }
 
-define write-file (string, string ->) { mlatu::write-file }
+define read-file (world, string -> world, string) { mlatu::read-file }
+
+define write-file (world, string, string -> world) { mlatu::write-file }

@@ -54,7 +54,7 @@ default-extensions:
   - DeriveGeneric
 
 dependencies:
-  - base >=4.8
+  - base
   - bytestring
   - containers
   - file-embed
@@ -62,7 +62,7 @@ dependencies:
   - optics
   - parsec
   - prettyprinter
-  - relude ==0.7.0.0
+  - relude
   - text
   - transformers
   - unordered-containers

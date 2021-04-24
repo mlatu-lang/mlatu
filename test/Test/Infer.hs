@@ -63,7 +63,7 @@ spec = do
 
       testTypecheck
         Positive
-        "define test (-> int) { 1 2 _::mlatu::add_int64 }"
+        "define test (-> int) { 1 2 _::mlatu::add_int }"
         $ Type.Fun o r (Type.Prod o r int)
 
     it "typechecks data types" $ do
@@ -90,14 +90,14 @@ spec = do
         Positive
         "define one (-> int) { 1 }\n\
         \define two (-> int) { 2 }\n\
-        \define test (-> int) { one two _::mlatu::add_int64 }"
+        \define test (-> int) { one two _::mlatu::add_int }"
         $ Type.Fun o r (Type.Prod o r int)
 
       testTypecheck
         Positive
-        "define up (int -> int) { 1 _::mlatu::add_int64 }\n\
-        \define down (int -> int) { -1 _::mlatu::add_int64 }\n\
-        \define test (-> int) { 1 up 2 down _::mlatu::add_int64 }"
+        "define up (int -> int) { 1 _::mlatu::add_int }\n\
+        \define down (int -> int) { -1 _::mlatu::add_int }\n\
+        \define test (-> int) { 1 up 2 down _::mlatu::add_int }"
         $ Type.Fun o r (Type.Prod o r int)
 
     it "typechecks operators" $ do
@@ -169,7 +169,7 @@ spec = do
       testTypecheck
         Positive
         "define curried_add (int -> int -> int) {\n\
-        \  -> x; { -> y; x y _::mlatu::add_int64 }\n\
+        \  -> x; { -> y; x y _::mlatu::add_int }\n\
         \}\n\
         \define test (-> int) { 1 2 curried_add call }"
         $ Type.Fun o r (Type.Prod o r int)
@@ -182,8 +182,8 @@ spec = do
         $ Type.Fun o r (Type.Prod o r int)
   where
     o = Origin.point "" 0 0
-    r = TypeVar o $ Var "R" (TypeId 0) Stack
-    s = TypeVar o $ Var "S" (TypeId 1) Stack
+    r = TypeVar o $ Var "r" (TypeId 0) Stack
+    s = TypeVar o $ Var "s" (TypeId 1) Stack
     ctor =
       TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
@@ -191,7 +191,7 @@ spec = do
     int = ctor "int"
     io = ctor "IO"
     fail_ = ctor "Fail"
-    float = ctor "double"
+    float = ctor "float"
 
 testTypecheck :: Sign -> Text -> Type -> IO ()
 testTypecheck sign input expected = do

@@ -32,7 +32,7 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Entry.Parent (Parent (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Name (Qualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
@@ -75,11 +75,11 @@ main mName term =
       _parent = Nothing,
       _signature =
         Signature.Quantified
-          [Parameter o "R" Stack]
+          [Parameter o "r" Stack]
           ( Signature.StackFunction
-              (Signature.Variable "R" o)
+              (Signature.Variable "r" o)
               []
-              (Signature.Variable "R" o)
+              (Signature.Variable "r" o)
               []
               o
           )

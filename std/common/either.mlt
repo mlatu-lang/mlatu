@@ -21,13 +21,13 @@ define from-right (∀ a b . b a either, string -> b) {
   else { message fail }
 }
 
-define get-left (∀ a b . b a either -> a optional) {
+define get-left (∀ a b . b a either -> a option) {
   match
   case left { some }
   else { none }
 }
 
-define get-right (∀ a b . b a either -> b optional) {
+define get-right (∀ a b . b a either -> b option) {
   match
   case right { some }
   else { none }
