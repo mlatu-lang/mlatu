@@ -123,7 +123,7 @@ termRs x = goTerms $ decompose x
       Push _ (Local (LocalIndex i)) _ -> pure $ stackPush $ "locals[locals.len() - " <> show (1 + i) <> "].clone()"
       Push _ (Closed (ClosureIndex i)) _ -> pure $ stackPush $ "closures.last().unwrap().clone()[" <> show i <> "].clone()"
       Word _ (QualifiedName name) args _ -> word name args
-      Lambda _ _ _ body _ -> do
+      Lambda _ _ _ body _ _ -> do
         a <- termRs body
         pure $ "locals.push(stack.pop().unwrap());" <> a <> "locals.pop();"
       Match _ _ cases els _ -> do

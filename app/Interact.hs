@@ -82,12 +82,13 @@ cmd input = do
       stackScheme <-
         typeFromSignature tenv $
           Signature.Quantified
-            [ Parameter currentOrigin "r" Stack
+            [ Parameter currentOrigin "r" Stack,
+              Parameter currentOrigin "s" Stack
             ]
             ( Signature.StackFunction
-                (Signature.Bottom currentOrigin)
-                []
                 (Signature.Variable "r" currentOrigin)
+                []
+                (Signature.Variable "s" currentOrigin)
                 []
                 currentOrigin
             )

@@ -54,8 +54,8 @@ term tenv0 = go
         Generic name i (go a) origin
       Group a ->
         go a
-      Lambda tref name varType body origin ->
-        Lambda (zonk tref) name (zonk varType) (go body) origin
+      Lambda tref name varType body s origin ->
+        Lambda (zonk tref) name (zonk varType) (go body) s origin
       Match hint tref cases else_ origin ->
         Match hint (zonk tref) (goCase <$> cases) (goElse else_) origin
         where

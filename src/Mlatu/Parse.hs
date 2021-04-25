@@ -162,8 +162,8 @@ partitionElements mainName = rev . foldr go mempty
           -- include subsequent expressions.
 
           composeUnderLambda :: Term () -> Term () -> Term ()
-          composeUnderLambda (Lambda typ name parameterType body origin) term =
-            Lambda typ name parameterType (composeUnderLambda body term) origin
+          composeUnderLambda (Lambda typ name parameterType body s origin) term =
+            Lambda typ name parameterType (composeUnderLambda body term) s origin
           composeUnderLambda a b = Compose () a b
 
 vocabularyParser :: Parser [Element ()]
@@ -318,16 +318,16 @@ metadataParser = (<?> "metadata block") $ do
 typeDefinitionParser :: Parser TypeDefinition
 typeDefinitionParser = (<?> "type definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Type
-  name <- qualifiedNameParser <?> "type definition name"
+  parameters <- Parsec.option [] (groupedParser (Parsec.many parameter)) <?> "type parameters"
+  name <- qualifiedNameParser <?> "type name"
   kind <- Parsec.optionMaybe $ parserMatch_ Token.Bang
-  parameters <- Parsec.option [] quantifierParser
-  constructors <- blockedParser $ many constructorParser
+  constructors <- blockedParser (many constructorParser) <?> "type constructors"
   pure
     TypeDefinition
       { TypeDefinition._constructors = constructors,
         TypeDefinition._name = name,
         TypeDefinition._origin = origin,
-        TypeDefinition._parameters = parameters,
+        TypeDefinition._parameters = reverse parameters,
         TypeDefinition._kind = case kind of
           Just _ -> Circle
           Nothing -> Star
@@ -419,9 +419,6 @@ basicTypeParser = (<?> "basic type") $ do
         go (Signature.Application a b _) xs = go a xs ++ go b xs
         go x xs = x : xs
 
-quantifierParser :: Parser [Parameter]
-quantifierParser = typeListParser parameter
-
 parameter :: Parser Parameter
 parameter = (<?> "parameter") $ do
   origin <- getTokenOrigin
@@ -432,11 +429,6 @@ parameter = (<?> "parameter") $ do
         Parsec.try (parserMatch_ Token.Bang >> pure Circle),
         pure Star
       ]
-
-typeListParser :: Parser a -> Parser [a]
-typeListParser e =
-  bracketedParser
-    (e `Parsec.sepEndBy1` commaParser)
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
@@ -762,7 +754,7 @@ makeLambda parsed body origin =
               )
               acc
           )
-          (\name -> Lambda () name () acc nameOrigin)
+          (\name -> Lambda () name () acc Nothing nameOrigin)
           nameMaybe
     )
     body

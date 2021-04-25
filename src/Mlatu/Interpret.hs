@@ -129,36 +129,37 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           -- An entry in the dictionary should already be instantiated, so we
           -- shouldn't need to instantiate it again here.
           Just (Entry.Word _ _ _ _ _ (Just body)) -> term (name : callStack) body
-          _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
-            -- A regular word.
-            Just (Entry.Word _ _ _ _ _ (Just body)) -> do
-              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
-              case mBody' of
-                Right body' -> term (name : callStack) body'
-                Left reports ->
-                  hPrint stdout' $
-                    vcat $
-                      hcat
-                        [ "Could not instantiate generic word ",
-                          dquotes $ Pretty.printQualified name,
-                          ":"
-                        ] :
-                      (Report.human <$> reports)
-            -- An intrinsic.
-            Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
-              Qualified v unqualified
-                | v == Vocabulary.intrinsic ->
-                  intrinsic (name : callStack) unqualified
-              _nonIntrinsic -> ice "Mlatu.Interpret.interpret.word" "no such intrinsic"
-            _noInstantiation ->
-              throwIO $
-                Failure $
-                  hcat
-                    [ "I can't find an instantiation of ",
-                      dquotes $ Pretty.printQualified name,
-                      ": ",
-                      dquotes $ Pretty.printInstantiated mangled
-                    ]
+          x -> do
+            case Dictionary.lookup (Instantiated name []) dictionary of
+              -- A regular word.
+              Just (Entry.Word _ _ _ _ _ (Just body)) -> do
+                mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
+                case mBody' of
+                  Right body' -> term (name : callStack) body'
+                  Left reports ->
+                    hPrint stdout' $
+                      vcat $
+                        hcat
+                          [ "Could not instantiate generic word ",
+                            dquotes $ Pretty.printQualified name,
+                            ":"
+                          ] :
+                        (Report.human <$> reports)
+              -- An intrinsic.
+              Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
+                Qualified v unqualified
+                  | v == Vocabulary.intrinsic ->
+                    intrinsic (name : callStack) unqualified
+                _nonIntrinsic -> ice "Mlatu.Interpret.interpret.word" "no such intrinsic"
+              _ ->
+                throwIO $
+                  Failure $
+                    hcat
+                      [ "I can't find an instantiation of ",
+                        dquotes $ Pretty.printQualified name,
+                        ": ",
+                        dquotes $ Pretty.printInstantiated mangled
+                      ]
 
       term :: [Qualified] -> Term Type -> IO ()
       term callStack t = case t of
@@ -167,7 +168,7 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
         -- TODO: Verify that this is correct.
         Generic _name _ t' _ -> term callStack t'
         Group t' -> term callStack t'
-        Lambda _ _name _ body _ -> do
+        Lambda _ _name _ body _ _ -> do
           a ::: r <- readIORef stackRef
           ls <- readIORef localsRef
           writeIORef stackRef r

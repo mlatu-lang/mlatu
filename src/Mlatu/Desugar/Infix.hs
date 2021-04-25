@@ -73,9 +73,9 @@ desugar _ definition = do
             "Mlatu.Desugar.Infix.desugar.desugarTerm"
             "generic expression should not appear before infix desugaring"
         Group a -> desugarTerms' a
-        Lambda _ name _ body origin ->
+        Lambda _ name _ body s origin ->
           Lambda () name ()
-            <$> desugarTerms' body <*> pure origin
+            <$> desugarTerms' body <*> pure s <*> pure origin
         Match hint _ cases else_ origin ->
           Match hint ()
             <$> traverse desugarCase cases <*> desugarElse else_ <*> pure origin

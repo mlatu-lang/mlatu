@@ -1,4 +1,4 @@
-type either[a, b] {   case left (a) case right (b) }
+type (b a) either {   case left (a) case right (b) }
 
 define either-fun (∀ r... s... a b . r..., b a either, (r..., a -> s...), (r..., b -> s...) -> s...) {
   -> f, g;

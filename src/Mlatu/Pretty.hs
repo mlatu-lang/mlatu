@@ -163,7 +163,7 @@ printType type0 = recur type0
     recur typ = case typ of
       Type.Fun _ a b ->
         parens $
-          recur a <+> "->" <> recur b
+          recur a <+> "->" <+> recur b
       TypeConstructor _ "FUN" :@ a ->
         parens $
           recur a <+> "->"
@@ -203,8 +203,9 @@ printType type0 = recur type0
         where
           prettyForall (Forall _ x t) vars = prettyForall t (x : vars)
           prettyForall t vars =
-            list (recur . TypeVar (Type.origin t) <$> vars)
-              <> parens (recur t)
+            "∀" <+> hsep (recur . TypeVar (Type.origin t) <$> vars)
+              <+> "."
+              <+> recur t
 
 type PrettyContext = Map Unqualified [(TypeId, Kind)]
 
@@ -239,6 +240,7 @@ printVar (Var (Unqualified unqualified) i k) =
 prettyKinded :: Unqualified -> Kind -> Doc a
 prettyKinded name k = case k of
   Stack -> printUnqualified name <> "..."
+  Circle -> printUnqualified name <> "!"
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
@@ -353,7 +355,7 @@ maybePrintTerms = \case
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
   (Group (Group a) : xs) -> printGroup a `horiz` xs
   (Group a : xs) -> printGroup a `horiz` xs
-  (Lambda _ name _ body _ : xs) -> Just (printLambda name body `justHoriz` xs)
+  (Lambda _ name _ body _ _ : xs) -> Just (printLambda name body `justHoriz` xs)
   (Match BooleanMatch _ cases _ _ : xs) -> Just (printIf Nothing cases `justVertical` xs)
   (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (vsep [printMatch Nothing cases Nothing] `justVertical` xs)
   (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (vsep [printMatch Nothing cases (Just elseBody)] `justVertical` xs)
@@ -406,7 +408,7 @@ printLambda name body =
         Just a -> vsep [lambda, a]
   where
     (names, newBody) = go [name] body
-    go ns (Lambda _ n _ b _) = go (n : ns) b
+    go ns (Lambda _ n _ b _ _) = go (n : ns) b
     go ns b = (ns, b)
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
@@ -432,14 +434,14 @@ printMatch cond cases else_ =
     )
 
 printCase :: GeneralName -> Term a -> Doc b
-printCase n (Lambda _ name _ body _) =
+printCase n (Lambda _ name _ body _ _) =
   group $
     blockMaybe
       ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names))
       (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body
-    go ns (Lambda _ ln _ b _) = go (ln : ns) b
+    go ns (Lambda _ ln _ b _ _) = go (ln : ns) b
     go ns b = (ns, b)
 printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
 

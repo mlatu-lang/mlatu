@@ -58,7 +58,7 @@ trait <= (∀ t . t, t -> bool)
 
 trait <> (∀ t . t, t -> bool)
 
-trait = (∀ t . t, t -> bool)
+trait = (∀ t! . t!, t! -> bool)
 
 trait > (∀ t . t, t -> bool)
 
@@ -69,11 +69,11 @@ trait neg (∀ t . t -> t)
 trait zero (∀ t . -> t)
 
 
-type char {}
+type char! {}
 
-type float {}
+type float! {}
 
-type int {}
+type int! {}
 
 instance % (float, float -> float) { mlatu::mod-float }
 

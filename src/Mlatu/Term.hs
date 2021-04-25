@@ -67,7 +67,7 @@ data Term a
   | -- | @(e)@: precedence grouping for infix operators.
     Group (Term a)
   | -- | @→ x; e@: local variable introductions.
-    Lambda a Unqualified a (Term a) Origin
+    Lambda a Unqualified a (Term a) (Maybe Int) Origin
   | -- | @match { case C {...}... else {...} }@, @if {...} else {...}@:
     -- pattern-matching.
     Match MatchHint a [Case a] (Else a) Origin
@@ -169,7 +169,7 @@ origin term = case term of
   Compose _ a _ -> origin a
   Generic _ _ _ o -> o
   Group a -> origin a
-  Lambda _ _ _ _ o -> o
+  Lambda _ _ _ _ _ o -> o
   New _ _ _ o -> o
   NewClosure _ _ o -> o
   NewVector _ _ _ o -> o
@@ -194,7 +194,7 @@ metadata term = case term of
   Compose t _ _ -> t
   Generic _ _ term' _ -> metadata term'
   Group term' -> metadata term'
-  Lambda t _ _ _ _ -> t
+  Lambda t _ _ _ _ _ -> t
   Match _ t _ _ _ -> t
   New t _ _ _ -> t
   NewClosure t _ _ -> t
@@ -208,7 +208,7 @@ stripMetadata term = case term of
   Compose _ a b -> Compose () (stripMetadata a) (stripMetadata b)
   Generic a b term' c -> Generic a b (stripMetadata term') c
   Group term' -> stripMetadata term'
-  Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
+  Lambda _ a _ b c d -> Lambda () a () (stripMetadata b) c d
   Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
   New _ a b c -> New () a b c
   NewClosure _ a b -> NewClosure () a b

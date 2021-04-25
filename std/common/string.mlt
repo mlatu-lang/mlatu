@@ -15,7 +15,7 @@ vocab mlatu {
   intrinsic string-to-list (string -> char list)
 }
 
-type string {}
+type string! {}
 
 instance + (string, string -> string) { mlatu::string-concat }
 

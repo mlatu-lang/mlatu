@@ -10,12 +10,11 @@ trait || (∀ t . t, (-> t) -> t)
 
 trait ~ (∀ a . a, a -> a)
 
-
-type bool {   case false case true }
+type bool! { case true case false }
 
 instance & (int, int -> int) { mlatu::and-int }
 
-instance & (bool, bool -> bool) { swap (not) if { drop false } else {} }
+instance & (bool, bool -> bool) { swap not if { drop false } else {} }
 
 instance && (bool, (-> bool) -> bool) { swap if { call } else { drop false } }
 

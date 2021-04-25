@@ -38,12 +38,13 @@ scope = scopeTerm [0]
           ice
             "Mlatu.Scope.scope"
             "group expression should not appear after infix desugaring"
-        recur (Lambda _ name _ a origin) =
+        recur (Lambda _ name _ a b origin) =
           Lambda
             ()
             name
             ()
             (scopeTerm (mapHead next stack) a)
+            b
             origin
         recur (Match hint _ cases else_ origin) =
           Match
@@ -117,14 +118,14 @@ captureTerm term = case term of
     ice
       "Mlatu.Scope.captureTerm"
       "group expression should not appear after infix desugaring"
-  Lambda _ name _ a origin ->
+  Lambda _ name _ a b origin ->
     let inside env =
           env
             { scopeStack = mapHead next (scopeStack env),
               scopeDepth = next (scopeDepth env)
             }
      in Lambda () name ()
-          <$> local inside (captureTerm a) <*> pure origin
+          <$> local inside (captureTerm a) <*> pure b <*> pure origin
   Match hint _ cases else_ origin ->
     Match hint ()
       <$> traverse captureCase cases <*> captureElse else_ <*> pure origin

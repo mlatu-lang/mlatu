@@ -1,4 +1,4 @@
-type option[t] {   case none case some (t) }
+type (t) option {   case none case some (t) }
 
 define from-option (∀ t . t option, t -> t) {
   -> default;

@@ -9,7 +9,7 @@ vocab mlatu {
   intrinsic tl (∀ t . t list -> (t list) option)
 }
 
-type list[t] {}
+type (t) list {}
 
 define for-all (∀ t . t list, (t -> bool) -> bool) {
   -> f;

@@ -62,12 +62,12 @@ desugar dictionary qualifier term0 = do
         (a', tenv1) <- go tenv0 a
         pure (Generic name typ a' origin, tenv1)
       Group {} -> error "group should not appear after infix desugaring"
-      Lambda typ name varType a origin -> do
+      Lambda typ name varType a s origin -> do
         let oldLocals = view TypeEnv.vs tenv0
             localEnv = over TypeEnv.vs (varType :) tenv0
         (a', tenv1) <- go localEnv a
         let tenv2 = set TypeEnv.vs oldLocals tenv1
-        pure (Lambda typ name varType a' origin, tenv2)
+        pure (Lambda typ name varType a' s origin, tenv2)
       Match hint typ cases else_ origin -> do
         (cases', tenv1) <-
           foldrM

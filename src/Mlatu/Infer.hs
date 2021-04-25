@@ -116,7 +116,6 @@ inferType0 dictionary tenv mDeclared term = do
   let zonked = Zonk.typ tenvFinal' t
   let regeneralized = regeneralize tenvFinal' zonked
   for_ mDeclared (instanceCheck "inferred" regeneralized "declared")
-
   pure (Zonk.term tenvFinal' term', regeneralized)
 
 -- We infer the type of a term and annotate each terminal with the inferred type
@@ -179,9 +178,17 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- extended with a fresh local bound to a fresh type variable, and produce a
   -- type of the form 'R..., A -> S... +P'.
 
-  Lambda _ name@(Unqualified unqualified) _ term origin -> do
-    let varTypeName = Unqualified ("Local" <> capitalize unqualified)
-    a <- TypeEnv.freshTv tenv0 varTypeName origin Star
+  Lambda _ name@(Unqualified unqualified) _ term s origin -> do
+    let varTypeName = Unqualified ("local" <> capitalize unqualified)
+    a <-
+      TypeEnv.freshTv
+        tenv0
+        varTypeName
+        origin
+        ( case s of
+            Just 1 -> Circle
+            _ -> Star
+        )
     let oldLocals = view TypeEnv.vs tenv0
     let localEnv = over TypeEnv.vs (a :) tenv0
     (term', t1, tenv1) <- inferType' localEnv term
@@ -191,7 +198,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         type' = Zonk.typ tenvFinal typ
         varType' = Zonk.typ tenvFinal a
     pure
-      ( Lambda type' name varType' term' origin,
+      ( Lambda type' name varType' term' s origin,
         typ,
         tenv3
       )
@@ -325,7 +332,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             [ Unqualified ("Capture" <> show i)
               | i <- [1 :: Int ..]
             ]
-            $ replicate size Star
+            $ replicate size Circle
       [r, s, t] <-
         fresh
           origin
@@ -603,7 +610,7 @@ data SignatureEnv = SignatureEnv
 starKinded :: Dictionary -> [Type] -> M [Type]
 starKinded dictionary =
   filterM $
-    fmap (Star ==) . typeKind dictionary
+    fmap (\x -> Circle == x || Star == x) . typeKind dictionary
 
 -- | Infers the kind of a type.
 typeKind :: Dictionary -> Type -> M Kind

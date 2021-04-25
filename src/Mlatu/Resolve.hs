@@ -15,6 +15,7 @@ module Mlatu.Resolve
 where
 
 import Data.List (elemIndex)
+import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
@@ -36,12 +37,12 @@ import Optics
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
 
-type Resolved a = StateT [Unqualified] M a
+type Resolved a = StateT ([Unqualified], Map Unqualified Int) M a
 
 -- | Name resolution is responsible for rewriting unqualified calls to
 -- definitions into fully qualified calls.
 run :: Resolved a -> M a
-run = flip evalStateT []
+run = flip evalStateT ([], Map.empty)
 
 definition :: Dictionary -> Definition () -> Resolved (Definition ())
 definition dictionary def = do
@@ -66,9 +67,16 @@ term dictionary vocabulary = recur
     recur Generic {} =
       ice "Mlatu.Resolve.term.recur" "generic expression should not appear before name resolution"
     recur (Group a) = Group <$> recur a
-    recur (Lambda _ name _ t origin) =
-      withLocal name $
-        Lambda () name () <$> recur t <*> pure origin
+    recur (Lambda _ name _ t _ origin) = do
+      let lam x y = Lambda () name () x y origin
+      (Lambda _ _ _ x _ _, s) <-
+        withLocal
+          name
+          ( do
+              t' <- recur t
+              pure $ lam t' Nothing
+          )
+      pure $ lam x $ Just s
     recur (Match hint _ cases else_ origin) =
       Match hint ()
         <$> traverse resolveCase cases
@@ -123,7 +131,7 @@ signature dictionary vocabulary = go
         <*> pure origin
     go (Signature.Quantified vars a origin) =
       Signature.Quantified vars
-        <$> foldr (withLocal . (\(Parameter _ name _) -> name)) (go a) vars
+        <$> foldr (\(Parameter _ name _) x -> fst <$> withLocal name x) (go a) vars
         <*> pure origin
     go (Signature.Variable name origin) =
       Signature.Variable
@@ -144,7 +152,9 @@ definitionName dictionary =
   where
     isDefined = flip Set.member defined
     defined = Set.fromList $ Dictionary.wordNames dictionary
-    resolveLocal _ index = pure $ LocalName index
+    resolveLocal name index = do
+      modify $ second (Map.adjust (+ 1) name)
+      pure $ LocalName index
 typeName dictionary =
   generalName Report.TypeName resolveLocal isDefined
   where
@@ -166,7 +176,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
     -- or a name in the global scope, respectively.
 
     UnqualifiedName unqualified -> do
-      mLocalIndex <- gets (elemIndex unqualified)
+      mLocalIndex <- gets (elemIndex unqualified . fst)
       case mLocalIndex of
         Just index -> resolveLocal unqualified (LocalIndex index)
         Nothing -> do
@@ -198,9 +208,10 @@ generalName category resolveLocal isDefined vocabulary name origin =
               pure name
     LocalName {} -> ice "Mlatu.Resolve.generalName" "local name should not appear before name resolution"
 
-withLocal :: Unqualified -> Resolved a -> Resolved a
+withLocal :: Unqualified -> Resolved a -> Resolved (a, Int)
 withLocal name action = do
-  modify (name :)
+  modify $ bimap (name :) (Map.insert name 0)
   result <- action
-  modify (Unsafe.fromJust . viaNonEmpty tail)
-  pure result
+  Just num <- gets (Map.lookup name . snd)
+  modify $ bimap Unsafe.tail (Map.delete name)
+  pure (result, num)
