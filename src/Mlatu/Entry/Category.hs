@@ -18,4 +18,5 @@ data Category
   | Instance
   | Permission
   | Word
+  | Deconstructor
   deriving (Ord, Eq, Show)

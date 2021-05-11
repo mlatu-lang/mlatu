@@ -88,7 +88,7 @@ mangleInstance dictionary name instanceSignature traitSignature = do
   let tenv0 = TypeEnv.empty
   instanceType <- typeFromSignature tenv0 instanceSignature
   traitType <- typeFromSignature tenv0 traitSignature
-  instanceCheck "trait" traitType "instance" instanceType
+  instanceCheck traitType instanceType
   (traitType', args, tenv1) <- Instantiate.prenex tenv0 traitType
   tenv2 <- Unify.typ tenv1 instanceType traitType'
   args' <- valueKinded dictionary $ Zonk.typ tenv2 <$> args
@@ -115,7 +115,7 @@ inferType0 dictionary tenv mDeclared term = do
       tenvFinal' <- maybe (pure tenvFinal) (Unify.typ tenvFinal t) mDeclared
   let zonked = Zonk.typ tenvFinal' t
   let regeneralized = regeneralize tenvFinal' zonked
-  for_ mDeclared (instanceCheck "inferred" regeneralized "declared")
+  for_ mDeclared (instanceCheck regeneralized)
 
   pure (Zonk.term tenvFinal' term', regeneralized)
 
@@ -148,8 +148,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, p] <-
         fresh
           origin
-          [ ("S", Stack),
-            ("P", Permission)
+          [ ("s", Stack),
+            ("p", Permission)
           ]
       let typ = Type.Fun origin a a p
       let type' = Zonk.typ tenvFinal typ
@@ -244,7 +244,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "match-unused" origin Value
         (a, b, e, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
@@ -266,7 +266,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         -- branch.
         --
         -- TODO: This should be considered a drop.
-        unusedScrutinee <- TypeEnv.freshTv tenv1 "MatchUnused" origin Value
+        unusedScrutinee <- TypeEnv.freshTv tenv1 "match-unused" origin Value
         (a, b, e, tenv'') <- Unify.function tenv' bodyType
         let elseType =
               Type.Fun
@@ -306,18 +306,18 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- the type signature of the desugared data constructor definition to make this
   -- type-safe, since only the compiler can generate 'new' expressions.
 
-  New _ constructor size origin ->
+  New _ constructor size isNat origin ->
     while (Term.origin term0) context $ do
       [a, b, e] <-
         fresh
           origin
-          [ ("R", Stack),
-            ("S", Stack),
-            ("P", Permission)
+          [ ("r", Stack),
+            ("s", Stack),
+            ("p", Permission)
           ]
       let typ = Type.Fun origin a b e
       let type' = Zonk.typ tenvFinal typ
-      pure (New type' constructor size origin, typ, tenv0)
+      pure (New type' constructor size isNat origin, typ, tenv0)
 
   -- Unlike with 'new', we cannot simply type a 'new closure' expression as an
   -- unsafe cast because we need to know its effect on the stack within the body
@@ -331,18 +331,18 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       as <-
         fresh origin $
           zip
-            [ Unqualified ("Capture" <> show i)
+            [ Unqualified ("capture" <> show i)
               | i <- [1 :: Int ..]
             ]
             $ replicate size Value
       [r, s, t, p1, p2] <-
         fresh
           origin
-          [ ("R", Stack),
-            ("ClosureIn", Stack),
-            ("ClosureOut", Stack),
-            ("ClosurePermissions", Permission),
-            ("P", Permission)
+          [ ("r", Stack),
+            ("closure-in", Stack),
+            ("closure-out", Stack),
+            ("closure-permissions", Permission),
+            ("p", Permission)
           ]
       let f = Type.Fun origin s t p1
           typ =
@@ -353,31 +353,6 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               p2
           type' = Zonk.typ tenvFinal typ
       pure (NewClosure type' size origin, typ, tenv0)
-
-  -- This is similar for 'new vector' expressions, which we type as:
-  --
-  --     ∀ρα. ρ × α₀ × … × αₓ → ρ × vector<α>
-  --
-
-  NewVector _ size _ origin ->
-    while (Term.origin term0) context $ do
-      [a, b, e] <-
-        fresh
-          origin
-          [ ("R", Stack),
-            ("Item", Value),
-            ("P", Permission)
-          ]
-      let typ =
-            Type.Fun
-              origin
-              (foldl' (Type.Prod origin) a (replicate size b))
-              (Type.Prod origin a (TypeConstructor origin "List" :@ b))
-              e
-          type' = Zonk.typ tenvFinal typ
-          b' = Zonk.typ tenvFinal b
-      pure (NewVector type' size b' origin, typ, tenv0)
-
   -- Pushing a value results in a stack with that value on top.
 
   Push _ value origin ->
@@ -385,8 +360,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, e] <-
         fresh
           origin
-          [ ("S", Stack),
-            ("P", Permission)
+          [ ("s", Stack),
+            ("p", Permission)
           ]
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
       let typ = Type.Fun origin a (Type.Prod origin a t) e
@@ -465,12 +440,10 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     (term', t1, tenv1) <- inferType dictionary tenvFinal localEnv term
     let tenv2 = set TypeEnv.closure oldClosure tenv1
     pure (Capture names term', t1, tenv2)
-  Character x -> pure (Character x, TypeConstructor origin "Char", tenv0)
+  Character x -> pure (Character x, TypeConstructor origin "char", tenv0)
   Closed (ClosureIndex index) ->
     pure
       (Closed $ ClosureIndex index, Unsafe.fromJust (view TypeEnv.closure tenv0 !!? index), tenv0)
-  Float x -> pure (Float x, TypeConstructor origin "Double", tenv0)
-  Integer x -> pure (Integer x, TypeConstructor origin "Int", tenv0)
   Local (LocalIndex index) ->
     pure
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
@@ -490,7 +463,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Text x ->
     pure
       ( Text x,
-        TypeConstructor origin "String",
+        TypeConstructor origin "string",
         tenv0
       )
 
@@ -555,7 +528,7 @@ typeFromSignature tenv signature0 = do
       Signature.Bottom origin -> pure $ Type.Bottom origin
       Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
-        let var = Var "R" r Stack
+        let var = Var "r" r Stack
         let typeVar = TypeVar origin var
         es' <- traverse (fromVar origin) es
         (me, es'') <- lift $ permissionVar origin es'
@@ -634,7 +607,7 @@ typeFromSignature tenv signature0 = do
         Just e -> pure e
         Nothing -> do
           ex <- lift $ freshTypeId tenv
-          let var = Var "P" ex Permission
+          let var = Var "p" ex Permission
           modify $ \env -> env {sigEnvAnonymous = var : sigEnvAnonymous env}
           pure $ TypeVar origin var
       pure $
@@ -681,16 +654,11 @@ typeKind dictionary = go
           _noParameters -> case qualified of
             Qualified qualifier unqualified
               | qualifier == Vocabulary.global -> case unqualified of
-                "Bottom" -> pure Stack
-                "Fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
-                "Prod" -> pure $ Stack :-> Value :-> Stack
-                "Sum" -> pure $ Value :-> Value :-> Value
-                "Unsafe" -> pure Label
-                "Void" -> pure Value
-                "IO" -> pure Label
-                "Fail" -> pure Label
-                "Join" -> pure $ Label :-> Permission :-> Permission
-                "List" -> pure $ Value :-> Value
+                "bottom" -> pure Stack
+                "fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
+                "prod" -> pure $ Stack :-> Value :-> Stack
+                "sum" -> pure $ Value :-> Value :-> Value
+                "join" -> pure $ Label :-> Permission :-> Permission
                 _noKind ->
                   ice $
                     show $

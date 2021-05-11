@@ -112,9 +112,9 @@ function tenv0 t = case t of
   Type.Fun _ a b e -> pure (a, b, e, tenv0)
   _nonFun -> do
     let origin = Type.origin t
-    a <- freshTv tenv0 "A" origin Stack
-    b <- freshTv tenv0 "B" origin Stack
-    e <- freshTv tenv0 "P" origin Permission
+    a <- freshTv tenv0 "a" origin Stack
+    b <- freshTv tenv0 "b" origin Stack
+    e <- freshTv tenv0 "p" origin Permission
     tenv1 <- typ tenv0 t $ Type.Fun origin a b e
     pure (a, b, e, tenv1)
 

@@ -1,76 +1,58 @@
-trait read [T] (String -> Optional[T])
-
-trait show [T] (T -> String)
-
-
-vocab mlatu {
-  intrinsic eq_string (String, String -> Bool)
-  intrinsic gt_string (String, String -> Bool)
-  intrinsic read_float64 (String -> Optional[Double])
-  intrinsic read_int64 (String -> Optional[Int])
-  intrinsic show_float64 (Double -> String)
-  intrinsic show_int64 (Int -> String)
-  intrinsic string_concat (String, String -> String)
-  intrinsic string_from_list (List[Char] -> String)
-  intrinsic string_to_list (String -> List[Char])
+module Mlatu {
+  intrinsic cmp-string (string, string -> ord)
+  intrinsic read-nat (string -> nat optional)
+  intrinsic show-nat (nat -> string)
+  intrinsic string-concat (string, string -> string)
+  intrinsic string-from-list (char list -> string)
+  intrinsic string-to-list (string -> char list)
 }
 
-type String {}
+trait read (for t. string -> t optional)
 
-instance + (String, String -> String) { _::mlatu::string_concat }
+trait show (for t. t -> string)
 
-instance < (String, String -> Bool) { swap (>) }
+type string {}
 
-instance <= (String, String -> Bool) { (>) not }
+instance ++ (string, string -> string) { Mlatu.string-concat }
 
-instance <> (String, String -> Bool) { (=) not }
+instance cmp (string, string -> ord) { Mlatu.cmp-string }
 
-instance = (String, String -> Bool) { _::mlatu::eq_string }
-
-instance > (String, String -> Bool) { _::mlatu::gt_string }
-
-instance >= (String, String -> Bool) { (<) not }
-
-instance read (String -> Optional[Bool]) {
-  -> s;
-  if (s = "true") { true some }
-  else { if (s = "false") { false some } else { none } }
+instance read (string -> bool optional) {
+  dup
+  if ("true" eq) { drop true some }
+  else { if ("false" eq) { false some } else { none } }
 }
 
-instance read (String -> Optional[Double]) { _::mlatu::read_float64 }
+instance read (string -> nat optional) { Mlatu.read-nat }
 
-instance read (String -> Optional[Int]) { _::mlatu::read_int64 }
-
-instance read (String -> Optional[Char]) {
-  chars -> cs;
-  if (cs length = 1) { cs head }
-  else { none }
+instance read (string -> char optional) {
+  chars dup length 1 eq
+  if { hd }
+  else { drop none }
 }
 
-instance read (String -> Optional[String]) { some }
+instance read (string -> string optional) { some }
 
-instance show (String -> String) {}
+instance show (string -> string) {}
 
-instance show (Bool -> String) { if { "true" } else { "false" } }
+instance show (bool -> string) { if { "true" } else { "false" } }
 
-instance show [A, B] (Either[A, B] -> String) {
+instance show (for a b . b a either -> string) {
   match
   case left { show }
   case right { show }
 }
 
-instance show [T] (Optional[T] -> String) {
+instance show (for t . t optional -> string) {
   match
-  case some -> x { "some " + x show }
+  case some -> x { "some " x show ++ }
   case none { "none" }
 }
 
-instance show (Double -> String) { _::mlatu::show_float64 }
+instance show (nat -> string) { Mlatu.show-nat }
 
-instance show (Int -> String) { _::mlatu::show_int64 }
+instance show (char -> string) { once from-chars }
 
-instance show (Char -> String) { once from_chars }
+define chars (string -> char list) { Mlatu.string-to-list }
 
-define chars (String -> List[Char]) { _::mlatu::string_to_list }
-
-define from_chars (List[Char] -> String) { _::mlatu::string_from_list }
+define from-chars (char list -> string) { Mlatu.string-from-list }

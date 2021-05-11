@@ -46,15 +46,15 @@ data Type
 
 infixl 1 :@
 
-pattern Bottom o = TypeConstructor o "Bottom"
+pattern Bottom o = TypeConstructor o "bottom"
 
-pattern Fun o a b e = TypeConstructor o "Fun" :@ a :@ b :@ e
+pattern Fun o a b e = TypeConstructor o "fun" :@ a :@ b :@ e
 
-pattern Prod o a b = TypeConstructor o "Prod" :@ a :@ b
+pattern Prod o a b = TypeConstructor o "prod" :@ a :@ b
 
-pattern Join o a b = TypeConstructor o "Join" :@ a :@ b
+pattern Join o a b = TypeConstructor o "join" :@ a :@ b
 
-pattern Sum o a b = TypeConstructor o "Sum" :@ a :@ b
+pattern Sum o a b = TypeConstructor o "sum" :@ a :@ b
 
 newtype Constructor = Constructor Qualified
   deriving (Ord, Eq, Hashable, Show)

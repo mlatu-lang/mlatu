@@ -66,24 +66,24 @@ spec = do
       (UnqualifiedName "f")
       (Qualified (Qualifier Absolute ["v1", "v2"]) "f")
     testWord
-      "vocab v1::v2 { define f (->) {} }"
+      "vocab v1.v2 { define f (->) {} }"
       (Qualifier Absolute ["v1", "v2"])
       (UnqualifiedName "f")
       (Qualified (Qualifier Absolute ["v1", "v2"]) "f")
 
   it "resolves words in nested vocabularies" $ do
     testWord
-      "vocab v1::v2 { define f (->) {} }"
+      "vocab v1.v2 { define f (->) {} }"
       (Qualifier Absolute ["v1"])
       (QualifiedName (Qualified (Qualifier Relative ["v2"]) "f"))
       (Qualified (Qualifier Absolute ["v1", "v2"]) "f")
     testWord
-      "vocab v1::v2::v3 { define f (->) {} }"
+      "vocab v1.v2.v3 { define f (->) {} }"
       (Qualifier Absolute ["v1"])
       (QualifiedName (Qualified (Qualifier Relative ["v2", "v3"]) "f"))
       (Qualified (Qualifier Absolute ["v1", "v2", "v3"]) "f")
     testWord
-      "vocab v1::v2::v3 { define f (->) {} }"
+      "vocab v1.v2.v3 { define f (->) {} }"
       (Qualifier Absolute ["v1", "v2"])
       (QualifiedName (Qualified (Qualifier Relative ["v3"]) "f"))
       (Qualified (Qualifier Absolute ["v1", "v2", "v3"]) "f")
@@ -117,24 +117,24 @@ spec = do
       (UnqualifiedName "T")
       (Qualified (Qualifier Absolute ["v1", "v2"]) "T")
     testType
-      "vocab v1::v2 { type T {} }"
+      "vocab v1.v2 { type T {} }"
       (Qualifier Absolute ["v1", "v2"])
       (UnqualifiedName "T")
       (Qualified (Qualifier Absolute ["v1", "v2"]) "T")
 
   it "resolves types in nested vocabularies" $ do
     testType
-      "vocab v1::v2 { type T {} }"
+      "vocab v1.v2 { type T {} }"
       (Qualifier Absolute ["v1"])
       (QualifiedName (Qualified (Qualifier Relative ["v2"]) "T"))
       (Qualified (Qualifier Absolute ["v1", "v2"]) "T")
     testType
-      "vocab v1::v2::v3 { type T {} }"
+      "vocab v1.v2.v3 { type T {} }"
       (Qualifier Absolute ["v1"])
       (QualifiedName (Qualified (Qualifier Relative ["v2", "v3"]) "T"))
       (Qualified (Qualifier Absolute ["v1", "v2", "v3"]) "T")
     testType
-      "vocab v1::v2::v3 { type T {} }"
+      "vocab v1.v2.v3 { type T {} }"
       (Qualifier Absolute ["v1", "v2"])
       (QualifiedName (Qualified (Qualifier Relative ["v3"]) "T"))
       (Qualified (Qualifier Absolute ["v1", "v2", "v3"]) "T")

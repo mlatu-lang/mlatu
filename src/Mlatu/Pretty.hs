@@ -17,6 +17,8 @@ module Mlatu.Pretty
     printSignature,
     printTerm,
     printType,
+    printDefinition,
+    printTypeDefinition,
     printInstantiated,
     printKind,
     printEntry,
@@ -42,7 +44,6 @@ import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..), floatValue, integerBase, integerValue)
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
@@ -54,7 +55,6 @@ import Mlatu.Token qualified as Token
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeDefinition (TypeDefinition (..))
-import Numeric (showIntAtBase)
 import Optics
 import Prettyprinter
 import Relude hiding (Compose, Constraint, Type, group)
@@ -64,37 +64,9 @@ import Text.Show qualified
 punctuateComma :: [Doc a] -> Doc a
 punctuateComma = hsep . punctuate comma
 
-printIntegerLiteral :: IntegerLiteral -> Doc a
-printIntegerLiteral literal =
-  hsep $
-    catMaybes
-      [ sign,
-        case view integerBase literal of
-          Binary -> Just "0b"
-          Octal -> Just "0o"
-          Decimal -> Nothing
-          Hexadecimal -> Just "0x",
-        Just $ pretty $ showIntAtBase base (\i -> Unsafe.fromJust (digits !!? i)) (abs value) ""
-      ]
-  where
-    sign = if value < 0 then Just "-" else Nothing
-    value = view integerValue literal
-    (base, digits) = case view integerBase literal of
-      Binary -> (2, "01")
-      Octal -> (8, ['0' .. '7'])
-      Decimal -> (10, ['0' .. '9'])
-      Hexadecimal -> (16, ['0' .. '9'] ++ ['A' .. 'F'])
-
-printFloatLiteral :: FloatLiteral -> Doc a
-printFloatLiteral literal =
-  if value < 0 then "-" else "" <> pretty value
-  where
-    value :: Double
-    value = floatValue literal
-
 printParameter :: Parameter -> Doc a
 printParameter (Parameter _ name Value _) = printUnqualified name
-printParameter (Parameter _ name Stack _) = printUnqualified name <> "..."
+printParameter (Parameter _ name Stack _) = printUnqualified name <> ".."
 printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
 printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
 printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
@@ -102,12 +74,11 @@ printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
 printQualified (Qualified qualifier unqualifiedName) =
-  printQualifier qualifier <> "::" <> printUnqualified unqualifiedName
+  printQualifier qualifier <> "." <> printUnqualified unqualifiedName
 
 printQualifier :: Qualifier -> Doc a
 printQualifier (Qualifier Absolute parts) = printQualifier $ Qualifier Relative ("_" : parts)
-printQualifier (Qualifier Relative parts) =
-  pretty $ Text.intercalate "::" parts
+printQualifier (Qualifier Relative parts) = pretty $ Text.intercalate "." parts
 
 printOrigin :: Origin.Origin -> Doc a
 printOrigin origin =
@@ -127,6 +98,7 @@ printCategory :: Category.Category -> Doc a
 printCategory Category.Constructor = "constructor"
 printCategory Category.Instance = "instance"
 printCategory Category.Permission = "permission"
+printCategory Category.Deconstructor = "deconstructor"
 printCategory Category.Word = "word"
 
 printKind :: Kind -> Doc a
@@ -166,27 +138,27 @@ printType type0 = recur type0
     recur typ = case typ of
       Type.Fun _ a b p ->
         parens $
-          recur a <+> "->" <> recur b <+> recur p
-      TypeConstructor _ "Fun" :@ a :@ b ->
+          recur a <+> "->" <+> recur b <+> recur p
+      TypeConstructor _ "fun" :@ a :@ b ->
         parens $
           recur a <+> "->" <+> recur b
-      TypeConstructor _ "Fun" :@ a ->
+      TypeConstructor _ "fun" :@ a ->
         parens $
           recur a <+> "->"
-      TypeConstructor _ "Fun" -> parens "->"
+      TypeConstructor _ "fun" -> parens "->"
       Type.Prod _ a b ->
         punctuateComma [recur a, recur b]
-      TypeConstructor _ "Prod" :@ a ->
+      TypeConstructor _ "prod" :@ a ->
         parens $ recur a <> comma <> space
-      TypeConstructor _ "Prod" ->
+      TypeConstructor _ "prod" ->
         parens comma
       Type.Sum _ a b ->
         recur a <+> "|" <+> recur b
       Type.Join _ a b ->
         "+" <> recur a <+> recur b
-      TypeConstructor _ "Join" :@ a ->
+      TypeConstructor _ "join" :@ a ->
         parens $ "+" <> recur a
-      a :@ b -> recur a <> brackets (recur b)
+      a :@ b -> recur b <+> recur a
       TypeConstructor _ constructor -> printConstructor constructor
       TypeVar _ var@(Var name i k) ->
         -- The default cases here shouldn't happen if the context was built
@@ -205,16 +177,20 @@ printType type0 = recur type0
               pure $
                 prettyKinded
                   ( Unqualified
-                      (unqualified <> "_" <> show (index + 1))
+                      (unqualified <> "-" <> show (index + 1))
                   )
                   k
-      TypeConstant o var -> "∃" <> recur (TypeVar o var)
+      TypeConstant o var -> "exists" <+> recur (TypeVar o var)
       Forall {} -> prettyForall typ []
         where
           prettyForall (Forall _ x t) vars = prettyForall t (x : vars)
           prettyForall t vars =
-            list (recur . TypeVar (Type.origin t) <$> vars)
-              <> parens (recur t)
+            parens
+              ( "for"
+                  <+> hsep (recur . TypeVar (Type.origin t) <$> vars)
+                  <+> "."
+                  <+> recur t
+              )
       TypeValue _ value -> pretty value
 
 type PrettyContext = Map Unqualified [(TypeId, Kind)]
@@ -234,7 +210,7 @@ buildContext = go mempty
         record name i k = Map.insertWith (<>) name [(i, k)]
 
 printTypeId :: TypeId -> Doc a
-printTypeId (TypeId i) = "T" <> pretty i
+printTypeId (TypeId i) = "t" <> pretty i
 
 printVar :: Var -> Doc a
 printVar (Var (Unqualified unqualified) i k) =
@@ -251,84 +227,80 @@ printVar (Var (Unqualified unqualified) i k) =
 prettyKinded :: Unqualified -> Kind -> Doc a
 prettyKinded name k = case k of
   Permission -> "+" <> printUnqualified name
-  Stack -> printUnqualified name <> "..."
+  Stack -> printUnqualified name <> ".."
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
-printSignature (Application firstA b _) =
-  printSignature finalA <> brackets (punctuateComma (printSignature <$> (as ++ [b])))
-  where
-    (finalA, as) = go [] firstA
-    go l (Application x y _) = go (l ++ [y]) x
-    go l x = (x, l)
+printSignature (Application a b _) = printSignature b <+> printSignature a
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
   parens $
-    mapNonEmpty "" (\sigs -> punctuateComma (printSignature <$> sigs) <> space) as
-      <> "->"
-      <> mapNonEmpty "" (\sigs -> space <> punctuateComma (printSignature <$> sigs)) bs
-      <> mapNonEmpty "" (\names -> space <> hsep ((\p -> "+" <> printGeneralName p) <$> names)) es
+    punctuateComma (printSignature <$> as)
+      <+> "->"
+      <+> punctuateComma (printSignature <$> bs)
+      <+> hsep (("+" <>) . printGeneralName <$> es)
 printSignature (Quantified names typ _) =
-  mapNonEmpty "" (\ns -> brackets (punctuateComma (printParameter <$> ns)) <> flatAlt space "\n") names
-    <> printSignature typ
+  parens $ "for" <+> hsep (printParameter <$> names) <+> "." <+> printSignature typ
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
-    punctuateComma ((printSignature r <> "...") : (printSignature <$> as))
+    punctuateComma ((printSignature r <> "..") : (printSignature <$> as))
       <+> "->"
-      <+> punctuateComma ((printSignature s <> "...") : (printSignature <$> bs))
-      <> mapNonEmpty "" (\xs -> space <> hsep (("+" <>) . printGeneralName <$> xs)) es
+      <+> punctuateComma ((printSignature s <> "..") : (printSignature <$> bs))
+      <+> hsep (("+" <>) . printGeneralName <$> es)
 printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a
 printToken = \case
-  Token.About -> "`about`"
-  Token.AngleBegin -> "`<`"
-  Token.AngleEnd -> "`>`"
-  Token.Arrow -> "`->`"
-  Token.As -> "`as`"
-  Token.BlockBegin -> "`{`"
-  Token.BlockEnd -> "`}`"
-  Token.Case -> "`case`"
+  Token.About -> "about"
+  Token.AngleBegin -> "<"
+  Token.AngleEnd -> ">"
+  Token.Alias -> "alias"
+  Token.Arrow -> "->"
+  Token.As -> "as"
+  Token.BlockBegin -> "{"
+  Token.BlockEnd -> "}"
+  Token.Case -> "case"
   Token.Character c -> squotes $ pretty c
-  Token.Colon -> "`:`"
-  Token.Comma -> "`,`"
-  Token.Define -> "`define`"
-  Token.Do -> "`do`"
-  Token.Ellipsis -> "`...`"
-  Token.Else -> "`else`"
-  Token.Float a -> pretty (floatValue a :: Double)
-  Token.GroupBegin -> "`(`"
-  Token.GroupEnd -> "`)`"
-  Token.If -> "`if`"
-  Token.Ignore -> "`_`"
-  Token.Instance -> "`instance`"
-  Token.Integer literal -> printIntegerLiteral literal
-  Token.Intrinsic -> "`intrinsic`"
-  Token.Match -> "`match`"
+  Token.Colon -> ":"
+  Token.Comma -> ","
+  Token.Define -> "define"
+  Token.Do -> "do"
+  Token.Dot -> "."
+  Token.Ellipsis -> ".."
+  Token.Else -> "else"
+  Token.Field -> "field"
+  Token.For -> "for"
+  Token.GroupBegin -> "("
+  Token.GroupEnd -> ")"
+  Token.If -> "if"
+  Token.Ignore -> "_"
+  Token.Instance -> "instance"
+  Token.Integer num -> pretty num
+  Token.Intrinsic -> "intrinsic"
+  Token.Match -> "match"
+  Token.Module -> "module"
   Token.Operator name -> printUnqualified name
-  Token.Permission -> "`permission`"
-  Token.Reference -> "`\\`"
-  Token.Return -> "`return`"
+  Token.Permission -> "permission"
+  Token.Reference -> "\\"
+  Token.Record -> "record"
   Token.Text t -> dquotes $ pretty t
-  Token.Trait -> "`trait`"
-  Token.Type -> "`type`"
-  Token.VectorBegin -> "`[`"
-  Token.VectorEnd -> "`]`"
-  Token.Vocab -> "`vocab`"
-  Token.VocabLookup -> "`::`"
-  Token.Where -> "`where`"
-  Token.With -> "`with`"
+  Token.Trait -> "trait"
+  Token.Type -> "type"
+  Token.VectorBegin -> "["
+  Token.VectorEnd -> "]"
+  Token.Where -> "where"
+  Token.With -> "with"
   Token.Word name -> printUnqualified name
 
 -- Minor hack because Parsec requires 'Show'.
 instance Show Token.Token where
-  show = show . printToken
+  show x = "`" <> show (printToken x) <> "`"
 
 printInstantiated :: Instantiated -> Doc a
 printInstantiated (Instantiated n []) = printQualified n
 printInstantiated (Instantiated n ts) =
-  printQualified n <> "::" <> list (printType <$> ts)
+  printQualified n <> "." <> list (printType <$> ts)
 
 printDataConstructor :: DataConstructor.DataConstructor -> Doc a
 printDataConstructor (DataConstructor.DataConstructor fields name _) =
@@ -339,11 +311,10 @@ printDataConstructor (DataConstructor.DataConstructor fields name _) =
     printedFields = if not $ null fields then space <> tupled (printSignature <$> fields) else ""
 
 printDeclaration :: Declaration -> Doc a
-printDeclaration (Declaration category name _ signature) = printedCategory <+> printUnqualified (unqualifiedName name) <+> printSignature signature
-  where
-    printedCategory = case category of
-      Declaration.Trait -> "trait"
-      Declaration.Intrinsic -> "intrinsic"
+printDeclaration (Declaration Declaration.Intrinsic name _ signature) =
+  "intrinsic" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
+printDeclaration (Declaration Declaration.Trait name _ signature) =
+  "trait" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
 
 printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
@@ -364,13 +335,35 @@ maybePrintTerms = \case
   (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
-  (Group a : Group b : Group c : NewVector _ 3 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b, c]) `justHoriz` xs)
-  (Group a : Group b : NewVector _ 2 _ _ : xs) -> Just (list (mapMaybe maybePrintTerm [a, b]) `justHoriz` xs)
-  (Group a : NewVector _ 1 _ _ : xs) -> (list . one <$> maybePrintTerm a) `horiz` xs
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
   (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
-  (Coercion (AnyCoercion (Quantified [Parameter _ r1 Stack Nothing, Parameter _ s1 Stack Nothing] (Function [StackFunction (Variable r2 _) [] (Variable s2 _) [] grantNames _] [StackFunction (Variable r3 _) [] (Variable s3 _) [] revokeNames _] [] _) _)) _ _ : Word _ (QualifiedName (Qualified _ u)) _ _ : xs)
-    | r1 == "R" && s1 == "S" && r2 == "R" && s2 == "S" && r3 == "R" && s3 == "S" && u == "call" ->
+  ( Coercion
+      ( AnyCoercion
+          ( Quantified
+              [ Parameter _ "r" Stack Nothing,
+                Parameter _ "s" Stack Nothing
+                ]
+              ( Function
+                  [ StackFunction
+                      (Variable "r" _)
+                      []
+                      (Variable "s" _)
+                      []
+                      grantNames
+                      _
+                    ]
+                  [StackFunction (Variable "r" _) [] (Variable "s" _) [] revokeNames _]
+                  []
+                  _
+                )
+              _
+            )
+        )
+      _
+      _
+      : Word _ (QualifiedName (Qualified _ "call")) _ _
+      : xs
+    ) ->
       Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
   (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
   (Group (Group a) : xs) -> printGroup a `horiz` xs
@@ -383,7 +376,6 @@ maybePrintTerms = \case
   (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
   (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
-  (NewVector _ 0 _ _ : xs) -> Just (lbracket <> rbracket `justHoriz` xs)
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
   where
     horiz :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
@@ -467,7 +459,7 @@ printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTe
 
 printWord :: GeneralName -> [Type] -> Doc a
 printWord word [] = printGeneralName word
-printWord word args = printGeneralName word <> "::" <> list (printType <$> args)
+printWord word args = printGeneralName word <> "." <> list (printType <$> args)
 
 printValue :: Value a -> Doc b
 printValue value = case value of
@@ -477,8 +469,6 @@ printValue value = case value of
       <> braces (printTerm term)
   Character c -> squotes (pretty c)
   Closed (ClosureIndex index) -> "closure" <> dot <> pretty index
-  Float f -> printFloatLiteral f
-  Integer i -> printIntegerLiteral i
   Local (LocalIndex index) -> "local" <> dot <> pretty index
   Name n -> backslash <> printQualified n
   Quotation w@Word {} -> backslash <> printTerm w
@@ -515,6 +505,7 @@ printMetadata metadata =
 
 printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _) = Nothing
+printDefinition (Definition Category.Deconstructor _ _ _ _ _ _ _) = Nothing
 printDefinition (Definition Category.Permission name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 printDefinition (Definition Category.Instance name body _ _ _ signature _) =
@@ -541,6 +532,7 @@ printEntry (Entry.Word category _ origin mParent mSignature _) =
               case parent of
                 Parent.Trait a -> "trait" <+> printQualified a
                 Parent.Type a -> "type" <+> printQualified a
+                Parent.Record a -> "record" <+> printQualified a
             ]
         Nothing -> "with no parent"
     ]
@@ -549,12 +541,6 @@ printEntry (Entry.Metadata origin term) =
     [ "metadata",
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
-    ]
-printEntry (Entry.Trait origin signature) =
-  vsep
-    [ "trait",
-      hsep ["defined at", printOrigin origin],
-      hsep ["with signature", printSignature signature]
     ]
 printEntry (Entry.Type origin parameters ctors) =
   vsep
@@ -599,11 +585,17 @@ printFragment fragment =
            )
     )
   where
-    groupedDeclarations = groupBy (\a b -> (qualifierName . view Declaration.name) a == (qualifierName . view Declaration.name) b) (view Fragment.declarations fragment)
+    groupedDeclarations =
+      groupBy
+        ( \a b ->
+            (qualifierName . view Declaration.name) a
+              == (qualifierName . view Declaration.name) b
+        )
+        (view Fragment.declarations fragment)
     printGrouped decls =
       if noVocab
         then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
-        else vsep $ ("vocab" <+> printQualifier commonName <+> lbrace) : (indent 2 . printDeclaration <$> sort decls) ++ [rbrace]
+        else blockMulti ("module" <+> printQualifier commonName) printDeclaration (sort decls)
       where
         (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)

@@ -1,15 +1,22 @@
-type Pair[A, B] {   case pair (A, B) }
-
-define first [A, B] (Pair[A, B] -> A) { unpair drop }
-
-define flip [A, B] (Pair[A, B] -> Pair[B, A]) { unpair swap pair }
-
-define map_pair [A, B, C, D] (Pair[A, B], (A -> C), (B -> D) -> Pair[C, D]) {
-  -> p, f, g;
-  p unpair -> a, b;
-  (a f call) (b g call) pair
+record (b a) pair {
+  field first (a)
+  field second (b)
 }
 
-define second [A, B] (Pair[A, B] -> B) { unpair swap drop }
+instance cmp (for a b. b a pair, b a pair -> ord) {
+  -> a, b;
+  match (a first b first cmp)
+  case equal { a second b second cmp }
+  case less { less }
+  case more { more }
+}
 
-define unpair [A, B] (Pair[A, B] -> A, B) { match case pair {} }
+define flip (for a b . b a pair -> a b pair) { unpair swap mk-pair }
+
+define map-pair (for a b c d . b a pair, (a -> c), (b -> d) -> d c pair) {
+  -> p, f, g;
+  p unpair -> a, b;
+  (a f call) (b g call) mk-pair
+}
+
+define unpair (for a b. b a pair -> a, b) { match case mk-pair {} }

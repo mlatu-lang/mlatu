@@ -36,8 +36,8 @@ main = do
 
 mainPermissions :: [GeneralName]
 mainPermissions =
-  [ QualifiedName $ Qualified Vocabulary.global "IO",
-    QualifiedName $ Qualified Vocabulary.global "Fail"
+  [ QualifiedName $ Qualified Vocabulary.global "io",
+    QualifiedName $ Qualified Vocabulary.global "fail"
   ]
 
 handleReports :: [Report] -> IO ()

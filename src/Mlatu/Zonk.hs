@@ -47,34 +47,22 @@ term tenv0 = go
   where
     zonk = typ tenv0
     go t = case t of
-      Coercion hint tref origin ->
-        Coercion hint (zonk tref) origin
-      Compose tref a b ->
-        Compose (zonk tref) (go a) (go b)
-      Generic name i a origin ->
-        Generic name i (go a) origin
-      Group a ->
-        go a
+      Coercion hint tref origin -> Coercion hint (zonk tref) origin
+      Compose tref a b -> Compose (zonk tref) (go a) (go b)
+      Generic name i a origin -> Generic name i (go a) origin
+      Group a -> go a
       Lambda tref name varType body origin ->
         Lambda (zonk tref) name (zonk varType) (go body) origin
       Match hint tref cases else_ origin ->
         Match hint (zonk tref) (goCase <$> cases) (goElse else_) origin
         where
-          goCase (Case name body caseOrigin) =
-            Case name (go body) caseOrigin
+          goCase (Case name body caseOrigin) = Case name (go body) caseOrigin
           goElse (DefaultElse a b) = DefaultElse a b
-          goElse (Else body elseOrigin) =
-            Else (go body) elseOrigin
-      New tref index size origin ->
-        New (zonk tref) index size origin
-      NewClosure tref index origin ->
-        NewClosure (zonk tref) index origin
-      NewVector tref size elemType origin ->
-        NewVector (zonk tref) size (zonk elemType) origin
-      Push tref value' origin ->
-        Push (zonk tref) (value tenv0 value') origin
-      Word tref name params origin ->
-        Word (zonk tref) name params origin
+          goElse (Else body elseOrigin) = Else (go body) elseOrigin
+      New tref index size isNat origin -> New (zonk tref) index size isNat origin
+      NewClosure tref index origin -> NewClosure (zonk tref) index origin
+      Push tref value' origin -> Push (zonk tref) (value tenv0 value') origin
+      Word tref name params origin -> Word (zonk tref) name params origin
 
 value :: TypeEnv -> Value Type -> Value Type
 value tenv0 = go
@@ -83,8 +71,6 @@ value tenv0 = go
       Capture names body -> Capture names $ term tenv0 body
       Character {} -> v
       Closed {} -> v
-      Float {} -> v
-      Integer {} -> v
       Local {} -> v
       Name {} -> v
       Quotation body -> Quotation $ term tenv0 body

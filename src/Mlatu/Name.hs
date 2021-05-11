@@ -111,3 +111,6 @@ instance Hashable Unqualified where
 
 instance IsString Unqualified where
   fromString = Unqualified . toText
+
+instance Semigroup Unqualified where
+  (Unqualified a) <> (Unqualified b) = Unqualified (a <> b)

@@ -14,13 +14,13 @@ module Mlatu.Token
   )
 where
 
-import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Name (Unqualified)
 import Relude
 
 data Token
   = -- | @about@
     About
+  | Alias
   | -- | @<@ See note [Angle Brackets].
     AngleBegin
   | -- | @>@ See note [Angle Brackets].
@@ -45,12 +45,15 @@ data Token
     Define
   | -- | @do@
     Do
+  | -- | @dot@
+    Dot
   | -- | @...@
     Ellipsis
   | -- | @else@
     Else
-  | -- | See note [Float Literals].
-    Float !FloatLiteral
+  | -- | @for
+    For
+  | Field
   | -- | @(@
     GroupBegin
   | -- | @)@
@@ -62,33 +65,28 @@ data Token
   | -- | @instance@
     Instance
   | -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
-    Integer !IntegerLiteral
+    Integer !Int
   | -- | @intrinsic@
     Intrinsic
   | -- | @match@
     Match
+  | Module
   | -- | @+@
     Operator !Unqualified
   | -- | @permission@
     Permission
   | -- | @\@
     Reference
-  | -- | @return@
-    Return
+  | Record
   | -- | @"..."@
     Text !Text
-  | -- | @trait@
-    Trait
+  | Trait
   | -- | @type@
     Type
   | -- | @[@
     VectorBegin
   | -- | @]@
     VectorEnd
-  | -- | @vocab@
-    Vocab
-  | -- | @::@
-    VocabLookup
   | -- | @where@
     Where
   | -- | @with@
@@ -98,6 +96,7 @@ data Token
 
 instance Eq Token where
   About == About = True
+  Alias == Alias = True
   AngleBegin == AngleBegin = True
   AngleEnd == AngleEnd = True
   Arrow == Arrow = True
@@ -110,10 +109,12 @@ instance Eq Token where
   Comma == Comma = True
   Define == Define = True
   Do == Do = True
+  Dot == Dot = True
   Ellipsis == Ellipsis = True
   Else == Else = True
   -- See note [Float Literals].
-  Float a == Float b = a == b
+  For == For = True
+  Field == Field = True
   GroupBegin == GroupBegin = True
   GroupEnd == GroupEnd = True
   If == If = True
@@ -122,17 +123,16 @@ instance Eq Token where
   Integer a == Integer b = a == b
   Intrinsic == Intrinsic = True
   Match == Match = True
+  Module == Module = True
   Operator a == Operator b = a == b
   Permission == Permission = True
+  Record == Record = True
   Reference == Reference = True
-  Return == Return = True
   Text a == Text b = a == b
   Trait == Trait = True
   Type == Type = True
   VectorBegin == VectorBegin = True
   VectorEnd == VectorEnd = True
-  Vocab == Vocab = True
-  VocabLookup == VocabLookup = True
   Where == Where = True
   With == With = True
   Word a == Word b = a == b

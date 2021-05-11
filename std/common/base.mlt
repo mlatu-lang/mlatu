@@ -1,97 +1,97 @@
-define bi [A, B, C] (A, (A -> B), (A -> C) -> B, C) {
+define bi (for a b c . a, (a -> b), (a -> c) -> b, c) {
   -> x, f, g;
   (x f call) (x g call)
 }
 
-define bi2 [A, B, C, D] (A, B, (A, B -> C), (A, B -> D) -> C, D) {
+define bi2 (for a b c d . a, b, (a, b -> c), (a, b -> d) -> c, d) {
   -> x, y, f, g;
   (x y f call) (x y g call)
 }
 
-define bi3 [A, B, C, D, E, F] (A, B, C, (A, B, C -> D), (A, B, C -> E), (A, B, C -> F) -> D, E, F) {
+define bi3 (for a b c d e f . a, b, c, (a, b, c -> d), (a, b, c -> e), (a, b, c -> f) -> d, e, f) {
   -> x, y, z, f, g, h;
   (x y z f call) (x y z g call) (x y z h call)
 }
 
-define compose [R..., S..., T...] ((R... -> S...), (S... -> T...) -> (R... -> T...)) {
+define compose (for r.. s.. t.. . (r.. -> s..), (s.. -> t..) -> (r.. -> t..)) {
   -> f, g;
   { f call g call }
 }
 
-define curry [R..., S..., T, +P] (T, (R..., T -> S... +P) -> (R... -> S... +P)) {
+define curry (for r.. s.. t +p . t, (r.., t -> s.. +p) -> (r.. -> s.. +p)) {
   -> x, f;
   { x f call }
 }
 
-define curry2 [R..., S..., A, B, +P] (A, B, (R..., A, B -> S... +P) -> (R... -> S... +P)) {
+define curry2 (for r.. s.. a b +p . a, b, (r.., a, b -> s.. +p) -> (r.. -> s.. +p)) {
   -> x, y, f;
   { x y f call }
 }
 
-define dip [R..., S..., T] (R..., T, (R... -> S...) -> S..., T) {
+define dip (for r.. s.. t . r.., t, (r.. -> s..) -> s.., t) {
   -> x, f;
   f call x
 }
 
-define drop2 [A, B] (A, B ->) { drop drop }
+define drop2 (for a b . a, b ->) { drop drop }
 
-define drop3 [A, B, C] (A, B, C ->) { drop drop drop }
+define drop3 (for a b c . a, b, c ->) { drop drop drop }
 
-define dup [T] (T -> T, T) { -> x; x x }
+define dup (for t . t -> t, t) { -> x; x x }
 
-define dup2 [A, B] (A, B -> A, B, A, B) { -> x, y; x y x y }
+define dup2 (for a b . a, b -> a, b, a, b) { -> x, y; x y x y }
 
-define dup3 [A, B, C] (A, B, C -> A, B, C, A, B, C) { -> x, y, z; x y z x y z }
+define dup3 (for a b c . a, b, c -> a, b, c, a, b, c) { -> x, y, z; x y z x y z }
 
-define fix [R..., S...] (R..., (R..., (R... -> S...) -> S...) -> S...) {
+define fix (for r.. s.. . r.., (r.., (r.. -> s..) -> s..) -> s..) {
   -> f;
   { f fix } f call
 }
 
-define function [T] (T -> (-> T)) { -> x; { x } }
+define function (for t . t -> (-> t)) { -> x; { x } }
 
-define id [R...] (R... -> R...) {}
+define id (for r.. . r.. -> r..) {}
 
-define keep [R..., S..., T] (R..., T, (R..., T -> S...) -> S..., T) {
+define keep (for r.. s.. t . r.., t, (r.., t -> s..) -> s.., t) {
   -> x, f;
   x f call x
 }
 
-define keep2 [R..., S..., A, B] (R..., A, B, (R..., A, B -> S...) -> S..., A, B) {
+define keep2 (for r.. s.. a b . r.., a, b, (r.., a, b -> s..) -> s.., a, b) {
   -> x, y, f;
   x y f call x y
 }
 
-define keep3 [R..., S..., A, B, C] (R..., A, B, C, (R..., A, B, C -> S...) -> S..., A, B, C) {
+define keep3 (for r.. s.. a b c. r.., a, b, c, (r.., a, b, c -> r..) -> r.., a, b, c) {
   -> x, y, z, f;
   x y z f call x y z
 }
 
-define nip [A, B] (A, B -> B) { -> x; drop x }
+define nip (for a b . a, b -> b) { -> x; drop x }
 
-define nip2 [A, B, C] (A, B, C -> C) { -> x; drop2 x }
+define nip2 (for a b c . a, b, c -> c) { -> x; drop2 x }
 
-define over [A, B] (A, B -> A, B, A) { -> x, y; x y x }
+define over (for a b . a, b -> a, b, a) { -> x, y; x y x }
 
-define over2 [A, B, C] (A, B, C -> A, B, C, A, B) { -> x, y, z; x y z x y }
+define over2 (for a b c . a, b, c -> a, b, c, a, b) { -> x, y, z; x y z x y }
 
-define pick [A, B, C] (A, B, C -> A, B, C, A) { -> x, y, z; x y z x }
+define pick (for a b c . a, b, c -> a, b, c, a) { -> x, y, z; x y z x }
 
-define swapped [R..., S..., A, B] ((R..., A, B -> S...) -> (R..., B, A -> S...)) {
+define swapped (for r.. s.. a b . (r.., a, b -> r..) -> (r.., b, a -> r..)) {
   \swap swap compose
 }
 
-define tri [A, B, C, D] (A, (A -> B), (A -> C), (A -> D) -> B, C, D) {
+define tri (for a b c d . a, (a -> b), (a -> c), (a -> d) -> b, c, d) {
   -> x, f, g, h;
   (x f call) (x g call) (x h call)
 }
 
-define tri2 [A, B, C, D, E] (A, B, (A, B -> C), (A, B -> D), (A, B -> E) -> C, D, E) {
+define tri2 (for a b c d e . a, b, (a, b -> c), (a, b -> d), (a, b -> e) -> c, d, e) {
   -> x, y, f, g, h;
   (x y f call) (x y g call) (x y h call)
 }
 
-define tri3 [A, B, C, D, E, F] (A, B, C, (A, B, C -> D), (A, B, C -> E), (A, B, C -> F) -> D, E, F) {
+define tri3 (for a b c d e f . a, b, c, (a, b, c -> d), (a, b, c -> e), (a, b, c -> f) -> d, e, f) {
   -> x, y, z, f, g, h;
   (x y z f call) (x y z g call) (x y z h call)
 }
@@ -99,10 +99,10 @@ define tri3 [A, B, C, D, E, F] (A, B, C, (A, B, C -> D), (A, B, C -> E), (A, B, 
 about fix {
   docs {
     """
-    Computes the least fixed point of a function. Can be used to write recursive
+    computes the least fixed point of a function. can be used to write recursive
     definitions without explicit recursion, e.g.:
 
-        // Compute the factorial of 5.
+        // compute the factorial of 5.
         5 {
           -> n, rec;
           if (n <= 0):

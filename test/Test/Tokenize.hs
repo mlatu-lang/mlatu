@@ -72,11 +72,8 @@ spec = do
     it "produces single token for arrow" $ do
       testTokenize "->" `shouldBe` Right [Arrow]
       testTokenize "\x2192" `shouldBe` Right [Arrow]
-    it "produces single token for double colon" $ do
-      testTokenize "::" `shouldBe` Right [VocabLookup]
-      testTokenize "\x2237" `shouldBe` Right [VocabLookup]
     it "produces single token for ellipsis" $ do
-      testTokenize "..." `shouldBe` Right [Ellipsis]
+      testTokenize ".." `shouldBe` Right [Ellipsis]
       testTokenize "\x2026" `shouldBe` Right [Ellipsis]
     it "produces single token for operator beginning with arrow" $ do
       testTokenize "->?"

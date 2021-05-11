@@ -16,15 +16,12 @@ where
 import Data.ByteString qualified as BS
 import Data.Char (isLetter, isPunctuation, isSymbol)
 import Data.Text qualified as Text
-import Mlatu.Ice (ice)
 import Mlatu.Informer (Informer (..))
-import Mlatu.Literal (Base (..), FloatLiteral (..), IntegerLiteral (..))
 import Mlatu.Located (Located (..))
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
-import Numeric (readHex, readOct)
 import Prettyprinter (dquotes)
 import Prettyprinter.Internal (Pretty (pretty))
 import Relude
@@ -177,20 +174,14 @@ special = Parsec.oneOf "\"'(),:[\\]_{}"
 comma :: Tokenizer Token
 comma = Comma <$ Parsec.char ','
 
+dot :: Tokenizer Token
+dot = Dot <$ Parsec.char '.'
+
 ellipsis :: Tokenizer Token
-ellipsis =
-  Parsec.try $
-    Ellipsis
-      <$ Parsec.choice (fmap Parsec.string ["...", "\x2026"])
+ellipsis = Ellipsis <$ (Parsec.string ".." <|> Parsec.string "\x2026")
 
 ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
-
-vocabLookup :: Tokenizer Token
-vocabLookup =
-  Parsec.try $
-    VocabLookup
-      <$ Parsec.choice (fmap Parsec.string ["::", "\x2237"])
 
 colon :: Tokenizer Token
 colon = Colon <$ Parsec.char ':'
@@ -205,62 +196,7 @@ reference :: Tokenizer Token
 reference = Reference <$ Parsec.char '\\'
 
 num :: Tokenizer Token
-num = Parsec.try $ do
-  sign <- Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
-  let applySign :: (Num a) => Maybe Char -> a -> a
-      applySign s = if s `elem` [Just '-', Just '\x2212'] then negate else id
-      base ::
-        (Num a) =>
-        Char ->
-        String ->
-        (String -> a) ->
-        Base ->
-        String ->
-        Tokenizer (Base, a)
-      base prefix digits readBase hint desc =
-        (,) hint . readBase
-          <$> ( Parsec.char prefix
-                  *> Parsec.many1 (Parsec.oneOf digits <?> (desc ++ " digit"))
-              )
-  Parsec.choice
-    [ Parsec.try $
-        (\(hint, value) -> Integer (IntegerLiteral (applySign sign value) hint))
-          <$> ( Parsec.char '0'
-                  *> Parsec.choice
-                    [ base 'b' ['0' .. '1'] readBin Binary "binary",
-                      base 'o' ['0' .. '7'] (fst . Unsafe.fromJust . viaNonEmpty head . readOct) Octal "octal",
-                      base
-                        'x'
-                        (['0' .. '9'] ++ ['A' .. 'F'])
-                        (fst . Unsafe.fromJust . viaNonEmpty head . readHex)
-                        Hexadecimal
-                        "hexadecimal"
-                    ]
-              ),
-      ( \integer fraction power ->
-          case (fraction, power) of
-            (Nothing, Nothing) -> Integer (IntegerLiteral (applySign sign (fromMaybe 0 (readMaybe integer))) Decimal)
-            (_, _) ->
-              Float
-                ( FloatLiteral
-                    (applySign sign (fromMaybe 0 (readMaybe (integer ++ fromMaybe "" fraction))))
-                    (maybe 0 length fraction)
-                    (maybe 0 (\(s, p) -> applySign s (fromMaybe 0 (readMaybe p))) power)
-                )
-      )
-        <$> Parsec.many1 Parsec.digit
-        <*> Parsec.optionMaybe
-          ( Parsec.char '.' *> Parsec.many Parsec.digit
-          )
-        <*> Parsec.optionMaybe
-          ( Parsec.oneOf "Ee"
-              *> ( (,)
-                     <$> Parsec.optionMaybe (Parsec.oneOf "+-\x2212")
-                     <*> Parsec.many1 Parsec.digit
-                 )
-          )
-    ]
-    <* Parsec.notFollowedBy Parsec.digit
+num = Integer . Unsafe.read <$> Parsec.many1 Parsec.digit
 
 doubleQuoteStringLiteral :: Tokenizer Token
 doubleQuoteStringLiteral =
@@ -300,25 +236,27 @@ alphanumeric =
     [ do
         name <-
           (toText .) . (:)
-            <$> (letter <|> Parsec.char '_')
-            <*> (many . Parsec.choice)
-              [letter, Parsec.char '_', Parsec.digit]
+            <$> letter
+            <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.digit])
         pure $ case name of
+          "alias" -> Alias
           "about" -> About
           "as" -> As
           "case" -> Case
           "define" -> Define
           "do" -> Do
           "else" -> Else
+          "field" -> Field
+          "for" -> For
           "if" -> If
           "instance" -> Instance
           "intrinsic" -> Intrinsic
           "match" -> Match
+          "module" -> Module
           "permission" -> Permission
-          "return" -> Return
+          "record" -> Record
           "trait" -> Trait
           "type" -> Type
-          "vocab" -> Vocab
           "with" -> With
           "where" -> Where
           _ -> Word (Unqualified name),
@@ -344,11 +282,10 @@ tokenTokenizer =
         blockEnd,
         characterLiteral,
         comma,
-        ellipsis,
+        Parsec.try ellipsis <|> dot,
         groupBegin,
         groupEnd,
         ignore,
-        vocabLookup,
         colon,
         vectorBegin,
         vectorEnd,
@@ -376,16 +313,6 @@ nestableCharacter open close = go
 letter :: Tokenizer Char
 letter = Parsec.satisfy isLetter
 
-readBin :: String -> Integer
-readBin = go 0
-  where
-    go :: Integer -> String -> Integer
-    go acc ds = case ds of
-      '0' : ds' -> go (2 * acc + 0) ds'
-      '1' : ds' -> go (2 * acc + 1) ds'
-      [] -> acc
-      _nonBinary -> ice "Mlatu.Tokenize.readBin non-binary digit"
-
 text :: Tokenizer Text
 text = toText . catMaybes <$> many (character '"')
 
@@ -407,7 +334,7 @@ paragraph =
         _prefix ->
           Parsec.unexpected
             (show $ dquotes $ pretty line)
-            -- HACK: Relies on formatting of messages to include "expected ...".
+            -- HACK: Relies on formatting of messages to include "expected ..".
             <?> asum
               [ "all lines to be empty or begin with ",
                 show $ BS.length (encodeUtf8 prefix),

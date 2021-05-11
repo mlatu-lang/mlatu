@@ -1,30 +1,30 @@
-vocab mlatu {
-  intrinsic call [R..., S...] (R..., (R... -> S...) -> S...)
-  intrinsic drop [A] (A ->)
-  intrinsic swap [A, B] (A, B -> B, A)
+module Mlatu {
+  intrinsic call (for r.. s.. . r.., (r.. -> s..) -> s..)
+  intrinsic drop (for a . a ->)
+  intrinsic swap (for a b . a, b -> b, a)
 }
 
-permission Exit [R..., S..., +P] (R..., (R... -> S... +Exit +P) -> S... +P) {
-  with (+Exit)
+permission exit (for r.. s.. +p . r.., (r.. -> s.. +exit +p) -> s.. +p) {
+  with (+exit)
 }
 
-permission Fail [R..., S..., +P] (R..., (R... -> S... +Fail +P) -> S... +P) {
-  with (+Fail)
+permission fail (for r.. s.. +p . r.., (r.. -> s.. +fail +p) -> s.. +p) {
+  with (+fail)
 }
 
-permission IO [R..., S..., +P] (R..., (R... -> S... +IO +P) -> S... +P) {
-  with (+IO)
+permission io (for r.. s.. +p . r.., (r.. -> s.. +io +p) -> s.. +p) {
+  with (+io)
 }
 
-define call [R..., S...] (R..., (R... -> S...) -> S...) {
-  _::mlatu::call
+define call (for r.. s.. . r.., (r.. -> s..) -> s..) {
+  Mlatu.call
 }
 
-define drop [T] (T ->) {
-  -> _;
+define drop (for a . a ->) {
+  Mlatu.drop
 }
 
-define swap [A, B] (A, B -> B, A) {
+define swap (for a b . a, b -> b, a) {
   -> x, y;
   y x
 }

@@ -15,4 +15,4 @@ data Sign = Negative | Positive
   deriving (Eq, Ord, Show)
 
 ioPermission :: [GeneralName]
-ioPermission = [QualifiedName $ Qualified Vocabulary.global "IO"]
+ioPermission = [QualifiedName $ Qualified Vocabulary.global "io"]

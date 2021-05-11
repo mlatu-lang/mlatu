@@ -75,10 +75,10 @@ spec = do
     x = TypeVar o xv
     y = TypeVar o yv
     e = TypeVar o ev
-    rv = Var "R" (TypeId 0) Stack
-    xv = Var "X" (TypeId 2) Value
-    yv = Var "Y" (TypeId 3) Value
-    ev = Var "P" (TypeId 4) Permission
+    rv = Var "r" (TypeId 0) Stack
+    xv = Var "x" (TypeId 2) Value
+    yv = Var "y" (TypeId 3) Value
+    ev = Var "p" (TypeId 4) Permission
     fr = Type.Forall o rv
     fx = Type.Forall o xv
     fy = Type.Forall o yv
@@ -86,13 +86,13 @@ spec = do
     ctor =
       TypeConstructor o . Type.Constructor
         . Qualified Vocabulary.global
-    int = ctor "Int"
-    pair = ctor "Pair"
+    int = ctor "int"
+    pair = ctor "pair"
 
 testInstanceCheck :: Sign -> Type -> Type -> IO ()
 testInstanceCheck sign a b = do
   result <- runMlatuExceptT $ do
-    instanceCheck "polymorphic" a "concrete" b
+    instanceCheck a b
     errorCheckpoint
   case sign of
     Positive ->

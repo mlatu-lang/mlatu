@@ -27,7 +27,6 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Hint qualified as Hint
 import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
@@ -51,8 +50,11 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
+import Mlatu.TypeAlias (TypeAlias)
+import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
+import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Prettyprinter (dquotes, hsep)
 import Relude
@@ -60,8 +62,8 @@ import Relude
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f =
-  -- TODO: Link constructors to parent type.
-  foldlMx declareType (view Fragment.types f)
+  foldlMx declareTypeAlias (view Fragment.aliases f)
+    >=> foldlMx declareType (view Fragment.types f)
     -- We enter declarations of all traits and intrinsics.
     >=> foldlMx enterDeclaration (view Fragment.declarations f)
     -- Then declare all permissions.
@@ -93,6 +95,15 @@ fragment f =
   where
     foldlMx :: (Foldable f, Monad m) => (b -> a -> m b) -> f a -> b -> m b
     foldlMx = flip . foldlM
+
+declareTypeAlias :: Dictionary -> TypeAlias -> M Dictionary
+declareTypeAlias dictionary a = do
+  let entry = Entry.TypeAlias (view TypeAlias.origin a) (view TypeAlias.alias a)
+  pure $
+    Dictionary.insert
+      (Instantiated (Qualified Vocabulary.global (view TypeAlias.name a)) [])
+      entry
+      dictionary
 
 enterDeclaration :: Dictionary -> Declaration -> M Dictionary
 enterDeclaration dictionary declaration = do
@@ -405,10 +416,6 @@ fragmentFromSource mainPermissions mainName line path source = do
 
   errorCheckpoint
 
-  _ <- Hint.fragment parsed
-
-  errorCheckpoint
-
   pure parsed
 
 resolveAndDesugar :: Dictionary -> Definition () -> M (Definition ())
@@ -425,7 +432,7 @@ resolveAndDesugar dictionary definition = do
   -- infix operators can be desugared into postfix syntax.
 
   -- needs dictionary for operator metadata
-  postfix <- Infix.desugar dictionary resolved
+  postfix <- Infix.desugar resolved
 
   errorCheckpoint
 

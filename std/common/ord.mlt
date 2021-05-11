@@ -1,0 +1,37 @@
+type ord {
+  case less
+  case more
+  case equal
+}
+
+trait cmp (for t. t, t -> ord)
+
+define gt (for t. t, t -> bool) {
+  match (cmp)
+  case more { true }
+  else { false }
+}
+
+define lt (for t. t, t -> bool) {
+  match (cmp)
+  case less { true }
+  else { false }
+}
+
+define le (for t. t, t -> bool) {
+  match (cmp)
+  case more { false }
+  else { true }
+}
+
+define eq (for t. t, t -> bool) {
+  match (cmp)
+  case equal { true }
+  else { false }
+}
+
+define neq (for t. t, t -> bool) {
+  match (cmp)
+  case equal { false }
+  else { true }
+}

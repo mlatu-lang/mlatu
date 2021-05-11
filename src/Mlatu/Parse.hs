@@ -14,14 +14,14 @@ module Mlatu.Parse
   )
 where
 
-import Data.List (findIndex)
+import Data.List (findIndex, foldl1, zipWith3)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Declaration (Declaration (Declaration))
+import Mlatu.Declaration (Declaration (..))
 import Mlatu.Declaration qualified as Declaration
-import Mlatu.Definition (Definition (Definition))
+import Mlatu.Definition (Definition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Data qualified as Data
 import Mlatu.Element (Element)
@@ -47,6 +47,8 @@ import Mlatu.Name
     Qualifier (Qualifier),
     Root (Absolute, Relative),
     Unqualified (..),
+    qualifierName,
+    unqualifiedName,
   )
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
@@ -59,6 +61,8 @@ import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
 import Mlatu.Token qualified as Token
 import Mlatu.Tokenize (tokenize)
+import Mlatu.TypeAlias (TypeAlias (..))
+import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary qualified as Vocabulary
@@ -129,7 +133,17 @@ fragmentParser mainPermissions mainName =
     <$> elementsParser <* Parsec.eof
 
 elementsParser :: Parser [Element ()]
-elementsParser = asum <$> many (vocabularyParser <|> one <$> elementParser)
+elementsParser =
+  asum
+    <$> many
+      ( moduleParser
+          <|> ( do
+                  (defs, td) <- recordParser
+                  pure (Element.TypeDefinition td : (Element.Definition <$> defs))
+              )
+          <|> one
+          <$> elementParser
+      )
 
 partitionElements ::
   [GeneralName] ->
@@ -139,14 +153,20 @@ partitionElements ::
 partitionElements mainPermissions mainName = rev . foldr go mempty
   where
     rev :: Fragment () -> Fragment ()
-    rev f = over Fragment.declarations reverse $ over Fragment.definitions reverse $ over Fragment.metadata reverse $ over Fragment.types reverse f
+    rev =
+      over Fragment.declarations reverse
+        . over Fragment.definitions reverse
+        . over Fragment.metadata reverse
+        . over Fragment.types reverse
+        . over Fragment.aliases reverse
 
     go :: Element () -> Fragment () -> Fragment ()
-    go e acc = case e of
-      Element.Declaration x -> over Fragment.declarations (x :) acc
-      Element.Definition x -> over Fragment.definitions (x :) acc
-      Element.Metadata x -> over Fragment.metadata (x :) acc
-      Element.TypeDefinition x -> over Fragment.types (x :) acc
+    go = \case
+      Element.Declaration x -> over Fragment.declarations (x :)
+      Element.Definition x -> over Fragment.definitions (x :)
+      Element.Metadata x -> over Fragment.metadata (x :)
+      Element.TypeDefinition x -> over Fragment.types (x :)
+      Element.TypeAlias x -> over Fragment.aliases (x :)
       Element.Term x ->
         over
           Fragment.definitions
@@ -163,7 +183,6 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
                 Nothing ->
                   Definition.main mainPermissions mainName x : defs
           )
-          acc
         where
           -- In top-level code, we want local parameteriable bindings to remain in scope even
           -- when separated by other top-level program elements, e.g.:
@@ -180,17 +199,17 @@ partitionElements mainPermissions mainName = rev . foldr go mempty
             Lambda typ name parameterType (composeUnderLambda body term) origin
           composeUnderLambda a b = Compose () a b
 
-vocabularyParser :: Parser [Element ()]
-vocabularyParser = (<?> "vocabulary definition") $ do
-  parserMatch_ Token.Vocab
+moduleParser :: Parser [Element ()]
+moduleParser = (<?> "module definition") $ do
+  parserMatch_ Token.Module
   original@(Qualifier _ outer) <- Parsec.getState
-  vocabularyName <- nameParser <?> "vocabulary name"
+  vocabularyName <- nameParser <?> "module name"
   let (inner, name) = case vocabularyName of
         QualifiedName
           (Qualified (Qualifier _root qualifier) (Unqualified unqualified)) ->
             (qualifier, unqualified)
         UnqualifiedName (Unqualified unqualified) -> ([], unqualified)
-        LocalName {} -> ice "Mlatu.Parse.vocabularyParser - local name should not appear as vocabulary name"
+        LocalName {} -> ice "Mlatu.Parse.moduleParser - local name should not appear as vocabulary name"
   Parsec.putState (Qualifier Absolute (outer ++ inner ++ [name]))
   Parsec.choice
     [ [] <$ parserMatchOperator ";",
@@ -228,13 +247,13 @@ nameParser = (<?> "name") $ do
   global <-
     isJust
       <$> Parsec.optionMaybe
-        (parserMatch Token.Ignore <* parserMatch Token.VocabLookup)
+        (parserMatch Token.Ignore <* parserMatch Token.Dot)
   parts <-
     Parsec.choice
       [ wordNameParser,
         operatorNameParser
       ]
-      `Parsec.sepBy1` parserMatch Token.VocabLookup
+      `Parsec.sepBy1` parserMatch Token.Dot
   pure $ case parts of
     [unqualified] ->
       ( if global
@@ -298,6 +317,7 @@ elementParser =
             [ traitParser,
               intrinsicParser
             ],
+        Element.TypeAlias <$> typeAliasParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
         do
@@ -330,18 +350,30 @@ metadataParser = (<?> "metadata block") $ do
         Metadata._origin = origin
       }
 
+typeAliasParser :: Parser TypeAlias
+typeAliasParser = (<?> "type alias definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Alias
+  newName <- unqualifiedNameParser <?> "type alias"
+  oldName <- qualifiedNameParser <?> "type name"
+  pure
+    TypeAlias
+      { TypeAlias._name = newName,
+        TypeAlias._alias = oldName,
+        TypeAlias._origin = origin
+      }
+
 typeDefinitionParser :: Parser TypeDefinition
 typeDefinitionParser = (<?> "type definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Type
+  parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
   name <- qualifiedNameParser <?> "type definition name"
-  parameters <- Parsec.option [] quantifierParser
   constructors <- blockedParser $ many constructorParser
   pure
     TypeDefinition
       { TypeDefinition._constructors = constructors,
         TypeDefinition._name = name,
         TypeDefinition._origin = origin,
-        TypeDefinition._parameters = parameters
+        TypeDefinition._parameters = reverse parameters
       }
 
 constructorParser :: Parser DataConstructor
@@ -350,8 +382,7 @@ constructorParser = (<?> "constructor definition") $ do
   name <- wordNameParser <?> "constructor name"
   fields <-
     (<?> "constructor fields") $
-      Parsec.option [] $
-        groupedParser constructorFieldsParser
+      Parsec.option [] $ groupedParser (typeParser `Parsec.sepEndBy` commaParser)
   pure
     DataConstructor
       { DataConstructor._fields = fields,
@@ -359,8 +390,103 @@ constructorParser = (<?> "constructor definition") $ do
         DataConstructor._origin = origin
       }
 
-constructorFieldsParser :: Parser [Signature]
-constructorFieldsParser = typeParser `Parsec.sepEndBy` commaParser
+recordParser :: Parser ([Definition ()], TypeDefinition)
+recordParser = (<?> "record definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Record
+  parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
+  recordName <- qualifiedNameParser <?> "record  name"
+  fields <-
+    blockedParser $
+      many
+        ( (<?> "record field definition") $ do
+            origin <- getTokenOrigin <* parserMatch Token.Field
+            name <- wordNameParser <?> "record field name"
+            let qualifiedName = Qualified (qualifierName recordName) name
+            sig <- groupedParser typeParser <?> "record field signature"
+            pure
+              ( \num1 num2 ->
+                  Definition
+                    { Definition._body =
+                        Match
+                          AnyMatch
+                          ()
+                          [ Case
+                              (UnqualifiedName ("mk-" <> unqualifiedName recordName))
+                              ( compose
+                                  ()
+                                  origin
+                                  ( replicate num2 (Word () "drop" [] origin)
+                                      <> replicate num1 (Word () "nip" [] origin)
+                                  )
+                              )
+                              origin
+                          ]
+                          (DefaultElse () origin)
+                          origin,
+                      Definition._category = Category.Deconstructor,
+                      Definition._inferSignature = True,
+                      Definition._merge = Merge.Deny,
+                      Definition._name = qualifiedName,
+                      Definition._origin = origin,
+                      Definition._parent = Just $ Parent.Record recordName,
+                      Definition._signature =
+                        Signature.Quantified
+                          parameters
+                          ( Signature.Function
+                              [ foldl'
+                                  (\a b -> Signature.Application a b origin)
+                                  (Signature.Variable (QualifiedName recordName) origin)
+                                  $ ( \(Parameter po p _ _) ->
+                                        Signature.Variable (UnqualifiedName p) po
+                                    )
+                                    <$> parameters
+                              ]
+                              [sig]
+                              []
+                              origin
+                          )
+                          origin
+                    },
+                sig
+              )
+        )
+  let list = [0 .. (length fields - 1)]
+  pure
+    ( zipWith3 id (fst <$> fields) list (reverse list),
+      TypeDefinition
+        { TypeDefinition._constructors = [DataConstructor (snd <$> fields) ("mk-" <> unqualifiedName recordName) origin],
+          TypeDefinition._name = recordName,
+          TypeDefinition._origin = origin,
+          TypeDefinition._parameters = reverse parameters
+        }
+    )
+
+traitParser :: Parser Declaration
+traitParser =
+  (<?> "trait declaration") $
+    declarationParser Token.Trait Declaration.Trait
+
+intrinsicParser :: Parser Declaration
+intrinsicParser =
+  (<?> "intrinsic declaration") $
+    declarationParser Token.Intrinsic Declaration.Intrinsic
+
+declarationParser ::
+  Token ->
+  Declaration.Category ->
+  Parser Declaration
+declarationParser keyword category = do
+  origin <- getTokenOrigin <* parserMatch keyword
+  suffix <- unqualifiedNameParser <?> "declaration name"
+  name <- Qualified <$> Parsec.getState <*> pure suffix
+  sig <- signatureParser <?> "declaration signature"
+  pure
+    Declaration
+      { Declaration._category = category,
+        Declaration._name = name,
+        Declaration._origin = origin,
+        Declaration._signature = sig
+      }
 
 typeParser :: Parser Signature
 typeParser = Parsec.try functionTypeParser <|> basicTypeParser <?> "type"
@@ -416,30 +542,19 @@ functionTypeParser = (<?> "function type") $ do
 commaParser :: Parser ()
 commaParser = void $ parserMatch Token.Comma
 
-basicTypeParser :: Parser Signature
-basicTypeParser = (<?> "basic type") $ do
-  prefix <-
-    Parsec.choice
-      [ quantifiedParser $ groupedParser typeParser,
-        Parsec.try $ do
-          origin <- getTokenOrigin
-          name <- nameParser
-          pure $ Signature.Variable name origin,
-        groupedParser typeParser
-      ]
-  let apply a b = Signature.Application a b $ Signature.origin prefix
-  mSuffix <-
-    Parsec.optionMaybe $
-      asum
-        <$> Parsec.many1
-          ( typeListParser basicTypeParser
-          )
-  pure $ case mSuffix of
-    Just suffix -> foldl' apply prefix suffix
-    Nothing -> prefix
+basicTypeParser' :: Parser Signature
+basicTypeParser' =
+  Parsec.choice
+    [ groupedParser (quantifiedParser typeParser <|> typeParser),
+      Parsec.try $ do
+        origin <- getTokenOrigin
+        name <- nameParser
+        guard $ name /= "+"
+        pure $ Signature.Variable name origin
+    ]
 
-quantifierParser :: Parser [Parameter]
-quantifierParser = typeListParser parameter
+basicTypeParser :: Parser Signature
+basicTypeParser = (<?> "basic type") $ foldl1 (\a b -> Signature.Application a b (Signature.origin a)) . reverse <$> Parsec.many1 basicTypeParser'
 
 parameter :: Parser Parameter
 parameter = do
@@ -453,43 +568,12 @@ parameter = do
           <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <*> pure Nothing
     ]
 
-typeListParser :: Parser a -> Parser [a]
-typeListParser e =
-  bracketedParser
-    (e `Parsec.sepEndBy1` commaParser)
-
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
-  origin <- getTokenOrigin
-  params <- quantifierParser
+  origin <- getTokenOrigin <* parserMatch_ Token.For
+  params <- Parsec.many1 parameter
+  parserMatch_ Token.Dot
   Signature.Quantified params <$> thing <*> pure origin
-
-traitParser :: Parser Declaration
-traitParser =
-  (<?> "trait declaration") $
-    declarationParser Token.Trait Declaration.Trait
-
-intrinsicParser :: Parser Declaration
-intrinsicParser =
-  (<?> "intrinsic declaration") $
-    declarationParser Token.Intrinsic Declaration.Intrinsic
-
-declarationParser ::
-  Token ->
-  Declaration.Category ->
-  Parser Declaration
-declarationParser keyword category = do
-  origin <- getTokenOrigin <* parserMatch keyword
-  suffix <- unqualifiedNameParser <?> "declaration name"
-  name <- Qualified <$> Parsec.getState <*> pure suffix
-  sig <- signatureParser <?> "declaration signature"
-  pure
-    Declaration
-      { Declaration._category = category,
-        Declaration._name = name,
-        Declaration._origin = origin,
-        Declaration._signature = sig
-      }
 
 basicDefinitionParser :: Parser (Definition ())
 basicDefinitionParser =
@@ -547,10 +631,7 @@ definitionParser keyword category = do
       }
 
 signatureParser :: Parser Signature
-signatureParser = quantifiedParser signature <|> signature <?> "type signature"
-
-signature :: Parser Signature
-signature = groupedParser functionTypeParser
+signatureParser = groupedParser (quantifiedParser functionTypeParser <|> functionTypeParser) <?> "type signature"
 
 blockParser :: Parser (Term ())
 blockParser =
@@ -580,7 +661,8 @@ termParser :: Parser (Term ())
 termParser = (<?> "expression") $ do
   origin <- getTokenOrigin
   Parsec.choice
-    [ Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
+    [ Parsec.try intParser,
+      Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
       do
         name <- nameParser
         pure (Word () name [] origin),
@@ -599,13 +681,24 @@ termParser = (<?> "expression") $ do
 toLiteral :: Located Token -> Maybe (Value (), Origin)
 toLiteral token = case Located.item token of
   Token.Character x -> Just (Character x, origin)
-  Token.Float x -> Just (Float x, origin)
-  Token.Integer x -> Just (Integer x, origin)
   Token.Text x -> Just (Text x, origin)
   _nonLiteral -> Nothing
   where
     origin :: Origin
     origin = Located.origin token
+
+intParser :: Parser (Term ())
+intParser = do
+  (num, origin) <-
+    parseOne
+      ( \token -> case Located.item token of
+          Token.Integer x -> Just (x, Located.origin token)
+          _ -> Nothing
+      )
+  let go 0 = [Word () "zero" [] origin]
+      go n = go (n - 1) ++ [Word () "succ" [] origin]
+
+  pure $ compose () origin (go num)
 
 sectionParser :: Parser (Term ())
 sectionParser =
@@ -648,16 +741,10 @@ sectionParser =
         ]
 
 vectorParser :: Parser (Term ())
-vectorParser = (<?> "vector literal") $ do
-  vectorOrigin <- getTokenOrigin
-  es <-
-    bracketedParser $
-      (compose () vectorOrigin <$> Parsec.many1 termParser)
-        `Parsec.sepEndBy` commaParser
-  pure $
-    compose () vectorOrigin $
-      Group <$> es
-        ++ [NewVector () (length es) () vectorOrigin]
+vectorParser = (<?> "list literal") $ do
+  origin <- getTokenOrigin
+  es <- bracketedParser $ (compose () origin <$> Parsec.many1 termParser) `Parsec.sepEndBy` commaParser
+  pure $ compose () origin ((Group <$> es) ++ [Word () "nil" [] origin] ++ replicate (length es) (Word () "cons" [] origin))
 
 lambdaParser :: Parser (Term ())
 lambdaParser = (<?> "parameteriable introduction") $ do

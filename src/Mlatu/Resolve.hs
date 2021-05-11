@@ -87,7 +87,6 @@ term dictionary vocabulary = recur
           Else <$> recur t <*> pure elseOrigin
     recur unresolved@New {} = pure unresolved
     recur unresolved@NewClosure {} = pure unresolved
-    recur unresolved@NewVector {} = pure unresolved
     recur (Push _ v origin) =
       Push ()
         <$> value dictionary vocabulary v <*> pure origin
@@ -101,8 +100,6 @@ value :: Dictionary -> Qualifier -> Value () -> Resolved (Value ())
 value _ _ Capture {} = ice "Mlatu.Resolve.value - closure should not appear before name resolution"
 value _ _ v@Character {} = pure v
 value _ _ Closed {} = ice "Mlatu.Resolve.value - closed name should not appear before name resolution"
-value _ _ v@Float {} = pure v
-value _ _ v@Integer {} = pure v
 value _ _ Local {} = ice "Mlatu.Resolve.value - local name should not appear before name resolution"
 -- FIXME: Maybe should be a GeneralName and require resolution.
 value _ _ v@Name {} = pure v

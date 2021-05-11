@@ -1,0 +1,49 @@
+type nat {
+  case zero
+  case succ (nat)
+}
+
+instance cmp (nat, nat -> ord) {
+  -> a, b;
+  match (a)
+  case zero {
+    match (b)
+    case zero { equal }
+    case succ { drop less }
+  }
+  case succ {
+    match (b)
+    case zero { drop more }
+    case succ { cmp }
+  }
+}
+
+define pred (nat -> nat) {
+  match
+  case zero { zero }
+  case succ { }
+}
+
+define + (nat, nat -> nat) {
+  match
+  case zero { }
+  case succ { + succ }
+}
+
+define - (nat, nat -> nat) {
+  -> a, b;
+  match (a)
+  case zero { b }
+  case succ {
+    match (b)
+    case zero { drop a }
+    case succ { - }
+  }
+}
+
+define * (nat, nat -> nat) {
+  -> a, b;
+  match (a)
+  case zero { zero }
+  case succ { b * b +}
+}

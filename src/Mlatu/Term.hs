@@ -31,7 +31,6 @@ where
 import Data.List (partition)
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Kind qualified as Kind
-import Mlatu.Literal (FloatLiteral, IntegerLiteral)
 import Mlatu.Name
   ( Closed,
     ClosureIndex (..),
@@ -74,11 +73,9 @@ data Term a
     -- pattern-matching.
     Match !MatchHint !a ![Case a] !(Else a) !Origin
   | -- | @new.n@: ADT allocation.
-    New !a !ConstructorIndex !Int !Origin
+    New !a !ConstructorIndex !Int !Bool !Origin
   | -- | @new.closure.n@: closure allocation.
     NewClosure !a !Int !Origin
-  | -- | @new.vec.n@: vector allocation.
-    NewVector !a !Int !a !Origin
   | -- | @push v@: push of a value.
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
@@ -113,7 +110,7 @@ data Else a
   deriving (Ord, Eq, Show)
 
 defaultElseBody :: a -> Origin -> Term a
-defaultElseBody a = Word a (QualifiedName (Qualified Vocabulary.global "abort")) []
+defaultElseBody a = Word a (QualifiedName (Qualified Vocabulary.global "abort-now")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
@@ -131,10 +128,6 @@ data Value a
     Character !Char
   | -- | A captured variable.
     Closed !ClosureIndex
-  | -- | A floating-point literal.
-    Float !FloatLiteral
-  | -- | An integer literal.
-    Integer !IntegerLiteral
   | -- | A local variable.
     Local !LocalIndex
   | -- | A reference to a name.
@@ -162,22 +155,22 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
   where
     signature =
       Signature.Quantified
-        [ Parameter o "R" Kind.Stack Nothing,
-          Parameter o "S" Kind.Stack Nothing
+        [ Parameter o "r" Kind.Stack Nothing,
+          Parameter o "s" Kind.Stack Nothing
         ]
         ( Signature.Function
             [ Signature.StackFunction
-                (Signature.Variable "R" o)
+                (Signature.Variable "r" o)
                 []
-                (Signature.Variable "S" o)
+                (Signature.Variable "s" o)
                 []
                 (permitName <$> grants)
                 o
             ]
             [ Signature.StackFunction
-                (Signature.Variable "R" o)
+                (Signature.Variable "r" o)
                 []
-                (Signature.Variable "S" o)
+                (Signature.Variable "s" o)
                 []
                 (permitName <$> revokes)
                 o
@@ -203,9 +196,8 @@ origin term = case term of
   Generic _ _ _ o -> o
   Group a -> origin a
   Lambda _ _ _ _ o -> o
-  New _ _ _ o -> o
+  New _ _ _ _ o -> o
   NewClosure _ _ o -> o
-  NewVector _ _ _ o -> o
   Match _ _ _ _ o -> o
   Push _ _ o -> o
   Word _ _ _ o -> o
@@ -229,9 +221,8 @@ metadata term = case term of
   Group term' -> metadata term'
   Lambda t _ _ _ _ -> t
   Match _ t _ _ _ -> t
-  New t _ _ _ -> t
+  New t _ _ _ _ -> t
   NewClosure t _ _ -> t
-  NewVector t _ _ _ -> t
   Push t _ _ -> t
   Word t _ _ _ -> t
 
@@ -243,9 +234,8 @@ stripMetadata term = case term of
   Group term' -> stripMetadata term'
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
   Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
-  New _ a b c -> New () a b c
+  New _ a b c d -> New () a b c d
   NewClosure _ a b -> NewClosure () a b
-  NewVector _ a _ b -> NewVector () a () b
   Push _ a b -> Push () (stripValue a) b
   Word _ a b c -> Word () a b c
   where
@@ -263,8 +253,6 @@ stripValue v = case v of
   Capture a b -> Capture a (stripMetadata b)
   Character a -> Character a
   Closed a -> Closed a
-  Float a -> Float a
-  Integer a -> Integer a
   Local a -> Local a
   Name a -> Name a
   Quotation a -> Quotation (stripMetadata a)

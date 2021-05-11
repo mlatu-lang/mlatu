@@ -18,4 +18,5 @@ import Relude
 data Parent
   = Trait !Qualified
   | Type !Qualified
+  | Record !Qualified
   deriving (Ord, Eq, Show)

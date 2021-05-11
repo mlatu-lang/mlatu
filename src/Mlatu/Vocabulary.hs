@@ -23,4 +23,4 @@ intrinsic :: Qualifier
 intrinsic = Qualifier Absolute [intrinsicName]
 
 intrinsicName :: Text
-intrinsicName = "mlatu"
+intrinsicName = "Mlatu"

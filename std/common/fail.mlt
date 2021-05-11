@@ -1,22 +1,22 @@
-vocab mlatu {
-  intrinsic abort [R..., S...] (R..., String -> S... +Fail)
-  intrinsic exit [R..., S...] (R..., Int -> S... +Exit)
+module Mlatu {
+  intrinsic abort (for r.. s.. . r.., string -> s.. +fail)
+  intrinsic exit (for r.. s.. . r.., nat -> s.. +exit)
 }
 
-define abort [R..., S...] (R... -> S... +Fail) { "abort called" fail }
+define abort-now (for r.. s.. . r.. -> s.. +fail) { "abort called" fail-now }
 
-define assert [+P] (String, (-> Bool +P) -> +Fail +P) {
+define assert (for +p . string, (-> bool +p) -> +fail +p) {
   -> message, test;
-  do (with (-Fail)) { test call }
-  if (not) { message fail }
-  else {}
+  do (with (-fail)) { test call }
+  if (not) { message fail-now }
+  else { }
 }
 
-define assert_eq [T] (String, T, T -> +Fail) {
-  -> message, x, y;
-  message { x = y } assert
+define assert-eq (for t . string, t, t -> +fail) {
+  -> x, y;
+  { x y eq } assert
 }
 
-define exit [R..., S...] (R..., Int -> S... +Exit) { _::mlatu::exit }
+define exit-now (for r.. s.. . r.., nat -> s.. +exit) { Mlatu.exit }
 
-define fail [R..., S...] (R..., String -> S... +Fail) { _::mlatu::abort }
+define fail-now (for r.. s.. . r.., string -> s.. +fail) { Mlatu.abort }

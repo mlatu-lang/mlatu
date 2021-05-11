@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 843da2285f39b81d0369114419760c6fad2fcbc6b541ac367bd28bf658a05362
+-- hash: 36d8a506e256ff72001dce5c9315aa8a929231ca045a1f1f59aa98d96ef2d3d9
 
 name:           mlatu
 version:        0.1.0.0
@@ -41,7 +41,6 @@ library
       Mlatu.Entry.Parent
       Mlatu.Fragment
       Mlatu.Free
-      Mlatu.Hint
       Mlatu.Ice
       Mlatu.Infer
       Mlatu.Informer
@@ -50,7 +49,6 @@ library
       Mlatu.Instantiated
       Mlatu.Interpret
       Mlatu.Kind
-      Mlatu.Literal
       Mlatu.Located
       Mlatu.Metadata
       Mlatu.Monad
@@ -73,6 +71,7 @@ library
       Mlatu.Token
       Mlatu.Tokenize
       Mlatu.Type
+      Mlatu.TypeAlias
       Mlatu.TypeDefinition
       Mlatu.TypeEnv
       Mlatu.Unify
@@ -82,7 +81,46 @@ library
       Paths_mlatu
   hs-source-dirs:
       src
-  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  default-extensions:
+      NoImplicitPrelude
+      LambdaCase
+      OverloadedStrings
+      EmptyCase
+      PostfixOperators
+      TupleSections
+      ImportQualifiedPost
+      NamedFieldPuns
+      BangPatterns
+      BinaryLiterals
+      HexFloatLiterals
+      NumericUnderscores
+      GADTSyntax
+      RankNTypes
+      TypeApplications
+      PolyKinds
+      StandaloneKindSignatures
+      ExistentialQuantification
+      TypeOperators
+      ConstraintKinds
+      ExplicitForAll
+      KindSignatures
+      NamedWildCards
+      ScopedTypeVariables
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      ConstrainedClassMethods
+      InstanceSigs
+      TypeSynonymInstances
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      StandaloneDeriving
+      EmptyDataDeriving
+      DeriveLift
+      GeneralizedNewtypeDeriving
+      DeriveGeneric
   ghc-options: -Wall -O2
   build-depends:
       base >=4.8
@@ -98,9 +136,6 @@ library
     , transformers
     , unordered-containers
     , vector
-  if false
-    other-modules:
-        Paths_name
   default-language: Haskell2010
 
 executable mlatu
@@ -112,7 +147,46 @@ executable mlatu
       Paths_mlatu
   hs-source-dirs:
       app
-  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  default-extensions:
+      NoImplicitPrelude
+      LambdaCase
+      OverloadedStrings
+      EmptyCase
+      PostfixOperators
+      TupleSections
+      ImportQualifiedPost
+      NamedFieldPuns
+      BangPatterns
+      BinaryLiterals
+      HexFloatLiterals
+      NumericUnderscores
+      GADTSyntax
+      RankNTypes
+      TypeApplications
+      PolyKinds
+      StandaloneKindSignatures
+      ExistentialQuantification
+      TypeOperators
+      ConstraintKinds
+      ExplicitForAll
+      KindSignatures
+      NamedWildCards
+      ScopedTypeVariables
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      ConstrainedClassMethods
+      InstanceSigs
+      TypeSynonymInstances
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      StandaloneDeriving
+      EmptyDataDeriving
+      DeriveLift
+      GeneralizedNewtypeDeriving
+      DeriveGeneric
   ghc-options: -Wall -O2 -threaded
   build-depends:
       base >=4.8
@@ -152,7 +226,46 @@ test-suite test
       Paths_mlatu
   hs-source-dirs:
       test
-  default-extensions: NoImplicitPrelude LambdaCase OverloadedStrings EmptyCase PostfixOperators TupleSections ImportQualifiedPost NamedFieldPuns BangPatterns BinaryLiterals HexFloatLiterals NumericUnderscores GADTSyntax RankNTypes TypeApplications PolyKinds StandaloneKindSignatures ExistentialQuantification TypeOperators ConstraintKinds ExplicitForAll KindSignatures NamedWildCards ScopedTypeVariables FlexibleContexts FlexibleInstances MultiParamTypeClasses ConstrainedClassMethods InstanceSigs TypeSynonymInstances DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveTraversable StandaloneDeriving EmptyDataDeriving DeriveLift GeneralizedNewtypeDeriving DeriveGeneric
+  default-extensions:
+      NoImplicitPrelude
+      LambdaCase
+      OverloadedStrings
+      EmptyCase
+      PostfixOperators
+      TupleSections
+      ImportQualifiedPost
+      NamedFieldPuns
+      BangPatterns
+      BinaryLiterals
+      HexFloatLiterals
+      NumericUnderscores
+      GADTSyntax
+      RankNTypes
+      TypeApplications
+      PolyKinds
+      StandaloneKindSignatures
+      ExistentialQuantification
+      TypeOperators
+      ConstraintKinds
+      ExplicitForAll
+      KindSignatures
+      NamedWildCards
+      ScopedTypeVariables
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      ConstrainedClassMethods
+      InstanceSigs
+      TypeSynonymInstances
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      StandaloneDeriving
+      EmptyDataDeriving
+      DeriveLift
+      GeneralizedNewtypeDeriving
+      DeriveGeneric
   ghc-options: -Wall -O2
   build-depends:
       HUnit

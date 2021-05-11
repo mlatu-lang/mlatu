@@ -12,8 +12,8 @@ module Mlatu.Entry
   ( Entry (..),
     _Word,
     _Metadata,
-    _Trait,
     _Type,
+    _TypeAlias,
     _InstantiatedType,
   )
 where
@@ -23,6 +23,7 @@ import Mlatu.Entry.Category (Category)
 import Mlatu.Entry.Merge (Merge)
 import Mlatu.Entry.Parameter (Parameter)
 import Mlatu.Entry.Parent (Parent)
+import Mlatu.Name (Qualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
@@ -53,10 +54,10 @@ data Entry
   | -- | Untyped metadata from @about@ blocks. Used internally for operator
     -- precedence and associativity.
     Metadata !Origin !(Term ())
-  | -- | A trait to which other entries can link.
-    Trait !Origin !Signature
   | -- | A data type with some generic parameters.
     Type !Origin ![Parameter] ![DataConstructor]
+  | TypeAlias !Origin !Qualified
+  | Trait !Origin !Signature
   | -- | An instantiation of a data type, with the given size.
     InstantiatedType !Origin !Int
   deriving (Show)

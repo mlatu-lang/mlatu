@@ -64,23 +64,17 @@ term tenv x a = recur
           <*> pure origin
         where
           goCase :: Case Type -> M (Case Type)
-          goCase (Case name body caseOrigin) =
-            Case name <$> recur body <*> pure caseOrigin
+          goCase (Case name body caseOrigin) = Case name <$> recur body <*> pure caseOrigin
 
           goElse :: Else Type -> M (Else Type)
           goElse (DefaultElse elseType elseOrigin) = pure $ DefaultElse elseType elseOrigin
           goElse (Else body elseOrigin) = Else <$> recur body <*> pure elseOrigin
-      New tref index size origin ->
+      New tref index size isNat origin ->
         New
-          <$> go tref <*> pure index <*> pure size <*> pure origin
+          <$> go tref <*> pure index <*> pure size <*> pure isNat <*> pure origin
       NewClosure tref size origin ->
         NewClosure <$> go tref
           <*> pure size
-          <*> pure origin
-      NewVector tref size elemType origin ->
-        NewVector <$> go tref
-          <*> pure size
-          <*> go elemType
           <*> pure origin
       Push tref value origin -> Push <$> go tref <*> pure value <*> pure origin
       Word tref name args origin ->

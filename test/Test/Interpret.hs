@@ -73,24 +73,24 @@ spec = do
       testInterpret "2.0 / 4.0" [Float64 0.5]
       testInterpret "2.0 % 3.0" [Float64 2]
     it "interprets Bool operators" $ do
-      let false = Algebraic (ConstructorIndex 0) []
-          true = Algebraic (ConstructorIndex 1) []
-      testInterpret "false & false" [false]
-      testInterpret "false & true" [false]
-      testInterpret "true & false" [false]
-      testInterpret "true & true" [true]
-      testInterpret "false | false" [false]
-      testInterpret "false | true" [true]
-      testInterpret "true | false" [true]
-      testInterpret "true | true" [true]
-      testInterpret "false ~ false" [false]
-      testInterpret "false ~ true" [true]
-      testInterpret "true ~ false" [true]
-      testInterpret "true ~ true" [false]
-      testInterpret "false --> false" [true]
-      testInterpret "false --> true" [true]
-      testInterpret "true --> false" [false]
-      testInterpret "true --> true" [true]
+      let false = Algebraic (ConstructorIndex 1) []
+          true = Algebraic (ConstructorIndex 0) []
+      testInterpret "false false and" [false]
+      testInterpret "false true and" [false]
+      testInterpret "true false and" [false]
+      testInterpret "true true and" [true]
+      testInterpret "false false or" [false]
+      testInterpret "false true or" [true]
+      testInterpret "true false or" [true]
+      testInterpret "true true or" [true]
+      testInterpret "false false xor" [false]
+      testInterpret "false true xor" [true]
+      testInterpret "true false xor" [true]
+      testInterpret "true true xor" [false]
+      testInterpret "false false implies" [true]
+      testInterpret "false true implies" [true]
+      testInterpret "true false implies" [false]
+      testInterpret "true true implies" [true]
 
   describe "with scope" $ do
     it "looks up locals and closure values correctly" $ do
@@ -142,8 +142,8 @@ spec = do
     it "computes fixed points" $ do
       testInterpret
         "5 { -> n, rec;\
-        \  if (n <= 0) { 1 }\
-        \  else {(n - 1) rec call * n}\
+        \  if (n 0 <=) { 1 }\
+        \  else {(n 1 -) rec call n *}\
         \} fix"
         [Int64 120]
 

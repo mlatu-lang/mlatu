@@ -62,7 +62,6 @@ scope = scopeTerm [0]
             origin
         recur term@New {} = term
         recur term@NewClosure {} = term
-        recur term@NewVector {} = term
         recur (Push _ value origin) = Push () (scopeValue stack value) origin
         recur (Word _ (LocalName index) _ origin) =
           Push () (scopeValue stack (Local index)) origin
@@ -72,8 +71,6 @@ scope = scopeTerm [0]
     scopeValue _ Capture {} = ice "Mlatu.Scope.scope - capture should not appear before scope resolution"
     scopeValue _ value@Character {} = value
     scopeValue _ Closed {} = ice "Mlatu.Scope.scope - closed name should not appear before scope resolution"
-    scopeValue _ value@Float {} = value
-    scopeValue _ value@Integer {} = value
     scopeValue _ value@Local {} = value
     scopeValue _ value@Name {} = value
     scopeValue stack (Quotation body) = Capture (ClosedLocal <$> capturedNames) capturedTerm
@@ -135,7 +132,6 @@ captureTerm term = case term of
         Else <$> captureTerm a <*> pure elseOrigin
   New {} -> pure term
   NewClosure {} -> pure term
-  NewVector {} -> pure term
   Push _ value origin -> Push () <$> captureValue value <*> pure origin
   Word {} -> pure term
 
@@ -151,8 +147,6 @@ captureValue value = case value of
         ClosedClosure {} -> pure original
   Character {} -> pure value
   Closed {} -> pure value
-  Float {} -> pure value
-  Integer {} -> pure value
   Local index -> do
     closed <- closeLocal index
     pure $ maybe value Closed closed
