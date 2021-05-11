@@ -47,3 +47,21 @@ define * (nat, nat -> nat) {
   case zero { zero }
   case succ { b * b +}
 }
+
+define / (nat, nat -> nat +fail) {
+  -> a, b;
+  if (a b lt) {
+    zero
+  } else {
+    b a - b / succ
+  }
+}
+
+define % (nat, nat -> nat +fail) {
+  -> a, b;
+  if (a b lt) {
+    a
+  } else {
+    b a - b % succ
+  }
+}
