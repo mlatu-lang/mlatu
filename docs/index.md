@@ -1,37 +1,23 @@
-## Welcome to GitHub Pages
+# What is Mlatu?
 
-You can use the [editor on GitHub](https://github.com/brightly-salty/mlatu/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+Mlatu is a statically-typed purely-functional concatenative high-level programming language. That's a bit of a mouthful, so let's break that down.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Statically typed
 
-### Markdown
+Mlatu has a strong static type system like many programming languages in the ML family. Every word you define needs a type signature but local variables and everything else gets its type inferred. You can define your own algebraic data types and record types, and then pattern match over them.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Purely functional
 
-```markdown
-Syntax highlighted code block
+Mlatu is purely functional, like Haskell and Idris. All side effects in Mlatu are tracked automatically through type inference and the algebraic effect system. You can give functions permission to do certain side effects and revoke those permissions for other functions. You don't have to understand monads to do pure functional programming in Mlatu.
 
-# Header 1
-## Header 2
-### Header 3
+## Concatenative 
 
-- Bulleted
-- List
+Mlatu is concatenative, like Forth. You program and read in the same direction data flows, and composition is the basis instead of application. This means point-free functional programming is the default in Mlatu, making it require more work to write in a point-ful style though it is still possible.
 
-1. Numbered
-2. List
+## High-level
 
-**Bold** and _Italic_ and `Code` text
+Mlatu is high-level - you don't have to worry about bits and null when you program in Mlatu. You can write in a way that maps well to the abstractions in your head without caring about performance because the compiler will worry about that for you.
 
-[Link](url) and ![Image](src)
-```
+# Now what?
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/brightly-salty/mlatu/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+Now that you've seen what Mlatu is, what are you waiting for? Go play around in the REPL or run the examples, and see for yourself how nice Mlatu makes programming!
