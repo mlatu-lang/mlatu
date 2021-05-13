@@ -20,47 +20,21 @@ The *strong type system* and automatic *type inference* provide increased safety
 Here's a naive recursive fibonacci function:
 
 ```
-define fib (Int -> Int) {
+define fib (nat -> nat) {
   -> n;
-  if (n < 2) {
-    1
-  }
-  else {
-    (n - 2) fib + (n - 1) fib
-  }
+  if (n 2 le) { 1 }
+  else { n 2 - fib n 1 - fib + }
 }
 
-20 fib print
+15 fib println
 ```
 
-Here's the definition of `or` in common/list.mlt, which demonstrates a more functional style, as well as some of the functions available out of the gate in the prelude.
+Here's the definition of `exists` in std/common/list.mlt, which demonstrates a more functional style, as well as some of the functions available out of the gate in the prelude.
 
 ```
-define or (List[Bool] -> Bool) {
-  true \(|) (fold_left)
-}
-```
-
-It is very easy to, for example, implement lazy evaluation and its use:
-
-```
-type Lazy[T] {
-  case thunk (-> T)
-  case value (T)
-}
-
-define force[T] (Lazy[T] -> T) {
-  match {
-    case thunk { call }
-    case value {}
-  }
-}
-
-define lazy_or(Lazy[Bool], Lazy[Bool] -> Lazy[Bool] {
-  match (force) {
-    case true { true value }
-    case false {}
-  }
+define exists (for t . t list, (t -> bool) -> bool) {
+  -> f;
+  true { f call or } fold-left
 }
 ```
 
@@ -98,6 +72,7 @@ Available commands:
                            them
   fmt                      Formats Mlatu files prettily
   run                      Runs Mlatu files
+  build                    Builds Mlatu files into an executable
 ```
 
 Type `:help` in the interactive REPL for command options.

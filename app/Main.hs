@@ -28,8 +28,8 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles prelude files -> runFiles prelude files
-    Arguments.CompileFiles prelude files -> compileFiles prelude files
+    Arguments.RunFiles prelude files -> compileFiles prelude files True
+    Arguments.CompileFiles prelude files -> compileFiles prelude files False
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -66,35 +66,27 @@ checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
-runFiles :: Prelude -> [FilePath] -> IO ()
-runFiles prelude relativePaths =
-  forM relativePaths makeAbsolute
-    >>= ( \paths ->
-            runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths)
-              >>= ( \case
-                      Left reports -> handleReports reports
-                      Right program -> void (interpret program Nothing [] stdin stdout stderr [])
+compileFiles :: Prelude -> [FilePath] -> Bool -> IO ()
+compileFiles prelude relativePaths toRun =
+  let name = "output"
+   in forM relativePaths makeAbsolute
+        >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+        >>= ( \case
+                Left reports -> handleReports reports
+                Right program ->
+                  ( Codegen.generate program
+                      >>= writeFileBS (name <> ".rs")
                   )
-        )
-
-compileFiles :: Prelude -> [FilePath] -> IO ()
-compileFiles prelude relativePaths = do
-  forM relativePaths makeAbsolute
-    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \case
-            Left reports -> handleReports reports
-            Right program ->
-              ( Codegen.generate program
-                  >>= writeFileBS "output.rs"
-              )
-                >> runProcess_
-                  ( proc "rustfmt" ["output.rs"]
-                  )
-                >> runProcess_
-                  ( proc "rustc" ["-C", "opt-level=3", "output.rs"]
-                  )
-                >> removeFile "output.rs"
-                >> runProcess_
-                  ( proc "upx" ["--best", "-q", "output"]
-                  )
-        )
+                    >> runProcess_
+                      ( proc "rustfmt" [name <> ".rs"]
+                      )
+                    >> runProcess_
+                      ( proc "rustc" ["-C", "opt-level=3", name <> ".rs"]
+                      )
+                    >> removeFile (name <> ".rs")
+                    >> runProcess_
+                      ( if toRun
+                          then proc ("./" <> name) []
+                          else proc "upx" ["--best", "-q", name]
+                      )
+            )

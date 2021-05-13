@@ -3,8 +3,6 @@ cabal-version: 1.12
 -- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 8c6ce30be2a79755002d4fc3b6f4af5ddb8e67bcd2a9909b5f204ef86f49b8b6
 
 name:           mlatu
 version:        0.1.0.0

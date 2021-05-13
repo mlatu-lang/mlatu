@@ -202,7 +202,7 @@ intrinsic = \case
   "string-concat" -> pure $ ifLetPop2 ("Text(a)", "Text(b)") (letStmt "mut new_string" "b" <> "new_string.push_str(&a);" <> stackPushText "new_string")
   "string-from-list" -> pure $ "if let Some(a) = fromList(stack.pop().unwrap()) {" <> stackPushText "a.iter().filter_map(|e| if let Char(c) = e { Some(c) } else { None } ).collect::<String>()" <> "}"
   "string-to-list" -> pure $ ifLetPop "Text(a)" $ stackPush "toList(a.chars().map(Char).collect::<Vec<_>>())"
-  "print" -> pure $ ifLetPop "Text(a)" "println!(\"{}\", a);"
+  "print" -> pure $ ifLetPop "Text(a)" "print!(\"{}\", a);"
   "get-line" -> pure $ letStmt "mut buf" "String::new()" <> "std::io::stdin().read_line(&mut buf).unwrap();" <> stackPushText "buf"
   "flush-stdout" -> pure "use std::io::Write; std::io::stdout().flush().unwrap();"
   "read-file" -> pure $ ifLetPop "Text(a)" $ stackPushText "std::fs::read_to_string(a).unwrap()"
