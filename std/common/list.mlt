@@ -1,12 +1,3 @@
-module Mlatu {
-  intrinsic cat (for t . t list, t list -> t list)
-  intrinsic empty (for t . t list -> bool)
-  intrinsic nth (for t . t list, nat -> t optional)
-  intrinsic init (for t . t list -> (t list) optional)
-  intrinsic last (for t . t list -> t optional)
-  intrinsic set (for t . t list, t, nat -> (t list) optional)
-}
-
 type (t) list {
   case nil
   case cons (t, t list)
@@ -128,7 +119,17 @@ define fold-right (for a b . a list, b, (a, b -> b) -> b) {
   case none { z }
 }
 
-define nth (for t . t list, nat -> t optional) { Mlatu.nth }
+define nth (for t . t list, nat -> t optional) {
+  -> l, n;
+  match (l)
+  case nil { none }
+  case cons {
+    -> x, xs;
+    match (n)
+    case zero { x some }
+    case succ { -> n1; xs n1 nth }
+  }
+}
 
 define get-all (for t . t list, nat list -> (t optional) list) {
   swap -> list;

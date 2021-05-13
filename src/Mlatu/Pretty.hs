@@ -21,7 +21,6 @@ module Mlatu.Pretty
     printTypeDefinition,
     printInstantiated,
     printKind,
-    printEntry,
     printFragment,
     printQualifier,
   )
@@ -34,7 +33,6 @@ import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Declaration (Declaration (..))
 import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition (Definition), mainName)
-import Mlatu.Entry (Entry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Parameter (Parameter (..))
@@ -515,8 +513,7 @@ printDefinition (Definition Category.Word name body _ _ _ _ _)
 printDefinition (Definition Category.Word name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
-printEntry :: Entry -> Doc a
-printEntry (Entry.Word category _ origin mParent mSignature _) =
+printWordEntry (Entry.WordEntry category _ origin mParent mSignature _) =
   vsep
     [ printCategory category,
       hsep ["defined at", printOrigin origin],
@@ -536,13 +533,15 @@ printEntry (Entry.Word category _ origin mParent mSignature _) =
             ]
         Nothing -> "with no parent"
     ]
-printEntry (Entry.Metadata origin term) =
+
+printMetadataEntry (Entry.MetadataEntry origin term) =
   vsep
     [ "metadata",
       hsep ["defined at", printOrigin origin],
       hsep ["with contents", printTerm term]
     ]
-printEntry (Entry.Type origin parameters ctors) =
+
+printTypeEntry (Entry.TypeEntry origin parameters ctors) =
   vsep
     [ "type",
       hsep ["defined at", printOrigin origin],
@@ -560,12 +559,6 @@ printEntry (Entry.Type origin parameters ctors) =
             intersperse ", " (printSignature <$> view DataConstructor.fields ctor),
           ")"
         ]
-printEntry (Entry.InstantiatedType origin size) =
-  vsep
-    [ "instantiated type",
-      hsep ["defined at", printOrigin origin],
-      hsep ["with size", pretty size]
-    ]
 
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =

@@ -216,10 +216,10 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           -- constructors are actually permitted.
           [] -> []
           Case (QualifiedName ctorName) _ _ : _ ->
-            case Dictionary.lookup (Instantiated ctorName []) dictionary of
-              Just (Entry.Word _ _ _ (Just (Parent.Type typeName)) _ _) ->
-                case Dictionary.lookup (Instantiated typeName []) dictionary of
-                  Just (Entry.Type _ _ ctors) -> ctors
+            case Dictionary.lookupWord (Instantiated ctorName []) dictionary of
+              Just (Entry.WordEntry _ _ _ (Just (Parent.Type typeName)) _ _) ->
+                case Dictionary.lookupType (Instantiated typeName []) dictionary of
+                  Just (Entry.TypeEntry _ _ ctors) -> ctors
                   -- TODO: Check whether this can happen if a non-constructor
                   -- word is erroneously used in a case; if this is possible, we
                   -- should generate a report rather than an error.
@@ -448,8 +448,8 @@ inferValue dictionary tenvFinal tenv0 origin = \case
     pure
       (Local $ LocalIndex index, Unsafe.fromJust (view TypeEnv.vs tenv0 !!? index), tenv0)
   Quotation {} -> ice "Mlatu.Infer.inferValue - quotation should not appear during type inference"
-  Name name -> case Dictionary.lookup (Instantiated name []) dictionary of
-    Just (Entry.Word _ _ _ _ (Just signature) _) -> do
+  Name name -> case Dictionary.lookupWord (Instantiated name []) dictionary of
+    Just (Entry.WordEntry _ _ _ _ (Just signature) _) -> do
       typ <- typeFromSignature tenv0 signature
       pure (Name name, typ, tenv0)
     _noBinding ->
@@ -642,8 +642,8 @@ typeKind dictionary = go
     go :: Type -> M Kind
     go t = case t of
       TypeConstructor _origin (Constructor qualified) ->
-        case Dictionary.lookup (Instantiated qualified []) dictionary of
-          Just (Entry.Type _origin parameters _ctors) -> case parameters of
+        case Dictionary.lookupType (Instantiated qualified []) dictionary of
+          Just (Entry.TypeEntry _origin parameters _ctors) -> case parameters of
             [] -> pure Value
             _list ->
               pure $
@@ -665,8 +665,7 @@ typeKind dictionary = go
                       hsep
                         [ "Mlatu.Infer.typeKind - can't infer kind of constructor",
                           dquotes $ Pretty.printQualified qualified,
-                          "in dictionary",
-                          Dictionary.printDictionary dictionary
+                          "in dictionary"
                         ]
             _noKInd ->
               ice $
@@ -674,8 +673,7 @@ typeKind dictionary = go
                   hsep
                     [ "Mlat.Infer.typeKind - can't infer kind of constructor",
                       dquotes $ Pretty.printQualified qualified,
-                      "in dictionary",
-                      Dictionary.printDictionary dictionary
+                      "in dictionary"
                     ]
       TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> pure k

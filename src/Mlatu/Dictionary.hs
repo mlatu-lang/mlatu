@@ -10,37 +10,45 @@
 -- Portability : GHC
 module Mlatu.Dictionary
   ( Dictionary (..),
-    entries,
     empty,
-    difference,
-    insert,
-    lookup,
-    member,
     signatures,
-    toList,
     typeNames,
     wordNames,
-    printDictionary,
+    lookupWord,
+    lookupType,
+    lookupTrait,
+    lookupMetadata,
+    wordEntries,
+    insertWord,
+    insertTrait,
+    insertType,
+    insertTypeAlias,
+    insertMetadata,
   )
 where
 
 import Data.Map.Strict qualified as Map
-import Mlatu.Entry (Entry)
+import Mlatu.Entry (MetadataEntry, TraitEntry, TypeAliasEntry, TypeEntry, WordEntry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Instantiated (Instantiated (Instantiated))
+import Mlatu.Instantiated qualified as Instantiated
 import Mlatu.Name
   ( Qualified,
   )
-import Mlatu.Pretty (printInstantiated)
+import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Optics
 import Prettyprinter (Doc, vsep)
 import Relude hiding (empty, fromList, toList)
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.
-newtype Dictionary = Dictionary
-  { _entries :: Map Instantiated Entry
+data Dictionary = Dictionary
+  { _wordEntries :: Map Instantiated WordEntry,
+    _typeEntries :: Map Instantiated TypeEntry,
+    _metadataEntries :: Map Instantiated MetadataEntry,
+    _traitEntries :: Map Instantiated TraitEntry,
+    _typeAliasEntries :: Map Instantiated TypeAliasEntry
   }
   deriving (Show)
 
@@ -49,56 +57,72 @@ makeLenses ''Dictionary
 empty :: Dictionary
 empty =
   Dictionary
-    { _entries = Map.empty
+    { _wordEntries = Map.empty,
+      _typeEntries = Map.empty,
+      _metadataEntries = Map.empty,
+      _traitEntries = Map.empty,
+      _typeAliasEntries = Map.empty
     }
 
-difference :: Dictionary -> Dictionary -> Dictionary
-difference a b = Dictionary {_entries = Map.difference (view entries a) (view entries b)}
+insert :: ((Map Instantiated a -> Map Instantiated a) -> Dictionary -> Dictionary) -> Instantiated -> a -> Dictionary -> Dictionary
+insert o name entry = o (Map.insert name entry)
 
--- | Directly inserts into the dictionary. This is somewhat unsafe, as it can
--- lead to an invalid dictionary state.
-insert :: Instantiated -> Entry -> Dictionary -> Dictionary
-insert name entry = over entries (Map.insert name entry)
+insertWord :: Instantiated -> WordEntry -> Dictionary -> Dictionary
+insertWord = insert $ over wordEntries
 
-lookup :: Instantiated -> Dictionary -> Maybe Entry
-lookup name dictionary = Map.lookup name (view entries dictionary)
-{-# INLINEABLE lookup #-}
+insertMetadata :: Instantiated -> MetadataEntry -> Dictionary -> Dictionary
+insertMetadata = insert $ over metadataEntries
 
--- | Whether a name is present in the dictionary.
-member :: Instantiated -> Dictionary -> Bool
-member = (. view entries) . Map.member
+insertType :: Instantiated -> TypeEntry -> Dictionary -> Dictionary
+insertType = insert $ over typeEntries
+
+insertTypeAlias :: Instantiated -> TypeAliasEntry -> Dictionary -> Dictionary
+insertTypeAlias = insert $ over typeAliasEntries
+
+insertTrait :: Instantiated -> TraitEntry -> Dictionary -> Dictionary
+insertTrait = insert $ over traitEntries
+
+lookupWord :: Instantiated -> Dictionary -> Maybe WordEntry
+lookupWord = lookup $ view wordEntries
+
+lookupType :: Instantiated -> Dictionary -> Maybe TypeEntry
+lookupType = lookup $ view typeEntries
+
+lookupTrait :: Instantiated -> Dictionary -> Maybe TraitEntry
+lookupTrait = lookup $ view traitEntries
+
+lookupMetadata :: Instantiated -> Dictionary -> Maybe MetadataEntry
+lookupMetadata = lookup $ view metadataEntries
+
+lookup :: (Dictionary -> Map Instantiated a) -> Instantiated -> Dictionary -> Maybe a
+lookup o name dictionary = Map.lookup name (o dictionary)
 
 -- | All type signatures (for words or traits) in the dictionary.
 signatures :: Dictionary -> [(Qualified, Signature)]
-signatures = mapMaybe getSignature . toList
+signatures dict =
+  mapMaybe getWordSignature (Map.toList (view wordEntries dict))
+    ++ mapMaybe getTraitSignature (Map.toList (view traitEntries dict))
   where
-    getSignature :: (Instantiated, Entry) -> Maybe (Qualified, Signature)
-    getSignature (Instantiated name [], Entry.Word _ _ _ _ (Just signature) _) =
+    getWordSignature (Instantiated name [], Entry.WordEntry _ _ _ _ (Just signature) _) =
       Just (name, signature)
-    getSignature (Instantiated name [], Entry.Trait _ signature) =
-      Just (name, signature)
-    getSignature _ = Nothing
+    getWordSignature _ = Nothing
 
-toList :: Dictionary -> [(Instantiated, Entry)]
-toList = Map.toList . view entries
+    getTraitSignature (Instantiated name [], Entry.TraitEntry _ signature) =
+      Just (name, signature)
+    getTraitSignature _ = Nothing
 
 -- | All type names (for data types or permissions) in the dictionary.
 typeNames :: Dictionary -> [Qualified]
-typeNames = mapMaybe typeName . toList
+typeNames dict =
+  mapMaybe typeWordName (Map.toList (view wordEntries dict))
+    ++ (Instantiated.name <$> (Map.keys (view typeEntries dict) ++ Map.keys (view typeAliasEntries dict)))
   where
-    typeName (Instantiated name _, Entry.Word Category.Permission _ _ _ _ _) =
+    typeWordName (Instantiated name _, Entry.WordEntry Category.Permission _ _ _ _ _) =
       Just name
-    typeName (Instantiated name _, Entry.Type {}) = Just name
-    typeName _ = Nothing
+    typeWordName _ = Nothing
 
 -- | All word names (for words or traits) in the dictionary.
 wordNames :: Dictionary -> [Qualified]
-wordNames = mapMaybe wordName . toList
-  where
-    wordName (Instantiated name [], Entry.Word {}) = Just name
-    -- TODO: Figure out how to get mangled names out of this...
-    wordName (Instantiated name _, Entry.Trait {}) = Just name
-    wordName _ = Nothing
-
-printDictionary :: Dictionary -> Doc a
-printDictionary = vsep . fmap printInstantiated . sort . Map.keys . view entries
+wordNames dict =
+  Instantiated.name
+    <$> (Map.keys (view wordEntries dict) ++ Map.keys (view traitEntries dict))

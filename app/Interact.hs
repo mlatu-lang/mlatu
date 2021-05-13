@@ -76,10 +76,10 @@ cmd input = do
       dictionary'' <- Enter.fragment callFragment dictionary'
       warnCheckpoint
       let tenv = TypeEnv.empty
-          mainBody = case Dictionary.lookup
+          mainBody = case Dictionary.lookupWord
             (Instantiated Definition.mainName [])
             dictionary'' of
-            Just (Entry.Word _ _ _ _ _ (Just body)) ->
+            Just (Entry.WordEntry _ _ _ _ _ (Just body)) ->
               body
             _noEntryPoint -> ice "Interact.run - cannot get entry point"
       let currentOrigin = Origin.point "<interactive>" lineNumber 1
@@ -134,23 +134,19 @@ cmd input = do
             `catch` (\e -> liftIO $ hPrint stderr (e :: Failure))
         _noArgs -> error $ show lastEntry
 
+-- TODO
 completer :: String -> StateT Dictionary (StateT [Rep] (StateT Int IO)) [String]
-completer n = do
-  dictionary <- get
-  let dictNames = show . fst <$> Dictionary.toList dictionary
-  pure $ filter (\dictName -> n `isPrefixOf` dictName) dictNames
+completer n = pure []
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
   ["help"] -> putStrLn helpHelp
   ["stack"] -> putStrLn stackHelp
-  ["dict"] -> putStrLn dictHelp
   ["type"] -> putStrLn typeHelp
-  _ -> traverse_ putStrLn [dictHelp, stackHelp, helpHelp]
+  _ -> traverse_ putStrLn [stackHelp, helpHelp]
   where
     helpHelp = ":help - Show this help."
     stackHelp = ":stack - Show the current state of the stack."
-    dictHelp = ":dict - Show the current state of the dictionary."
     typeHelp = ":type - Show the type of an expression."
 
 stackCmd :: String -> MRepl ()
@@ -158,12 +154,6 @@ stackCmd =
   const $
     lift (lift get)
       >>= (liftIO . renderStack)
-
-dictCmd :: String -> MRepl ()
-dictCmd =
-  const $
-    lift get
-      >>= (liftIO . renderDictionary)
 
 typeCmd :: String -> MRepl ()
 typeCmd expression = do
@@ -194,7 +184,7 @@ typeCmd expression = do
     Right Nothing -> hPrint stderr ("That doesn't look like an expression" :: String)
 
 opts :: [(String, String -> MRepl ())]
-opts = [("help", helpCmd), ("stack", stackCmd), ("dict", dictCmd), ("type", typeCmd)]
+opts = [("help", helpCmd), ("stack", stackCmd), ("type", typeCmd)]
 
 ini :: MRepl ()
 ini = liftIO $ putStrLn "Welcome!"
@@ -230,6 +220,3 @@ run prelude = do
 
 renderStack :: [Rep] -> IO ()
 renderStack stack = unless (null stack) (print $ vcat $ printRep <$> stack)
-
-renderDictionary :: Dictionary -> IO ()
-renderDictionary = print . Dictionary.printDictionary

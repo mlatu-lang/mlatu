@@ -122,40 +122,41 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
   let word :: [Qualified] -> Qualified -> [Type] -> IO ()
       word callStack name args = do
         let mangled = Instantiated name args
-        case Dictionary.lookup mangled dictionary of
+        case Dictionary.lookupWord mangled dictionary of
           -- An entry in the dictionary should already be instantiated, so we
           -- shouldn't need to instantiate it again here.
-          Just (Entry.Word _ _ _ _ _ (Just body)) -> term (name : callStack) body
-          _noBody -> case Dictionary.lookup (Instantiated name []) dictionary of
-            -- A regular word.
-            Just (Entry.Word _ _ _ _ _ (Just body)) -> do
-              mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
-              case mBody' of
-                Right body' -> term (name : callStack) body'
-                Left reports ->
-                  hPrint stdout' $
-                    vcat $
-                      hcat
-                        [ "Could not instantiate generic word ",
-                          dquotes $ Pretty.printQualified name,
-                          ":"
-                        ] :
-                      (Report.human <$> reports)
-            -- An intrinsic.
-            Just (Entry.Word _ _ _ _ _ Nothing) -> case name of
-              Qualified v unqualified
-                | v == Vocabulary.intrinsic ->
-                  intrinsic (name : callStack) unqualified
-              _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
-            _noInstantiation ->
-              throwIO $
-                Failure $
-                  hcat
-                    [ "I can't find an instantiation of ",
-                      dquotes $ Pretty.printQualified name,
-                      ": ",
-                      dquotes $ Pretty.printInstantiated mangled
-                    ]
+          Just (Entry.WordEntry _ _ _ _ _ (Just body)) -> term (name : callStack) body
+          _ -> do
+            case Dictionary.lookupWord (Instantiated name []) dictionary of
+              -- A regular word.
+              Just (Entry.WordEntry _ _ _ _ _ (Just body)) -> do
+                mBody' <- runMlatuExceptT $ Instantiate.term TypeEnv.empty body args
+                case mBody' of
+                  Right body' -> term (name : callStack) body'
+                  Left reports ->
+                    hPrint stdout' $
+                      vcat $
+                        hcat
+                          [ "Could not instantiate generic word ",
+                            dquotes $ Pretty.printQualified name,
+                            ":"
+                          ] :
+                        (Report.human <$> reports)
+              -- An intrinsic.
+              Just (Entry.WordEntry _ _ _ _ _ Nothing) -> case name of
+                Qualified v unqualified
+                  | v == Vocabulary.intrinsic ->
+                    intrinsic (name : callStack) unqualified
+                _nonIntrinsic -> ice "Mlatu.Interpret.interpret - no such intrinsic"
+              _ ->
+                throwIO $
+                  Failure $
+                    hcat
+                      [ "I can't find an instantiation of ",
+                        dquotes $ Pretty.printQualified name,
+                        ": ",
+                        dquotes $ Pretty.printInstantiated mangled
+                      ]
 
       term :: [Qualified] -> Term Type -> IO ()
       term callStack t = case t of
@@ -180,8 +181,8 @@ interpret dictionary mName mainArgs stdin' stdout' _stderr' initialStack = do
           let go (Case (QualifiedName name) caseBody _ : _)
                 -- FIXME: Embed this information during name resolution, rather than
                 -- looking it up.
-                | Just (Entry.Word _ _ _ _ _ (Just ctorBody)) <-
-                    Dictionary.lookup (Instantiated name []) dictionary,
+                | Just (Entry.WordEntry _ _ _ _ _ (Just ctorBody)) <-
+                    Dictionary.lookupWord (Instantiated name []) dictionary,
                   [New _ (ConstructorIndex index') _ _ _] <- Term.decompose ctorBody,
                   Algebraic (ConstructorIndex index) fields <- x,
                   index == index' =

@@ -103,14 +103,14 @@ desugar dictionary qualifier term0 = do
             addForall (i, (n, k)) = Forall origin (Var n i k)
         modify $ \(l, d) ->
           let entry =
-                Entry.Word
+                Entry.WordEntry
                   Category.Word
                   Merge.Deny
                   (Term.origin a')
                   Nothing
                   (Just (Signature.Type typ))
                   (Just a')
-           in (l, Dictionary.insert (Instantiated name []) entry d)
+           in (l, Dictionary.insertWord (Instantiated name []) entry d)
         dict <- gets snd
         (typechecked, _) <-
           lift $

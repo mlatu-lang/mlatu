@@ -9,7 +9,6 @@ license-file: LICENSE.md
 
 ghc-options:
   - -Wall
-  - -O2
 
 default-extensions:
   - NoImplicitPrelude
@@ -66,7 +65,6 @@ dependencies:
   - text
   - transformers
   - unordered-containers
-  - vector
 
 library:
   source-dirs: src
@@ -80,13 +78,14 @@ executables:
     source-dirs: app
     ghc-options:
       - -threaded
+      - -O2
     dependencies:
-      - mlatu
       - directory
       - repline
       - exceptions
       - optparse-applicative
       - typed-process
+      - mlatu
 
 tests:
   test:
@@ -94,6 +93,6 @@ tests:
     source-dirs: test
     dependencies:
       - HUnit
-      - mlatu
       - hspec
       - knob
+      - mlatu

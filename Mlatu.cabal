@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 36d8a506e256ff72001dce5c9315aa8a929231ca045a1f1f59aa98d96ef2d3d9
+-- hash: 8c6ce30be2a79755002d4fc3b6f4af5ddb8e67bcd2a9909b5f204ef86f49b8b6
 
 name:           mlatu
 version:        0.1.0.0
@@ -121,7 +121,7 @@ library
       DeriveLift
       GeneralizedNewtypeDeriving
       DeriveGeneric
-  ghc-options: -Wall -O2
+  ghc-options: -Wall
   build-depends:
       base >=4.8
     , bytestring
@@ -135,7 +135,6 @@ library
     , text
     , transformers
     , unordered-containers
-    , vector
   default-language: Haskell2010
 
 executable mlatu
@@ -187,7 +186,7 @@ executable mlatu
       DeriveLift
       GeneralizedNewtypeDeriving
       DeriveGeneric
-  ghc-options: -Wall -O2 -threaded
+  ghc-options: -Wall -threaded -O2
   build-depends:
       base >=4.8
     , bytestring
@@ -207,7 +206,6 @@ executable mlatu
     , transformers
     , typed-process
     , unordered-containers
-    , vector
   default-language: Haskell2010
 
 test-suite test
@@ -266,7 +264,7 @@ test-suite test
       DeriveLift
       GeneralizedNewtypeDeriving
       DeriveGeneric
-  ghc-options: -Wall -O2
+  ghc-options: -Wall
   build-depends:
       HUnit
     , base >=4.8
@@ -284,5 +282,4 @@ test-suite test
     , text
     , transformers
     , unordered-containers
-    , vector
   default-language: Haskell2010
