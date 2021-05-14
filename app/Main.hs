@@ -81,12 +81,22 @@ compileFiles prelude relativePaths toRun =
                       ( proc "rustfmt" [name <> ".rs"]
                       )
                     >> runProcess_
-                      ( proc "rustc" ["-C", "opt-level=3", name <> ".rs"]
+                      ( proc
+                          "rustc"
+                          [ "--emit=link",
+                            "--crate-type=bin",
+                            "--edition=2018",
+                            "-C",
+                            "opt-level=3",
+                            "-C",
+                            "lto=y",
+                            "-C",
+                            "panic=abort",
+                            "-C",
+                            "codegen-units=1",
+                            name <> ".rs"
+                          ]
                       )
                     >> removeFile (name <> ".rs")
-                    >> runProcess_
-                      ( if toRun
-                          then proc ("./" <> name) []
-                          else proc "upx" ["--best", "-q", name]
-                      )
+                    >> when toRun (runProcess_ (proc ("./" <> name) []))
             )

@@ -1,0 +1,5 @@
+define fact (nat -> nat) {
+  dup match
+  case zero { succ }
+  case succ { fact * }
+}

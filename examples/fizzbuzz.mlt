@@ -10,7 +10,7 @@ define fizzbuzz (nat -> string) {
 define fizzbuzzes (nat, nat -> +io) {
   -> c, m;
   c fizzbuzz println
-  if (c m lt) { c 1 + m fizzbuzzes }
+  if (c m lt) { c succ m fizzbuzzes }
   else {}
 }
 

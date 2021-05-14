@@ -1,7 +1,0 @@
-define fib (nat -> nat) {
-  -> n;
-  if (n 2 le) { 1 }
-  else { n 2 - fib n 1 - fib + }
-}
-
-15 fib println

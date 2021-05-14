@@ -65,7 +65,7 @@ desugarTypeDefinition definition =
               ()
               (ConstructorIndex index)
               (length $ view DataConstructor.fields constructor)
-              False
+              (unqualifiedName (view TypeDefinition.name definition) == "nat")
               $ view DataConstructor.origin constructor,
           Definition._category = Category.Constructor,
           Definition._inferSignature = False,

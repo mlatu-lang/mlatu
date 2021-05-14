@@ -42,11 +42,10 @@ generate dict = do
   bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (Map.mapKeys rustifyInstantiated (view wordEntries dict), Map.empty) dict
   pure
     ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
-        <> "type StackFn = fn(Vec<Rep>, Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>); #[derive(Debug, Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>), Algebraic(i64, Vec<Rep>), Char(char), Text(String) } use Rep::*;"
-        <> "#[inline] fn toInt(n: u64) -> Rep { if n == 0 { Algebraic(0, Vec::new()) } else { Algebraic(1, vec![toInt(n-1)]) } }"
-        <> "#[inline] fn fromInt(n: Rep) -> Option<u64> { if let Algebraic(0, v) = n { if v.is_empty() { Some(0) } else { None } } else if let Algebraic(1, v) = n { if let Some(n) = fromInt(v[0].clone()) { Some(n + 1) } else { None }} else { None } } "
-        <> "#[inline] fn toList(n: Vec<Rep>) -> Rep { if n.is_empty() { Algebraic(0, Vec::new()) } else { Algebraic(1, vec![n[0].clone(), toList(n[1..].to_vec())]) } }"
-        <> "#[inline] fn fromList(n: Rep) -> Option<Vec<Rep>> { if let Algebraic(0, v) = n { if v.is_empty() { Some(vec![]) } else { None } } else if let Algebraic(1, v) = n { if let Some(ns) = fromList(v[1].clone()) { let mut ns = ns; ns.insert(0, ns[0].clone()); Some(ns) } else { None }} else { None } } "
+        <> "fn main() { mmain(&mut Vec::new(), &mut Vec::new()); }"
+        <> "type StackFn = fn(&mut Vec<Rep>, &mut Vec<Vec<Rep>>); #[derive(Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>), Algebraic(i64, Vec<Rep>), Nat(usize), Char(char), Text(String) } use Rep::*;"
+        <> "fn toList(mut n: Vec<Rep>) -> Rep { if n.is_empty() { Algebraic(0, Vec::new()) } else { let x = n.remove(0); Algebraic(1, vec![x, toList(n)]) } }"
+        <> "fn fromList(n: Rep) -> Option<Vec<Rep>> { if let Algebraic(0, v) = n { if v.is_empty() { Some(vec![]) } else { None } } else if let Algebraic(1, v) = n { if let Some(ns) = fromList(v[1].clone()) { let mut ns = ns; ns.insert(0, ns[0].clone()); Some(ns) } else { None }} else { None } } "
         <> ByteString.concat bs
     )
 
@@ -81,11 +80,9 @@ entryRs =
               Just ((i, e), newMap) ->
                 (setToDo newMap >> modifyDone (Map.insert i e))
                   >> ( case e of
-                         (Entry.WordEntry _ _ _ _ _ (Just body))
-                           | i == "mmain" ->
-                             (<> "}") . ("fn main() { let mut stack: Vec<Rep> = Vec::new(); let mut locals: Vec<Rep> = Vec::new(); let mut closures: Vec<Vec<Rep>> = Vec::new();" <>)
-                               <$> termRs body
-                           | otherwise -> stackFn i <$> termRs body
+                         (Entry.WordEntry _ _ _ _ _ (Just body)) -> do
+                           b <- termRs body
+                           pure $ stackFn i b $ containsLocals body
                          _ -> pure ""
                      )
           )
@@ -137,6 +134,8 @@ termRs x = goTerms $ decompose x
           (Else body _) -> termRs body
           (DefaultElse _ _) -> word (Qualified Vocabulary.global "abort-now") []
         pure $ matchStmt "stack.pop()" (catMaybes cs ++ [("_", e)])
+      (New _ (ConstructorIndex 0) 0 True _) -> pure $ stackPush "Nat(0)"
+      (New _ (ConstructorIndex 1) 1 True _) -> pure $ ifLetPop "Nat(a)" $ stackPush "Nat(a + 1)"
       (New _ (ConstructorIndex i) size False _) -> pure $ case size of
         0 -> stackPushAlgebraic (show i) "Vec::new()"
         1 -> letStmt "v" "vec![stack.pop().unwrap()]" <> stackPushAlgebraic (show i) "v"
@@ -150,17 +149,28 @@ termRs x = goTerms $ decompose x
 stackPush :: ByteString -> ByteString
 stackPush x = "stack.push(" <> x <> ");"
 
+constructor :: Int -> Int -> Bool -> ByteString
+constructor 0 0 True = stackPush "Nat(0)"
+constructor 1 1 True = ifLetPop "Nat(a)" $ stackPush "Nat(a+1)"
+constructor i 0 False = stackPushAlgebraic (show i) "Vec::new()"
+constructor i 1 False = letStmt "v" "vec![stack.pop().unwrap()]" <> stackPushAlgebraic (show i) "v"
+constructor i size False = letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> stackPushAlgebraic (show i) "v"
+
 word :: Qualified -> [Type] -> Codegen ByteString
 word name args = do
   let mangled = rustifyInstantiated $ Instantiated name args
-  isToDo <- Map.member mangled <$> getToDo
-  isDone <- Map.member mangled <$> getDone
-  if isToDo || isDone
-    then case Instantiated name args of
-      (Instantiated (Qualified v unqualified) [])
-        | v == Vocabulary.intrinsic -> intrinsic unqualified
-      _ -> pure $ "(stack, closures) = " <> mangled <> "(stack, closures);"
-    else do
+  isInstantiated <- uncurry ((. Map.lookup mangled) . (<|>) . Map.lookup mangled) <$> get
+  case isInstantiated of
+    Just (Entry.WordEntry _ _ _ _ _ b) ->
+      case Instantiated name args of
+        (Instantiated (Qualified v unqualified) [])
+          | v == Vocabulary.intrinsic -> intrinsic unqualified
+        _ -> case b of
+          Just body -> case decompose body of
+            [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
+            _ -> pure $ mangled <> "(stack, closures);"
+          _ -> pure $ mangled <> "(stack, closures);"
+    _ -> do
       let unMangled = rustifyInstantiated $ Instantiated name []
       isUninstantiated <- uncurry ((. Map.lookup unMangled) . (<|>) . Map.lookup unMangled) <$> get
       case isUninstantiated of
@@ -168,32 +178,34 @@ word name args = do
           liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
             >>= ( \case
                     Right body' -> do
-                      unless isDone $ modifyToDo $ Map.insert mangled (Entry.WordEntry a b c d e (Just body'))
-                      pure $ "(stack, closures) = " <> mangled <> "(stack, closures);"
+                      modifyToDo $ Map.insert mangled (Entry.WordEntry a b c d e (Just body'))
+                      case decompose body' of
+                        [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
+                        _ -> pure $ mangled <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
         Just (Entry.WordEntry _ _ _ _ _ Nothing) -> case name of
           (Qualified v unqualified)
             | v == Vocabulary.intrinsic -> intrinsic unqualified
           _ -> error "No such intrinsic"
-        _ -> pure $ " /* " <> show mangled <> " */ "
+        _ -> pure ""
 
 intrinsic :: Unqualified -> Codegen ByteString
 intrinsic = \case
-  "call" -> pure $ ifLetPop "Closure(n, rs)" "closures.push(rs); (stack, closures) = n(stack, closures); closures.pop();"
+  "call" -> pure $ ifLetPop "Closure(n, rs)" "closures.push(rs); n(stack, closures); closures.pop();"
   "abort" -> pure $ ifLetPop "Text(a)" "panic!(\"Execution failure: {}\", a);"
-  "exit" -> pure "if let Some(i) = fromInt(stack.pop().unwrap()) { std::process::exit(i as i32); }"
+  "exit" -> pure $ ifLetPop "Nat(i)" "std::process::exit(i as i32);"
   "drop" -> pure $ letStmt "_" "stack.pop().unwrap();"
   "swap" -> pure $ ifLetPop2 ("a", "b") (stackPush "a" <> stackPush "b")
   "cmp-char" -> ifLetPop2 ("Char(a)", "Char(b)") <$> cmp "a" "b"
   "cmp-string" -> ifLetPop2 ("Text(a)", "Text(b)") <$> cmp "a" "b"
-  "show-nat" -> pure "if let Some(i) = fromInt(stack.pop().unwrap()) { stack.push(Text(format!(\"{}\", i))); } "
+  "show-nat" -> pure $ ifLetPop "Nat(i)" "stack.push(Text(format!(\"{}\", i)));"
   "read-nat" -> do
     s <- word (Qualified Vocabulary.global "some") []
     n <- word (Qualified Vocabulary.global "none") []
     pure $
       ifLetPop "Text(a)" $
-        "if let Some(a) = a.parse().ok().map(toInt) {"
+        "if let Some(a) = a.parse().ok().map(Nat) {"
           <> stackPush "a"
           <> s
           <> "} else {"
@@ -235,7 +247,10 @@ caseRs (Case (QualifiedName name) caseBody _) = do
   case Dictionary.lookupWord (Instantiated name []) dict of
     Just (Entry.WordEntry _ _ _ _ _ (Just ctorBody)) ->
       case decompose ctorBody of
-        [New _ (ConstructorIndex i) _ _ _] -> Just . ("Some(Algebraic(" <> show i <> ", fields))",) . ("stack.extend(fields); " <>) <$> termRs caseBody
+        [New _ (ConstructorIndex i) 0 False _] -> Just . ("Some(Algebraic(" <> show i <> ", _))",) <$> termRs caseBody
+        [New _ (ConstructorIndex i) _ False _] -> Just . ("Some(Algebraic(" <> show i <> ", fields))",) . ("stack.extend(fields); " <>) <$> termRs caseBody
+        [New _ (ConstructorIndex 0) 0 True _] -> Just . ("Some(Nat(0))",) <$> termRs caseBody
+        [New _ (ConstructorIndex 1) 1 True _] -> Just . ("Some(Nat(a)) if a > 0 ",) . ("stack.push(Nat(a-1));" <>) <$> termRs caseBody
         _ -> pure Nothing
     _ -> pure Nothing
 caseRs _ = pure Nothing
@@ -262,11 +277,35 @@ stackPushText a = stackPush $ "Text(" <> a <> ")"
 stackPushAlgebraic :: ByteString -> ByteString -> ByteString
 stackPushAlgebraic a b = stackPush $ "Algebraic(" <> a <> "," <> b <> ")"
 
-stackFn :: ByteString -> ByteString -> ByteString
-stackFn name body = "#[must_use] #[inline] fn " <> name <> "(mut stack: Vec<Rep>, mut closures: Vec<Vec<Rep>>) -> (Vec<Rep>, Vec<Vec<Rep>>) { let mut locals: Vec<Rep> = Vec::new();" <> body <> " (stack, closures) }"
+stackFn :: ByteString -> ByteString -> Bool -> ByteString
+stackFn name body containsLocals =
+  "fn "
+    <> name
+    <> "(stack: &mut Vec<Rep>, closures: &mut Vec<Vec<Rep>>) { "
+    <> ( if containsLocals
+           then "let mut locals: Vec<Rep> = Vec::new();" <> body
+           else body
+       )
+    <> " }"
+
+containsLocals :: Term a -> Bool
+containsLocals t =
+  any
+    ( \case
+        Push _ (Local _) _ -> True
+        Lambda {} -> True
+        Match _ _ cases e _ ->
+          any (\case Case _ t _ -> containsLocals t) cases
+            || ( case e of
+                   DefaultElse {} -> False
+                   Else t _ -> containsLocals t
+               )
+        _ -> False
+    )
+    (decompose t)
 
 ifLetPop :: ByteString -> ByteString -> ByteString
-ifLetPop binding body = matchStmt "stack.pop()" [("Some(" <> binding <> ")", body), ("x", "panic!(\"Expected `Some(" <> binding <> ")`, but found `{:?}`\", x);")]
+ifLetPop binding body = matchStmt "stack.pop()" [("Some(" <> binding <> ")", body), ("_", "panic!(\"Expected `Some(" <> binding <> ")`\");")]
 
 ifLetPop2 :: (ByteString, ByteString) -> ByteString -> ByteString
 ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)

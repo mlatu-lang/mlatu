@@ -3,9 +3,10 @@
 Factorial
 ```ml
 define fact (nat -> nat) {
-  dup match
-  case zero { succ }
-  case succ { fact * }
+  dup                         // duplicates the input so we can use it later
+  match                       // matches on the input, a natural number
+  case zero { succ }          // if zero, increment by one
+  case succ { fact * }        // otherwise, take factorial of one less and multiply
 }
 ```
 
