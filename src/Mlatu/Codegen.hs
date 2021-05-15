@@ -37,12 +37,14 @@ import Text.Printf (printf)
 instance IsString a => IsString (Codegen a) where
   fromString = pure . fromString
 
-generate :: Dictionary -> IO ByteString
-generate dict = do
+generate :: Dictionary -> Maybe Qualified -> IO ByteString
+generate dict mMain = do
   bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (Map.mapKeys rustifyInstantiated (view wordEntries dict), Map.empty) dict
   pure
     ( "#![feature(destructuring_assignment)] #![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
-        <> "fn main() { mmain(&mut Vec::new(), &mut Vec::new()); }"
+        <> "fn main() { "
+        <> maybe "mmain" rustifyQualified mMain
+        <> "(&mut Vec::new(), &mut Vec::new()); }"
         <> "type StackFn = fn(&mut Vec<Rep>, &mut Vec<Vec<Rep>>); #[derive(Clone)] enum Rep { Name(StackFn), Closure(StackFn, Vec<Rep>), Algebraic(i64, Vec<Rep>), Nat(usize), Char(char), Text(String) } use Rep::*;"
         <> "fn toList(mut n: Vec<Rep>) -> Rep { if n.is_empty() { Algebraic(0, Vec::new()) } else { let x = n.remove(0); Algebraic(1, vec![x, toList(n)]) } }"
         <> "fn fromList(n: Rep) -> Option<Vec<Rep>> { if let Algebraic(0, v) = n { if v.is_empty() { Some(vec![]) } else { None } } else if let Algebraic(1, v) = n { if let Some(ns) = fromList(v[1].clone()) { let mut ns = ns; ns.insert(0, ns[0].clone()); Some(ns) } else { None }} else { None } } "

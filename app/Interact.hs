@@ -6,6 +6,7 @@ where
 import Control.Monad.Catch (catch)
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
+import Mlatu.Codegen qualified as Codegen
 import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
@@ -17,7 +18,6 @@ import Mlatu.Ice (ice)
 import Mlatu.Infer (typeFromSignature, typecheck)
 import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Interpret (Failure, Rep, interpret, printRep)
 import Mlatu.Kind (Kind (..))
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
@@ -39,14 +39,16 @@ import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
+import System.Directory (removeFile)
 import System.IO (hPrint)
+import System.Process.Typed (proc, runProcess_)
 
-type MRepl a = HaskelineT (StateT Dictionary (StateT [Rep] (StateT Int IO))) a
+type MRepl a = HaskelineT (StateT Text (StateT Int IO)) a
 
 cmd :: String -> MRepl ()
 cmd input = do
-  dictionary <- lift get
-  lineNumber <- lift $ lift $ lift get
+  text <- lift get
+  lineNumber <- lift $ lift get
   let entryNameUnqualified = toText $ "entry" ++ show lineNumber
       entryName =
         Qualified
@@ -54,137 +56,60 @@ cmd input = do
           $ Unqualified entryNameUnqualified
   mResults <- liftIO $
     runMlatuExceptT $ do
-      -- Each entry gets its own definition in the dictionary, so it can
-      -- be executed individually, and later conveniently referred to.
+      commonDictionary <- Mlatu.compilePrelude Common [QualifiedName $ Qualified Vocabulary.global "io"] Nothing
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Qualified Vocabulary.global "io"]
           (Just entryName)
           lineNumber
           "<interactive>"
-          (toText input)
-      dictionary' <- Enter.fragment fragment dictionary
-      _ <- warnCheckpoint
-      callFragment <-
-        Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "io"]
-          Nothing
-          lineNumber
-          "<interactive>"
-          -- TODO: Avoid stringly typing.
-          (show $ printQualified entryName)
-      dictionary'' <- Enter.fragment callFragment dictionary'
-      warnCheckpoint
-      let tenv = TypeEnv.empty
-          mainBody = case Dictionary.lookupWord
-            (Instantiated Definition.mainName [])
-            dictionary'' of
-            Just (Entry.WordEntry _ _ _ _ _ (Just body)) ->
-              body
-            _noEntryPoint -> ice "Interact.run - cannot get entry point"
-      let currentOrigin = Origin.point "<interactive>" lineNumber 1
-      stackScheme <-
-        typeFromSignature tenv $
-          Signature.Quantified
-            [ Parameter currentOrigin "r" Stack Nothing,
-              Parameter currentOrigin "e" Permission Nothing
-            ]
-            ( Signature.StackFunction
-                (Signature.Bottom currentOrigin)
-                []
-                (Signature.Variable "r" currentOrigin)
-                []
-                ["e"]
-                currentOrigin
-            )
-            currentOrigin
-      -- Checking that the main definition is able to operate on an
-      -- empty stack is the same as verifying the last entry against the
-      -- current stack state, as long as the state was modified
-      -- correctly by the interpreter.
-      _ <- Unify.typ tenv stackScheme (Term.typ mainBody)
-      warnCheckpoint
-      pure (dictionary'', mainBody)
+          (text <> " " <> toText input)
+      errorCheckpoint
+      dictionary <- Enter.fragment fragment commonDictionary
+      errorCheckpoint
+      pure dictionary
   case mResults of
     Left reports -> do
       liftIO $ reportAll reports
-    Right (dictionary', mainBody) -> do
-      lift $ put dictionary
-      lift $ lift $ lift $ modify' (+ 1)
-      -- HACK: Get the last entry from the main body so we have the
-      -- right generic args.
-      let lastEntry = viaNonEmpty last (Term.decompose mainBody)
-      case lastEntry of
-        Just (Term.Word _ _ args _) ->
-          ( do
-              oldStack <- lift $ lift get
-              stack <-
-                liftIO $
-                  interpret
-                    dictionary'
-                    (Just entryName)
-                    args
-                    stdin
-                    stdout
-                    stderr
-                    oldStack
-              lift $ lift $ put stack
-              liftIO $ renderStack stack
+    Right dictionary -> do
+      lift $ put (text <> " " <> toText input)
+      lift $ lift $ modify' (+ 1)
+      liftIO $ do
+        bs <- Codegen.generate dictionary (Just entryName)
+        writeFileBS "repl.rs" bs
+        runProcess_ (proc "rustfmt" ["repl.rs"])
+        runProcess_
+          ( proc
+              "rustc"
+              [ "--emit=link",
+                "--crate-type=bin",
+                "--edition=2018",
+                "-C",
+                "opt-level=3",
+                "-C",
+                "lto=y",
+                "-C",
+                "panic=abort",
+                "-C",
+                "codegen-units=1",
+                "repl.rs"
+              ]
           )
-            `catch` (\e -> liftIO $ hPrint stderr (e :: Failure))
-        _noArgs -> error $ show lastEntry
+        runProcess_ (proc "./repl" [])
 
 -- TODO
-completer :: String -> StateT Dictionary (StateT [Rep] (StateT Int IO)) [String]
+completer :: String -> StateT Text (StateT Int IO) [String]
 completer n = pure []
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
   ["help"] -> putStrLn helpHelp
-  ["stack"] -> putStrLn stackHelp
-  ["type"] -> putStrLn typeHelp
-  _ -> traverse_ putStrLn [stackHelp, helpHelp]
+  _ -> traverse_ putStrLn [helpHelp]
   where
     helpHelp = ":help - Show this help."
-    stackHelp = ":stack - Show the current state of the stack."
-    typeHelp = ":type - Show the type of an expression."
-
-stackCmd :: String -> MRepl ()
-stackCmd =
-  const $
-    lift (lift get)
-      >>= (liftIO . renderStack)
-
-typeCmd :: String -> MRepl ()
-typeCmd expression = do
-  dictionary <- lift get
-  lineNumber <- lift $ lift $ lift get
-  mResults <- liftIO $
-    runMlatuExceptT $ do
-      fragment <-
-        Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "io"]
-          Nothing
-          lineNumber
-          "<interactive>"
-          (toText expression)
-      errorCheckpoint
-      case view Fragment.definitions fragment of
-        [main] | view Definition.name main == Definition.mainName -> do
-          resolved <- Enter.resolveAndDesugar dictionary main
-          errorCheckpoint
-          (_, typ) <- typecheck dictionary Nothing $ view Definition.body resolved
-          errorCheckpoint
-          pure (Just typ)
-        _otherDefinition -> pure Nothing
-
-  liftIO $ case mResults of
-    Left reports -> reportAll reports
-    Right (Just typ) -> print $ printType typ
-    Right Nothing -> hPrint stderr ("That doesn't look like an expression" :: String)
 
 opts :: [(String, String -> MRepl ())]
-opts = [("help", helpCmd), ("stack", stackCmd), ("type", typeCmd)]
+opts = [("help", helpCmd)]
 
 ini :: MRepl ()
 ini = liftIO $ putStrLn "Welcome!"
@@ -192,17 +117,12 @@ ini = liftIO $ putStrLn "Welcome!"
 final :: MRepl ExitDecision
 final = do
   liftIO $ putStrLn "Bye!"
+  liftIO $ removeFile "repl.rs"
+  liftIO $ removeFile "./repl"
   pure Exit
 
 run :: Prelude -> IO Int
-run prelude = do
-  mResult <- runMlatuExceptT $ compilePrelude prelude [QualifiedName $ Qualified Vocabulary.global "io"] Nothing
-  case mResult of
-    Left reports -> do
-      reportAll reports
-      exitFailure
-    Right commonDictionary ->
-      execStateT (execStateT (execStateT (evalReplOpts replOpts) commonDictionary) []) 1
+run prelude = execStateT (execStateT (evalReplOpts replOpts) "") 1
   where
     replOpts =
       ReplOpts
@@ -217,6 +137,3 @@ run prelude = do
           initialiser = ini,
           finaliser = final
         }
-
-renderStack :: [Rep] -> IO ()
-renderStack stack = unless (null stack) (print $ vcat $ printRep <$> stack)

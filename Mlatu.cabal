@@ -45,7 +45,6 @@ library
       Mlatu.InstanceCheck
       Mlatu.Instantiate
       Mlatu.Instantiated
-      Mlatu.Interpret
       Mlatu.Kind
       Mlatu.Located
       Mlatu.Metadata

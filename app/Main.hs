@@ -4,7 +4,6 @@ import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
 import Mlatu.Codegen qualified as Codegen
-import Mlatu.Interpret (interpret)
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
@@ -74,7 +73,7 @@ compileFiles prelude relativePaths toRun =
         >>= ( \case
                 Left reports -> handleReports reports
                 Right program ->
-                  ( Codegen.generate program
+                  ( Codegen.generate program Nothing
                       >>= writeFileBS (name <> ".rs")
                   )
                     >> runProcess_
@@ -98,5 +97,5 @@ compileFiles prelude relativePaths toRun =
                           ]
                       )
                     >> removeFile (name <> ".rs")
-                    >> when toRun (runProcess_ (proc ("./" <> name) []))
+                    >> when toRun (runProcess_ (proc ("./" <> name) []) >> removeFile name)
             )
