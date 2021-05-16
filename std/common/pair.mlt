@@ -1,7 +1,4 @@
-record (b a) pair {
-  field first (a)
-  field second (b)
-}
+type pair[a, b] { mk-pair (a, b) } 
 
 instance cmp (for a b. b a pair, b a pair -> ord) {
   -> a, b;
@@ -11,12 +8,10 @@ instance cmp (for a b. b a pair, b a pair -> ord) {
   | more { more }
 }
 
-define flip (for a b . b a pair -> a b pair) { unpair swap mk-pair }
+define flip (for a b. b a pair -> a b pair) { unpair swap mk-pair }
 
-define map-pair (for a b c d . b a pair, (a -> c), (b -> d) -> d c pair) {
-  -> p, f, g;
-  p unpair -> a, b;
-  (a f call) (b g call) mk-pair
+define map-pair (for a b c d. b a pair, (a -> c), (b -> d) -> d c pair) {
+  -> p, f, g; p unpair -> a, b; (a f call) (b g call) mk-pair
 }
 
-define unpair (for a b. b a pair -> a, b) { match | mk-pair {} }
+define unpair (for a b. b a pair -> a, b) { match | mk-pair [] }

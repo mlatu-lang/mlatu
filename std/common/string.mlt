@@ -1,3 +1,5 @@
+trait read (for t. string -> t optional)  trait show (for t. t -> string) 
+
 module Mlatu {
   intrinsic cmp-string (string, string -> ord)
   intrinsic read-nat (string -> nat optional)
@@ -7,46 +9,35 @@ module Mlatu {
   intrinsic string-to-list (string -> char list)
 }
 
-trait read (for t. string -> t optional)
-
-trait show (for t. t -> string)
-
-type string {}
+type string {  } 
 
 instance ++ (string, string -> string) { Mlatu.string-concat }
 
 instance cmp (string, string -> ord) { Mlatu.cmp-string }
 
-instance read (string -> bool optional) {
-  dup
-  if ("true" eq) { drop true some }
-  else { if ("false" eq) { false some } else { none } }
-}
-
 instance read (string -> nat optional) { Mlatu.read-nat }
 
 instance read (string -> char optional) {
-  chars dup length 1 eq
-  if { hd }
-  else { drop none }
+  chars dup length zero succ eq if { hd } else { drop none }
+}
+
+instance read (string -> bool optional) {
+  dup ("true" eq)
+  if { drop true some } else { if ("false" eq) { false some } else { none } }
 }
 
 instance read (string -> string optional) { some }
 
-instance show (string -> string) {}
+instance show (string -> string) []
 
 instance show (bool -> string) { if { "true" } else { "false" } }
 
-instance show (for a b . b a either -> string) {
-  match
-  | left { show " left" ++ }
-  | right { show " right" ++}
+instance show (for a b. b a either -> string) {
+  match | left { show " left" ++ } | right { show " right" ++ }
 }
 
-instance show (for t . t optional -> string) {
-  match
-  | some { show " some" ++ }
-  | none { "none" }
+instance show (for t. t optional -> string) {
+  match | some { show " some" ++ } | none { "none" }
 }
 
 instance show (nat -> string) { Mlatu.show-nat }
