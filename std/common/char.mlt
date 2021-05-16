@@ -1,5 +1,7 @@
-module Mlatu { intrinsic cmp-char (char, char -> ord) }
+module Mlatu {
+  intrinsic cmp-char (char, char -> ord)
+}
 
-type char {  } 
+type char {}
 
 instance cmp (char, char -> ord) { Mlatu.cmp-char }

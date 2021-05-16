@@ -1,4 +1,4 @@
-define divisible (nat, nat -> bool) { % 0 eq }
+define divisible (nat, nat -> bool +fail) { % 0 eq }
 
 define fizzbuzz (nat -> string) {
   -> n;
@@ -7,8 +7,11 @@ define fizzbuzz (nat -> string) {
   else { if { "Buzz" } else { n show } }
 }
 
-define fizzbuzzes (nat, nat ->  <io>) {
-  -> c, m; c fizzbuzz println (c m lt) if { c succ m fizzbuzzes } else []
+define fizzbuzzes (nat, nat -> +io) {
+  -> c, m;
+  c fizzbuzz println
+  if (c m lt) { c succ m fizzbuzzes }
+  else {}
 }
 
 1 100 fizzbuzzes

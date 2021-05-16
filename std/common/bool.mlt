@@ -1,25 +1,32 @@
-type bool { false | true } 
+type bool { false | true }
 
 instance cmp (bool, bool -> ord) {
   -> a, b;
-  if (a) { if (b) { equal } else { more } }
-  else { if (b) { less } else { more } }
+  if (a) {
+    if (b) { equal } else { more }
+  } else {
+    if (b) { less } else { more }
+  }
 }
 
-define and (bool, bool -> bool) { not if { drop false } else [] }
+define and (bool, bool -> bool) { not if { drop false } else {} }
 
-define implies (bool, bool -> bool) { not if { drop true } else [] }
+define implies (bool, bool -> bool) { not if { drop true } else {} }
 
 define not (bool -> bool) { if { false } else { true } }
 
-define or (bool, bool -> bool) { swap if { drop true } else [] }
+define or (bool, bool -> bool) { swap if { drop true } else {} }
 
-define until (for R. R, (R -> R, bool) -> R) {
-  -> f; if (f call not) { f until } else []
+define xor (bool, bool -> bool) { swap if { not } else {} }
+
+define until (for R . R, (R -> R, bool) -> R) {
+  -> f;
+  if (f call not) { f until }
+  else {}
 }
 
-define while (for R. R, (R -> R, bool) -> R) {
-  -> f; if (f call) { f while } else []
+define while (for R . R, (R -> R, bool) -> R) {
+  -> f;
+  if (f call) { f while }
+  else {}
 }
-
-define xor (bool, bool -> bool) { swap if { not } else [] }

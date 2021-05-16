@@ -1,44 +1,75 @@
-type either[a, b] { left (a) | right (b) } 
+type (b a) either { left (a) | right (b) }
 
 instance cmp (for a b. b a either, b a either -> ord) {
   -> a, b;
   match (a)
-  | left { match (b) | left { cmp } | right { drop drop less } }
-  | right { match (b) | left { drop drop more } | right { cmp } }
+  | left {
+    match (b)
+    | left { cmp }
+    | right { drop drop less }
+  }
+  | right {
+    match (b)
+    | left { drop drop more }
+    | right { cmp}
+  }
 }
 
-define either-fun (for R S a b. R, b a either, (R, a -> S), (R, b -> S) -> S) {
-  -> f, g; match | left { f call } | right { g call }
+define either-fun (for R S a b . R, b a either, (R, a -> S), (R, b -> S) -> S) {
+  -> f, g;
+  match
+  | left { f call }
+  | right { g call }
 }
 
-define from-left (for a b. b a either, string -> a <fail>) {
-  -> message; match | left [] | _  { message fail-now }
+define from-left (for a b . b a either, string -> a <fail>) {
+  -> message;
+  match
+  | left {}
+  | _ { message fail-now }
 }
 
-define from-right (for a b. b a either, string -> b <fail>) {
-  -> message; match | right [] | _  { message fail-now }
+define from-right (for a b . b a either, string -> b <fail>) {
+  -> message;
+  match
+  | right {}
+  | _ { message fail-now }
 }
 
-define get-left (for a b. b a either -> a optional) {
-  match | left { some } | _  { none }
+define get-left (for a b . b a either -> a optional) {
+  match
+  | left { some }
+  | _ { none }
 }
 
-define get-right (for a b. b a either -> b optional) {
-  match | right { some } | _  { none }
+define get-right (for a b . b a either -> b optional) {
+  match
+  | right { some }
+  | _ { none }
 }
 
-define is-left (for a b. b a either -> bool) {
-  match | left { drop true } | _  { false }
+define is-left (for a b . b a either -> bool) {
+  match
+  | left { drop true }
+  | _ { false }
 }
 
-define is-right (for a b. b a either -> bool) {
-  match | right { drop true } | _  { false }
+define is-right (for a b . b a either -> bool) {
+  match
+  | right { drop true }
+  | _ { false }
 }
 
-define map-left (for a b c. b a either, (a -> c) -> b c either) {
-  -> f; match | left { f call left } | right { right }
+define map-left (for a b c . b a either, (a -> c) -> b c either) {
+  -> f;
+  match
+  | left { f call left }
+  | right { right }
 }
 
-define map-right (for a b c. b a either, (b -> c) -> c a either) {
-  -> f; match | right { f call right } | left { left }
+define map-right (for a b c . b a either, (b -> c) -> c a either) {
+  -> f;
+  match
+  | right { f call right }
+  | left { left }
 }

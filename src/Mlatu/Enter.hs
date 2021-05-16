@@ -41,7 +41,7 @@ import Mlatu.Name
     qualifierFromName,
   )
 import Mlatu.Parse qualified as Parse
-import Mlatu.Pretty (printQualified)
+import Mlatu.Pretty (printInstantiated, printQualified)
 import Mlatu.Quantify qualified as Quantify
 import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
