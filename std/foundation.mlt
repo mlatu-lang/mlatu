@@ -1,22 +1,22 @@
 module Mlatu {
-  intrinsic call (for r.. s.. . r.., (r.. -> s..) -> s..)
+  intrinsic call (for R S . R, (R -> S) -> S)
   intrinsic drop (for a . a ->)
   intrinsic swap (for a b . a, b -> b, a)
 }
 
-permission exit (for r.. s.. +p . r.., (r.. -> s.. <exit + p>) -> s.. <p>) {
+permission exit (for R S +p . R, (R -> S <exit + p>) -> S <p>) {
   with (+exit)
 }
 
-permission fail (for r.. s.. +p . r.., (r.. -> s.. <fail + p>) -> s.. <p>) {
+permission fail (for R S +p . R, (R -> S <fail + p>) -> S <p>) {
   with (+fail)
 }
 
-permission io (for r.. s.. +p . r.., (r.. -> s.. <io + p>) -> s.. <p>) {
+permission io (for R S +p . R, (R -> S <io + p>) -> S <p>) {
   with (+io)
 }
 
-define call (for r.. s.. . r.., (r.. -> s..) -> s..) {
+define call (for R S . R, (R -> S) -> S) {
   Mlatu.call
 }
 

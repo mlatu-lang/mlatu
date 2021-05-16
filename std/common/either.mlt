@@ -15,7 +15,7 @@ instance cmp (for a b. b a either, b a either -> ord) {
   }
 }
 
-define either-fun (for r.. s.. a b . r.., b a either, (r.., a -> s..), (r.., b -> s..) -> s..) {
+define either-fun (for R S a b . R, b a either, (R, a -> S), (R, b -> S) -> S) {
   -> f, g;
   match
   case left { f call }

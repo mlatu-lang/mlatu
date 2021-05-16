@@ -76,11 +76,11 @@ main permissions mName term =
       _parent = Nothing,
       _signature =
         Signature.Quantified
-          [Parameter o "r" Stack Nothing]
+          [Parameter o "R" Stack Nothing]
           ( Signature.StackFunction
-              (Signature.Variable "r" o)
+              (Signature.Variable "R" o)
               []
-              (Signature.Variable "r" o)
+              (Signature.Variable "R" o)
               []
               permissions
               o

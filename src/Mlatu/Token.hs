@@ -47,8 +47,6 @@ data Token
     Do
   | -- | @dot@
     Dot
-  | -- | @...@
-    Ellipsis
   | -- | @else@
     Else
   | -- | @for
@@ -92,7 +90,8 @@ data Token
   | -- | @with@
     With
   | -- | @word@
-    Word !Unqualified
+    LowerWord !Unqualified
+  | UpperWord !Unqualified
 
 instance Eq Token where
   About == About = True
@@ -110,7 +109,6 @@ instance Eq Token where
   Define == Define = True
   Do == Do = True
   Dot == Dot = True
-  Ellipsis == Ellipsis = True
   Else == Else = True
   -- See note [Float Literals].
   For == For = True
@@ -135,43 +133,6 @@ instance Eq Token where
   VectorEnd == VectorEnd = True
   Where == Where = True
   With == With = True
-  Word a == Word b = a == b
+  LowerWord a == LowerWord b = a == b
+  UpperWord a == UpperWord b = a == b
   _ == _ = False
-
--- Note [Angle Brackets]:
---
--- Since we separate the passes of tokenization and parsing, we are faced with a
--- classic ambiguity between angle brackets as used in operator names such as
--- '>>' and '<+', and as used in type argument and parameter lists such as
--- 'vector<vector<T>>' and '<+E>'.
---
--- Our solution is to parse a less-than or greater-than character as an 'angle'
--- token if it was immediately followed by a symbol character in the input, with
--- no intervening whitespace. This is enough information for the parser to
--- disambiguate the intent:
---
---   • When parsing an expression, it joins a sequence of angle tokens and
---     an operator token into a single operator token.
---
---   • When parsing a signature, it treats them separately.
---
--- You may ask why we permit this silly ambiguity in the first place. Why not
--- merge the passes of tokenization and parsing, or use a different bracketing
--- character such as '[]' for type argument lists?
---
--- We separate tokenization and parsing for the sake of tool support: it's
--- simply easier to provide token-accurate source locations when we keep track
--- of source locations at the token level, and it's easier to provide a list of
--- tokens to external tools (e.g., for syntax highlighting) if we already have
--- such a list at hand.
---
--- The reason for the choice of bracketing character is for the sake of
--- compatibility with C++ tools. When setting a breakpoint in GDB, for example,
--- it's nice to be able to type:
---
---     break foo::bar<int>
---
--- And for this to refer to the Mlatu definition 'foo::bar<int>' precisely,
--- rather than to some syntactic analogue such as 'foo.bar[int]'. The modest
--- increase in complexity of implementation is justified by fostering a better
--- experience for people.

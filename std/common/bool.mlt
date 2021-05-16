@@ -19,13 +19,13 @@ define or (bool, bool -> bool) { swap if { drop true } else {} }
 
 define xor (bool, bool -> bool) { swap if { not } else {} }
 
-define until (for r.. . r.., (r.. -> r.., bool) -> r..) {
+define until (for R . R, (R -> R, bool) -> R) {
   -> f;
   if (f call not) { f until }
   else {}
 }
 
-define while (for r.. . r.., (r.. -> r.., bool) -> r..) {
+define while (for R . R, (R -> R, bool) -> R) {
   -> f;
   if (f call) { f while }
   else {}

@@ -155,22 +155,22 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
   where
     signature =
       Signature.Quantified
-        [ Parameter o "r" Kind.Stack Nothing,
-          Parameter o "s" Kind.Stack Nothing
+        [ Parameter o "R" Kind.Stack Nothing,
+          Parameter o "S" Kind.Stack Nothing
         ]
         ( Signature.Function
             [ Signature.StackFunction
-                (Signature.Variable "r" o)
+                (Signature.Variable "R" o)
                 []
-                (Signature.Variable "s" o)
+                (Signature.Variable "S" o)
                 []
                 (permitName <$> grants)
                 o
             ]
             [ Signature.StackFunction
-                (Signature.Variable "r" o)
+                (Signature.Variable "R" o)
                 []
-                (Signature.Variable "s" o)
+                (Signature.Variable "S" o)
                 []
                 (permitName <$> revokes)
                 o

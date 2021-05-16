@@ -14,7 +14,7 @@ module Mlatu.Tokenize
 where
 
 import Data.ByteString qualified as BS
-import Data.Char (isLetter, isPunctuation, isSymbol)
+import Data.Char (isLetter, isLower, isPunctuation, isSymbol, isUpper)
 import Data.Text qualified as Text
 import Mlatu.Informer (Informer (..))
 import Mlatu.Located (Located (..))
@@ -177,9 +177,6 @@ comma = Comma <$ Parsec.char ','
 dot :: Tokenizer Token
 dot = Dot <$ Parsec.char '.'
 
-ellipsis :: Tokenizer Token
-ellipsis = Ellipsis <$ (Parsec.string ".." <|> Parsec.string "\x2026")
-
 ignore :: Tokenizer Token
 ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
 
@@ -236,7 +233,7 @@ alphanumeric =
     [ do
         name <-
           (toText .) . (:)
-            <$> letter
+            <$> lower
             <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.digit])
         pure $ case name of
           "alias" -> Alias
@@ -259,7 +256,12 @@ alphanumeric =
           "type" -> Type
           "with" -> With
           "where" -> Where
-          _ -> Word (Unqualified name),
+          _ -> LowerWord (Unqualified name),
+      UpperWord . Unqualified
+        <$> ( (toText .) . (:)
+                <$> upper
+                <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.digit])
+            ),
       angleBegin,
       angleEnd,
       operator
@@ -276,7 +278,7 @@ tokenTokenizer =
         blockEnd,
         characterLiteral,
         comma,
-        Parsec.try ellipsis <|> dot,
+        dot,
         groupBegin,
         groupEnd,
         ignore,
@@ -306,6 +308,12 @@ nestableCharacter open close = go
 
 letter :: Tokenizer Char
 letter = Parsec.satisfy isLetter
+
+lower :: Tokenizer Char
+lower = Parsec.satisfy isLower
+
+upper :: Tokenizer Char
+upper = Parsec.satisfy isUpper
 
 text :: Tokenizer Text
 text = toText . catMaybes <$> many (character '"')

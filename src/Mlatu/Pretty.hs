@@ -64,7 +64,7 @@ punctuateComma = hsep . punctuate comma
 
 printParameter :: Parameter -> Doc a
 printParameter (Parameter _ name Value _) = printUnqualified name
-printParameter (Parameter _ name Stack _) = printUnqualified name <> ".."
+printParameter (Parameter _ name Stack _) = printUnqualified name
 printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
 printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
 printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
@@ -225,7 +225,6 @@ printVar (Var (Unqualified unqualified) i k) =
 prettyKinded :: Unqualified -> Kind -> Doc a
 prettyKinded name k = case k of
   Permission -> "+" <> printUnqualified name
-  Stack -> printUnqualified name <> ".."
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
@@ -240,13 +239,13 @@ printSignature (Function as bs es _) =
         [] -> ""
         _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
 printSignature (Quantified names typ _) =
-  parens $ "for" <+> hsep (printParameter <$> names) <+> "." <+> printSignature typ
+  parens $ "for" <+> hsep (printParameter <$> names) <> "." <+> printSignature typ
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
   parens $
-    punctuateComma ((printSignature r <> "..") : (printSignature <$> as))
+    punctuateComma (printSignature <$> (r : as))
       <+> "->"
-      <+> punctuateComma ((printSignature s <> "..") : (printSignature <$> bs))
+      <+> punctuateComma (printSignature <$> (s : bs))
       <> case es of
         [] -> ""
         _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
@@ -269,7 +268,6 @@ printToken = \case
   Token.Define -> "define"
   Token.Do -> "do"
   Token.Dot -> "."
-  Token.Ellipsis -> ".."
   Token.Else -> "else"
   Token.Field -> "field"
   Token.For -> "for"
@@ -293,7 +291,8 @@ printToken = \case
   Token.VectorEnd -> "]"
   Token.Where -> "where"
   Token.With -> "with"
-  Token.Word name -> printUnqualified name
+  Token.UpperWord name -> printUnqualified name
+  Token.LowerWord name -> printUnqualified name
 
 -- Minor hack because Parsec requires 'Show'.
 instance Show Token.Token where
@@ -342,19 +341,19 @@ maybePrintTerms = \case
   ( Coercion
       ( AnyCoercion
           ( Quantified
-              [ Parameter _ "r" Stack Nothing,
-                Parameter _ "s" Stack Nothing
+              [ Parameter _ "R" Stack Nothing,
+                Parameter _ "S" Stack Nothing
                 ]
               ( Function
                   [ StackFunction
-                      (Variable "r" _)
+                      (Variable "R" _)
                       []
-                      (Variable "s" _)
+                      (Variable "S" _)
                       []
                       grantNames
                       _
                     ]
-                  [StackFunction (Variable "r" _) [] (Variable "s" _) [] revokeNames _]
+                  [StackFunction (Variable "R" _) [] (Variable "S" _) [] revokeNames _]
                   []
                   _
                 )

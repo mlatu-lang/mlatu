@@ -13,22 +13,22 @@ define bi3 (for a b c d e f . a, b, c, (a, b, c -> d), (a, b, c -> e), (a, b, c 
   (x y z f call) (x y z g call) (x y z h call)
 }
 
-define compose (for r.. s.. t.. . (r.. -> s..), (s.. -> t..) -> (r.. -> t..)) {
+define compose (for R S T . (R -> S), (S -> T) -> (R -> T)) {
   -> f, g;
   { f call g call }
 }
 
-define curry (for r.. s.. t +p . t, (r.., t -> s.. <p>) -> (r.. -> s.. <p>)) {
+define curry (for R S t +p . t, (R, t -> S <p>) -> (R -> S <p>)) {
   -> x, f;
   { x f call }
 }
 
-define curry2 (for r.. s.. a b +p . a, b, (r.., a, b -> s.. <p>) -> (r.. -> s.. <p>)) {
+define curry2 (for R S a b +p . a, b, (R, a, b -> S <p>) -> (R -> S <p>)) {
   -> x, y, f;
   { x y f call }
 }
 
-define dip (for r.. s.. t . r.., t, (r.. -> s..) -> s.., t) {
+define dip (for R S t . R, t, (R -> S) -> S, t) {
   -> x, f;
   f call x
 }
@@ -43,26 +43,26 @@ define dup2 (for a b . a, b -> a, b, a, b) { -> x, y; x y x y }
 
 define dup3 (for a b c . a, b, c -> a, b, c, a, b, c) { -> x, y, z; x y z x y z }
 
-define fix (for r.. s.. . r.., (r.., (r.. -> s..) -> s..) -> s..) {
+define fix (for R S . R, (R, (R -> S) -> S) -> S) {
   -> f;
   { f fix } f call
 }
 
 define function (for t . t -> (-> t)) { -> x; { x } }
 
-define id (for r.. . r.. -> r..) {}
+define id (for R . R -> R) {}
 
-define keep (for r.. s.. t . r.., t, (r.., t -> s..) -> s.., t) {
+define keep (for R S t . R, t, (R, t -> S) -> S, t) {
   -> x, f;
   x f call x
 }
 
-define keep2 (for r.. s.. a b . r.., a, b, (r.., a, b -> s..) -> s.., a, b) {
+define keep2 (for R S a b . R, a, b, (R, a, b -> S) -> S, a, b) {
   -> x, y, f;
   x y f call x y
 }
 
-define keep3 (for r.. s.. a b c. r.., a, b, c, (r.., a, b, c -> r..) -> r.., a, b, c) {
+define keep3 (for R S a b c. R, a, b, c, (R, a, b, c -> R) -> R, a, b, c) {
   -> x, y, z, f;
   x y z f call x y z
 }
@@ -77,7 +77,7 @@ define over2 (for a b c . a, b, c -> a, b, c, a, b) { -> x, y, z; x y z x y }
 
 define pick (for a b c . a, b, c -> a, b, c, a) { -> x, y, z; x y z x }
 
-define swapped (for r.. s.. a b . (r.., a, b -> r..) -> (r.., b, a -> r..)) {
+define swapped (for R S a b . (R, a, b -> R) -> (R, b, a -> R)) {
   \swap swap compose
 }
 

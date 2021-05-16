@@ -148,7 +148,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, p] <-
         fresh
           origin
-          [ ("s", Stack),
+          [ ("S", Stack),
             ("p", Permission)
           ]
       let typ = Type.Fun origin a a p
@@ -311,8 +311,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, b, e] <-
         fresh
           origin
-          [ ("r", Stack),
-            ("s", Stack),
+          [ ("R", Stack),
+            ("S", Stack),
             ("p", Permission)
           ]
       let typ = Type.Fun origin a b e
@@ -338,7 +338,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [r, s, t, p1, p2] <-
         fresh
           origin
-          [ ("r", Stack),
+          [ ("R", Stack),
             ("closure-in", Stack),
             ("closure-out", Stack),
             ("closure-permissions", Permission),
@@ -360,7 +360,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       [a, e] <-
         fresh
           origin
-          [ ("s", Stack),
+          [ ("S", Stack),
             ("p", Permission)
           ]
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
@@ -528,7 +528,7 @@ typeFromSignature tenv signature0 = do
       Signature.Bottom origin -> pure $ Type.Bottom origin
       Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
-        let var = Var "r" r Stack
+        let var = Var "R" r Stack
         let typeVar = TypeVar origin var
         es' <- traverse (fromVar origin) es
         (me, es'') <- lift $ permissionVar origin es'

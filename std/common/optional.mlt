@@ -58,7 +58,7 @@ define map-optional (for a b . a optional, (a -> b) -> b optional) {
   else { none }
 }
 
-define optional-fun (for r.. s.. a . r.., a optional, (r.., a -> s..), (r.. -> s..) -> s..) {
+define optional-fun (for R S a . R, a optional, (R, a -> S), (R -> S) -> S) {
   -> f, g;
   match
   case some { f call }

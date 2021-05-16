@@ -248,12 +248,7 @@ nameParser = (<?> "name") $ do
     isJust
       <$> Parsec.optionMaybe
         (parserMatch Token.Ignore <* parserMatch Token.Dot)
-  parts <-
-    Parsec.choice
-      [ wordNameParser,
-        operatorNameParser
-      ]
-      `Parsec.sepBy1` parserMatch Token.Dot
+  parts <- unqualifiedNameParser `Parsec.sepBy1` parserMatch Token.Dot
   pure $ case parts of
     [unqualified] ->
       ( if global
@@ -274,13 +269,20 @@ nameParser = (<?> "name") $ do
 unqualifiedNameParser :: Parser Unqualified
 unqualifiedNameParser =
   (<?> "unqualified name") $
-    wordNameParser <|> operatorNameParser
+    lowerNameParser <|> upperNameParser <|> operatorNameParser
 
-wordNameParser :: Parser Unqualified
-wordNameParser = (<?> "word name") $
+lowerNameParser :: Parser Unqualified
+lowerNameParser = (<?> "word name") $
   parseOne $
     \token -> case Located.item token of
-      Token.Word name -> Just name
+      Token.LowerWord name -> Just name
+      _nonWord -> Nothing
+
+upperNameParser :: Parser Unqualified
+upperNameParser = (<?> "initial-capital word name") $
+  parseOne $
+    \token -> case Located.item token of
+      Token.UpperWord name -> Just name
       _nonWord -> Nothing
 
 operatorNameParser :: Parser Unqualified
@@ -334,14 +336,14 @@ metadataParser = (<?> "metadata block") $ do
     Qualified <$> Parsec.getState
       <*> Parsec.choice
         [ unqualifiedNameParser <?> "word identifier",
-          (parserMatch Token.Type *> wordNameParser)
+          (parserMatch Token.Type *> lowerNameParser)
             <?> "'type' and type identifier"
         ]
   fields <-
     blockedParser $
       many $
         (,)
-          <$> (wordNameParser <?> "metadata key identifier")
+          <$> (lowerNameParser <?> "metadata key identifier")
           <*> (blockParser <?> "metadata value block")
   pure
     Metadata
@@ -379,7 +381,7 @@ typeDefinitionParser = (<?> "type definition") $ do
 constructorParser :: Parser DataConstructor
 constructorParser = (<?> "constructor definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Case
-  name <- wordNameParser <?> "constructor name"
+  name <- lowerNameParser <?> "constructor name"
   fields <-
     (<?> "constructor fields") $
       Parsec.option [] $ groupedParser (typeParser `Parsec.sepEndBy` commaParser)
@@ -400,7 +402,7 @@ recordParser = (<?> "record definition") $ do
       many
         ( (<?> "record field definition") $ do
             origin <- getTokenOrigin <* parserMatch Token.Field
-            name <- wordNameParser <?> "record field name"
+            name <- lowerNameParser <?> "record field name"
             let qualifiedName = Qualified (qualifierName recordName) name
             sig <- groupedParser typeParser <?> "record field signature"
             pure
@@ -518,7 +520,7 @@ functionTypeParser = (<?> "function type") $ do
         )
       where
         stack :: Parser Unqualified
-        stack = Parsec.try $ wordNameParser <* parserMatch Token.Ellipsis
+        stack = upperNameParser
 
     arrowSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
     arrowSignature = (<?> "arrow function type") $ do
@@ -561,14 +563,13 @@ basicTypeParser = (<?> "basic type") $ foldl1 (\a b -> Signature.Application a b
 parameter :: Parser Parameter
 parameter = do
   origin <- getTokenOrigin
-  Parsec.choice
-    [ (\unqualified -> Parameter origin unqualified Permission Nothing)
-        <$> (parserMatchOperator "+" *> wordNameParser),
-      do
-        name <- wordNameParser
-        Parameter origin name
-          <$> Parsec.option Value (Stack <$ parserMatch Token.Ellipsis) <*> pure Nothing
-    ]
+  (kind, name) <-
+    Parsec.choice
+      [ (Permission,) <$> (parserMatchOperator "+" *> lowerNameParser),
+        (Stack,) <$> upperNameParser,
+        (Value,) <$> lowerNameParser
+      ]
+  pure $ Parameter origin name kind Nothing
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do
@@ -865,7 +866,7 @@ permitParser =
       [ True <$ parserMatchOperator "+",
         False <$ parserMatchOperator "-"
       ]
-    <*> (UnqualifiedName <$> wordNameParser)
+    <*> (UnqualifiedName <$> lowerNameParser)
 
 parserMatchOperator :: Text -> Parser (Located Token)
 parserMatchOperator = parserMatch . Token.Operator . Unqualified
@@ -876,7 +877,7 @@ lambdaNamesParser = lambdaName `Parsec.sepEndBy1` commaParser
 lambdaName :: Parser (Maybe Unqualified, Origin)
 lambdaName = do
   origin <- getTokenOrigin
-  name <- Just <$> wordNameParser <|> Nothing <$ parserMatch Token.Ignore
+  name <- Just <$> lowerNameParser <|> Nothing <$ parserMatch Token.Ignore
   pure (name, origin)
 
 blockLikeParser :: Parser (Term ())
