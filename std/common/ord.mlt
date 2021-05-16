@@ -1,43 +1,39 @@
-type ord {
-  case less
-  case more
-  case equal
-}
+type ord { less | more | equal }
 
 trait cmp (for t. t, t -> ord)
 
 define gt (for t. t, t -> bool) {
   match (cmp)
-  case more { true }
-  else { false }
+  | more { true }
+  | _ { false }
 }
 
 define ge (for t. t, t -> bool) {
   match (cmp)
-  case less { false }
-  else { false }
+  | less { false }
+  | _ { false }
 }
 
 define lt (for t. t, t -> bool) {
   match (cmp)
-  case less { true }
-  else { false }
+  | less { true }
+  | _ { false }
 }
 
 define le (for t. t, t -> bool) {
   match (cmp)
-  case more { false }
-  else { true }
+  | more { false }
+  | _ { true }
 }
 
 define eq (for t. t, t -> bool) {
   match (cmp)
-  case equal { true }
-  else { false }
+  | equal { true }
+  | _ { false }
 }
 
 define neq (for t. t, t -> bool) {
   match (cmp)
-  case equal { false }
-  else { true }
+  | equal { false }
+  | _ { true }
 }

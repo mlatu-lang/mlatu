@@ -1,27 +1,24 @@
-type (t) list {
-  case nil
-  case cons (t, t list)
-}
+type (t) list { nil | cons (t, t list) }
 
 instance cmp (for t. t list, t list -> ord) {
   -> xs, ys;
   match (xs)
-  case cons {
+  | cons {
     -> x, x-tail;
     match (ys)
-    case cons {
+    | cons {
       -> y, y-tail;
       match (x y cmp)
-      case equal { x-tail y-tail cmp }
-      case less { less }
-      case more { more }
+      | equal { x-tail y-tail cmp }
+      | less { less }
+      | more { more }
     }
-    case nil { more }
+    | nil { more }
   }
-  case nil {
+  | nil {
     match (ys)
-    case cons { drop drop less }
-    case nil { equal }
+    | cons { drop drop less }
+    | nil { equal }
   }
 }
 
@@ -50,8 +47,8 @@ define exists2 (for a b . a list, b list, (a, b -> bool) -> bool) {
 define append (for t . t list, t list -> t list) {
   -> a, b;
   match (b)
-  case nil { a }
-  case cons { -> h, t; h a cons t append }
+  | nil { a }
+  | cons { -> h, t; h a cons t append }
 }
 
 define append3 (for t . t list, t list, t list -> t list) { append append }
@@ -68,14 +65,17 @@ define cartesian-with (for a b c . a list, b list, (a, b -> c) -> c list) {
 define concat (for t . (t list) list -> t list) { [] \append fold-left }
 
 define concat-optionals (for t . (t optional) list -> t list) {
-  [] { match case some { suffix } else {} } fold-left
+  [] { match
+      | some { suffix }
+      | _ {}
+    } fold-left
 }
 
 define iter (for t +p . t list, (t -> <p>) -> <p>) {
   -> f;
   match
-  case cons { -> h, t; h f call t f iter }
-  case nil {}
+  | cons { -> h, t; h f call t f iter }
+  | nil {}
 }
 
 define iter2 (for a b +p . a list, b list, (a, b -> <p>) -> <p>) {
@@ -87,15 +87,15 @@ define mem (for t . t, t list -> bool) { swap -> x; { x eq } exists }
 
 define empty (for t . t list -> bool) {
   match
-  case nil { true }
-  case cons { drop drop false }
+  | nil { true }
+  | cons { drop drop false }
 }
 
 define filter-in (for t . t list, (t -> bool) -> t list) {
   -> f;
   match
-  case cons { -> h, t; t f filter-in h f call if { h swap cons } else {} }
-  case nil { nil }
+  | cons { -> h, t; t f filter-in h f call if { h swap cons } else {} }
+  | nil { nil }
 }
 
 define filter-out (for t . t list, (t -> bool) -> t list) {
@@ -108,26 +108,26 @@ define find (for t . t list, (t -> bool) -> t optional) { filter-in hd }
 define fold-left (for a b . b list, a, (a, b -> a) -> a) {
   -> z, k;
   match
-  case cons { -> h, t; t (z h k call) k fold-left }
-  case nil { z }
+  | cons { -> h, t; t (z h k call) k fold-left }
+  | nil { z }
 }
 
 define fold-right (for a b . a list, b, (a, b -> b) -> b) {
   -> z, k;
   match (init-last)
-  case some { unpair z k call k fold-right }
-  case none { z }
+  | some { unpair z k call k fold-right }
+  | none { z }
 }
 
 define nth (for t . t list, nat -> t optional) {
   -> l, n;
   match (l)
-  case nil { none }
-  case cons {
+  | nil { none }
+  | cons {
     -> x, xs;
     match (n)
-    case zero { x some }
-    case succ { -> n1; xs n1 nth }
+    | zero { x some }
+    | succ { -> n1; xs n1 nth }
   }
 }
 
@@ -140,51 +140,51 @@ define glue (for t . t list, t list, t list -> t list) { prepend append }
 
 define hd (for t . t list -> t optional) {
   match
-  case nil { none }
-  case cons { drop some }
+  | nil { none }
+  | cons { drop some }
 }
 
 define hd-tl (for t . t list -> ((t list) t pair) optional) {
   match
-  case nil { none }
-  case cons { mk-pair some }
+  | nil { none }
+  | cons { mk-pair some }
 }
 
 define tl-hd (for t . t list -> (t (t list) pair) optional) {
   match
-  case nil { none }
-  case cons { swap mk-pair some }
+  | nil { none }
+  | cons { swap mk-pair some }
 }
 
 define init (for t . t list -> (t list) optional) {
   match
-  case nil { none }
-  case cons {
+  | nil { none }
+  | cons {
     -> h, t;
     match (t init)
-    case some { -> i; h i cons some }
-    case none { h nil cons some }
+    | some { -> i; h i cons some }
+    | none { h nil cons some }
   }
 }
 
 define init-last (for t . t list -> (t (t list) pair) optional) {
   match
-  case nil { none }
-  case cons {
+  | nil { none }
+  | cons {
     -> h, t;
     match (t)
-    case cons {
+    | cons {
       -> h1, t1;
       match (t1 init-last)
-      case some {
+      | some {
         unpair -> i, l;
         [h, h1] i append l mk-pair some
       }
-      case none {
+      | none {
         [h] h1 mk-pair some
       }
     }
-    case nil { nil h mk-pair some}
+    | nil { nil h mk-pair some}
   }
 }
 
@@ -195,12 +195,12 @@ define join (for t . (t list) list, t list -> t list) {
 
 define last (for t . t list -> t optional) {
   match
-  case nil { none }
-  case cons {
+  | nil { none }
+  | cons {
     -> h, t;
     match (t last)
-    case some { some }
-    case none { h some }
+    | some { some }
+    | none { h some }
   }
 }
 
@@ -211,8 +211,8 @@ define length (for t . t list -> nat) { 0 { drop 1 (+) } fold-left }
 define map (for a b +p . a list, (a -> b <p>) -> b list <p>) {
   -> f;
   match
-  case cons { -> h, t; (h f call) (t f map) cons }
-  case nil { nil }
+  | cons { -> h, t; (h f call) (t f map) cons }
+  | nil { nil }
 }
 
 define map2 (for a b c +p . a list, b list, (a, b -> c <p>) -> c list <p>) {
@@ -229,13 +229,13 @@ define map-index (for a b +p . a list, (a, nat -> b <p>) -> b list <p>) {
 define map-optionally (for a b . a list, (a -> b optional) -> b list) {
   -> f;
   match
-  case cons {
+  | cons {
     swap
     match (f call)
-    case some { swap f map-optionally cons }
-    case none { f map-optionally }
+    | some { swap f map-optionally cons }
+    | none { f map-optionally }
   }
-  case nil { nil }
+  | nil { nil }
 }
 
 define map-reduce-left (for a b . a list, (a -> b), (b, b -> b) -> b optional) {
@@ -315,8 +315,8 @@ define replicate (for t . t, nat -> t list) {
 
 define rev (for t . t list -> t list) {
   match
-  case cons { rev swap suffix }
-  case nil { nil }
+  | cons { rev swap suffix }
+  | nil { nil }
 }
 
 define rights (for a b . (b a either) list -> b list) {
@@ -332,39 +332,39 @@ define surround (for t . t list, t list, t list -> t list) {
 
 define tl (for t . t list -> (t list) optional) {
   match
-  case nil { none }
-  case cons { swap drop some }
+  | nil { none }
+  | cons { swap drop some }
 }
 
 define split (for a b . (b a pair) list -> a list, b list) {
   match
-  case cons {
+  | cons {
     -> h, t;
     h unpair -> m, n;
     t split -> ms, ns;
     m ms cons n ns cons
   }
-  case nil { [] [] }
+  | nil { [] [] }
 }
 
 define combine (for a b . a list, b list -> (b a pair) list) {
   -> a, b;
   match (a)
-  case cons {
+  | cons {
     -> x1, x2;
     match (b)
-    case cons {
+    | cons {
       -> y1, y2;
       x1 y1 mk-pair x2 y2 combine cons
     }
-    case nil { [] }
+    | nil { [] }
   }
-  case nil { [] }
+  | nil { [] }
 }
 
 define MapIndex.helper (for a b +p . a list, (a, nat -> b <p>), nat -> b list <p>) {
   -> f, i;
   match
-  case cons { -> h, t; h i f call t f i 1 + helper cons }
-  case nil { [] }
+  | cons { -> h, t; h i f call t f i 1 + helper cons }
+  | nil { [] }
 }

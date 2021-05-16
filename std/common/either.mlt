@@ -1,75 +1,75 @@
-type (b a) either {   case left (a) case right (b) }
+type (b a) either { left (a) | right (b) }
 
 instance cmp (for a b. b a either, b a either -> ord) {
   -> a, b;
   match (a)
-  case left {
+  | left {
     match (b)
-    case left { cmp }
-    case right { drop drop less }
+    | left { cmp }
+    | right { drop drop less }
   }
-  case right {
+  | right {
     match (b)
-    case left { drop drop more }
-    case right { cmp}
+    | left { drop drop more }
+    | right { cmp}
   }
 }
 
 define either-fun (for R S a b . R, b a either, (R, a -> S), (R, b -> S) -> S) {
   -> f, g;
   match
-  case left { f call }
-  case right { g call }
+  | left { f call }
+  | right { g call }
 }
 
 define from-left (for a b . b a either, string -> a <fail>) {
   -> message;
   match
-  case left {}
-  else { message fail-now }
+  | left {}
+  | _ { message fail-now }
 }
 
 define from-right (for a b . b a either, string -> b <fail>) {
   -> message;
   match
-  case right {}
-  else { message fail-now }
+  | right {}
+  | _ { message fail-now }
 }
 
 define get-left (for a b . b a either -> a optional) {
   match
-  case left { some }
-  else { none }
+  | left { some }
+  | _ { none }
 }
 
 define get-right (for a b . b a either -> b optional) {
   match
-  case right { some }
-  else { none }
+  | right { some }
+  | _ { none }
 }
 
 define is-left (for a b . b a either -> bool) {
   match
-  case left { drop true }
-  else { false }
+  | left { drop true }
+  | _ { false }
 }
 
 define is-right (for a b . b a either -> bool) {
   match
-  case right { drop true }
-  else { false }
+  | right { drop true }
+  | _ { false }
 }
 
 define map-left (for a b c . b a either, (a -> c) -> b c either) {
   -> f;
   match
-  case left { f call left }
-  case right { right }
+  | left { f call left }
+  | right { right }
 }
 
 define map-right (for a b c . b a either, (b -> c) -> c a either) {
   -> f;
   match
-  case right { f call right }
-  case left { left }
+  | right { f call right }
+  | left { left }
 }

@@ -1,4 +1,4 @@
-type bool {   case false case true }
+type bool { false | true }
 
 instance cmp (bool, bool -> ord) {
   -> a, b;

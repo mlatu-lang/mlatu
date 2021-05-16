@@ -244,25 +244,16 @@ bracketedParser =
 
 nameParser :: Parser GeneralName
 nameParser = (<?> "name") $ do
-  global <-
-    isJust
-      <$> Parsec.optionMaybe
-        (parserMatch Token.Ignore <* parserMatch Token.Dot)
   parts <- unqualifiedNameParser `Parsec.sepBy1` parserMatch Token.Dot
   pure $ case parts of
-    [unqualified] ->
-      ( if global
-          then QualifiedName . Qualified Vocabulary.global
-          else UnqualifiedName
-      )
-        unqualified
+    [unqualified] -> UnqualifiedName unqualified
     _list ->
       let parts' = (\(Unqualified part) -> part) <$> parts
           qualifier = Unsafe.fromJust (viaNonEmpty init parts')
           unqualified = Unsafe.fromJust (viaNonEmpty last parts)
        in QualifiedName
             ( Qualified
-                (Qualifier (if global then Absolute else Relative) qualifier)
+                (Qualifier Relative qualifier)
                 unqualified
             )
 
@@ -369,7 +360,7 @@ typeDefinitionParser = (<?> "type definition") $ do
   origin <- getTokenOrigin <* parserMatch Token.Type
   parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
   name <- qualifiedNameParser <?> "type definition name"
-  constructors <- blockedParser $ many constructorParser
+  constructors <- blockedParser (constructorParser `Parsec.sepBy` parserMatch Token.Case)
   pure
     TypeDefinition
       { TypeDefinition._constructors = constructors,
@@ -380,7 +371,7 @@ typeDefinitionParser = (<?> "type definition") $ do
 
 constructorParser :: Parser DataConstructor
 constructorParser = (<?> "constructor definition") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Case
+  origin <- getTokenOrigin
   name <- lowerNameParser <?> "constructor name"
   fields <-
     (<?> "constructor fields") $
@@ -772,13 +763,14 @@ matchParser = (<?> "match") $ do
     cases' <-
       many $
         (<?> "case") $
-          parserMatch Token.Case *> do
-            origin <- getTokenOrigin
+          Parsec.try $ do
+            origin <- getTokenOrigin <* parserMatch Token.Case
             name <- nameParser
             body <- blockLikeParser
             pure $ Case name body origin
     mElse' <- Parsec.optionMaybe $ do
-      origin <- getTokenOrigin <* parserMatch Token.Else
+      origin <- getTokenOrigin <* parserMatch Token.Case
+      parserMatch_ Token.Ignore
       body <- blockParser
       pure $ Else body origin
     pure $

@@ -1,66 +1,68 @@
-type (t) optional {
-  case none
-  case some (t)
-}
+type (t) optional { none | some (t) }
 
 instance cmp (for t. t optional, t optional -> ord) {
   -> a, b;
   match (a)
-  case none {
+  | none {
     match (b)
-    case none { equal }
-    case some { drop less }
+    | none { equal }
+    | some { drop less }
   }
-  case some {
+  | some {
     match (b)
-    case none { drop more }
-    case some { cmp }
+    | none { drop more }
+    | some { cmp }
   }
 }
 
 define from-optional (for t . t optional, t -> t) {
   -> default;
   match
-  case some {}
-  else { default }
+  | some {}
+  | _ { default }
 }
 
 define from-some (for t . t optional, string -> t <fail>) {
   -> message;
   match
-  case some {}
-  else { message fail-now }
+  | some {}
+  | _ { message fail-now }
 }
 
 define is-none (for t . t optional -> bool) {
   match
-  case none { true }
-  else { false }
+  | none { true }
+  | _ { false }
 }
 
 define is-some (for t . t optional -> bool) {
   match
-  case some { drop true }
-  else { false }
+  | some { drop true }
+  | _ { false }
 }
 
 define lift-optional-2 (for a b c . a optional, b optional, (a, b -> c) -> c optional) {
   -> mx, my, f;
   match (mx)
-  case some -> x { match (my) case some -> y { x y f call some } else { none } }
-  else { none }
+  | some {
+    -> x;
+    match (my)
+    | some -> y { x y f call some }
+    | _  { none }
+  }
+  | _ { none }
 }
 
 define map-optional (for a b . a optional, (a -> b) -> b optional) {
   -> opt, f;
   match (opt)
-  case some -> x { x f call some }
-  else { none }
+  | some -> x { x f call some }
+  | _  { none }
 }
 
 define optional-fun (for R S a . R, a optional, (R, a -> S), (R -> S) -> S) {
   -> f, g;
   match
-  case some { f call }
-  case none { g call }
+  | some { f call }
+  | none { g call }
 }

@@ -261,7 +261,7 @@ printToken = \case
   Token.As -> "as"
   Token.BlockBegin -> "{"
   Token.BlockEnd -> "}"
-  Token.Case -> "case"
+  Token.Case -> "|"
   Token.Character c -> squotes $ pretty c
   Token.Colon -> ":"
   Token.Comma -> ","
@@ -319,7 +319,7 @@ printDeclaration (Declaration Declaration.Trait name _ signature) =
 
 printTypeDefinition :: TypeDefinition -> Doc a
 printTypeDefinition (TypeDefinition constructors name _ parameters) =
-  group $ blockMulti ("type" <+> typeName) printDataConstructor constructors
+  "type" <+> typeName <> encloseSep " { " " } " " | " (printDataConstructor <$> constructors)
   where
     typeName =
       printQualified name
@@ -441,7 +441,7 @@ printMatch cond cases else_ =
         )
           ++ maybe
             []
-            (\e -> [group $ blockMaybe "else" (maybePrintTerm e)])
+            (\e -> [group $ blockMaybe "| _ " (maybePrintTerm e)])
             else_
       )
     )
@@ -450,7 +450,7 @@ printCase :: GeneralName -> Term a -> Doc b
 printCase n (Lambda _ name _ body _) =
   group $
     blockMaybe
-      ("case" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names))
+      ("|" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names))
       (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body

@@ -21,7 +21,8 @@ Here's a naive recursive fibonacci function:
 
 ```
 define fib (nat -> nat) {
-  -> x; if (x 2 le) { 1 }
+  -> x;
+  if (x 2 le) { 1 }
   else { x pred fib x pred pred fib +}
 }
 

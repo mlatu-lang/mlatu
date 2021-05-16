@@ -183,6 +183,9 @@ ignore = Parsec.try $ Ignore <$ Parsec.char '_' <* Parsec.notFollowedBy letter
 colon :: Tokenizer Token
 colon = Colon <$ Parsec.char ':'
 
+caseToken :: Tokenizer Token
+caseToken = Case <$ Parsec.char '|'
+
 vectorBegin :: Tokenizer Token
 vectorBegin = VectorBegin <$ Parsec.char '['
 
@@ -239,7 +242,6 @@ alphanumeric =
           "alias" -> Alias
           "about" -> About
           "as" -> As
-          "case" -> Case
           "define" -> Define
           "do" -> Do
           "else" -> Else
@@ -278,6 +280,7 @@ tokenTokenizer =
         blockEnd,
         characterLiteral,
         comma,
+        caseToken,
         dot,
         groupBegin,
         groupEnd,

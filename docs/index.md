@@ -5,8 +5,8 @@ Factorial
 define fact (nat -> nat) {
   dup                         // duplicates the input so we can use it later
   match                       // matches on the input, a natural number
-  case zero { succ }          // if zero, increment by one
-  case succ { fact * }        // otherwise, take factorial of one less and multiply
+  | zero { succ }             // if zero, increment by one
+  | succ { fact * }           // otherwise, take factorial of one less and multiply
 }
 ```
 

@@ -39,14 +39,14 @@ instance show (bool -> string) { if { "true" } else { "false" } }
 
 instance show (for a b . b a either -> string) {
   match
-  case left { show }
-  case right { show }
+  | left { show " left" ++ }
+  | right { show " right" ++}
 }
 
 instance show (for t . t optional -> string) {
   match
-  case some -> x { "some " x show ++ }
-  case none { "none" }
+  | some { show " some" ++ }
+  | none { "none" }
 }
 
 instance show (nat -> string) { Mlatu.show-nat }
