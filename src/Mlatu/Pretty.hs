@@ -236,7 +236,9 @@ printSignature (Function as bs es _) =
     punctuateComma (printSignature <$> as)
       <+> "->"
       <+> punctuateComma (printSignature <$> bs)
-      <+> hsep (("+" <>) . printGeneralName <$> es)
+      <> case es of
+        [] -> ""
+        _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
 printSignature (Quantified names typ _) =
   parens $ "for" <+> hsep (printParameter <$> names) <+> "." <+> printSignature typ
 printSignature (Variable name _) = printGeneralName name
@@ -245,7 +247,9 @@ printSignature (StackFunction r as s bs es _) =
     punctuateComma ((printSignature r <> "..") : (printSignature <$> as))
       <+> "->"
       <+> punctuateComma ((printSignature s <> "..") : (printSignature <$> bs))
-      <+> hsep (("+" <>) . printGeneralName <$> es)
+      <> case es of
+        [] -> ""
+        _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
 printSignature (Type t) = printType t
 
 printToken :: Token.Token -> Doc a

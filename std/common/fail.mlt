@@ -1,22 +1,22 @@
 module Mlatu {
-  intrinsic abort (for r.. s.. . r.., string -> s.. +fail)
-  intrinsic exit (for r.. s.. . r.., nat -> s.. +exit)
+  intrinsic abort (for r.. s.. . r.., string -> s.. <fail>)
+  intrinsic exit (for r.. s.. . r.., nat -> s.. <exit>)
 }
 
-define abort-now (for r.. s.. . r.. -> s.. +fail) { "abort called" fail-now }
+define abort-now (for r.. s.. . r.. -> s.. <fail>) { "abort called" fail-now }
 
-define assert (for +p . string, (-> bool +p) -> +fail +p) {
+define assert (for +p . string, (-> bool <p>) -> <fail + p>) {
   -> message, test;
   do (with (-fail)) { test call }
   if (not) { message fail-now }
   else { }
 }
 
-define assert-eq (for t . string, t, t -> +fail) {
+define assert-eq (for t . string, t, t -> <fail>) {
   -> x, y;
   { x y eq } assert
 }
 
-define exit-now (for r.. s.. . r.., nat -> s.. +exit) { Mlatu.exit }
+define exit-now (for r.. s.. . r.., nat -> s.. <exit>) { Mlatu.exit }
 
-define fail-now (for r.. s.. . r.., string -> s.. +fail) { Mlatu.abort }
+define fail-now (for r.. s.. . r.., string -> s.. <fail>) { Mlatu.abort }

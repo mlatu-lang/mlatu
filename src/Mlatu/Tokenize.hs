@@ -260,13 +260,7 @@ alphanumeric =
           "with" -> With
           "where" -> Where
           _ -> Word (Unqualified name),
-      -- See note [Angle Brackets].
-
-      Operator (Unqualified (one '<'))
-        <$ Parsec.try (Parsec.char '<' <* Parsec.notFollowedBy symbol),
       angleBegin,
-      Operator (Unqualified (one '>'))
-        <$ Parsec.try (Parsec.char '>' <* Parsec.notFollowedBy symbol),
       angleEnd,
       operator
     ]

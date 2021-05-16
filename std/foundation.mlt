@@ -4,15 +4,15 @@ module Mlatu {
   intrinsic swap (for a b . a, b -> b, a)
 }
 
-permission exit (for r.. s.. +p . r.., (r.. -> s.. +exit +p) -> s.. +p) {
+permission exit (for r.. s.. +p . r.., (r.. -> s.. <exit + p>) -> s.. <p>) {
   with (+exit)
 }
 
-permission fail (for r.. s.. +p . r.., (r.. -> s.. +fail +p) -> s.. +p) {
+permission fail (for r.. s.. +p . r.., (r.. -> s.. <fail + p>) -> s.. <p>) {
   with (+fail)
 }
 
-permission io (for r.. s.. +p . r.., (r.. -> s.. +io +p) -> s.. +p) {
+permission io (for r.. s.. +p . r.., (r.. -> s.. <io + p>) -> s.. <p>) {
   with (+io)
 }
 

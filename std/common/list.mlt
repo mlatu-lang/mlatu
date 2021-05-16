@@ -71,14 +71,14 @@ define concat-optionals (for t . (t optional) list -> t list) {
   [] { match case some { suffix } else {} } fold-left
 }
 
-define iter (for t +p . t list, (t -> +p) -> +p) {
+define iter (for t +p . t list, (t -> <p>) -> <p>) {
   -> f;
   match
   case cons { -> h, t; h f call t f iter }
   case nil {}
 }
 
-define iter2 (for a b +p . a list, b list, (a, b -> +p) -> +p) {
+define iter2 (for a b +p . a list, b list, (a, b -> <p>) -> <p>) {
   -> f;
   combine { unpair f call } iter
 }
@@ -208,21 +208,21 @@ define lefts (for a b . (b a either) list -> a list) { \get-left map-optionally 
 
 define length (for t . t list -> nat) { 0 { drop 1 (+) } fold-left }
 
-define map (for a b +p . a list, (a -> b +p) -> b list +p) {
+define map (for a b +p . a list, (a -> b <p>) -> b list <p>) {
   -> f;
   match
   case cons { -> h, t; (h f call) (t f map) cons }
   case nil { nil }
 }
 
-define map2 (for a b c +p . a list, b list, (a, b -> c +p) -> c list +p) {
+define map2 (for a b c +p . a list, b list, (a, b -> c <p>) -> c list <p>) {
   -> f;
   combine (\unpair f compose) map
 }
 
 define map-concat (for a b . a list, (a -> b list) -> b list) { map concat }
 
-define map-index (for a b +p . a list, (a, nat -> b +p) -> b list +p) {
+define map-index (for a b +p . a list, (a, nat -> b <p>) -> b list <p>) {
   0 MapIndex.helper
 }
 
@@ -362,7 +362,7 @@ define combine (for a b . a list, b list -> (b a pair) list) {
   case nil { [] }
 }
 
-define MapIndex.helper (for a b +p . a list, (a, nat -> b +p), nat -> b list +p) {
+define MapIndex.helper (for a b +p . a list, (a, nat -> b <p>), nat -> b list <p>) {
   -> f, i;
   match
   case cons { -> h, t; h i f call t f i 1 + helper cons }

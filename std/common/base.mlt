@@ -18,12 +18,12 @@ define compose (for r.. s.. t.. . (r.. -> s..), (s.. -> t..) -> (r.. -> t..)) {
   { f call g call }
 }
 
-define curry (for r.. s.. t +p . t, (r.., t -> s.. +p) -> (r.. -> s.. +p)) {
+define curry (for r.. s.. t +p . t, (r.., t -> s.. <p>) -> (r.. -> s.. <p>)) {
   -> x, f;
   { x f call }
 }
 
-define curry2 (for r.. s.. a b +p . a, b, (r.., a, b -> s.. +p) -> (r.. -> s.. +p)) {
+define curry2 (for r.. s.. a b +p . a, b, (r.., a, b -> s.. <p>) -> (r.. -> s.. <p>)) {
   -> x, y, f;
   { x y f call }
 }

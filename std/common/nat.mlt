@@ -48,7 +48,7 @@ define * (nat, nat -> nat) {
   case succ { b * b +}
 }
 
-define / (nat, nat -> nat +fail) {
+define / (nat, nat -> nat) {
   -> a, b;
   if (a b lt) {
     zero
@@ -57,7 +57,7 @@ define / (nat, nat -> nat +fail) {
   }
 }
 
-define % (nat, nat -> nat +fail) {
+define % (nat, nat -> nat) {
   -> a, b;
   if (a b lt) {
     a

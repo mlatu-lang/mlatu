@@ -12,6 +12,12 @@ define gt (for t. t, t -> bool) {
   else { false }
 }
 
+define ge (for t. t, t -> bool) {
+  match (cmp)
+  case less { false }
+  else { false }
+}
+
 define lt (for t. t, t -> bool) {
   match (cmp)
   case less { true }

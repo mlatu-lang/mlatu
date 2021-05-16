@@ -25,7 +25,7 @@ define from-optional (for t . t optional, t -> t) {
   else { default }
 }
 
-define from-some (for t . t optional, string -> t +fail) {
+define from-some (for t . t optional, string -> t <fail>) {
   -> message;
   match
   case some {}

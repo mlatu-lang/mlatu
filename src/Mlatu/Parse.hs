@@ -498,7 +498,7 @@ functionTypeParser = (<?> "function type") $ do
       [ stackSignature,
         arrowSignature
       ]
-  perms <- permissions
+  perms <- Parsec.option [] permissions
   pure (effect perms origin)
   where
     stackSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
@@ -528,9 +528,11 @@ functionTypeParser = (<?> "function type") $ do
       pure (Signature.Function leftTypes rightTypes, origin)
 
     permissions :: Parser [GeneralName]
-    permissions =
-      (<?> "permission labels") $
-        many (parserMatchOperator "+" *> nameParser)
+    permissions = (<?> "permission labels") $ do
+      parserMatch_ Token.AngleBegin
+      ps <- nameParser `Parsec.sepBy1` parserMatchOperator "+"
+      parserMatch_ Token.AngleEnd
+      pure ps
 
     left, right :: Parser [Signature]
     left = basicTypeParser `Parsec.sepEndBy` commaParser
