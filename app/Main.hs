@@ -97,5 +97,11 @@ compileFiles prelude relativePaths toRun =
                           ]
                       )
                     >> removeFile (name <> ".rs")
-                    >> when toRun (runProcess_ (proc ("./" <> name) []) >> removeFile name)
+                    >> when
+                      toRun
+                      ( putStrLn "Running the produced executable"
+                          >> runProcess_ (proc ("./" <> name) [])
+                          >> removeFile name
+                      )
+                    >> unless toRun (putStrLn ("Produced the executable ./" <> name))
             )

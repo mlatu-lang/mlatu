@@ -14,6 +14,7 @@ module Mlatu.Term
     Permit (..),
     Term (..),
     Value (..),
+    Specialness (..),
     asCoercion,
     compose,
     decompose,
@@ -73,13 +74,16 @@ data Term a
     -- pattern-matching.
     Match !MatchHint !a ![Case a] !(Else a) !Origin
   | -- | @new.n@: ADT allocation.
-    New !a !ConstructorIndex !Int !Bool !Origin
+    New !a !ConstructorIndex !Int !Specialness !Origin
   | -- | @new.closure.n@: closure allocation.
     NewClosure !a !Int !Origin
   | -- | @push v@: push of a value.
     Push !a !(Value a) !Origin
   | -- | @f@: an invocation of a word.
     Word !a !GeneralName ![Type] !Origin
+  deriving (Ord, Eq, Show)
+
+data Specialness = NatLike | ListLike | NonSpecial
   deriving (Ord, Eq, Show)
 
 -- | The type of coercion to perform.

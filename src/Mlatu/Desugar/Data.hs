@@ -22,7 +22,7 @@ import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Term (..))
+import Mlatu.Term (Specialness (..), Term (..))
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Optics
@@ -65,7 +65,11 @@ desugarTypeDefinition definition =
               ()
               (ConstructorIndex index)
               (length $ view DataConstructor.fields constructor)
-              (unqualifiedName (view TypeDefinition.name definition) == "nat")
+              ( case unqualifiedName (view TypeDefinition.name definition) of
+                  "nat" -> NatLike
+                  "list" -> ListLike
+                  _ -> NonSpecial
+              )
               $ view DataConstructor.origin constructor,
           Definition._category = Category.Constructor,
           Definition._inferSignature = False,
