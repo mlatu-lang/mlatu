@@ -1,4 +1,4 @@
-define divisible (nat, nat -> bool +fail) { % 0 eq }
+define divisible (nat, nat -> bool) { % 0 eq }
 
 define fizzbuzz (nat -> string) {
   -> n;

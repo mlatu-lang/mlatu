@@ -27,7 +27,7 @@ import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Pretty (printInstantiated, printQualified)
 import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), Value (..), decompose)
-import Mlatu.Type (Type)
+import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
@@ -44,9 +44,9 @@ generate dict mMain = do
     ( "#![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]"
         <> ( "fn main() { "
                <> maybe "mmain" rustifyQualified mMain
-               <> "(&mut Stack::new(), &mut Vec::new()); }"
+               <> "(&mut Stack::new(), &Vec::new()); }"
            )
-        <> "type StackFn = fn(&mut Stack, &mut Vec<Vec<Rep>>);"
+        <> "type StackFn = fn(&mut Stack, &Vec<Rep>);"
         <> "#[derive(Clone)] enum Rep { Closure(StackFn, Vec<Rep>), Algebraic(usize, Vec<Rep>), Nat(usize), List(Vec<Rep>), Char(char), Text(String) } "
         <> "#[derive(Clone)] struct Stack { inner: Vec<Rep> }"
         <> "use Rep::*; "
@@ -66,6 +66,8 @@ generate dict mMain = do
                <> "fn push_char(&mut self, n: char) { self.inner.push(Char(n)); } "
                <> "fn push_algebraic(&mut self, a: usize, b: Vec<Rep>) { self.inner.push(Algebraic(a,b)); } "
                <> "fn push_list(&mut self, n: Vec<Rep>) { self.inner.push(List(n)); } "
+               <> "fn nat_pred(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n -= 1; } }"
+               <> "fn nat_succ(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n += 1; } }"
            )
         <> "}"
         <> ByteString.concat bs
@@ -134,6 +136,11 @@ termRs x = goTerms $ decompose x
             <>
         )
           <$> goTerms xs
+      (Word _ (QualifiedName (Qualified _ "zero")) _ _ : xs) -> do
+        let go n ((Word _ (QualifiedName (Qualified _ "succ")) _ _) : xs) = go (n + 1) xs
+            go n xs = (n, xs)
+            (sum, xs') = go 0 xs
+        (pushNat (show sum) <>) <$> goTerms xs'
       (y : ys) -> do
         a <- goTerm y
         b <- goTerms ys
@@ -157,7 +164,18 @@ termRs x = goTerms $ decompose x
             )
       Push _ (Local (LocalIndex 0)) _ -> pure "stack.push(locals.last().unwrap().clone());"
       Push _ (Local (LocalIndex i)) _ -> pure $ "stack.push(locals[locals.len() - " <> show (1 + i) <> "].clone());"
-      Push _ (Closed (ClosureIndex i)) _ -> pure $ "stack.push(closures.last().unwrap().clone()[" <> show i <> "].clone());"
+      Push _ (Closed (ClosureIndex i)) _ -> pure $ "stack.push(closures[" <> show i <> "].clone());"
+      Word _ (QualifiedName (Qualified _ "cmp")) [TypeConstructor _ "nat"] _ ->
+        ((unwrapNat "a" <> unwrapNat "b") <>) <$> cmp "a" "b"
+      Word _ (QualifiedName (Qualified _ "pred")) _ _ -> pure "stack.nat_pred();"
+      Word _ (QualifiedName (Qualified _ "+")) _ _ ->
+        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a+b"
+      Word _ (QualifiedName (Qualified _ "-")) _ _ ->
+        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a-b"
+      Word _ (QualifiedName (Qualified _ "*")) _ _ ->
+        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a*b"
+      Word _ (QualifiedName (Qualified _ "/")) _ _ ->
+        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a/b"
       Word _ (QualifiedName name) args _ -> word name args
       Lambda _ _ _ body _ -> (\a -> "locals.push(stack.get().unwrap());" <> a <> "locals.pop();") <$> termRs body
       Match _ _ cases els _ -> do
@@ -170,7 +188,7 @@ termRs x = goTerms $ decompose x
 
 constructor :: Int -> Int -> Specialness -> ByteString
 constructor 0 0 NatLike = pushNat "0"
-constructor 1 1 NatLike = unwrapNat "a" <> pushNat "a+1"
+constructor 1 1 NatLike = "stack.nat_succ();"
 constructor 0 0 ListLike = pushList "Vec::new()"
 constructor 1 2 ListLike = letStmt "x" "stack.get().unwrap()" <> unwrapList "mut xs" <> "xs.insert(0, x);" <> pushList "xs"
 constructor i 0 NonSpecial = pushAlgebraic (show i) "Vec::new()"
@@ -178,14 +196,6 @@ constructor i 1 NonSpecial = letStmt "v" "vec![stack.get().unwrap()]" <> pushAlg
 constructor i size NonSpecial = letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
 
 word :: Qualified -> [Type] -> Codegen ByteString
-word (Qualified v "+") []
-  | v == Vocabulary.global = pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a+b"
-word (Qualified v "-") []
-  | v == Vocabulary.global = pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a-b"
-word (Qualified v "*") []
-  | v == Vocabulary.global = pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a*b"
-word (Qualified v "/") []
-  | v == Vocabulary.global = pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a/b"
 word (Qualified v unqualified) []
   | v == Vocabulary.intrinsic = intrinsic unqualified
 word name args = do
@@ -217,7 +227,7 @@ word name args = do
 
 intrinsic :: Unqualified -> Codegen ByteString
 intrinsic = \case
-  "call" -> pure $ unwrapClosure "n" "rs" <> "closures.push(rs); n(stack, closures); closures.pop();"
+  "call" -> pure $ unwrapClosure "name" "new" <> "let old = closures; name(stack, &new); let closures = old;"
   "abort" -> pure $ unwrapText "a" <> "panic!(\"Execution failure: {}\", a);"
   "exit" -> pure $ unwrapNat "i" <> "std::process::exit(i as i32);"
   "drop" -> pure $ letStmt "_" "stack.get().unwrap();"
@@ -253,18 +263,19 @@ intrinsic = \case
         <> letStmt "mut file" "std::fs::File::open(b).unwrap()"
         <> "file.write_all(a.as_bytes()).unwrap();"
   x -> error ("No such intrinsic: " <> show x)
-  where
-    cmp a b = do
-      m <- word (Qualified Vocabulary.global "more") []
-      l <- word (Qualified Vocabulary.global "less") []
-      e <- word (Qualified Vocabulary.global "equal") []
-      pure $
-        matchStmt
-          (a <> ".cmp(&" <> b <> ")")
-          [ ("std::cmp::Ordering::Greater", m),
-            ("std::cmp::Ordering::Less", l),
-            ("std::cmp::Ordering::Equal", e)
-          ]
+
+cmp :: ByteString -> ByteString -> Codegen ByteString
+cmp a b = do
+  m <- word (Qualified Vocabulary.global "more") []
+  l <- word (Qualified Vocabulary.global "less") []
+  e <- word (Qualified Vocabulary.global "equal") []
+  pure $
+    matchStmt
+      (b <> ".cmp(&" <> a <> ")")
+      [ ("std::cmp::Ordering::Greater", m),
+        ("std::cmp::Ordering::Less", l),
+        ("std::cmp::Ordering::Equal", e)
+      ]
 
 vecBuilder :: Int -> ByteString
 vecBuilder 0 = "Vec::new()"
@@ -282,6 +293,11 @@ caseRs (Case (QualifiedName name) caseBody _) = do
         [New _ (ConstructorIndex i) 0 NonSpecial _] ->
           Just
             . ("Some(Algebraic(" <> show i <> ", _))",)
+            <$> termRs caseBody
+        [New _ (ConstructorIndex i) 1 NonSpecial _] ->
+          Just
+            . ("Some(Algebraic(" <> show i <> ", mut fields))",)
+            . ("stack.push(fields.swap_remove(0));" <>)
             <$> termRs caseBody
         [New _ (ConstructorIndex i) _ NonSpecial _] ->
           Just
@@ -334,12 +350,6 @@ unwrapText a = "let " <> a <> " = stack.get_text().unwrap();"
 pushText :: ByteString -> ByteString
 pushText a = "stack.push_text(" <> a <> ");"
 
-unwrapName :: ByteString -> ByteString
-unwrapName a = "let " <> a <> " = stack.get_name().unwrap();"
-
-pushName :: ByteString -> ByteString
-pushName a = "stack.push_name(" <> a <> ");"
-
 unwrapClosure :: ByteString -> ByteString -> ByteString
 unwrapClosure a b = "let (" <> a <> "," <> b <> ") = stack.get_closure().unwrap();"
 
@@ -368,7 +378,7 @@ stackFn :: ByteString -> ByteString -> Bool -> ByteString
 stackFn name body containsLocals =
   " fn "
     <> name
-    <> "(stack: &mut Stack, closures: &mut Vec<Vec<Rep>>) { "
+    <> "(stack: &mut Stack, closures: &Vec<Rep>) { "
     <> ( if containsLocals
            then "let mut locals: Vec<Rep> = Vec::new();" <> body
            else body
