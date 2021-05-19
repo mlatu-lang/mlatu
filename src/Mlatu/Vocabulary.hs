@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- |
 -- Module      : Mlatu.Vocabulary
 -- Description : Namespaces
@@ -7,20 +9,12 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Vocabulary
-  ( global,
-    intrinsic,
-    intrinsicName,
+  ( pattern Global,
   )
 where
 
-import Mlatu.Name (Qualifier (..), Root (..))
+import Mlatu.Name (Qualified (..), Qualifier (..), Root (..), Unqualified (..))
 import Relude
 
-global :: Qualifier
-global = Qualifier Absolute []
-
-intrinsic :: Qualifier
-intrinsic = Qualifier Absolute [intrinsicName]
-
-intrinsicName :: Text
-intrinsicName = "Mlatu"
+pattern Global :: Unqualified -> Qualified
+pattern Global u = Qualified (Qualifier Absolute []) u

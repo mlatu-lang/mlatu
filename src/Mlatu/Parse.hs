@@ -19,8 +19,6 @@ import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor (DataConstructor (DataConstructor))
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Declaration (Declaration (..))
-import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Data qualified as Data
@@ -61,11 +59,12 @@ import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
 import Mlatu.Token qualified as Token
 import Mlatu.Tokenize (tokenize)
+import Mlatu.Trait (Trait (..))
+import Mlatu.Trait qualified as Trait
 import Mlatu.TypeAlias (TypeAlias (..))
 import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
-import Mlatu.Vocabulary qualified as Vocabulary
 import Optics
 import Relude hiding (Compose, Constraint)
 import Relude.Unsafe qualified as Unsafe
@@ -91,7 +90,7 @@ fragment line path mainPermissions mainName tokens =
   let parsed =
         Parsec.runParser
           (fragmentParser mainPermissions mainName)
-          Vocabulary.global
+          (Qualifier Absolute [])
           path
           tokens
    in case parsed of
@@ -119,7 +118,7 @@ generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
 generalName line path text = do
   tokens <- tokenize line path text
   errorCheckpoint
-  let parsed = Parsec.runParser nameParser Vocabulary.global path tokens
+  let parsed = Parsec.runParser nameParser (Qualifier Absolute []) path tokens
   case parsed of
     Left parseError -> do
       report $ Report.parseError parseError
@@ -150,19 +149,11 @@ partitionElements ::
   Maybe Qualified ->
   [Element ()] ->
   Fragment ()
-partitionElements mainPermissions mainName = rev . foldr go mempty
+partitionElements mainPermissions mainName = foldr go mempty
   where
-    rev :: Fragment () -> Fragment ()
-    rev =
-      over Fragment.declarations reverse
-        . over Fragment.definitions reverse
-        . over Fragment.metadata reverse
-        . over Fragment.types reverse
-        . over Fragment.aliases reverse
-
     go :: Element () -> Fragment () -> Fragment ()
     go = \case
-      Element.Declaration x -> over Fragment.declarations (x :)
+      Element.Trait x -> over Fragment.traits (x :)
       Element.Definition x -> over Fragment.definitions (x :)
       Element.Metadata x -> over Fragment.metadata (x :)
       Element.TypeDefinition x -> over Fragment.types (x :)
@@ -305,11 +296,7 @@ elementParser =
               instanceParser,
               permissionParser
             ],
-        Element.Declaration
-          <$> Parsec.choice
-            [ traitParser,
-              intrinsicParser
-            ],
+        Element.Trait <$> traitParser,
         Element.TypeAlias <$> typeAliasParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
@@ -454,31 +441,17 @@ recordParser = (<?> "record definition") $ do
         }
     )
 
-traitParser :: Parser Declaration
-traitParser =
-  (<?> "trait declaration") $
-    declarationParser Token.Trait Declaration.Trait
-
-intrinsicParser :: Parser Declaration
-intrinsicParser =
-  (<?> "intrinsic declaration") $
-    declarationParser Token.Intrinsic Declaration.Intrinsic
-
-declarationParser ::
-  Token ->
-  Declaration.Category ->
-  Parser Declaration
-declarationParser keyword category = do
-  origin <- getTokenOrigin <* parserMatch keyword
-  suffix <- unqualifiedNameParser <?> "declaration name"
+traitParser :: Parser Trait
+traitParser = do
+  origin <- getTokenOrigin <* parserMatch Token.Trait
+  suffix <- unqualifiedNameParser <?> "trait name"
   name <- Qualified <$> Parsec.getState <*> pure suffix
-  sig <- signatureParser <?> "declaration signature"
+  sig <- signatureParser <?> "trait signature"
   pure
-    Declaration
-      { Declaration._category = category,
-        Declaration._name = name,
-        Declaration._origin = origin,
-        Declaration._signature = sig
+    Trait
+      { Trait._name = name,
+        Trait._origin = origin,
+        Trait._signature = sig
       }
 
 typeParser :: Parser Signature
@@ -725,11 +698,8 @@ sectionParser =
             pure $
               compose () operandOrigin $
                 operand
-                  ++ [ Word
-                         ()
-                         (QualifiedName (Qualified Vocabulary.intrinsic "swap"))
-                         []
-                         origin,
+                  ++ [ Push () (Text "swap") origin,
+                       Word () "extern" [] origin,
                        Word () (UnqualifiedName function) [] origin
                      ]
         ]
@@ -844,11 +814,8 @@ withParser = (<?> "'with' expression") $ do
       ()
       origin
       [ Term.permissionCoercion permits () origin,
-        Word
-          ()
-          (QualifiedName (Qualified Vocabulary.intrinsic "call"))
-          []
-          origin
+        Push () (Text "call") origin,
+        Word () "extern" [] origin
       ]
 
 permitParser :: Parser Term.Permit
@@ -888,15 +855,10 @@ makeLambda parsed body origin =
   foldr
     ( \(nameMaybe, nameOrigin) acc ->
         maybe
-          ( Compose
+          ( compose
               ()
-              ( Word
-                  ()
-                  (QualifiedName (Qualified Vocabulary.intrinsic "drop"))
-                  []
-                  origin
-              )
-              acc
+              origin
+              [Push () (Text "drop") origin, Word () "extern" [] origin, acc]
           )
           (\name -> Lambda () name () acc nameOrigin)
           nameMaybe

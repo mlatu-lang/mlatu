@@ -31,7 +31,7 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Optics
 import Relude hiding (Compose)
 import Relude.Unsafe qualified as Unsafe
@@ -174,7 +174,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
           if isDefined qualified
             then pure (QualifiedName qualified)
             else do
-              let global = Qualified Vocabulary.global unqualified
+              let global = Global unqualified
               if isDefined global
                 then pure (QualifiedName global)
                 else do

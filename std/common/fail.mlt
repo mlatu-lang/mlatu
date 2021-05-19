@@ -1,8 +1,3 @@
-module Mlatu {
-  intrinsic abort (for R S . R, string -> S <fail>)
-  intrinsic exit (for R S . R, nat -> S <exit>)
-}
-
 define abort-now (for R S . R -> S <fail>) { "abort called" fail-now }
 
 define assert (for +p . string, (-> bool <p>) -> <fail + p>) {
@@ -17,6 +12,6 @@ define assert-eq (for t . string, t, t -> <fail>) {
   { x y eq } assert
 }
 
-define exit-now (for R S . R, nat -> S <exit>) { Mlatu.exit }
+define exit-now (for R S . R, nat -> S <exit>) { "exit" extern }
 
-define fail-now (for R S . R, string -> S <fail>) { Mlatu.abort }
+define fail-now (for R S . R, string -> S <fail>) { "abort" extern }

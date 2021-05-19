@@ -1,21 +1,12 @@
-module Mlatu {
-  intrinsic cmp-string (string, string -> ord)
-  intrinsic read-nat (string -> nat optional)
-  intrinsic show-nat (nat -> string)
-  intrinsic string-concat (string, string -> string)
-  intrinsic string-from-list (char list -> string)
-  intrinsic string-to-list (string -> char list)
-}
-
 trait read (for t. string -> t optional)
 
 trait show (for t. t -> string)
 
 type string {}
 
-instance ++ (string, string -> string) { Mlatu.string-concat }
+instance ++ (string, string -> string) { "string-concat" extern }
 
-instance cmp (string, string -> ord) { Mlatu.cmp-string }
+instance cmp (string, string -> ord) { "cmp-string" extern }
 
 instance read (string -> bool optional) {
   dup
@@ -23,7 +14,7 @@ instance read (string -> bool optional) {
   else { if ("false" eq) { false some } else { none } }
 }
 
-instance read (string -> nat optional) { Mlatu.read-nat }
+instance read (string -> nat optional) { "read-nat" extern }
 
 instance read (string -> char optional) {
   chars dup length 1 eq
@@ -49,10 +40,10 @@ instance show (for t . t optional -> string) {
   | none { "none" }
 }
 
-instance show (nat -> string) { Mlatu.show-nat }
+instance show (nat -> string) { "show-nat" extern }
 
 instance show (char -> string) { once from-chars }
 
-define chars (string -> char list) { Mlatu.string-to-list }
+define chars (string -> char list) { "string-to-list" extern }
 
-define from-chars (char list -> string) { Mlatu.string-from-list }
+define from-chars (char list -> string) { "string-from-list" extern }

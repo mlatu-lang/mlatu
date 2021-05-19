@@ -10,7 +10,7 @@
 -- Portability : GHC
 module Mlatu.Fragment
   ( Fragment (..),
-    declarations,
+    traits,
     definitions,
     metadata,
     types,
@@ -18,9 +18,9 @@ module Mlatu.Fragment
   )
 where
 
-import Mlatu.Declaration (Declaration (..))
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
+import Mlatu.Trait (Trait (..))
 import Mlatu.TypeAlias (TypeAlias)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics
@@ -28,7 +28,7 @@ import Relude
 
 -- | A program fragment, consisting of a bag of top-level program elements.
 data Fragment a = Fragment
-  { _declarations :: ![Declaration],
+  { _traits :: ![Trait],
     _definitions :: ![Definition a],
     _metadata :: ![Metadata],
     _types :: ![TypeDefinition],
@@ -41,7 +41,7 @@ makeLenses ''Fragment
 instance Monoid (Fragment a) where
   mempty =
     Fragment
-      { _declarations = mempty,
+      { _traits = mempty,
         _definitions = mempty,
         _metadata = mempty,
         _types = mempty,
@@ -50,7 +50,7 @@ instance Monoid (Fragment a) where
 
 instance Semigroup (Fragment a) where
   (<>) a =
-    over declarations (<> view declarations a)
+    over traits (<> view traits a)
       . over definitions (<> view definitions a)
       . over metadata (<> view metadata a)
       . over types (<> view types a)

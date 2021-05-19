@@ -37,7 +37,7 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Optics
 import Relude
 
@@ -92,4 +92,4 @@ main permissions mName term =
 
 -- | Default name of main definition.
 mainName :: Qualified
-mainName = Qualified Vocabulary.global "main"
+mainName = Global "main"

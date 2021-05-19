@@ -33,7 +33,7 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term qualified as Term
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Optics
 import Prettyprinter (vcat)
 import Relude
@@ -56,10 +56,10 @@ cmd input = do
           $ Unqualified entryNameUnqualified
   mResults <- liftIO $
     runMlatuExceptT $ do
-      commonDictionary <- Mlatu.compilePrelude Common [QualifiedName $ Qualified Vocabulary.global "io"] Nothing
+      commonDictionary <- Mlatu.compilePrelude Common [QualifiedName $ Global "io"] Nothing
       fragment <-
         Mlatu.fragmentFromSource
-          [QualifiedName $ Qualified Vocabulary.global "io"]
+          [QualifiedName $ Global "io"]
           (Just entryName)
           lineNumber
           "<interactive>"

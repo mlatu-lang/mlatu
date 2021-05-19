@@ -24,7 +24,6 @@ library
       Mlatu
       Mlatu.Codegen
       Mlatu.DataConstructor
-      Mlatu.Declaration
       Mlatu.Definition
       Mlatu.Desugar.Data
       Mlatu.Desugar.Infix
@@ -67,6 +66,7 @@ library
       Mlatu.Term
       Mlatu.Token
       Mlatu.Tokenize
+      Mlatu.Trait
       Mlatu.Type
       Mlatu.TypeAlias
       Mlatu.TypeDefinition

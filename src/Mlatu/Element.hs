@@ -10,7 +10,7 @@
 -- Portability : GHC
 module Mlatu.Element
   ( Element (..),
-    _Declaration,
+    _Trait,
     _Definition,
     _Metadata,
     _Term,
@@ -19,10 +19,10 @@ module Mlatu.Element
   )
 where
 
-import Mlatu.Declaration (Declaration)
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Term (Term)
+import Mlatu.Trait (Trait)
 import Mlatu.TypeAlias (TypeAlias)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics.TH (makePrisms)
@@ -30,7 +30,7 @@ import Optics.TH (makePrisms)
 -- | A top-level program element.
 data Element a
   = -- | @intrinsic@, @trait@
-    Declaration !Declaration
+    Trait !Trait
   | -- | @define@, @instance@
     Definition !(Definition a)
   | -- | @about@

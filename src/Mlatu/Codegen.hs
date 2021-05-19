@@ -29,7 +29,7 @@ import Mlatu.Pretty (printInstantiated, printQualified)
 import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), Value (..), decompose)
 import Mlatu.Type (Type (..))
 import Mlatu.TypeEnv qualified as TypeEnv
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Optics
 import Relude hiding (Compose, Type)
 import Text.Printf (printf)
@@ -118,14 +118,10 @@ termRs x = goTerms $ decompose x
   where
     goTerms = \case
       [] -> pure ""
-      (Group a : Match _ _ cases els _ : xs) -> do
-        cond <- termRs a
-        cs <- traverse caseRs cases
-        e <- case els of
-          (Else body _) -> termRs body
-          (DefaultElse _ _) -> word (Qualified Vocabulary.global "abort-now") []
+      (Push _ (Text x) _ : Word _ (QualifiedName (Global "extern")) _ _ : xs) -> do
+        cg <- intrinsic x
         rest <- goTerms xs
-        pure $ matchStmt cond (catMaybes cs ++ [("_", e)]) <> rest
+        pure (cg <> rest)
       (Push _ (Name name) _ : NewClosure _ size _ : xs) ->
         ( ( case size of
               0 -> pushClosure (rustifyQualified name) "Vec::new()"
@@ -138,9 +134,9 @@ termRs x = goTerms $ decompose x
           <$> goTerms xs
       (Word _ (QualifiedName (Qualified _ "zero")) _ _ : xs) -> do
         let go n ((Word _ (QualifiedName (Qualified _ "succ")) _ _) : xs) = go (n + 1) xs
-            go n xs = (n, xs)
-            (sum, xs') = go 0 xs
-        (pushNat (show sum) <>) <$> goTerms xs'
+            go n rest = (n, rest)
+            (s, rest) = go 0 xs
+        (pushNat (show s) <>) <$> goTerms rest
       (y : ys) -> do
         a <- goTerm y
         b <- goTerms ys
@@ -182,7 +178,7 @@ termRs x = goTerms $ decompose x
         cs <- traverse caseRs cases
         e <- case els of
           (Else body _) -> termRs body
-          (DefaultElse _ _) -> word (Qualified Vocabulary.global "abort-now") []
+          (DefaultElse _ _) -> word (Global "abort-now") []
         pure $ matchStmt "stack.get()" (catMaybes cs ++ [("_", e)])
       _ -> pure ""
 
@@ -196,8 +192,6 @@ constructor i 1 NonSpecial = letStmt "v" "vec![stack.get().unwrap()]" <> pushAlg
 constructor i size NonSpecial = letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
 
 word :: Qualified -> [Type] -> Codegen ByteString
-word (Qualified v unqualified) []
-  | v == Vocabulary.intrinsic = intrinsic unqualified
 word name args = do
   let mangled = rustifyInstantiated $ Instantiated name args
   isInstantiated <- uncurry ((. Map.lookup mangled) . (<|>) . Map.lookup mangled) <$> get
@@ -219,13 +213,9 @@ word name args = do
                         _ -> pure $ mangled <> "(stack, closures);"
                     Left _ -> error "Could not instantiate generic type"
                 )
-        Just (Entry.WordEntry _ _ _ _ _ Nothing) -> case name of
-          (Qualified v unqualified)
-            | v == Vocabulary.intrinsic -> intrinsic unqualified
-          _ -> error "No such intrinsic"
         _ -> pure ""
 
-intrinsic :: Unqualified -> Codegen ByteString
+intrinsic :: Text -> Codegen ByteString
 intrinsic = \case
   "call" -> pure $ unwrapClosure "name" "new" <> "let old = closures; name(stack, &new); let closures = old;"
   "abort" -> pure $ unwrapText "a" <> "panic!(\"Execution failure: {}\", a);"
@@ -236,8 +226,8 @@ intrinsic = \case
   "cmp-string" -> ((unwrapText "a" <> unwrapText "b") <>) <$> cmp "a" "b"
   "show-nat" -> pure $ unwrapNat "i" <> pushText "format!(\"{}\", i)"
   "read-nat" -> do
-    s <- word (Qualified Vocabulary.global "some") []
-    n <- word (Qualified Vocabulary.global "none") []
+    s <- word (Global "some") []
+    n <- word (Global "none") []
     pure $
       unwrapText "a"
         <> "if let Some(a) = a.parse().ok().map(Nat) { stack.push(a); "
@@ -266,9 +256,9 @@ intrinsic = \case
 
 cmp :: ByteString -> ByteString -> Codegen ByteString
 cmp a b = do
-  m <- word (Qualified Vocabulary.global "more") []
-  l <- word (Qualified Vocabulary.global "less") []
-  e <- word (Qualified Vocabulary.global "equal") []
+  m <- word (Global "more") []
+  l <- word (Global "less") []
+  e <- word (Global "equal") []
   pure $
     matchStmt
       (b <> ".cmp(&" <> a <> ")")
@@ -361,9 +351,6 @@ unwrapChar a = "let " <> a <> " = stack.get_char().unwrap();"
 
 pushChar :: ByteString -> ByteString
 pushChar a = "stack.push_char(" <> a <> ");"
-
-unwrapAlgebraic :: ByteString -> ByteString -> ByteString
-unwrapAlgebraic a b = "let (" <> a <> "," <> b <> ") = stack.get_algebraic().unwrap();"
 
 pushAlgebraic :: ByteString -> ByteString -> ByteString
 pushAlgebraic a b = "stack.push_algebraic(" <> a <> "," <> b <> ");"

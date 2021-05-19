@@ -45,7 +45,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Relude hiding (Compose, Type)
 
 -- | This is the core language. It permits pushing values to the stack, invoking
@@ -114,7 +114,7 @@ data Else a
   deriving (Ord, Eq, Show)
 
 defaultElseBody :: a -> Origin -> Term a
-defaultElseBody a = Word a (QualifiedName (Qualified Vocabulary.global "abort-now")) []
+defaultElseBody a = Word a (QualifiedName (Global "abort-now")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit

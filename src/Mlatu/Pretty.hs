@@ -30,8 +30,6 @@ import Data.List (findIndex, groupBy)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.DataConstructor qualified as DataConstructor
-import Mlatu.Declaration (Declaration (..))
-import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition (Definition), mainName)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
@@ -50,6 +48,8 @@ import Mlatu.Signature (Signature (..))
 import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
+import Mlatu.Trait (Trait (..))
+import Mlatu.Trait qualified as Trait
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeDefinition (TypeDefinition (..))
@@ -311,10 +311,8 @@ printDataConstructor (DataConstructor.DataConstructor fields name _) =
   where
     printedFields = if not $ null fields then space <> tupled (printSignature <$> fields) else ""
 
-printDeclaration :: Declaration -> Doc a
-printDeclaration (Declaration Declaration.Intrinsic name _ signature) =
-  "intrinsic" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
-printDeclaration (Declaration Declaration.Trait name _ signature) =
+printDeclaration :: Trait -> Doc a
+printDeclaration (Trait name _ signature) =
   "trait" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
 
 printTypeDefinition :: TypeDefinition -> Doc a
@@ -584,16 +582,16 @@ printFragment fragment =
     groupedDeclarations =
       groupBy
         ( \a b ->
-            (qualifierName . view Declaration.name) a
-              == (qualifierName . view Declaration.name) b
+            (qualifierName . view Trait.name) a
+              == (qualifierName . view Trait.name) b
         )
-        (view Fragment.declarations fragment)
+        (view Fragment.traits fragment)
     printGrouped decls =
       if noVocab
         then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
         else blockMulti ("module" <+> printQualifier commonName) printDeclaration (sort decls)
       where
-        (commonName, noVocab) = case qualifierName $ view Declaration.name $ decls Unsafe.!! 0 of
+        (commonName, noVocab) = case qualifierName $ view Trait.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
           n -> (n, False)
 

@@ -14,8 +14,6 @@ module Mlatu.Enter
 where
 
 import Data.Map.Strict qualified as Map
-import Mlatu.Declaration (Declaration)
-import Mlatu.Declaration qualified as Declaration
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Infix qualified as Infix
@@ -25,12 +23,14 @@ import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
+import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
 import Mlatu.Informer (errorCheckpoint, report)
 import Mlatu.Instantiated (Instantiated (Instantiated))
+import Mlatu.Kind (Kind (..))
 import Mlatu.Metadata (Metadata)
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Monad (M)
@@ -40,6 +40,7 @@ import Mlatu.Name
     Unqualified,
     qualifierFromName,
   )
+import Mlatu.Origin (point)
 import Mlatu.Parse qualified as Parse
 import Mlatu.Pretty (printInstantiated, printQualified)
 import Mlatu.Quantify qualified as Quantify
@@ -50,11 +51,13 @@ import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
+import Mlatu.Trait (Trait)
+import Mlatu.Trait qualified as Trait
 import Mlatu.TypeAlias (TypeAlias)
 import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Optics
 import Prettyprinter (dquotes, hsep)
 import Relude
@@ -62,10 +65,11 @@ import Relude
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f =
-  foldlMx declareTypeAlias (view Fragment.aliases f)
+  enterExtern
+    >=> foldlMx declareTypeAlias (view Fragment.aliases f)
     >=> foldlMx declareType (view Fragment.types f)
     -- We enter declarations of all traits and intrinsics.
-    >=> foldlMx enterDeclaration (view Fragment.declarations f)
+    >=> foldlMx enterTrait (view Fragment.traits f)
     -- Then declare all permissions.
     >=> foldlMx
       declareWord
@@ -75,7 +79,7 @@ fragment f =
     -- With everything type-level declared, we can resolve type signatures.
     >=> foldlMx
       resolveSignature
-      (view Declaration.name <$> view Fragment.declarations f)
+      (view Trait.name <$> view Fragment.traits f)
     -- And declare regular words.
     >=> foldlMx
       declareWord
@@ -85,8 +89,10 @@ fragment f =
     -- Then resolve their signatures.
     >=> foldlMx
       resolveSignature
-      ( fmap (view Definition.name) (view Fragment.definitions f)
-          ++ fmap (view Declaration.name) (view Fragment.declarations f)
+      ( Global "extern" :
+        ( (view Definition.name <$> view Fragment.definitions f)
+            ++ (view Trait.name <$> view Fragment.traits f)
+        )
       )
     -- Add their metadata (esp. for operator metadata).
     >=> foldlMx addMetadata (view Fragment.metadata f)
@@ -96,39 +102,53 @@ fragment f =
     foldlMx :: (Foldable f, Monad m) => (b -> a -> m b) -> f a -> b -> m b
     foldlMx = flip . foldlM
 
+enterExtern :: Dictionary -> M Dictionary
+enterExtern dictionary = do
+  let origin = point "internal" 1 1
+  pure $
+    Dictionary.insertWord
+      (Instantiated (Global "extern") [])
+      ( Entry.WordEntry
+          Category.Extern
+          Merge.Deny
+          origin
+          Nothing
+          ( Just
+              ( Signature.Quantified
+                  [ Parameter origin "R" Stack Nothing,
+                    Parameter origin "S" Stack Nothing
+                  ]
+                  ( Signature.StackFunction
+                      (Signature.Variable "R" origin)
+                      [Signature.Variable "string" origin]
+                      (Signature.Variable "S" origin)
+                      []
+                      []
+                      origin
+                  )
+                  origin
+              )
+          )
+          Nothing
+      )
+      dictionary
+
 declareTypeAlias :: Dictionary -> TypeAlias -> M Dictionary
 declareTypeAlias dictionary a =
   pure $
     Dictionary.insertTypeAlias
-      (Instantiated (Qualified Vocabulary.global (view TypeAlias.name a)) [])
+      (Instantiated (Global (view TypeAlias.name a)) [])
       (Entry.TypeAliasEntry (view TypeAlias.origin a) (view TypeAlias.alias a))
       dictionary
 
-enterDeclaration :: Dictionary -> Declaration -> M Dictionary
-enterDeclaration dictionary declaration = do
-  let name = view Declaration.name declaration
-      signature = view Declaration.signature declaration
-      origin = view Declaration.origin declaration
-  pure $ case view Declaration.category declaration of
-    Declaration.Intrinsic ->
-      case Dictionary.lookupWord (Instantiated name []) dictionary of
-        -- TODO: Check signatures.
-        Just _existing -> dictionary
-        _ ->
-          Dictionary.insertWord
-            (Instantiated name [])
-            ( Entry.WordEntry
-                Category.Word
-                Merge.Deny
-                origin
-                Nothing
-                (Just signature)
-                Nothing
-            )
-            dictionary
-    Declaration.Trait -> case Dictionary.lookupTrait (Instantiated name []) dictionary of
-      Just _existing -> dictionary
-      Nothing -> Dictionary.insertTrait (Instantiated name []) (Entry.TraitEntry origin signature) dictionary
+enterTrait :: Dictionary -> Trait -> M Dictionary
+enterTrait dictionary trait = do
+  let name = view Trait.name trait
+      signature = view Trait.signature trait
+      origin = view Trait.origin trait
+  pure $ case Dictionary.lookupTrait (Instantiated name []) dictionary of
+    Just _existing -> dictionary
+    Nothing -> Dictionary.insertTrait (Instantiated name []) (Entry.TraitEntry origin signature) dictionary
 
 -- declare type, declare & define constructors
 declareType :: Dictionary -> TypeDefinition -> M Dictionary

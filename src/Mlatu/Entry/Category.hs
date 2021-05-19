@@ -19,4 +19,5 @@ data Category
   | Permission
   | Word
   | Deconstructor
+  | Extern
   deriving (Ord, Eq, Show)

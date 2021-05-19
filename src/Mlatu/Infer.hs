@@ -51,7 +51,7 @@ import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.TypeEnv qualified as TypeEnv
 import Mlatu.Unify qualified as Unify
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Mlatu.Zonk qualified as Zonk
 import Optics
 import Prettyprinter (Doc, dquotes, hsep)
@@ -652,21 +652,20 @@ typeKind dictionary = go
                   Value
                   parameters
           _noParameters -> case qualified of
-            Qualified qualifier unqualified
-              | qualifier == Vocabulary.global -> case unqualified of
-                "bottom" -> pure Stack
-                "fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
-                "prod" -> pure $ Stack :-> Value :-> Stack
-                "sum" -> pure $ Value :-> Value :-> Value
-                "join" -> pure $ Label :-> Permission :-> Permission
-                _noKind ->
-                  ice $
-                    show $
-                      hsep
-                        [ "Mlatu.Infer.typeKind - can't infer kind of constructor",
-                          dquotes $ Pretty.printQualified qualified,
-                          "in dictionary"
-                        ]
+            Global unqualified -> case unqualified of
+              "bottom" -> pure Stack
+              "fun" -> pure $ Stack :-> Stack :-> Permission :-> Value
+              "prod" -> pure $ Stack :-> Value :-> Stack
+              "sum" -> pure $ Value :-> Value :-> Value
+              "join" -> pure $ Label :-> Permission :-> Permission
+              _noKind ->
+                ice $
+                  show $
+                    hsep
+                      [ "Mlatu.Infer.typeKind - can't infer kind of constructor",
+                        dquotes $ Pretty.printQualified qualified,
+                        "in dictionary"
+                      ]
             _noKInd ->
               ice $
                 show $

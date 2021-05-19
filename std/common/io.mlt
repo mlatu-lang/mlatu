@@ -1,24 +1,15 @@
-module Mlatu {
-  intrinsic append-file (string, string -> <io>)
-  intrinsic flush-stdout (-> <io>)
-  intrinsic get-line (-> string <io>)
-  intrinsic print (string -> <io>)
-  intrinsic read-file (string -> string <io>)
-  intrinsic write-file (string, string -> <io>)
-}
+define append-file (string, string -> <io>) { "append-file" extern }
 
-define append-file (string, string -> <io>) { Mlatu.append-file }
+define ask (string -> string <io>) { print "flush-stdout" extern get-line }
 
-define ask (string -> string <io>) { print Mlatu.flush-stdout get-line }
-
-define get-line (-> string <io>) { Mlatu.get-line }
+define get-line (-> string <io>) { "get-line" extern }
 
 define newline (-> <io>) { "\n" print }
 
-define print (for t . t -> <io>) { show Mlatu.print }
+define print (for t . t -> <io>) { show "print" extern }
 
 define println (for t . t -> <io>) { print newline }
 
-define read-file (string -> string <io>) { Mlatu.read-file }
+define read-file (string -> string <io>) { "read-file" extern }
 
-define write-file (string, string -> <io>) { Mlatu.write-file }
+define write-file (string, string -> <io>) { "write-file" extern }

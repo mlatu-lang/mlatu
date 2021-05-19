@@ -7,7 +7,7 @@ import Mlatu.Codegen qualified as Codegen
 import Mlatu.Name (GeneralName (..), Qualified (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Relude
 import Report (reportAll)
@@ -35,8 +35,8 @@ main = do
 
 mainPermissions :: [GeneralName]
 mainPermissions =
-  [ QualifiedName $ Qualified Vocabulary.global "io",
-    QualifiedName $ Qualified Vocabulary.global "fail"
+  [ QualifiedName $ Global "io",
+    QualifiedName $ Global "fail"
   ]
 
 handleReports :: [Report] -> IO ()

@@ -26,7 +26,7 @@ where
 import Mlatu.Kind (Kind (..))
 import Mlatu.Name (Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
-import Mlatu.Vocabulary qualified as Vocabulary
+import Mlatu.Vocabulary
 import Relude hiding (Sum, Type, void)
 
 -- | This is the type language. It describes a system of conventional Hindley–
@@ -117,8 +117,4 @@ instance Hashable Var where
   hashWithSalt s (Var _ a b) = hashWithSalt s (0 :: Int, a, b)
 
 instance IsString Constructor where
-  fromString =
-    Constructor
-      . Qualified Vocabulary.global
-      . Unqualified
-      . toText
+  fromString = Constructor . Global . Unqualified . toText
