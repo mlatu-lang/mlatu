@@ -15,7 +15,6 @@ module Mlatu.Element
     _Metadata,
     _Term,
     _TypeDefinition,
-    _TypeAlias,
   )
 where
 
@@ -23,7 +22,6 @@ import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Term (Term)
 import Mlatu.Trait (Trait)
-import Mlatu.TypeAlias (TypeAlias)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics.TH (makePrisms)
 
@@ -39,6 +37,5 @@ data Element a
     Term !(Term a)
   | -- | @type@
     TypeDefinition !TypeDefinition
-  | TypeAlias !TypeAlias
 
 makePrisms ''Element

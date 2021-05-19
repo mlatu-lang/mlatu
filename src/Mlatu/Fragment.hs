@@ -14,14 +14,12 @@ module Mlatu.Fragment
     definitions,
     metadata,
     types,
-    aliases,
   )
 where
 
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Trait (Trait (..))
-import Mlatu.TypeAlias (TypeAlias)
 import Mlatu.TypeDefinition (TypeDefinition)
 import Optics
 import Relude
@@ -31,8 +29,7 @@ data Fragment a = Fragment
   { _traits :: ![Trait],
     _definitions :: ![Definition a],
     _metadata :: ![Metadata],
-    _types :: ![TypeDefinition],
-    _aliases :: ![TypeAlias]
+    _types :: ![TypeDefinition]
   }
   deriving (Show)
 
@@ -44,8 +41,7 @@ instance Monoid (Fragment a) where
       { _traits = mempty,
         _definitions = mempty,
         _metadata = mempty,
-        _types = mempty,
-        _aliases = mempty
+        _types = mempty
       }
 
 instance Semigroup (Fragment a) where
@@ -54,4 +50,3 @@ instance Semigroup (Fragment a) where
       . over definitions (<> view definitions a)
       . over metadata (<> view metadata a)
       . over types (<> view types a)
-      . over aliases (<> view aliases a)

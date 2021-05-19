@@ -133,7 +133,8 @@ termRs x = goTerms $ decompose x
         )
           <$> goTerms xs
       (Word _ (QualifiedName (Qualified _ "zero")) _ _ : xs) -> do
-        let go n ((Word _ (QualifiedName (Qualified _ "succ")) _ _) : xs) = go (n + 1) xs
+        let go :: Int -> [Term a] -> (Int, [Term a])
+            go n ((Word _ (QualifiedName (Qualified _ "succ")) _ _) : xs) = go (n + 1) xs
             go n rest = (n, rest)
             (s, rest) = go 0 xs
         (pushNat (show s) <>) <$> goTerms rest

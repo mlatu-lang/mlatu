@@ -68,7 +68,6 @@ library
       Mlatu.Tokenize
       Mlatu.Trait
       Mlatu.Type
-      Mlatu.TypeAlias
       Mlatu.TypeDefinition
       Mlatu.TypeEnv
       Mlatu.Unify

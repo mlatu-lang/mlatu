@@ -53,8 +53,6 @@ import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
 import Mlatu.Trait (Trait)
 import Mlatu.Trait qualified as Trait
-import Mlatu.TypeAlias (TypeAlias)
-import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition)
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary
@@ -66,7 +64,6 @@ import Relude
 fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f =
   enterExtern
-    >=> foldlMx declareTypeAlias (view Fragment.aliases f)
     >=> foldlMx declareType (view Fragment.types f)
     -- We enter declarations of all traits and intrinsics.
     >=> foldlMx enterTrait (view Fragment.traits f)
@@ -131,14 +128,6 @@ enterExtern dictionary = do
           )
           Nothing
       )
-      dictionary
-
-declareTypeAlias :: Dictionary -> TypeAlias -> M Dictionary
-declareTypeAlias dictionary a =
-  pure $
-    Dictionary.insertTypeAlias
-      (Instantiated (Global (view TypeAlias.name a)) [])
-      (Entry.TypeAliasEntry (view TypeAlias.origin a) (view TypeAlias.alias a))
       dictionary
 
 enterTrait :: Dictionary -> Trait -> M Dictionary

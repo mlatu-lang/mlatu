@@ -10,7 +10,6 @@ module Mlatu.Entry
   ( WordEntry (..),
     MetadataEntry (..),
     TypeEntry (..),
-    TypeAliasEntry (..),
     TraitEntry (..),
   )
 where
@@ -35,9 +34,6 @@ data MetadataEntry = MetadataEntry !Origin !(Term ())
   deriving (Show)
 
 data TypeEntry = TypeEntry !Origin ![Parameter] ![DataConstructor]
-  deriving (Show)
-
-data TypeAliasEntry = TypeAliasEntry !Origin !Qualified
   deriving (Show)
 
 data TraitEntry = TraitEntry !Origin !Signature

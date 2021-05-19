@@ -61,8 +61,6 @@ import Mlatu.Token qualified as Token
 import Mlatu.Tokenize (tokenize)
 import Mlatu.Trait (Trait (..))
 import Mlatu.Trait qualified as Trait
-import Mlatu.TypeAlias (TypeAlias (..))
-import Mlatu.TypeAlias qualified as TypeAlias
 import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
 import Mlatu.TypeDefinition qualified as TypeDefinition
 import Optics
@@ -157,7 +155,6 @@ partitionElements mainPermissions mainName = foldr go mempty
       Element.Definition x -> over Fragment.definitions (x :)
       Element.Metadata x -> over Fragment.metadata (x :)
       Element.TypeDefinition x -> over Fragment.types (x :)
-      Element.TypeAlias x -> over Fragment.aliases (x :)
       Element.Term x ->
         over
           Fragment.definitions
@@ -297,7 +294,6 @@ elementParser =
               permissionParser
             ],
         Element.Trait <$> traitParser,
-        Element.TypeAlias <$> typeAliasParser,
         Element.Metadata <$> metadataParser,
         Element.TypeDefinition <$> typeDefinitionParser,
         do
@@ -328,18 +324,6 @@ metadataParser = (<?> "metadata block") $ do
       { Metadata._fields = Map.fromList fields,
         Metadata._name = QualifiedName name,
         Metadata._origin = origin
-      }
-
-typeAliasParser :: Parser TypeAlias
-typeAliasParser = (<?> "type alias definition") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Alias
-  newName <- unqualifiedNameParser <?> "type alias"
-  oldName <- qualifiedNameParser <?> "type name"
-  pure
-    TypeAlias
-      { TypeAlias._name = newName,
-        TypeAlias._alias = oldName,
-        TypeAlias._origin = origin
       }
 
 typeDefinitionParser :: Parser TypeDefinition

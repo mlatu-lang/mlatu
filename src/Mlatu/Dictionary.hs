@@ -22,13 +22,12 @@ module Mlatu.Dictionary
     insertWord,
     insertTrait,
     insertType,
-    insertTypeAlias,
     insertMetadata,
   )
 where
 
 import Data.Map.Strict qualified as Map
-import Mlatu.Entry (MetadataEntry, TraitEntry, TypeAliasEntry, TypeEntry, WordEntry)
+import Mlatu.Entry (MetadataEntry, TraitEntry, TypeEntry, WordEntry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Instantiated (Instantiated (Instantiated))
@@ -47,8 +46,7 @@ data Dictionary = Dictionary
   { _wordEntries :: Map Instantiated WordEntry,
     _typeEntries :: Map Instantiated TypeEntry,
     _metadataEntries :: Map Instantiated MetadataEntry,
-    _traitEntries :: Map Instantiated TraitEntry,
-    _typeAliasEntries :: Map Instantiated TypeAliasEntry
+    _traitEntries :: Map Instantiated TraitEntry
   }
   deriving (Show)
 
@@ -60,8 +58,7 @@ empty =
     { _wordEntries = Map.empty,
       _typeEntries = Map.empty,
       _metadataEntries = Map.empty,
-      _traitEntries = Map.empty,
-      _typeAliasEntries = Map.empty
+      _traitEntries = Map.empty
     }
 
 insert :: ((Map Instantiated a -> Map Instantiated a) -> Dictionary -> Dictionary) -> Instantiated -> a -> Dictionary -> Dictionary
@@ -75,9 +72,6 @@ insertMetadata = insert $ over metadataEntries
 
 insertType :: Instantiated -> TypeEntry -> Dictionary -> Dictionary
 insertType = insert $ over typeEntries
-
-insertTypeAlias :: Instantiated -> TypeAliasEntry -> Dictionary -> Dictionary
-insertTypeAlias = insert $ over typeAliasEntries
 
 insertTrait :: Instantiated -> TraitEntry -> Dictionary -> Dictionary
 insertTrait = insert $ over traitEntries
@@ -115,7 +109,7 @@ signatures dict =
 typeNames :: Dictionary -> [Qualified]
 typeNames dict =
   mapMaybe typeWordName (Map.toList (view wordEntries dict))
-    ++ (Instantiated.name <$> (Map.keys (view typeEntries dict) ++ Map.keys (view typeAliasEntries dict)))
+    ++ (Instantiated.name <$> Map.keys (view typeEntries dict))
   where
     typeWordName (Instantiated name _, Entry.WordEntry Category.Permission _ _ _ _ _) =
       Just name
