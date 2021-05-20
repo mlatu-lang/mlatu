@@ -64,7 +64,6 @@ dependencies:
   - relude ==0.7.0.0
   - text
   - transformers
-  - unordered-containers
 
 library:
   source-dirs: src
@@ -82,9 +81,9 @@ executables:
     dependencies:
       - directory
       - repline
-      - exceptions
       - optparse-applicative
       - typed-process
+      - temporary
       - mlatu
 
 tests:
@@ -95,4 +94,3 @@ tests:
       - HUnit
       - hspec
       - knob
-      - mlatu

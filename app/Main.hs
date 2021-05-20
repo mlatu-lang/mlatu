@@ -1,6 +1,7 @@
 module Main where
 
 import Arguments qualified
+import Data.ByteString (hPut)
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
 import Mlatu.Codegen qualified as Codegen
@@ -12,7 +13,8 @@ import Options.Applicative (execParser, header, helper, info)
 import Relude
 import Report (reportAll)
 import System.Directory (makeAbsolute, removeFile)
-import System.IO (hSetEncoding, utf8)
+import System.IO (hClose, hSetEncoding, utf8)
+import System.IO.Temp (withSystemTempFile)
 import System.Process.Typed (proc, runProcess_)
 
 main :: IO ()
@@ -74,34 +76,38 @@ compileFiles prelude relativePaths toRun =
                 Left reports -> handleReports reports
                 Right program ->
                   ( Codegen.generate program Nothing
-                      >>= writeFileBS (name <> ".rs")
+                      >>= ( \contents ->
+                              withSystemTempFile
+                                "output.rs"
+                                ( \path handle ->
+                                    hPut handle contents
+                                      >> runProcess_
+                                        ( proc
+                                            "rustc"
+                                            [ "--emit=link",
+                                              "--crate-type=bin",
+                                              "--edition=2018",
+                                              "-C",
+                                              "opt-level=3",
+                                              "-C",
+                                              "lto=y",
+                                              "-C",
+                                              "panic=abort",
+                                              "-C",
+                                              "codegen-units=1",
+                                              "-o",
+                                              "./output",
+                                              path
+                                            ]
+                                        )
+                                      >> hClose handle
+                                      >> if toRun
+                                        then
+                                          putStrLn "Running the produced executable"
+                                            >> runProcess_ (proc "./output" [])
+                                            >> removeFile "./output"
+                                        else putStrLn "Produced the executable ./output"
+                                )
+                          )
                   )
-                    >> runProcess_
-                      ( proc "rustfmt" [name <> ".rs"]
-                      )
-                    >> runProcess_
-                      ( proc
-                          "rustc"
-                          [ "--emit=link",
-                            "--crate-type=bin",
-                            "--edition=2018",
-                            "-C",
-                            "opt-level=3",
-                            "-C",
-                            "lto=y",
-                            "-C",
-                            "panic=abort",
-                            "-C",
-                            "codegen-units=1",
-                            name <> ".rs"
-                          ]
-                      )
-                    >> removeFile (name <> ".rs")
-                    >> when
-                      toRun
-                      ( putStrLn "Running the produced executable"
-                          >> runProcess_ (proc ("./" <> name) [])
-                          >> removeFile name
-                      )
-                    >> unless toRun (putStrLn ("Produced the executable ./" <> name))
             )

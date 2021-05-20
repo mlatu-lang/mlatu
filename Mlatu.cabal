@@ -130,7 +130,6 @@ library
     , relude ==0.7.0.0
     , text
     , transformers
-    , unordered-containers
   default-language: Haskell2010
 
 executable mlatu
@@ -188,7 +187,6 @@ executable mlatu
     , bytestring
     , containers
     , directory
-    , exceptions
     , file-embed
     , mlatu
     , monad-loops
@@ -198,10 +196,10 @@ executable mlatu
     , prettyprinter
     , relude ==0.7.0.0
     , repline
+    , temporary
     , text
     , transformers
     , typed-process
-    , unordered-containers
   default-language: Haskell2010
 
 test-suite test
@@ -269,7 +267,6 @@ test-suite test
     , file-embed
     , hspec
     , knob
-    , mlatu
     , monad-loops
     , optics
     , parsec
@@ -277,5 +274,4 @@ test-suite test
     , relude ==0.7.0.0
     , text
     , transformers
-    , unordered-containers
   default-language: Haskell2010

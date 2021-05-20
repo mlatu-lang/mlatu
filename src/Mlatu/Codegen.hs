@@ -221,7 +221,7 @@ intrinsic = \case
   "call" -> pure $ unwrapClosure "name" "new" <> "let old = closures; name(stack, &new); let closures = old;"
   "abort" -> pure $ unwrapText "a" <> "panic!(\"Execution failure: {}\", a);"
   "exit" -> pure $ unwrapNat "i" <> "std::process::exit(i as i32);"
-  "drop" -> pure $ letStmt "_" "stack.get().unwrap();"
+  "drop" -> pure $ letStmt "_" "stack.get().unwrap()"
   "swap" -> pure $ ifLetPop2 ("a", "b") "stack.push(a); stack.push(b);"
   "cmp-char" -> ((unwrapChar "a" <> unwrapChar "b") <>) <$> cmp "a" "b"
   "cmp-string" -> ((unwrapText "a" <> unwrapText "b") <>) <$> cmp "a" "b"
@@ -307,7 +307,7 @@ caseRs (Case (QualifiedName name) caseBody _) = do
           Just . ("Some(List(v)) if v.is_empty()",) <$> termRs caseBody
         [New _ (ConstructorIndex 1) 2 ListLike _] ->
           Just . ("Some(List(mut v)) if !v.is_empty() ",)
-            . ((letStmt "x" "v.remove(0);" <> "stack.push(x);" <> pushList "v") <>)
+            . ((letStmt "x" "v.remove(0)" <> "stack.push(x);" <> pushList "v") <>)
             <$> termRs caseBody
         _ -> pure Nothing
     _ -> pure Nothing
@@ -330,25 +330,25 @@ rustifyInstantiated :: Instantiated -> ByteString
 rustifyInstantiated = rustify . show . printInstantiated
 
 unwrapNat :: ByteString -> ByteString
-unwrapNat a = "let " <> a <> " = stack.get_nat().unwrap();"
+unwrapNat a = letStmt a "stack.get_nat().unwrap()"
 
 pushNat :: ByteString -> ByteString
 pushNat a = "stack.push_nat(" <> a <> ");"
 
 unwrapText :: ByteString -> ByteString
-unwrapText a = "let " <> a <> " = stack.get_text().unwrap();"
+unwrapText a = letStmt a "stack.get_text().unwrap()"
 
 pushText :: ByteString -> ByteString
 pushText a = "stack.push_text(" <> a <> ");"
 
 unwrapClosure :: ByteString -> ByteString -> ByteString
-unwrapClosure a b = "let (" <> a <> "," <> b <> ") = stack.get_closure().unwrap();"
+unwrapClosure a b = letStmt ("(" <> a <> "," <> b <> ")") "stack.get_closure().unwrap()"
 
 pushClosure :: ByteString -> ByteString -> ByteString
 pushClosure a b = "stack.push_closure(" <> a <> "," <> b <> ");"
 
 unwrapChar :: ByteString -> ByteString
-unwrapChar a = "let " <> a <> " = stack.get_char().unwrap();"
+unwrapChar a = letStmt a "stack.get_char().unwrap()"
 
 pushChar :: ByteString -> ByteString
 pushChar a = "stack.push_char(" <> a <> ");"
@@ -357,7 +357,7 @@ pushAlgebraic :: ByteString -> ByteString -> ByteString
 pushAlgebraic a b = "stack.push_algebraic(" <> a <> "," <> b <> ");"
 
 unwrapList :: ByteString -> ByteString
-unwrapList a = "let " <> a <> " = stack.get_list().unwrap();"
+unwrapList a = letStmt a "stack.get_list().unwrap()"
 
 pushList :: ByteString -> ByteString
 pushList a = "stack.push_list(" <> a <> ");"
@@ -368,7 +368,7 @@ stackFn name body containsLocals =
     <> name
     <> "(stack: &mut Stack, closures: &Vec<Rep>) { "
     <> ( if containsLocals
-           then "let mut locals: Vec<Rep> = Vec::new();" <> body
+           then letStmt "mut locals: Vec<Rep>" "Vec::new()" <> body
            else body
        )
     <> " }"
