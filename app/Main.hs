@@ -4,7 +4,7 @@ import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
 import Mlatu.Codegen qualified as Codegen
-import Mlatu.Name (GeneralName (..), Qualified (..))
+import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Report (Report)
 import Mlatu.Vocabulary

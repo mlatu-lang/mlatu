@@ -3,7 +3,6 @@ module Interact
   )
 where
 
-import Control.Monad.Catch (catch)
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
 import Mlatu.Codegen qualified as Codegen
@@ -43,12 +42,12 @@ import System.Directory (removeFile)
 import System.IO (hPrint)
 import System.Process.Typed (proc, runProcess_)
 
-type MRepl a = HaskelineT (StateT Text (StateT Int IO)) a
+type MRepl = HaskelineT (ReaderT Dictionary (StateT (Text, Int) IO))
 
 cmd :: String -> MRepl ()
 cmd input = do
-  text <- lift get
-  lineNumber <- lift $ lift get
+  (text, lineNumber) <- get
+  commonDictionary <- ask
   let entryNameUnqualified = toText $ "entry" ++ show lineNumber
       entryName =
         Qualified
@@ -56,7 +55,6 @@ cmd input = do
           $ Unqualified entryNameUnqualified
   mResults <- liftIO $
     runMlatuExceptT $ do
-      commonDictionary <- Mlatu.compilePrelude Common [QualifiedName $ Global "io"] Nothing
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Global "io"]
@@ -72,8 +70,7 @@ cmd input = do
     Left reports -> do
       liftIO $ reportAll reports
     Right dictionary -> do
-      lift $ put (text <> " " <> toText input)
-      lift $ lift $ modify' (+ 1)
+      put (text <> " " <> toText input, lineNumber + 1)
       liftIO $ do
         bs <- Codegen.generate dictionary (Just entryName)
         writeFileBS "repl.rs" bs
@@ -98,7 +95,7 @@ cmd input = do
         runProcess_ (proc "./repl" [])
 
 -- TODO
-completer :: String -> StateT Text (StateT Int IO) [String]
+completer :: String -> ReaderT Dictionary (StateT (Text, Int) IO) [String]
 completer n = pure []
 
 helpCmd :: String -> MRepl ()
@@ -122,7 +119,15 @@ final = do
   pure Exit
 
 run :: Prelude -> IO Int
-run prelude = execStateT (execStateT (evalReplOpts replOpts) "") 1
+run prelude = do
+  result <- runMlatuExceptT $ Mlatu.compilePrelude prelude [QualifiedName $ Global "io"] Nothing
+  case result of
+    Left reports -> do
+      reportAll reports
+      pure 1
+    Right commonDictionary -> do
+      execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
+      pure 0
   where
     replOpts =
       ReplOpts
