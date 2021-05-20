@@ -243,7 +243,6 @@ alphanumeric =
           "about" -> About
           "as" -> As
           "define" -> Define
-          "do" -> Do
           "else" -> Else
           "field" -> Field
           "for" -> For

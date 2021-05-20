@@ -623,7 +623,6 @@ termParser = (<?> "expression") $ do
       lambdaParser,
       matchParser,
       ifParser,
-      doParser,
       Push () <$> blockValue <*> pure origin,
       withParser,
       asParser
@@ -759,25 +758,6 @@ ifParser = (<?> "if-else expression") $ do
           (DefaultElse () ifOrigin)
           ifOrigin
       ]
-
-doParser :: Parser (Term ())
-doParser = (<?> "do expression") $ do
-  doOrigin <- getTokenOrigin <* parserMatch Token.Do
-  term <- groupParser <?> "parenthesized expression"
-  Parsec.choice
-    -- do (f) { x y z } => { x y z } f
-    [ do
-        body <- blockLikeParser
-        pure $
-          compose
-            ()
-            doOrigin
-            [Push () (Quotation body) (Term.origin body), term],
-      -- do (f) [x, y, z] => [x, y, z] f
-      do
-        body <- vectorParser
-        pure $ compose () doOrigin [body, term]
-    ]
 
 blockValue :: Parser (Value ())
 blockValue = (<?> "quotation") $ Quotation <$> blockParser

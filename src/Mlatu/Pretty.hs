@@ -266,7 +266,6 @@ printToken = \case
   Token.Colon -> ":"
   Token.Comma -> ","
   Token.Define -> "define"
-  Token.Do -> "do"
   Token.Dot -> "."
   Token.Else -> "else"
   Token.Field -> "field"
@@ -335,7 +334,6 @@ maybePrintTerms = \case
   (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
   (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
-  (Push _ (Quotation body) _ : Group a : xs) -> Just (printDo a body `justVertical` xs)
   ( Coercion
       ( AnyCoercion
           ( Quantified
@@ -404,9 +402,6 @@ maybePrintTerms = \case
 
 maybePrintTerm :: Term a -> Maybe (Doc b)
 maybePrintTerm = maybePrintTerms . Term.decompose
-
-printDo :: Term a -> Term a -> Doc b
-printDo a body = group $ blockMaybe (maybe "do" ("do" <+>) (printGroup a)) (maybePrintTerm body)
 
 printGroup :: Term a -> Maybe (Doc b)
 printGroup a = parens <$> maybePrintTerm a

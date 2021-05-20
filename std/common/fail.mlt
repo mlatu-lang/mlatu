@@ -2,7 +2,7 @@ define abort-now (for R S . R -> S <fail>) { "abort called" fail-now }
 
 define assert (for +p . string, (-> bool <p>) -> <fail + p>) {
   -> message, test;
-  do (with (-fail)) { test call }
+  { test call } with (-fail)
   if (not) { message fail-now }
   else { }
 }

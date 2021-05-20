@@ -43,8 +43,6 @@ data Token
     Comma
   | -- | @define@
     Define
-  | -- | @do@
-    Do
   | -- | @dot@
     Dot
   | -- | @else@
@@ -107,7 +105,6 @@ instance Eq Token where
   Colon == Colon = True
   Comma == Comma = True
   Define == Define = True
-  Do == Do = True
   Dot == Dot = True
   Else == Else = True
   -- See note [Float Literals].
