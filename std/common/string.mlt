@@ -2,7 +2,7 @@ trait read (for t. string -> t optional)
 
 trait show (for t. t -> string)
 
-type string {}
+data string {}
 
 instance ++ (string, string -> string) { "string-concat" extern }
 

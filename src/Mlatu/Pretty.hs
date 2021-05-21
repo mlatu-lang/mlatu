@@ -18,7 +18,7 @@ module Mlatu.Pretty
     printTerm,
     printType,
     printDefinition,
-    printTypeDefinition,
+    printDataDefinition,
     printInstantiated,
     printKind,
     printFragment,
@@ -29,7 +29,8 @@ where
 import Data.List (findIndex, groupBy)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
-import Mlatu.DataConstructor qualified as DataConstructor
+import Mlatu.CodataDefinition (CodataDefinition (..))
+import Mlatu.DataDefinition (DataDefinition (..))
 import Mlatu.Definition (Definition (Definition), mainName)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
@@ -52,7 +53,6 @@ import Mlatu.Trait (Trait (..))
 import Mlatu.Trait qualified as Trait
 import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
 import Mlatu.Type qualified as Type
-import Mlatu.TypeDefinition (TypeDefinition (..))
 import Optics
 import Prettyprinter
 import Relude hiding (Compose, Constraint, Type, group)
@@ -263,8 +263,10 @@ printToken = \case
   Token.BlockEnd -> "}"
   Token.Case -> "|"
   Token.Character c -> squotes $ pretty c
+  Token.Codata -> "codata"
   Token.Colon -> ":"
   Token.Comma -> ","
+  Token.Data -> "data"
   Token.Define -> "define"
   Token.Dot -> "."
   Token.Else -> "else"
@@ -276,16 +278,13 @@ printToken = \case
   Token.Ignore -> "_"
   Token.Instance -> "instance"
   Token.Integer num -> pretty num
-  Token.Intrinsic -> "intrinsic"
   Token.Match -> "match"
   Token.Module -> "module"
   Token.Operator name -> printUnqualified name
   Token.Permission -> "permission"
   Token.Reference -> "\\"
-  Token.Record -> "record"
   Token.Text t -> dquotes $ pretty t
   Token.Trait -> "trait"
-  Token.Type -> "type"
   Token.VectorBegin -> "["
   Token.VectorEnd -> "]"
   Token.Where -> "where"
@@ -302,25 +301,29 @@ printInstantiated (Instantiated n []) = printQualified n
 printInstantiated (Instantiated n ts) =
   printQualified n <> "." <> list (printType <$> ts)
 
-printDataConstructor :: DataConstructor.DataConstructor -> Doc a
-printDataConstructor (DataConstructor.DataConstructor fields name _) =
-  "case"
-    <+> printUnqualified name
-    <> printedFields
-  where
-    printedFields = if not $ null fields then space <> tupled (printSignature <$> fields) else ""
-
 printDeclaration :: Trait -> Doc a
 printDeclaration (Trait name _ signature) =
   "trait" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
 
-printTypeDefinition :: TypeDefinition -> Doc a
-printTypeDefinition (TypeDefinition constructors name _ parameters) =
-  "type" <+> typeName <> encloseSep " { " " } " " | " (printDataConstructor <$> constructors)
+printDataDefinition :: DataDefinition -> Doc a
+printDataDefinition (DataDefinition constructors name _ parameters) =
+  "data" <+> typeName <> encloseSep " { " " } " " | " (printDataConstructor <$> constructors)
   where
     typeName =
       printQualified name
         <> if not $ null parameters then (list . fmap printParameter) parameters else ""
+    printDataConstructor (name, fields, _) =
+      printUnqualified name
+        <> if not $ null fields then space <> tupled (printSignature <$> fields) else ""
+
+printCodataDefinition :: CodataDefinition -> Doc a
+printCodataDefinition (CodataDefinition constructors name _ parameters) =
+  "codata" <+> typeName <> encloseSep " { " " } " " + " (printDataDeconstructor <$> constructors)
+  where
+    typeName =
+      printQualified name
+        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
+    printDataDeconstructor (name, sig, _) = printUnqualified name <+> parens (printSignature sig)
 
 printTerm :: Term a -> Doc b
 printTerm t = fromMaybe "" (maybePrintTerms (decompose t))
@@ -509,61 +512,17 @@ printDefinition (Definition Category.Word name body _ _ _ _ _)
 printDefinition (Definition Category.Word name body _ _ _ signature _) =
   Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
 
-printWordEntry (Entry.WordEntry category _ origin mParent mSignature _) =
-  vsep
-    [ printCategory category,
-      hsep ["defined at", printOrigin origin],
-      case mSignature of
-        Just signature ->
-          hsep
-            ["with signature", dquotes $ printSignature signature]
-        Nothing -> "with no signature",
-      case mParent of
-        Just parent ->
-          hsep
-            [ "with parent",
-              case parent of
-                Parent.Trait a -> "trait" <+> printQualified a
-                Parent.Type a -> "type" <+> printQualified a
-                Parent.Record a -> "record" <+> printQualified a
-            ]
-        Nothing -> "with no parent"
-    ]
-
-printMetadataEntry (Entry.MetadataEntry origin term) =
-  vsep
-    [ "metadata",
-      hsep ["defined at", printOrigin origin],
-      hsep ["with contents", printTerm term]
-    ]
-
-printTypeEntry (Entry.TypeEntry origin parameters ctors) =
-  vsep
-    [ "type",
-      hsep ["defined at", printOrigin origin],
-      hsep $
-        "with parameters [" :
-        intersperse ", " (printParameter <$> parameters),
-      nestTwo $ vsep $ "and data constructors" : (constructor <$> ctors)
-    ]
-  where
-    constructor ctor =
-      hsep
-        [ printUnqualified $ view DataConstructor.name ctor,
-          " with fields (",
-          hsep $
-            intersperse ", " (printSignature <$> view DataConstructor.fields ctor),
-          ")"
-        ]
-
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
   vcat
     ( ( (\g -> printGrouped g <> line)
           <$> groupedDeclarations
       )
-        ++ ( (\t -> printTypeDefinition t <> line)
-               <$> sort (view Fragment.types fragment)
+        ++ ( (\t -> printDataDefinition t <> line)
+               <$> sort (view Fragment.dataDefinitions fragment)
+           )
+        ++ ( (\t -> printCodataDefinition t <> line)
+               <$> sort (view Fragment.codataDefinitions fragment)
            )
         ++ mapMaybe
           (fmap (<> line) . printDefinition)

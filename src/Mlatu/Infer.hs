@@ -23,8 +23,6 @@ import Data.Foldable (foldrM)
 import Data.List (partition)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
-import Mlatu.DataConstructor (DataConstructor)
-import Mlatu.DataConstructor qualified as DataConstructor
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
@@ -392,9 +390,9 @@ inferCase ::
   Dictionary ->
   TypeEnv ->
   TypeEnv ->
-  [DataConstructor] ->
+  [(Unqualified, [Signature], Origin)] ->
   Case a ->
-  M (Case Type, Type, [DataConstructor], TypeEnv)
+  M (Case Type, Type, [(Unqualified, [Signature], Origin)], TypeEnv)
 inferCase
   dictionary
   tenvFinal
@@ -413,7 +411,7 @@ inferCase
         let typ = Type.Fun origin b2 b1 e1
         -- FIXME: Should a case be annotated with a type?
         -- let type' = Zonk.typ tenvFinal typ
-        dataConstructors' <- case partition (\ctor -> view DataConstructor.name ctor == unqualifiedName name) dataConstructors of
+        dataConstructors' <- case partition (\ctor -> view _1 ctor == unqualifiedName name) dataConstructors of
           ([], remaining) -> do
             report $ Report.makeError $ Report.RedundantCase origin
             pure remaining

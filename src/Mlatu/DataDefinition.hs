@@ -8,8 +8,8 @@
 -- Maintainer  : mlatu@brightlysalty.33mail.com
 -- Stability   : experimental
 -- Portability : GHC
-module Mlatu.TypeDefinition
-  ( TypeDefinition (..),
+module Mlatu.DataDefinition
+  ( DataDefinition (..),
     constructors,
     name,
     origin,
@@ -17,19 +17,19 @@ module Mlatu.TypeDefinition
   )
 where
 
-import Mlatu.DataConstructor (DataConstructor)
 import Mlatu.Entry.Parameter (Parameter)
-import Mlatu.Name (Qualified)
+import Mlatu.Name (Qualified, Unqualified)
 import Mlatu.Origin (Origin)
+import Mlatu.Signature (Signature)
 import Optics.TH (makeLenses)
 import Relude hiding (Constraint)
 
-data TypeDefinition = TypeDefinition
-  { _constructors :: ![DataConstructor],
+data DataDefinition = DataDefinition
+  { _constructors :: ![(Unqualified, [Signature], Origin)],
     _name :: !Qualified,
     _origin :: !Origin,
     _parameters :: ![Parameter]
   }
   deriving (Eq, Ord, Show)
 
-makeLenses ''TypeDefinition
+makeLenses ''DataDefinition

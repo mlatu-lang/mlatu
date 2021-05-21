@@ -1,4 +1,4 @@
-type (b a) either { left (a) | right (b) }
+data (b a) either { left (a) | right (b) }
 
 instance cmp (for a b. b a either, b a either -> ord) {
   -> a, b;

@@ -13,14 +13,16 @@ module Mlatu.Fragment
     traits,
     definitions,
     metadata,
-    types,
+    dataDefinitions,
+    codataDefinitions,
   )
 where
 
+import Mlatu.CodataDefinition (CodataDefinition)
+import Mlatu.DataDefinition (DataDefinition)
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Trait (Trait (..))
-import Mlatu.TypeDefinition (TypeDefinition)
 import Optics
 import Relude
 
@@ -29,7 +31,8 @@ data Fragment a = Fragment
   { _traits :: ![Trait],
     _definitions :: ![Definition a],
     _metadata :: ![Metadata],
-    _types :: ![TypeDefinition]
+    _dataDefinitions :: ![DataDefinition],
+    _codataDefinitions :: ![CodataDefinition]
   }
   deriving (Show)
 
@@ -41,7 +44,8 @@ instance Monoid (Fragment a) where
       { _traits = mempty,
         _definitions = mempty,
         _metadata = mempty,
-        _types = mempty
+        _dataDefinitions = mempty,
+        _codataDefinitions = mempty
       }
 
 instance Semigroup (Fragment a) where
@@ -49,4 +53,5 @@ instance Semigroup (Fragment a) where
     over traits (<> view traits a)
       . over definitions (<> view definitions a)
       . over metadata (<> view metadata a)
-      . over types (<> view types a)
+      . over dataDefinitions (<> view dataDefinitions a)
+      . over codataDefinitions (<> view codataDefinitions a)

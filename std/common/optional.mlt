@@ -1,4 +1,4 @@
-type (t) optional { none | some (t) }
+data (t) optional { none | some (t) }
 
 instance cmp (for t. t optional, t optional -> ord) {
   -> a, b;

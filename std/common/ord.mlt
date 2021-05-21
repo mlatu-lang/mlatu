@@ -1,4 +1,4 @@
-type ord { less | more | equal }
+data ord { less | more | equal }
 
 trait cmp (for t. t, t -> ord)
 

@@ -1,4 +1,4 @@
-type bool { false | true }
+data bool { false | true }
 
 instance cmp (bool, bool -> ord) {
   -> a, b;

@@ -14,6 +14,10 @@ module Mlatu.Enter
 where
 
 import Data.Map.Strict qualified as Map
+import Mlatu.CodataDefinition (CodataDefinition)
+import Mlatu.CodataDefinition qualified as CodataDefinition
+import Mlatu.DataDefinition (DataDefinition)
+import Mlatu.DataDefinition qualified as DataDefinition
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Infix qualified as Infix
@@ -35,9 +39,9 @@ import Mlatu.Metadata (Metadata)
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Monad (M)
 import Mlatu.Name
-  ( GeneralName (QualifiedName),
-    Qualified (Qualified, qualifierName),
-    Unqualified,
+  ( GeneralName (..),
+    Qualified (..),
+    Unqualified (..),
     qualifierFromName,
   )
 import Mlatu.Origin (point)
@@ -53,8 +57,6 @@ import Mlatu.Term qualified as Term
 import Mlatu.Tokenize (tokenize)
 import Mlatu.Trait (Trait)
 import Mlatu.Trait qualified as Trait
-import Mlatu.TypeDefinition (TypeDefinition)
-import Mlatu.TypeDefinition qualified as TypeDefinition
 import Mlatu.Vocabulary
 import Optics
 import Prettyprinter (dquotes, hsep)
@@ -64,7 +66,8 @@ import Relude
 fragment :: Fragment () -> Dictionary -> M Dictionary
 fragment f =
   enterExtern
-    >=> foldlMx declareType (view Fragment.types f)
+    >=> foldlMx declareData (view Fragment.dataDefinitions f)
+    >=> foldlMx declareCodata (view Fragment.codataDefinitions f)
     -- We enter declarations of all traits and intrinsics.
     >=> foldlMx enterTrait (view Fragment.traits f)
     -- Then declare all permissions.
@@ -140,19 +143,38 @@ enterTrait dictionary trait = do
     Nothing -> Dictionary.insertTrait (Instantiated name []) (Entry.TraitEntry origin signature) dictionary
 
 -- declare type, declare & define constructors
-declareType :: Dictionary -> TypeDefinition -> M Dictionary
-declareType dictionary typ =
-  let name = view TypeDefinition.name typ
+declareData :: Dictionary -> DataDefinition -> M Dictionary
+declareData dictionary typ =
+  let name = view DataDefinition.name typ
    in case Dictionary.lookupType (Instantiated name []) dictionary of
         Just (Entry.TypeEntry _origin parameters _ctors)
-          | parameters == view TypeDefinition.parameters typ ->
+          | parameters == view DataDefinition.parameters typ ->
             pure dictionary
         _ -> do
           let entry =
                 Entry.TypeEntry
-                  (view TypeDefinition.origin typ)
-                  (view TypeDefinition.parameters typ)
-                  (view TypeDefinition.constructors typ)
+                  (view DataDefinition.origin typ)
+                  (view DataDefinition.parameters typ)
+                  (view DataDefinition.constructors typ)
+          pure $ Dictionary.insertType (Instantiated name []) entry dictionary
+
+declareCodata :: Dictionary -> CodataDefinition -> M Dictionary
+declareCodata dictionary typ =
+  let name = view CodataDefinition.name typ
+   in case Dictionary.lookupType (Instantiated name []) dictionary of
+        Just (Entry.TypeEntry _origin parameters _ctors)
+          | parameters == view CodataDefinition.parameters typ ->
+            pure dictionary
+        _ -> do
+          let entry =
+                Entry.TypeEntry
+                  (view CodataDefinition.origin typ)
+                  (view CodataDefinition.parameters typ)
+                  [ ( "mk-" <> unqualifiedName (view CodataDefinition.name typ),
+                      view _2 <$> view CodataDefinition.deconstructors typ,
+                      view CodataDefinition.origin typ
+                    )
+                  ]
           pure $ Dictionary.insertType (Instantiated name []) entry dictionary
 
 declareWord ::

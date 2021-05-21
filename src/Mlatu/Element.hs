@@ -14,15 +14,16 @@ module Mlatu.Element
     _Definition,
     _Metadata,
     _Term,
-    _TypeDefinition,
+    _Data,
   )
 where
 
+import Mlatu.CodataDefinition (CodataDefinition)
+import Mlatu.DataDefinition (DataDefinition)
 import Mlatu.Definition (Definition)
 import Mlatu.Metadata (Metadata)
 import Mlatu.Term (Term)
 import Mlatu.Trait (Trait)
-import Mlatu.TypeDefinition (TypeDefinition)
 import Optics.TH (makePrisms)
 
 -- | A top-level program element.
@@ -36,6 +37,7 @@ data Element a
   | -- | Top-level (@main@) code.
     Term !(Term a)
   | -- | @type@
-    TypeDefinition !TypeDefinition
+    Data !DataDefinition
+  | Codata !CodataDefinition
 
 makePrisms ''Element

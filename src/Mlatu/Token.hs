@@ -37,10 +37,12 @@ data Token
     Case
   | -- | @'x'@
     Character !Char
+  | Codata
   | -- | @:@
     Colon
   | -- | @,@
     Comma
+  | Data
   | -- | @define@
     Define
   | -- | @dot@
@@ -62,8 +64,6 @@ data Token
     Instance
   | -- | @1@, 0b1@, @0o1@, @0x1@, @1i64, @1u16@
     Integer !Int
-  | -- | @intrinsic@
-    Intrinsic
   | -- | @match@
     Match
   | Module
@@ -73,12 +73,9 @@ data Token
     Permission
   | -- | @\@
     Reference
-  | Record
   | -- | @"..."@
     Text !Text
   | Trait
-  | -- | @type@
-    Type
   | -- | @[@
     VectorBegin
   | -- | @]@
@@ -102,8 +99,10 @@ instance Eq Token where
   BlockEnd == BlockEnd = True
   Case == Case = True
   Character a == Character b = a == b
+  Codata == Codata = True
   Colon == Colon = True
   Comma == Comma = True
+  Data == Data = True
   Define == Define = True
   Dot == Dot = True
   Else == Else = True
@@ -116,16 +115,13 @@ instance Eq Token where
   Ignore == Ignore = True
   Instance == Instance = True
   Integer a == Integer b = a == b
-  Intrinsic == Intrinsic = True
   Match == Match = True
   Module == Module = True
   Operator a == Operator b = a == b
   Permission == Permission = True
-  Record == Record = True
   Reference == Reference = True
   Text a == Text b = a == b
   Trait == Trait = True
-  Type == Type = True
   VectorBegin == VectorBegin = True
   VectorEnd == VectorEnd = True
   Where == Where = True

@@ -1,3 +1,3 @@
-type char {}
+data char {}
 
 instance cmp (char, char -> ord) { "cmp-char" extern }

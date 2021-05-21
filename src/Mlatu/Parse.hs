@@ -14,11 +14,13 @@ module Mlatu.Parse
   )
 where
 
-import Data.List (findIndex, foldl1, zipWith3)
+import Data.List (findIndex, foldl1)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
-import Mlatu.DataConstructor (DataConstructor (DataConstructor))
-import Mlatu.DataConstructor qualified as DataConstructor
+import Mlatu.CodataDefinition (CodataDefinition (..))
+import Mlatu.CodataDefinition qualified as CodataDefinition
+import Mlatu.DataDefinition (DataDefinition (..))
+import Mlatu.DataDefinition qualified as DataDefinition
 import Mlatu.Definition (Definition (..))
 import Mlatu.Definition qualified as Definition
 import Mlatu.Desugar.Data qualified as Data
@@ -61,8 +63,6 @@ import Mlatu.Token qualified as Token
 import Mlatu.Tokenize (tokenize)
 import Mlatu.Trait (Trait (..))
 import Mlatu.Trait qualified as Trait
-import Mlatu.TypeDefinition (TypeDefinition (TypeDefinition))
-import Mlatu.TypeDefinition qualified as TypeDefinition
 import Optics
 import Relude hiding (Compose, Constraint)
 import Relude.Unsafe qualified as Unsafe
@@ -130,17 +130,7 @@ fragmentParser mainPermissions mainName =
     <$> elementsParser <* Parsec.eof
 
 elementsParser :: Parser [Element ()]
-elementsParser =
-  asum
-    <$> many
-      ( moduleParser
-          <|> ( do
-                  (defs, td) <- recordParser
-                  pure (Element.TypeDefinition td : (Element.Definition <$> defs))
-              )
-          <|> one
-          <$> elementParser
-      )
+elementsParser = many elementParser
 
 partitionElements ::
   [GeneralName] ->
@@ -151,10 +141,11 @@ partitionElements mainPermissions mainName = foldr go mempty
   where
     go :: Element () -> Fragment () -> Fragment ()
     go = \case
+      Element.Codata x -> over Fragment.codataDefinitions (x :)
       Element.Trait x -> over Fragment.traits (x :)
       Element.Definition x -> over Fragment.definitions (x :)
       Element.Metadata x -> over Fragment.metadata (x :)
-      Element.TypeDefinition x -> over Fragment.types (x :)
+      Element.Data x -> over Fragment.dataDefinitions (x :)
       Element.Term x ->
         over
           Fragment.definitions
@@ -295,7 +286,8 @@ elementParser =
             ],
         Element.Trait <$> traitParser,
         Element.Metadata <$> metadataParser,
-        Element.TypeDefinition <$> typeDefinitionParser,
+        Element.Data <$> dataParser,
+        Element.Codata <$> codataParser,
         do
           origin <- getTokenOrigin
           Element.Term . compose () origin <$> Parsec.many1 termParser
@@ -310,7 +302,7 @@ metadataParser = (<?> "metadata block") $ do
     Qualified <$> Parsec.getState
       <*> Parsec.choice
         [ unqualifiedNameParser <?> "word identifier",
-          (parserMatch Token.Type *> lowerNameParser)
+          (parserMatch Token.Data *> lowerNameParser)
             <?> "'type' and type identifier"
         ]
   fields <-
@@ -326,104 +318,57 @@ metadataParser = (<?> "metadata block") $ do
         Metadata._origin = origin
       }
 
-typeDefinitionParser :: Parser TypeDefinition
-typeDefinitionParser = (<?> "type definition") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Type
+dataParser :: Parser DataDefinition
+dataParser = (<?> "data definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Data
   parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
-  name <- qualifiedNameParser <?> "type definition name"
-  constructors <- blockedParser (constructorParser `Parsec.sepBy` parserMatch Token.Case)
-  pure
-    TypeDefinition
-      { TypeDefinition._constructors = constructors,
-        TypeDefinition._name = name,
-        TypeDefinition._origin = origin,
-        TypeDefinition._parameters = reverse parameters
-      }
-
-constructorParser :: Parser DataConstructor
-constructorParser = (<?> "constructor definition") $ do
-  origin <- getTokenOrigin
-  name <- lowerNameParser <?> "constructor name"
-  fields <-
-    (<?> "constructor fields") $
-      Parsec.option [] $ groupedParser (typeParser `Parsec.sepEndBy` commaParser)
-  pure
-    DataConstructor
-      { DataConstructor._fields = fields,
-        DataConstructor._name = name,
-        DataConstructor._origin = origin
-      }
-
-recordParser :: Parser ([Definition ()], TypeDefinition)
-recordParser = (<?> "record definition") $ do
-  origin <- getTokenOrigin <* parserMatch Token.Record
-  parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
-  recordName <- qualifiedNameParser <?> "record  name"
-  fields <-
-    blockedParser $
-      many
-        ( (<?> "record field definition") $ do
-            origin <- getTokenOrigin <* parserMatch Token.Field
-            name <- lowerNameParser <?> "record field name"
-            let qualifiedName = Qualified (qualifierName recordName) name
-            sig <- groupedParser typeParser <?> "record field signature"
-            pure
-              ( \num1 num2 ->
-                  Definition
-                    { Definition._body =
-                        Match
-                          AnyMatch
-                          ()
-                          [ Case
-                              (UnqualifiedName ("mk-" <> unqualifiedName recordName))
-                              ( compose
-                                  ()
-                                  origin
-                                  ( replicate num2 (Word () "drop" [] origin)
-                                      <> replicate num1 (Word () "nip" [] origin)
-                                  )
-                              )
-                              origin
-                          ]
-                          (DefaultElse () origin)
-                          origin,
-                      Definition._category = Category.Deconstructor,
-                      Definition._inferSignature = True,
-                      Definition._merge = Merge.Deny,
-                      Definition._name = qualifiedName,
-                      Definition._origin = origin,
-                      Definition._parent = Just $ Parent.Record recordName,
-                      Definition._signature =
-                        Signature.Quantified
-                          parameters
-                          ( Signature.Function
-                              [ foldl'
-                                  (\a b -> Signature.Application a b origin)
-                                  (Signature.Variable (QualifiedName recordName) origin)
-                                  $ ( \(Parameter po p _ _) ->
-                                        Signature.Variable (UnqualifiedName p) po
-                                    )
-                                    <$> parameters
-                              ]
-                              [sig]
-                              []
-                              origin
-                          )
-                          origin
-                    },
-                sig
-              )
+  dataName <- qualifiedNameParser <?> "data name"
+  constructors <-
+    blockedParser
+      ( ( ( do
+              origin <- getTokenOrigin
+              name <- lowerNameParser <?> "constructor name"
+              fields <-
+                (<?> "constructor fields") $
+                  Parsec.option [] $ groupedParser (typeParser `Parsec.sepEndBy` commaParser)
+              pure (name, fields, origin)
+          )
+            <?> "constructor definition"
         )
-  let list = [0 .. (length fields - 1)]
+          `Parsec.sepBy` parserMatch Token.Case
+      )
   pure
-    ( zipWith3 id (fst <$> fields) list (reverse list),
-      TypeDefinition
-        { TypeDefinition._constructors = [DataConstructor (snd <$> fields) ("mk-" <> unqualifiedName recordName) origin],
-          TypeDefinition._name = recordName,
-          TypeDefinition._origin = origin,
-          TypeDefinition._parameters = reverse parameters
-        }
-    )
+    DataDefinition
+      { DataDefinition._constructors = constructors,
+        DataDefinition._name = dataName,
+        DataDefinition._origin = origin,
+        DataDefinition._parameters = reverse parameters
+      }
+
+codataParser :: Parser CodataDefinition
+codataParser = (<?> "codata definition") $ do
+  origin <- getTokenOrigin <* parserMatch Token.Codata
+  parameters <- Parsec.option [] $ groupedParser (Parsec.many parameter)
+  codataName <- qualifiedNameParser <?> "codata name"
+  deconstructors <-
+    blockedParser
+      ( ( ( do
+              origin <- getTokenOrigin
+              name <- lowerNameParser <?> "destructor name"
+              sig <- groupedParser typeParser <?> "destructor signature"
+              pure (name, sig, origin)
+          )
+            <?> "destructor definition"
+        )
+          `Parsec.sepBy` parserMatchOperator "+"
+      )
+  pure $
+    CodataDefinition
+      { CodataDefinition._deconstructors = deconstructors,
+        CodataDefinition._name = codataName,
+        CodataDefinition._origin = origin,
+        CodataDefinition._parameters = reverse parameters
+      }
 
 traitParser :: Parser Trait
 traitParser = do

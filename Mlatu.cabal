@@ -22,8 +22,9 @@ source-repository head
 library
   exposed-modules:
       Mlatu
+      Mlatu.CodataDefinition
       Mlatu.Codegen
-      Mlatu.DataConstructor
+      Mlatu.DataDefinition
       Mlatu.Definition
       Mlatu.Desugar.Data
       Mlatu.Desugar.Infix
@@ -68,7 +69,6 @@ library
       Mlatu.Tokenize
       Mlatu.Trait
       Mlatu.Type
-      Mlatu.TypeDefinition
       Mlatu.TypeEnv
       Mlatu.Unify
       Mlatu.Vocabulary

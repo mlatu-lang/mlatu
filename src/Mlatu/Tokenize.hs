@@ -242,19 +242,18 @@ alphanumeric =
           "alias" -> Alias
           "about" -> About
           "as" -> As
+          "codata" -> Codata
+          "data" -> Data
           "define" -> Define
           "else" -> Else
           "field" -> Field
           "for" -> For
           "if" -> If
           "instance" -> Instance
-          "intrinsic" -> Intrinsic
           "match" -> Match
           "module" -> Module
           "permission" -> Permission
-          "record" -> Record
           "trait" -> Trait
-          "type" -> Type
           "with" -> With
           "where" -> Where
           _ -> LowerWord (Unqualified name),
