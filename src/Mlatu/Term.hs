@@ -10,7 +10,6 @@ module Mlatu.Term
   ( Case (..),
     CoercionHint (..),
     Else (..),
-    MatchHint (..),
     Permit (..),
     Term (..),
     Value (..),
@@ -72,7 +71,7 @@ data Term a
     Lambda !a !Unqualified !a !(Term a) !Origin
   | -- | @match { case C {...}... else {...} }@, @if {...} else {...}@:
     -- pattern-matching.
-    Match !MatchHint !a ![Case a] !(Else a) !Origin
+    Match !a ![Case a] !(Else a) !Origin
   | -- | @new.n@: ADT allocation.
     New !a !ConstructorIndex !Int !Specialness !Origin
   | -- | @new.closure.n@: closure allocation.
@@ -92,14 +91,6 @@ data CoercionHint
     IdentityCoercion
   | -- | A coercion to a particular type.
     AnyCoercion !Signature
-  deriving (Ord, Eq, Show)
-
--- | The original source of a @match@ expression
-data MatchHint
-  = -- | @match@ generated from @if@.
-    BooleanMatch
-  | -- | @match@ explicitly in the source.
-    AnyMatch
   deriving (Ord, Eq, Show)
 
 -- | A case branch in a @match@ expression.
@@ -202,7 +193,7 @@ origin term = case term of
   Lambda _ _ _ _ o -> o
   New _ _ _ _ o -> o
   NewClosure _ _ o -> o
-  Match _ _ _ _ o -> o
+  Match _ _ _ o -> o
   Push _ _ o -> o
   Word _ _ _ o -> o
 
@@ -224,7 +215,7 @@ metadata term = case term of
   Generic _ _ term' _ -> metadata term'
   Group term' -> metadata term'
   Lambda t _ _ _ _ -> t
-  Match _ t _ _ _ -> t
+  Match t _ _ _ -> t
   New t _ _ _ _ -> t
   NewClosure t _ _ -> t
   Push t _ _ -> t
@@ -237,7 +228,7 @@ stripMetadata term = case term of
   Generic a b term' c -> Generic a b (stripMetadata term') c
   Group term' -> stripMetadata term'
   Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
-  Match a _ b c d -> Match a () (stripCase <$> b) (stripElse c) d
+  Match _ a b c -> Match () (stripCase <$> a) (stripElse b) c
   New _ a b c d -> New () a b c d
   NewClosure _ a b -> NewClosure () a b
   Push _ a b -> Push () (stripValue a) b

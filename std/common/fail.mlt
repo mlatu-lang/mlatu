@@ -4,7 +4,7 @@ define abort-now (for R S. R -> S <fail>) {
 
 define assert (for +p. string, ( -> bool <p>) ->  <fail + p>) {
   -> message, test;
-  { test call } with (-fail) if (not) { message fail-now } else {}
+  { test call } with (-fail) match | false { message fail-now } | true {}
 }
 
 define assert-eq (for t. string, t, t ->  <fail>) {

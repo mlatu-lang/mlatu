@@ -53,8 +53,8 @@ term tenv0 = go
       Group a -> go a
       Lambda tref name varType body origin ->
         Lambda (zonk tref) name (zonk varType) (go body) origin
-      Match hint tref cases else_ origin ->
-        Match hint (zonk tref) (goCase <$> cases) (goElse else_) origin
+      Match tref cases else_ origin ->
+        Match (zonk tref) (goCase <$> cases) (goElse else_) origin
         where
           goCase (Case name body caseOrigin) = Case name (go body) caseOrigin
           goElse (DefaultElse a b) = DefaultElse a b

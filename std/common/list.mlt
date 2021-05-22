@@ -90,7 +90,7 @@ define filter-in (for t. t list, (t -> bool) -> t list) {
   -> f;
   match
   | cons {
-    -> h, t; t f filter-in h f call if { h swap cons } else {}
+    -> h, t; t f filter-in h f call match | true { h swap cons } | false {}
   }
   | nil {
     nil
@@ -278,20 +278,22 @@ define or-all (bool list -> bool) {
 
 define pad-hd (for t. t list, nat, t -> t list) {
   -> list, min-length, elt;
-  if (list length min-length lt) {
+  match (list length min-length lt)
+  | true {
     list elt min-length list length - replicate prepend
   }
-  else {
+  | false {
     list
   }
 }
 
 define pad-tl (for t. t list, nat, t -> t list) {
   -> list, min-length, elt;
-  if (list length min-length lt) {
+  match (list length min-length lt)
+  | true {
     elt min-length list length - replicate list prepend
   }
-  else {
+  | false {
     list
   }
 }
@@ -322,15 +324,17 @@ define remove (for t. t list, t -> t list) {
 
 define remove-nth (for t. t list, nat -> t list) {
   -> index;
-  { -> x, i; if (i index eq) { nil } else { (x) nil cons } } map-index concat
+  { -> x, i; match (i index eq) | true { nil } | false { (x) nil cons } }
+  map-index concat
 }
 
 define replicate (for t. t, nat -> t list) {
   -> value, count;
-  if (count 0 le) {
+  match (count 0 le)
+  | true {
     nil
   }
-  else {
+  | false {
     value count 1 "swap" extern - replicate value suffix
   }
 }
@@ -369,7 +373,7 @@ define tl-hd (for t. t list -> t t list pair optional) {
   match | nil { none } | cons { swap mk-pair some }
 }
 
-define _.MapIndex.helper (for a b +p. a list, (a, nat -> b <p>), nat -> b list <p>) {
+define MapIndex.helper (for a b +p. a list, (a, nat -> b <p>), nat -> b list <p>) {
   -> f, i;
   match | cons { -> h, t; h i f call t f i 1 + helper cons } | nil { nil }
 }

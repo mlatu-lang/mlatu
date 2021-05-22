@@ -26,7 +26,7 @@ import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..), Unqualified (..))
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), MatchHint (..), Specialness (..), Term (..), compose)
+import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), compose)
 import Optics
 import Relude
 
@@ -68,7 +68,6 @@ desugarCodataDefinition definition = do
       Definition
         { Definition._body =
             Match
-              AnyMatch
               ()
               [ Case
                   (QualifiedName constructorName)

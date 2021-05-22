@@ -2,38 +2,39 @@ data bool { false | true }
 
 instance cmp (bool, bool -> ord) {
   -> a, b;
-  if (a) {
-    if (b) { equal } else { more }
+  match (a)
+  | true {
+    match (b) | true { equal } | false { more }
   }
-  else {
-    if (b) { less } else { more }
+  | false {
+    match (b) | true { less } | false { more }
   }
 }
 
 define and (bool, bool -> bool) {
-  not if { drop false } else {}
+  match | false { drop false } | true {}
 }
 
 define implies (bool, bool -> bool) {
-  not if { drop true } else {}
+  match | false { drop true } | true {}
 }
 
 define not (bool -> bool) {
-  if { false } else { true }
+  match | true { false } | false { true }
 }
 
 define or (bool, bool -> bool) {
-  swap if { drop true } else {}
+  match | true { drop true } | false {}
 }
 
 define until (for R. R, (R -> R, bool) -> R) {
-  -> f; if (f call not) { f until } else {}
+  -> f; match (f call) | false { f until } | true {}
 }
 
 define while (for R. R, (R -> R, bool) -> R) {
-  -> f; if (f call) { f while } else {}
+  -> f; match (f call) | true { f while } | false {}
 }
 
 define xor (bool, bool -> bool) {
-  swap if { not } else {}
+  match | true { not } | false {}
 }

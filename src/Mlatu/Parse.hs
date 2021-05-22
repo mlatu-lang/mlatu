@@ -56,7 +56,7 @@ import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), MatchHint (..), Term (..), Value (..), compose)
+import Mlatu.Term (Case (..), Else (..), Term (..), Value (..), compose)
 import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
 import Mlatu.Token qualified as Token
@@ -567,7 +567,6 @@ termParser = (<?> "expression") $ do
       vectorParser,
       lambdaParser,
       matchParser,
-      ifParser,
       Push () <$> blockValue <*> pure origin,
       withParser,
       asParser
@@ -676,33 +675,10 @@ matchParser = (<?> "match") $ do
         fromMaybe
           (DefaultElse () matchOrigin)
           mElse'
-  let match = Match AnyMatch () cases else_ matchOrigin
+  let match = Match () cases else_ matchOrigin
   pure $ case mScrutinee of
     Just scrutinee -> compose () scrutineeOrigin [scrutinee, match]
     Nothing -> match
-
-ifParser :: Parser (Term ())
-ifParser = (<?> "if-else expression") $ do
-  ifOrigin <- getTokenOrigin <* parserMatch Token.If
-  mCondition <- Parsec.optionMaybe groupParser <?> "condition"
-  ifBody <- blockParser
-  elseBody <-
-    Parsec.option (Term.identityCoercion () ifOrigin) $
-      parserMatch Token.Else *> blockParser
-  pure $
-    compose
-      ()
-      ifOrigin
-      [ fromMaybe (Term.identityCoercion () ifOrigin) mCondition,
-        Match
-          BooleanMatch
-          ()
-          [ Case "true" ifBody ifOrigin,
-            Case "false" elseBody (Term.origin elseBody)
-          ]
-          (DefaultElse () ifOrigin)
-          ifOrigin
-      ]
 
 blockValue :: Parser (Value ())
 blockValue = (<?> "quotation") $ Quotation <$> blockParser

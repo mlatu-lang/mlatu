@@ -245,10 +245,8 @@ alphanumeric =
           "codata" -> Codata
           "data" -> Data
           "define" -> Define
-          "else" -> Else
           "field" -> Field
           "for" -> For
-          "if" -> If
           "instance" -> Instance
           "match" -> Match
           "module" -> Module

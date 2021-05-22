@@ -6,16 +6,18 @@ define fizzbuzz (nat -> string) {
   -> n;
   { n 5 divisible n 3 divisible }
   with (+fail)
-  if {
-    if { "FizzBuzz" } else { "Fizz" }
+  match
+  | true {
+    match | true { "FizzBuzz" } | false { "Fizz" }
   }
-  else {
-    if { "Buzz" } else { n show }
+  | false {
+    match | true { "Buzz" } | false { n show }
   }
 }
 
 define fizzbuzzes (nat, nat ->  <io>) {
-  -> c, m; c fizzbuzz println if (c m lt) { c succ m fizzbuzzes } else {}
+  -> c, m;
+  c fizzbuzz println match (c m lt) | true { c succ m fizzbuzzes } | false {}
 }
 
 1 100 fizzbuzzes

@@ -70,8 +70,8 @@ term dictionary vocabulary = recur
     recur (Lambda _ name _ t origin) =
       withLocal name $
         Lambda () name () <$> recur t <*> pure origin
-    recur (Match hint _ cases else_ origin) =
-      Match hint ()
+    recur (Match _ cases else_ origin) =
+      Match ()
         <$> traverse resolveCase cases
         <*> resolveElse else_
         <*> pure origin

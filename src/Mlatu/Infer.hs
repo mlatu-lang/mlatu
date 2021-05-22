@@ -208,7 +208,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- 'match' without an else branch raises 'abort', causing the 'match' to require
   -- the +Fail permission.
 
-  Match hint _ cases else_ origin -> while (Term.origin term0) context $ do
+  Match _ cases else_ origin -> while (Term.origin term0) context $ do
     let constructors = case cases of
           -- Curiously, because an empty match works on any type, no
           -- constructors are actually permitted.
@@ -292,7 +292,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             caseTypes
         pure (Type.setOrigin origin elseType, tenv')
     let type' = Zonk.typ tenvFinal typ
-    pure (Match hint type' cases' else' origin, typ, tenv3)
+    pure (Match type' cases' else' origin, typ, tenv3)
     where
       inferCase' (cases', types, remaining, tenv) case_ = do
         (case', typ, remaining', tenv') <-

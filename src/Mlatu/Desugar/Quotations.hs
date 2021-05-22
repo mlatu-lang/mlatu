@@ -68,7 +68,7 @@ desugar dictionary qualifier term0 = do
         (a', tenv1) <- go localEnv a
         let tenv2 = set TypeEnv.vs oldLocals tenv1
         pure (Lambda typ name varType a' origin, tenv2)
-      Match hint typ cases else_ origin -> do
+      Match typ cases else_ origin -> do
         (cases', tenv1) <-
           foldrM
             ( \(Case name a caseOrigin) (acc, tenv) -> do
@@ -82,7 +82,7 @@ desugar dictionary qualifier term0 = do
           Else a elseOrigin -> do
             (a', tenv') <- go tenv1 a
             pure (Else a' elseOrigin, tenv')
-        pure (Match hint typ cases' else' origin, tenv2)
+        pure (Match typ cases' else' origin, tenv2)
       New {} -> done
       NewClosure {} -> done
       Push _type (Capture closed a) origin -> do

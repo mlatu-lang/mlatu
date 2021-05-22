@@ -12,7 +12,7 @@ instance cmp (nat, nat -> ord) {
 }
 
 define % (nat, nat -> nat) {
-  -> a, b; if (a b lt) { a } else { b a - b % succ }
+  -> a, b; match (a b lt) | true { a } | false { b a - b % succ }
 }
 
 define * (nat, nat -> nat) {
@@ -29,7 +29,7 @@ define - (nat, nat -> nat) {
 }
 
 define / (nat, nat -> nat) {
-  -> a, b; if (a b lt) { 0 } else { b a - b / succ }
+  -> a, b; match (a b lt) | true { 0 } | false { b a - b / succ }
 }
 
 define pred (nat -> nat) {

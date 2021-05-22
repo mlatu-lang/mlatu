@@ -74,9 +74,8 @@ desugar definition = do
         Lambda _ name _ body origin ->
           Lambda () name ()
             <$> desugarTerms' body <*> pure origin
-        Match hint _ cases else_ origin ->
-          Match hint ()
-            <$> traverse desugarCase cases <*> desugarElse else_ <*> pure origin
+        Match _ cases else_ origin ->
+          Match () <$> traverse desugarCase cases <*> desugarElse else_ <*> pure origin
           where
             desugarCase :: Case () -> M (Case ())
             desugarCase (Case name body caseOrigin) =

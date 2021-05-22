@@ -57,8 +57,8 @@ term tenv x a = recur
           <*> go varType
           <*> recur body
           <*> pure origin
-      Match hint tref cases else_ origin ->
-        Match hint <$> go tref
+      Match tref cases else_ origin ->
+        Match <$> go tref
           <*> traverse goCase cases
           <*> goElse else_
           <*> pure origin

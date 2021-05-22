@@ -47,8 +47,6 @@ data Token
     Define
   | -- | @dot@
     Dot
-  | -- | @else@
-    Else
   | -- | @for
     For
   | Field
@@ -56,8 +54,6 @@ data Token
     GroupBegin
   | -- | @)@
     GroupEnd
-  | -- | @if@
-    If
   | -- | @_@
     Ignore
   | -- | @instance@
@@ -105,13 +101,10 @@ instance Eq Token where
   Data == Data = True
   Define == Define = True
   Dot == Dot = True
-  Else == Else = True
-  -- See note [Float Literals].
   For == For = True
   Field == Field = True
   GroupBegin == GroupBegin = True
   GroupEnd == GroupEnd = True
-  If == If = True
   Ignore == Ignore = True
   Instance == Instance = True
   Integer a == Integer b = a == b

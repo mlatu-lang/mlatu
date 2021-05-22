@@ -43,9 +43,8 @@ scope = scopeTerm [0]
             ()
             (scopeTerm (mapHead next stack) a)
             origin
-        recur (Match hint _ cases else_ origin) =
+        recur (Match _ cases else_ origin) =
           Match
-            hint
             ()
             ( ( \(Case name a caseOrigin) ->
                   Case name (recur a) caseOrigin
@@ -118,9 +117,8 @@ captureTerm term = case term of
             }
      in Lambda () name ()
           <$> local inside (captureTerm a) <*> pure origin
-  Match hint _ cases else_ origin ->
-    Match hint ()
-      <$> traverse captureCase cases <*> captureElse else_ <*> pure origin
+  Match _ cases else_ origin ->
+    Match () <$> traverse captureCase cases <*> captureElse else_ <*> pure origin
     where
       captureCase :: Case () -> Captured (Case ())
       captureCase (Case name a caseOrigin) =

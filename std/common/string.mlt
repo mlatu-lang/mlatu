@@ -1,6 +1,6 @@
-trait read for t. string -> t optional
+trait read (for t. string -> t optional)
 
-trait show for t. t -> string
+trait show (for t. t -> string)
 
 
 data string {  } 
@@ -18,16 +18,17 @@ instance read (string -> nat optional) {
 }
 
 instance read (string -> char optional) {
-  chars dup length 1 eq if { hd } else { drop none }
+  chars dup length 1 eq match | true { hd } | false { drop none }
 }
 
 instance read (string -> bool optional) {
   dup
-  if ("true" eq) {
+  match ("true" eq)
+  | true {
     drop true some
   }
-  else {
-    if ("false" eq) { false some } else { none }
+  | false {
+    match ("false" eq) | true { false some } | false { none }
   }
 }
 
@@ -37,16 +38,16 @@ instance read (string -> string optional) {
 
 instance show (string -> string) {}
 
-instance show (bool -> string) {
-  if { "true" } else { "false" }
-}
-
 instance show (for a b. b a either -> string) {
   match | left { show " left" ++ } | right { show " right" ++ }
 }
 
 instance show (for t. t optional -> string) {
   match | some { show " some" ++ } | none { "none" }
+}
+
+instance show (bool -> string) {
+  match | true { "true" } | false { "false" }
 }
 
 instance show (nat -> string) {

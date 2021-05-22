@@ -32,10 +32,8 @@ import Data.Text qualified as Text
 import Mlatu.CodataDefinition (CodataDefinition (..))
 import Mlatu.DataDefinition (DataDefinition (..))
 import Mlatu.Definition (Definition (Definition), mainName)
-import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Ice (ice)
@@ -46,7 +44,7 @@ import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Signature (..))
-import Mlatu.Term (Case (..), CoercionHint (..), Else (..), MatchHint (..), Term (..), Value (..))
+import Mlatu.Term (Case (..), CoercionHint (..), Else (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
 import Mlatu.Trait (Trait (..))
@@ -75,8 +73,7 @@ printQualified (Qualified qualifier unqualifiedName) =
   printQualifier qualifier <> dot <> printUnqualified unqualifiedName
 
 printQualifier :: Qualifier -> Doc a
-printQualifier (Qualifier Absolute parts) = printQualifier $ Qualifier Relative ("_" : parts)
-printQualifier (Qualifier Relative parts) = pretty $ Text.intercalate "." parts
+printQualifier (Qualifier _ parts) = pretty $ Text.intercalate "." parts
 
 printOrigin :: Origin.Origin -> Doc a
 printOrigin origin =
@@ -91,13 +88,6 @@ printOrigin origin =
     bl = view Origin.endLine origin
     ac = view Origin.beginColumn origin
     bc = view Origin.endColumn origin
-
-printCategory :: Category.Category -> Doc a
-printCategory Category.Constructor = "constructor"
-printCategory Category.Instance = "instance"
-printCategory Category.Permission = "permission"
-printCategory Category.Deconstructor = "deconstructor"
-printCategory Category.Word = "word"
 
 printKind :: Kind -> Doc a
 printKind Value = "value"
@@ -249,12 +239,14 @@ printSignature (StackFunction r as s bs es _) =
       _ -> space <> group (encloseSep langle rangle " + " (printGeneralName <$> es))
 printSignature (Type t) = printType t
 
+printSimpleSignature :: Signature -> Doc a
 printSimpleSignature t@Function {} = parens (printSignature t)
 printSimpleSignature t@StackFunction {} = parens (printSignature t)
 printSimpleSignature t@Variable {} = printSignature t
 printSimpleSignature t@Type {} = printSignature t
 printSimpleSignature t@Bottom {} = printSignature t
 printSimpleSignature t@Application {} = printSignature t
+printSimpleSignature t@Quantified {} = parens (printSignature t)
 
 printToken :: Token.Token -> Doc a
 printToken = \case
@@ -274,12 +266,10 @@ printToken = \case
   Token.Data -> "data"
   Token.Define -> "define"
   Token.Dot -> dot
-  Token.Else -> "else"
   Token.Field -> "field"
   Token.For -> "for"
   Token.GroupBegin -> lparen
   Token.GroupEnd -> rparen
-  Token.If -> "if"
   Token.Ignore -> "_"
   Token.Instance -> "instance"
   Token.Integer num -> pretty num
@@ -308,7 +298,7 @@ printInstantiated (Instantiated n ts) =
 
 printDeclaration :: Trait -> Doc a
 printDeclaration (Trait name _ signature) =
-  "trait" <+> printUnqualified (unqualifiedName name) <+> printSignature signature
+  "trait" <+> printUnqualified (unqualifiedName name) <+> parens (printSignature signature)
 
 printDataDefinition :: DataDefinition -> Doc a
 printDataDefinition (DataDefinition constructors name _ parameters) =
@@ -338,9 +328,8 @@ printTerm t = fromMaybe emptyDoc (maybePrintTerms (decompose t))
 maybePrintTerms :: [Term a] -> Maybe (Doc b)
 maybePrintTerms = \case
   [] -> Nothing
-  (Group a : Match BooleanMatch _ cases _ _ : xs) -> printIf (Just a) cases `maySep` maybePrintTerms xs
-  (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> printMatch (Just a) cases Nothing `maySep` maybePrintTerms xs
-  (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> printMatch (Just a) cases (Just elseBody) `maySep` maybePrintTerms xs
+  (Group a : Match _ cases (DefaultElse _ _) _ : xs) -> printMatch (Just a) cases Nothing `maySep` maybePrintTerms xs
+  (Group a : Match _ cases (Else elseBody _) _ : xs) -> printMatch (Just a) cases (Just elseBody) `maySep` maybePrintTerms xs
   (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> (backslash <> printWord name args) `maySep` maybePrintTerms (Group a : xs)
   ( Coercion
       ( AnyCoercion
@@ -383,10 +372,9 @@ maybePrintTerms = \case
   (Group (Group a) : xs) -> printGroup a `maybeSep` maybePrintTerms xs
   (Group a : xs) -> printGroup a `maybeSep` maybePrintTerms xs
   (Lambda _ name _ body _ : xs) -> printLambda name body `maySep` maybePrintTerms xs
-  (Match BooleanMatch _ cases _ _ : xs) -> printIf Nothing cases `maySep` maybePrintTerms xs
-  (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) ->
+  (Match _ cases (DefaultElse _ _) _ : xs) ->
     printMatch Nothing cases Nothing `maySep` maybePrintTerms xs
-  (Match AnyMatch _ cases (Else elseBody _) _ : xs) ->
+  (Match _ cases (Else elseBody _) _ : xs) ->
     printMatch Nothing cases (Just elseBody) `maySep` maybePrintTerms xs
   (Push _ value _ : xs) -> printValue value `maySep` maybePrintTerms xs
   (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
@@ -425,16 +413,6 @@ printLambda name body =
     (names, newBody) = go [name] body
     go ns (Lambda _ n _ b _) = go (n : ns) b
     go ns b = (ns, b)
-
-printIf :: Maybe (Term a) -> [Case a] -> Doc b
-printIf cond [Case _ trueBody _, Case _ falseBody _] =
-  sep
-    [ blockMaybe
-        (maybe "if" ("if" <+>) (cond >>= printGroup))
-        (maybePrintTerm trueBody),
-      blockMaybe "else" (maybePrintTerm falseBody)
-    ]
-printIf _ _ = ice "Mlatu.Pretty.printIf - Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =

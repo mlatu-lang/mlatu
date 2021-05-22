@@ -175,7 +175,7 @@ termRs x = goTerms $ decompose x
         pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a/b"
       Word _ (QualifiedName name) args _ -> word name args
       Lambda _ _ _ body _ -> (\a -> "locals.push(stack.get().unwrap());" <> a <> "locals.pop();") <$> termRs body
-      Match _ _ cases els _ -> do
+      Match _ cases els _ -> do
         cs <- traverse caseRs cases
         e <- case els of
           (Else body _) -> termRs body
@@ -379,7 +379,7 @@ containsLocals t =
     ( \case
         Push _ (Local _) _ -> True
         Lambda {} -> True
-        Match _ _ cases e _ ->
+        Match _ cases e _ ->
           any (\case Case _ t _ -> containsLocals t) cases
             || ( case e of
                    DefaultElse {} -> False

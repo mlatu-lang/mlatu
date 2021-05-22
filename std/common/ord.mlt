@@ -1,4 +1,4 @@
-trait cmp for t. t, t -> ord
+trait cmp (for t. t, t -> ord)
 
 
 data ord { less | more | equal } 
