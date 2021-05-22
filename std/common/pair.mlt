@@ -1,19 +1,27 @@
-codata (b a) pair { first (a) + second (b) }
+codata (b a) pair { first (a) + second (b) } 
 
 instance cmp (for a b. b a pair, b a pair -> ord) {
   -> a, b;
   match (a first b first cmp)
-  | equal { a second b second cmp }
-  | less { less }
-  | more { more }
+  | equal {
+    a second b second cmp
+  }
+  | less {
+    less
+  }
+  | more {
+    more
+  }
 }
 
-define flip (for a b . b a pair -> a b pair) { unpair swap mk-pair }
-
-define map-pair (for a b c d . b a pair, (a -> c), (b -> d) -> d c pair) {
-  -> p, f, g;
-  p unpair -> a, b;
-  (a f call) (b g call) mk-pair
+define flip (for a b. b a pair -> a b pair) {
+  unpair swap mk-pair
 }
 
-define unpair (for a b. b a pair -> a, b) { match | mk-pair {} }
+define map-pair (for a b c d. b a pair, (a -> c), (b -> d) -> d c pair) {
+  -> p, f, g; p unpair -> a, b; (a f call) (b g call) mk-pair
+}
+
+define unpair (for a b. b a pair -> a, b) {
+  match | mk-pair {}
+}

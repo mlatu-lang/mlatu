@@ -13,10 +13,10 @@ define fact (nat -> nat) {
 Fibonacci
 ```ml
 define fib (nat -> nat) {
-  dup 2 le
-  if { drop 0 }
-  else { { pred fib } { pred pred fib } bi +}
+  -> x; if (x 2 le) { 1 } else { x pred fib x pred pred fib + }
 }
+
+20 fib println
 ```
 
 ## What is Mlatu?

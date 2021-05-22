@@ -21,9 +21,7 @@ Here's a naive recursive fibonacci function:
 
 ```
 define fib (nat -> nat) {
-  -> x;
-  if (x 2 le) { 1 }
-  else { x pred fib x pred pred fib +}
+  -> x; if (x 2 le) { 1 } else { x pred fib x pred pred fib + }
 }
 
 20 fib println
@@ -32,9 +30,8 @@ define fib (nat -> nat) {
 Here's the definition of `exists` in std/common/list.mlt, which demonstrates a more functional style, as well as some of the functions available out of the gate in the prelude.
 
 ```
-define exists (for t . t list, (t -> bool) -> bool) {
-  -> f;
-  true { f call or } fold-left
+define exists (for t. t list, (t -> bool) -> bool) {
+  -> f; true { f call or } fold-left
 }
 ```
 

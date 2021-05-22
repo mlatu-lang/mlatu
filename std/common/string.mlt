@@ -1,49 +1,66 @@
-trait read (for t. string -> t optional)
+trait read for t. string -> t optional
 
-trait show (for t. t -> string)
+trait show for t. t -> string
 
-data string {}
 
-instance ++ (string, string -> string) { "string-concat" extern }
+data string {  } 
 
-instance cmp (string, string -> ord) { "cmp-string" extern }
+instance ++ (string, string -> string) {
+  "string-concat" extern
+}
+
+instance cmp (string, string -> ord) {
+  "cmp-string" extern
+}
+
+instance read (string -> nat optional) {
+  "read-nat" extern
+}
+
+instance read (string -> char optional) {
+  chars dup length 1 eq if { hd } else { drop none }
+}
 
 instance read (string -> bool optional) {
   dup
-  if ("true" eq) { drop true some }
-  else { if ("false" eq) { false some } else { none } }
+  if ("true" eq) {
+    drop true some
+  }
+  else {
+    if ("false" eq) { false some } else { none }
+  }
 }
 
-instance read (string -> nat optional) { "read-nat" extern }
-
-instance read (string -> char optional) {
-  chars dup length 1 eq
-  if { hd }
-  else { drop none }
+instance read (string -> string optional) {
+  some
 }
-
-instance read (string -> string optional) { some }
 
 instance show (string -> string) {}
 
-instance show (bool -> string) { if { "true" } else { "false" } }
-
-instance show (for a b . b a either -> string) {
-  match
-  | left { show " left" ++ }
-  | right { show " right" ++}
+instance show (bool -> string) {
+  if { "true" } else { "false" }
 }
 
-instance show (for t . t optional -> string) {
-  match
-  | some { show " some" ++ }
-  | none { "none" }
+instance show (for a b. b a either -> string) {
+  match | left { show " left" ++ } | right { show " right" ++ }
 }
 
-instance show (nat -> string) { "show-nat" extern }
+instance show (for t. t optional -> string) {
+  match | some { show " some" ++ } | none { "none" }
+}
 
-instance show (char -> string) { once from-chars }
+instance show (nat -> string) {
+  "show-nat" extern
+}
 
-define chars (string -> char list) { "string-to-list" extern }
+instance show (char -> string) {
+  once from-chars
+}
 
-define from-chars (char list -> string) { "string-from-list" extern }
+define chars (string -> char list) {
+  "string-to-list" extern
+}
+
+define from-chars (char list -> string) {
+  "string-from-list" extern
+}

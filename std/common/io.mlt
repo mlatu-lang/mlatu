@@ -1,15 +1,31 @@
-define append-file (string, string -> <io>) { "append-file" extern }
+define append-file (string, string ->  <io>) {
+  "append-file" extern
+}
 
-define ask (string -> string <io>) { print "flush-stdout" extern get-line }
+define ask (string -> string <io>) {
+  print "flush-stdout" extern get-line
+}
 
-define get-line (-> string <io>) { "get-line" extern }
+define get-line ( -> string <io>) {
+  "get-line" extern
+}
 
-define newline (-> <io>) { "\n" print }
+define newline ( ->  <io>) {
+  "\n" print
+}
 
-define print (for t . t -> <io>) { show "print" extern }
+define print (for t. t ->  <io>) {
+  show "print" extern
+}
 
-define println (for t . t -> <io>) { print newline }
+define println (for t. t ->  <io>) {
+  print newline
+}
 
-define read-file (string -> string <io>) { "read-file" extern }
+define read-file (string -> string <io>) {
+  "read-file" extern
+}
 
-define write-file (string, string -> <io>) { "write-file" extern }
+define write-file (string, string ->  <io>) {
+  "write-file" extern
+}

@@ -1,3 +1,5 @@
-data char {}
+data char {  } 
 
-instance cmp (char, char -> ord) { "cmp-char" extern }
+instance cmp (char, char -> ord) {
+  "cmp-char" extern
+}

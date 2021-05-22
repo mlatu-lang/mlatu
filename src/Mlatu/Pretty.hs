@@ -59,8 +59,8 @@ import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
 
-punctuateComma :: [Doc a] -> Doc a
-punctuateComma = hsep . punctuate comma
+punctuateComma :: [Doc a] -> [Doc a]
+punctuateComma = punctuate comma
 
 printParameter :: Parameter -> Doc a
 printParameter (Parameter _ name Value _) = printUnqualified name
@@ -72,7 +72,7 @@ printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
 printQualified (Qualified qualifier unqualifiedName) =
-  printQualifier qualifier <> "." <> printUnqualified unqualifiedName
+  printQualifier qualifier <> dot <> printUnqualified unqualifiedName
 
 printQualifier :: Qualifier -> Doc a
 printQualifier (Qualifier Absolute parts) = printQualifier $ Qualifier Relative ("_" : parts)
@@ -145,13 +145,13 @@ printType type0 = recur type0
           recur a <+> "->"
       TypeConstructor _ "fun" -> parens "->"
       Type.Prod _ a b ->
-        punctuateComma [recur a, recur b]
+        recur a <+> comma <+> recur b
       TypeConstructor _ "prod" :@ a ->
         parens $ recur a <> comma <> space
       TypeConstructor _ "prod" ->
         parens comma
       Type.Sum _ a b ->
-        recur a <+> "|" <+> recur b
+        recur a <+> pipe <+> recur b
       Type.Join _ a b ->
         "+" <> recur a <+> recur b
       TypeConstructor _ "join" :@ a ->
@@ -185,8 +185,8 @@ printType type0 = recur type0
           prettyForall t vars =
             parens
               ( "for"
-                  <+> hsep (recur . TypeVar (Type.origin t) <$> vars)
-                  <+> "."
+                  <+> sep (recur . TypeVar (Type.origin t) <$> vars)
+                  <+> dot
                   <+> recur t
               )
       TypeValue _ value -> pretty value
@@ -228,52 +228,57 @@ prettyKinded name k = case k of
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
-printSignature (Application a b _) = printSignature b <+> printSignature a
+printSignature (Application a b _) = printSimpleSignature b <+> printSimpleSignature a
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
-  parens $
-    punctuateComma (printSignature <$> as)
-      <+> "->"
-      <+> punctuateComma (printSignature <$> bs)
-      <> case es of
-        [] -> ""
-        _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
+  (group . hsep . punctuateComma) (printSimpleSignature <$> as)
+    <+> "->"
+    <+> (group . hsep . punctuateComma) (printSimpleSignature <$> bs)
+    <> case es of
+      [] -> emptyDoc
+      _ -> space <> group (encloseSep langle rangle " + " (printGeneralName <$> es))
 printSignature (Quantified names typ _) =
-  parens $ "for" <+> hsep (printParameter <$> names) <> "." <+> printSignature typ
+  "for" <+> hsep (printParameter <$> names) <> dot <+> group (printSignature typ)
 printSignature (Variable name _) = printGeneralName name
 printSignature (StackFunction r as s bs es _) =
-  parens $
-    punctuateComma (printSignature <$> (r : as))
-      <+> "->"
-      <+> punctuateComma (printSignature <$> (s : bs))
-      <> case es of
-        [] -> ""
-        _ -> space <> encloseSep "<" ">" " + " (printGeneralName <$> es)
+  (group . hsep . punctuateComma) (printSimpleSignature <$> (r : as))
+    <+> "->"
+    <+> (group . hsep . punctuateComma) (printSimpleSignature <$> (s : bs))
+    <> case es of
+      [] -> emptyDoc
+      _ -> space <> group (encloseSep langle rangle " + " (printGeneralName <$> es))
 printSignature (Type t) = printType t
+
+printSimpleSignature t@Function {} = parens (printSignature t)
+printSimpleSignature t@StackFunction {} = parens (printSignature t)
+printSimpleSignature t@Variable {} = printSignature t
+printSimpleSignature t@Type {} = printSignature t
+printSimpleSignature t@Bottom {} = printSignature t
+printSimpleSignature t@Application {} = printSignature t
 
 printToken :: Token.Token -> Doc a
 printToken = \case
   Token.About -> "about"
-  Token.AngleBegin -> "<"
-  Token.AngleEnd -> ">"
+  Token.AngleBegin -> langle
+  Token.AngleEnd -> rangle
   Token.Alias -> "alias"
   Token.Arrow -> "->"
   Token.As -> "as"
-  Token.BlockBegin -> "{"
-  Token.BlockEnd -> "}"
-  Token.Case -> "|"
+  Token.BlockBegin -> lbrace
+  Token.BlockEnd -> rbrace
+  Token.Case -> pipe
   Token.Character c -> squotes $ pretty c
   Token.Codata -> "codata"
-  Token.Colon -> ":"
-  Token.Comma -> ","
+  Token.Colon -> colon
+  Token.Comma -> comma
   Token.Data -> "data"
   Token.Define -> "define"
-  Token.Dot -> "."
+  Token.Dot -> dot
   Token.Else -> "else"
   Token.Field -> "field"
   Token.For -> "for"
-  Token.GroupBegin -> "("
-  Token.GroupEnd -> ")"
+  Token.GroupBegin -> lparen
+  Token.GroupEnd -> rparen
   Token.If -> "if"
   Token.Ignore -> "_"
   Token.Instance -> "instance"
@@ -282,11 +287,11 @@ printToken = \case
   Token.Module -> "module"
   Token.Operator name -> printUnqualified name
   Token.Permission -> "permission"
-  Token.Reference -> "\\"
+  Token.Reference -> backslash
   Token.Text t -> dquotes $ pretty t
   Token.Trait -> "trait"
-  Token.VectorBegin -> "["
-  Token.VectorEnd -> "]"
+  Token.VectorBegin -> lbracket
+  Token.VectorEnd -> rbracket
   Token.Where -> "where"
   Token.With -> "with"
   Token.UpperWord name -> printUnqualified name
@@ -299,7 +304,7 @@ instance Show Token.Token where
 printInstantiated :: Instantiated -> Doc a
 printInstantiated (Instantiated n []) = printQualified n
 printInstantiated (Instantiated n ts) =
-  printQualified n <> "." <> list (printType <$> ts)
+  printQualified n <> dot <> list (printType <$> ts)
 
 printDeclaration :: Trait -> Doc a
 printDeclaration (Trait name _ signature) =
@@ -309,34 +314,34 @@ printDataDefinition :: DataDefinition -> Doc a
 printDataDefinition (DataDefinition constructors name _ parameters) =
   "data" <+> typeName <> encloseSep " { " " } " " | " (printDataConstructor <$> constructors)
   where
-    typeName =
-      printQualified name
-        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
+    typeName = case parameters of
+      [] -> printQualified name
+      _ -> (parens . hsep) (printParameter <$> reverse parameters) <+> printQualified name
     printDataConstructor (name, fields, _) =
       printUnqualified name
-        <> if not $ null fields then space <> tupled (printSignature <$> fields) else ""
+        <> if not $ null fields then space <> tupled (printSignature <$> fields) else emptyDoc
 
 printCodataDefinition :: CodataDefinition -> Doc a
 printCodataDefinition (CodataDefinition constructors name _ parameters) =
   "codata" <+> typeName <> encloseSep " { " " } " " + " (printDataDeconstructor <$> constructors)
   where
-    typeName =
-      printQualified name
-        <> if not $ null parameters then (list . fmap printParameter) parameters else ""
+    typeName = case parameters of
+      [] -> printQualified name
+      _ -> (parens . hsep) (printParameter <$> reverse parameters) <+> printQualified name
     printDataDeconstructor (name, sig, _) = printUnqualified name <+> parens (printSignature sig)
 
 printTerm :: Term a -> Doc b
-printTerm t = fromMaybe "" (maybePrintTerms (decompose t))
+printTerm t = fromMaybe emptyDoc (maybePrintTerms (decompose t))
   where
     decompose = Term.decompose . Term.stripMetadata
 
 maybePrintTerms :: [Term a] -> Maybe (Doc b)
 maybePrintTerms = \case
   [] -> Nothing
-  (Group a : Match BooleanMatch _ cases _ _ : xs) -> Just (printIf (Just a) cases `justVertical` xs)
-  (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (printMatch (Just a) cases Nothing `justVertical` xs)
-  (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (printMatch (Just a) cases (Just elseBody) `justVertical` xs)
-  (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> Just ((backslash <> printWord name args) `justHoriz` (Group a : xs))
+  (Group a : Match BooleanMatch _ cases _ _ : xs) -> printIf (Just a) cases `maySep` maybePrintTerms xs
+  (Group a : Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> printMatch (Just a) cases Nothing `maySep` maybePrintTerms xs
+  (Group a : Match AnyMatch _ cases (Else elseBody _) _ : xs) -> printMatch (Just a) cases (Just elseBody) `maySep` maybePrintTerms xs
+  (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> (backslash <> printWord name args) `maySep` maybePrintTerms (Group a : xs)
   ( Coercion
       ( AnyCoercion
           ( Quantified
@@ -361,47 +366,48 @@ maybePrintTerms = \case
         )
       _
       _
-      : Word _ (QualifiedName (Qualified _ "call")) _ _
+      : Push _ (Text "call") _
+      : Word _ (UnqualifiedName "extern") _ _
       : xs
     ) ->
-      Just (("with" <> space <> tupled (((\g -> "+" <> printGeneralName g) <$> grantNames) ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames))) `justHoriz` xs)
-  (Coercion (AnyCoercion _) _ _ : xs) -> Nothing `horiz` xs
-  (Group (Group a) : xs) -> printGroup a `horiz` xs
-  (Group a : xs) -> printGroup a `horiz` xs
-  (Lambda _ name _ body _ : xs) -> Just (printLambda name body `justHoriz` xs)
-  (Match BooleanMatch _ cases _ _ : xs) -> Just (printIf Nothing cases `justVertical` xs)
-  (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) -> Just (vsep [printMatch Nothing cases Nothing] `justVertical` xs)
-  (Match AnyMatch _ cases (Else elseBody _) _ : xs) -> Just (vsep [printMatch Nothing cases (Just elseBody)] `justVertical` xs)
-  (Push _ value _ : xs) -> Just (printValue value `justHoriz` xs)
+      ( "with" <> space
+          <> tupled
+            ( ( (\g -> "+" <> printGeneralName g)
+                  <$> grantNames
+              )
+                ++ ((\r -> "-" <> printGeneralName r) <$> revokeNames)
+            )
+      )
+        `maySep` maybePrintTerms xs
+  (Coercion (AnyCoercion _) _ _ : xs) -> maybePrintTerms xs
+  (Group (Group a) : xs) -> printGroup a `maybeSep` maybePrintTerms xs
+  (Group a : xs) -> printGroup a `maybeSep` maybePrintTerms xs
+  (Lambda _ name _ body _ : xs) -> printLambda name body `maySep` maybePrintTerms xs
+  (Match BooleanMatch _ cases _ _ : xs) -> printIf Nothing cases `maySep` maybePrintTerms xs
+  (Match AnyMatch _ cases (DefaultElse _ _) _ : xs) ->
+    printMatch Nothing cases Nothing `maySep` maybePrintTerms xs
+  (Match AnyMatch _ cases (Else elseBody _) _ : xs) ->
+    printMatch Nothing cases (Just elseBody) `maySep` maybePrintTerms xs
+  (Push _ value _ : xs) -> printValue value `maySep` maybePrintTerms xs
   (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
     Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
-  (Word _ name args _ : xs) -> Just (printWord name args `justHoriz` xs)
+  (Word _ (UnqualifiedName "zero") _ _ : xs) ->
+    let go :: Int -> [Term a] -> (Int, [Term a])
+        go n ((Word _ (UnqualifiedName "succ") _ _) : xs') = go (n + 1) xs'
+        go n rest = (n, rest)
+     in let (s, rest) = go 0 xs in pretty s `maySep` maybePrintTerms rest
+  (Word _ name args _ : xs) -> printWord name args `maySep` maybePrintTerms xs
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
-  where
-    horiz :: Maybe (Doc b) -> [Term a] -> Maybe (Doc b)
-    horiz = \case
-      Nothing -> maybePrintTerms
-      Just a -> Just . justHoriz a
 
-    justHoriz :: Doc b -> [Term a] -> Doc b
-    justHoriz a l =
-      let (before, after) =
-            break
-              ( \case
-                  Match {} -> True
-                  _ -> False
-              )
-              l
-       in case (maybePrintTerms before, maybePrintTerms after) of
-            (Nothing, Nothing) -> a
-            (Just b, Nothing) -> a <+> b
-            (Nothing, Just b) -> vsep [a, b]
-            (Just b, Just c) -> vsep [a <+> b, c]
+maySep :: Doc a -> Maybe (Doc a) -> Maybe (Doc a)
+maySep a (Just b) = Just (sep [a, b])
+maySep a Nothing = Just a
 
-    justVertical :: Doc b -> [Term a] -> Doc b
-    justVertical a l = case maybePrintTerms l of
-      Nothing -> a
-      Just b -> vsep [a, b]
+maybeSep :: Maybe (Doc a) -> Maybe (Doc a) -> Maybe (Doc a)
+maybeSep (Just a) (Just b) = Just (sep [a, b])
+maybeSep (Just a) Nothing = Just a
+maybeSep Nothing (Just b) = Just b
+maybeSep Nothing Nothing = Nothing
 
 maybePrintTerm :: Term a -> Maybe (Doc b)
 maybePrintTerm = maybePrintTerms . Term.decompose
@@ -411,10 +417,10 @@ printGroup a = parens <$> maybePrintTerm a
 
 printLambda :: Unqualified -> Term a -> Doc b
 printLambda name body =
-  let lambda = printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names) <> semi
+  let lambda = "->" <+> (hsep . punctuateComma) (printUnqualified <$> names) <> semi
    in case maybePrintTerm newBody of
         Nothing -> lambda
-        Just a -> vsep [lambda, a]
+        Just a -> sep [lambda, a]
   where
     (names, newBody) = go [name] body
     go ns (Lambda _ n _ b _) = go (n : ns) b
@@ -422,41 +428,37 @@ printLambda name body =
 
 printIf :: Maybe (Term a) -> [Case a] -> Doc b
 printIf cond [Case _ trueBody _, Case _ falseBody _] =
-  vsep
-    [ group $ blockMaybe (maybe "if" ("if" <+>) (cond >>= printGroup)) (maybePrintTerm trueBody),
-      group $ blockMaybe "else" (maybePrintTerm falseBody)
+  sep
+    [ blockMaybe
+        (maybe "if" ("if" <+>) (cond >>= printGroup))
+        (maybePrintTerm trueBody),
+      blockMaybe "else" (maybePrintTerm falseBody)
     ]
 printIf _ _ = ice "Mlatu.Pretty.printIf - Expected a true and false case"
 
 printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
-  vsep
+  sep
     ( maybe "match" ("match" <+>) (cond >>= printGroup) :
-      ( ( (\(Case n b _) -> printCase n b)
-            <$> cases
-        )
-          ++ maybe
-            []
-            (\e -> [group $ blockMaybe "| _ " (maybePrintTerm e)])
-            else_
+      ( ((\(Case n b _) -> printCase n b) <$> cases)
+          <> maybe [] (\e -> [blockMaybe "| _ " (maybePrintTerm e)]) else_
       )
     )
 
 printCase :: GeneralName -> Term a -> Doc b
 printCase n (Lambda _ name _ body _) =
-  group $
-    blockMaybe
-      ("|" <+> printGeneralName n <+> printToken Token.Arrow <+> punctuateComma (printUnqualified <$> names))
-      (maybePrintTerm newBody)
+  blockMaybe
+    (pipe <+> printGeneralName n <+> "->" <+> (hsep . punctuateComma) (printUnqualified <$> names))
+    (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body
     go ns (Lambda _ ln _ b _) = go (ln : ns) b
     go ns b = (ns, b)
-printCase n b = group $ blockMaybe ("case" <+> printGeneralName n) (maybePrintTerm b)
+printCase n b = blockMaybe (pipe <+> printGeneralName n) (maybePrintTerm b)
 
 printWord :: GeneralName -> [Type] -> Doc a
 printWord word [] = printGeneralName word
-printWord word args = printGeneralName word <> "." <> list (printType <$> args)
+printWord word args = printGeneralName word <> dot <> list (printType <$> args)
 
 printValue :: Value a -> Doc b
 printValue value = case value of
@@ -469,7 +471,7 @@ printValue value = case value of
   Local (LocalIndex index) -> "local" <> dot <> pretty index
   Name n -> backslash <> printQualified n
   Quotation w@Word {} -> backslash <> printTerm w
-  Quotation body -> group $ maybeBlockMaybe Nothing (maybePrintTerm body)
+  Quotation body -> blockedMaybe (maybePrintTerm body)
   Text text -> (if Text.count "\n" text > 1 then multiline else singleline) text
     where
       multiline :: Text -> Doc a
@@ -504,13 +506,32 @@ printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _) = Nothing
 printDefinition (Definition Category.Deconstructor _ _ _ _ _ _ _) = Nothing
 printDefinition (Definition Category.Permission name body _ _ _ signature _) =
-  Just $ group $ blockMaybe ("permission" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
+  Just $
+    blockMaybe
+      ( "permission"
+          <+> (printQualified name <+> parens (printSignature signature))
+      )
+      (maybePrintTerm body)
 printDefinition (Definition Category.Instance name body _ _ _ signature _) =
-  Just $ group $ blockMaybe ("instance" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
-printDefinition (Definition Category.Word name body _ _ _ _ _)
+  Just $
+    blockMaybe
+      ( "instance"
+          <+> ( printQualified name
+                  <+> parens (printSignature signature)
+              )
+      )
+      (maybePrintTerm body)
+printDefinition (Definition Category.Word name body _ _ _ signature _)
   | name == mainName = maybePrintTerm body
-printDefinition (Definition Category.Word name body _ _ _ signature _) =
-  Just $ group $ blockMaybe ("define" <+> (printQualified name <+> printSignature signature)) (maybePrintTerm body)
+  | otherwise =
+    Just $
+      blockMaybe
+        ( "define"
+            <+> ( printQualified name
+                    <+> parens (printSignature signature)
+                )
+        )
+        (maybePrintTerm body)
 
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =
@@ -518,17 +539,16 @@ printFragment fragment =
     ( ( (\g -> printGrouped g <> line)
           <$> groupedDeclarations
       )
-        ++ ( (\t -> printDataDefinition t <> line)
+        <> ( (\t -> printDataDefinition t <> line)
                <$> sort (view Fragment.dataDefinitions fragment)
            )
-        ++ ( (\t -> printCodataDefinition t <> line)
+        <> ( (\t -> printCodataDefinition t <> line)
                <$> sort (view Fragment.codataDefinitions fragment)
            )
-        ++ mapMaybe
+        <> mapMaybe
           (fmap (<> line) . printDefinition)
-          ( sort (view Fragment.definitions fragment)
-          )
-        ++ ( (\m -> printMetadata m <> line)
+          (sort (view Fragment.definitions fragment))
+        <> ( (\m -> printMetadata m <> line)
                <$> sort (view Fragment.metadata fragment)
            )
     )
@@ -543,34 +563,30 @@ printFragment fragment =
     printGrouped decls =
       if noVocab
         then vsep ((\d -> printDeclaration d <> line) <$> sort decls)
-        else blockMulti ("module" <+> printQualifier commonName) printDeclaration (sort decls)
+        else blockLines ("module" <+> printQualifier commonName) printDeclaration (sort decls)
       where
         (commonName, noVocab) = case qualifierName $ view Trait.name $ decls Unsafe.!! 0 of
           (Qualifier Absolute parts) -> (Qualifier Relative parts, null parts)
           n -> (n, False)
 
-nestTwo :: Doc a -> Doc a
-nestTwo = nest 2
+block :: Maybe (Doc a) -> Doc a -> Doc a
+block Nothing inner = sep [lbrace, inner, rbrace]
+block (Just before) inner =
+  flatAlt
+    (vsep [before <+> lbrace, indent 2 inner, rbrace])
+    (sep [before <+> lbrace, inner, rbrace])
 
-block :: Doc a -> Doc a -> Doc a
-block before inner = flatAlt (vsep [before <+> lbrace, indent 2 inner, rbrace]) (before <+> lbrace <+> inner <+> rbrace)
-
-maybeBlock :: Maybe (Doc a) -> Doc a -> Doc a
-maybeBlock Nothing inner = flatAlt (vsep [lbrace, indent 2 inner, rbrace]) (lbrace <+> inner <+> rbrace)
-maybeBlock (Just before) inner = block before inner
+blockLines :: Doc a -> (b -> Doc a) -> [b] -> Doc a
+blockLines before _ [] = before <+> lbrace <> rbrace
+blockLines before f xs =
+  flatAlt
+    (vsep [before <+> lbrace, indent 2 (vsep (f <$> xs)), rbrace])
+    (sep [before <+> lbrace, sep (f <$> xs), rbrace])
 
 blockMaybe :: Doc a -> Maybe (Doc a) -> Doc a
-blockMaybe before Nothing = before <+> (lbrace <> rbrace)
-blockMaybe before (Just inner) = block before inner
+blockMaybe before Nothing = before <+> lbrace <> rbrace
+blockMaybe before (Just inner) = block (Just before) inner
 
-maybeBlockMaybe :: Maybe (Doc a) -> Maybe (Doc a) -> Doc a
-maybeBlockMaybe (Just before) (Just inner) = block before inner
-maybeBlockMaybe before (Just inner) = maybeBlock before inner
-maybeBlockMaybe (Just before) inner = blockMaybe before inner
-maybeBlockMaybe Nothing Nothing = lbrace <> rbrace
-
-blockMulti :: Doc a -> (b -> Doc a) -> [b] -> Doc a
-blockMulti before f = mapNonEmpty (blockMaybe before Nothing) (\xs -> vsep [before <+> lbrace, indent 2 (vsep (f <$> xs)), rbrace])
-
-mapNonEmpty :: b -> ([a] -> b) -> [a] -> b
-mapNonEmpty emptyCase nonEmptyFn l = fromMaybe emptyCase (viaNonEmpty (nonEmptyFn . toList) l)
+blockedMaybe :: Maybe (Doc a) -> Doc a
+blockedMaybe Nothing = lbrace <> rbrace
+blockedMaybe (Just inner) = block Nothing inner

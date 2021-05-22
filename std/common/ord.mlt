@@ -1,39 +1,28 @@
-data ord { less | more | equal }
+trait cmp for t. t, t -> ord
 
-trait cmp (for t. t, t -> ord)
 
-define gt (for t. t, t -> bool) {
-  match (cmp)
-  | more { true }
-  | _ { false }
+data ord { less | more | equal } 
+
+define eq (for t. t, t -> bool) {
+  match (cmp) | equal { true } | _  { false }
 }
 
 define ge (for t. t, t -> bool) {
-  match (cmp)
-  | less { false }
-  | _ { false }
+  match (cmp) | less { false } | _  { false }
 }
 
-define lt (for t. t, t -> bool) {
-  match (cmp)
-  | less { true }
-  | _ { false }
+define gt (for t. t, t -> bool) {
+  match (cmp) | more { true } | _  { false }
 }
 
 define le (for t. t, t -> bool) {
-  match (cmp)
-  | more { false }
-  | _ { true }
+  match (cmp) | more { false } | _  { true }
 }
 
-define eq (for t. t, t -> bool) {
-  match (cmp)
-  | equal { true }
-  | _ { false }
+define lt (for t. t, t -> bool) {
+  match (cmp) | less { true } | _  { false }
 }
 
 define neq (for t. t, t -> bool) {
-  match (cmp)
-  | equal { false }
-  | _ { true }
+  match (cmp) | equal { false } | _  { true }
 }

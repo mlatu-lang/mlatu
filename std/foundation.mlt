@@ -1,24 +1,24 @@
-permission exit (for R S +p . R, (R -> S <exit + p>) -> S <p>) {
+permission exit (for R S +p. R, (R -> S <exit + p>) -> S <p>) {
   with (+exit)
 }
 
-permission fail (for R S +p . R, (R -> S <fail + p>) -> S <p>) {
+permission fail (for R S +p. R, (R -> S <fail + p>) -> S <p>) {
   with (+fail)
 }
 
-permission io (for R S +p . R, (R -> S <io + p>) -> S <p>) {
+permission io (for R S +p. R, (R -> S <io + p>) -> S <p>) {
   with (+io)
 }
 
-define call (for R S . R, (R -> S) -> S) {
+define call (for R S. R, (R -> S) -> S) {
   "call" extern
 }
 
-define drop (for a . a ->) {
+define drop (for a. a -> ) {
   "drop" extern
 }
 
-define swap (for a b . a, b -> b, a) {
+define swap (for a b. a, b -> b, a) {
   "swap" extern
 }
 

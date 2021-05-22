@@ -35,10 +35,8 @@ import Mlatu.Instantiated qualified as Instantiated
 import Mlatu.Name
   ( Qualified,
   )
-import Mlatu.Pretty qualified as Pretty
 import Mlatu.Signature (Signature)
 import Optics
-import Prettyprinter (Doc, vsep)
 import Relude hiding (empty, fromList, toList)
 
 -- | A key-value store mapping an 'Instantiated' name to a dictionary 'Entry'.

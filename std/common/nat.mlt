@@ -1,64 +1,37 @@
-data nat { zero | succ (nat) }
+data nat { zero | succ (nat) } 
 
 instance cmp (nat, nat -> ord) {
   -> a, b;
   match (a)
   | zero {
-    match (b)
-    | zero { equal }
-    | succ { drop less }
+    match (b) | zero { equal } | succ { drop less }
   }
   | succ {
-    match (b)
-    | zero { drop more }
-    | succ { cmp }
-  }
-}
-
-define pred (nat -> nat) {
-  match
-  | zero { zero }
-  | succ { }
-}
-
-define + (nat, nat -> nat) {
-  match
-  | zero { }
-  | succ { + succ }
-}
-
-define - (nat, nat -> nat) {
-  -> a, b;
-  match (a)
-  | zero { b }
-  | succ {
-    match (b)
-    | zero { drop a }
-    | succ { - }
-  }
-}
-
-define * (nat, nat -> nat) {
-  -> a, b;
-  match (a)
-  | zero { zero }
-  | succ { b * b +}
-}
-
-define / (nat, nat -> nat) {
-  -> a, b;
-  if (a b lt) {
-    zero
-  } else {
-    b a - b / succ
+    match (b) | zero { drop more } | succ { cmp }
   }
 }
 
 define % (nat, nat -> nat) {
+  -> a, b; if (a b lt) { a } else { b a - b % succ }
+}
+
+define * (nat, nat -> nat) {
+  -> a, b; match (a) | zero { 0 } | succ { b * b + }
+}
+
+define + (nat, nat -> nat) {
+  match | zero {} | succ { + succ }
+}
+
+define - (nat, nat -> nat) {
   -> a, b;
-  if (a b lt) {
-    a
-  } else {
-    b a - b % succ
-  }
+  match (a) | zero { b } | succ { match (b) | zero { drop a } | succ { - } }
+}
+
+define / (nat, nat -> nat) {
+  -> a, b; if (a b lt) { 0 } else { b a - b / succ }
+}
+
+define pred (nat -> nat) {
+  match | zero { 0 } | succ {}
 }
