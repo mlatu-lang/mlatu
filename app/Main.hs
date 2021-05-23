@@ -31,8 +31,8 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles prelude files -> compileFiles prelude files True
-    Arguments.CompileFiles prelude files -> compileFiles prelude files False
+    Arguments.RunFiles prelude b files -> compileFiles prelude files (runRust b)
+    Arguments.CompileFiles prelude files -> compileFiles prelude files buildRust
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -65,46 +65,71 @@ checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
-compileFiles :: Prelude -> [FilePath] -> Bool -> IO ()
-compileFiles prelude relativePaths toRun =
+compileFiles :: Prelude -> [FilePath] -> RustHandler -> IO ()
+compileFiles prelude relativePaths handler =
   forM relativePaths makeAbsolute
     >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
               ( Codegen.generate program Nothing
-                  >>= ( \contents ->
-                          withSystemTempFile
-                            "output.rs"
-                            ( \path handle ->
-                                hPut handle contents
-                                  >> runProcess_
-                                    ( proc
-                                        "rustc"
-                                        [ "--emit=link",
-                                          "--crate-type=bin",
-                                          "--edition=2018",
-                                          "-C",
-                                          "opt-level=3",
-                                          "-C",
-                                          "lto=y",
-                                          "-C",
-                                          "panic=abort",
-                                          "-C",
-                                          "codegen-units=1",
-                                          "-o",
-                                          "./output",
-                                          path
-                                        ]
-                                    )
-                                  >> hClose handle
-                                  >> if toRun
-                                    then
-                                      putStrLn "Running the produced executable"
-                                        >> runProcess_ (proc "./output" [])
-                                        >> removeFile "./output"
-                                    else putStrLn "Produced the executable ./output"
-                            )
-                      )
+                  >>= (withSystemTempFile "output.rs" . handler)
               )
         )
+
+type RustHandler = ByteString -> FilePath -> Handle -> IO ()
+
+runRust :: Bool -> RustHandler
+runRust b contents path handle =
+  hPut handle contents
+    >> runProcess_
+      ( proc
+          "rustc"
+          [ "--emit=link",
+            "--crate-type=bin",
+            "--edition=2018",
+            "-C",
+            "opt-level=3",
+            "-C",
+            "lto=y",
+            "-C",
+            "panic=abort",
+            "-C",
+            "codegen-units=1",
+            "-o",
+            "./output",
+            path
+          ]
+      )
+    >> hClose handle
+    >> if b
+      then runProcess_ (proc "time" ["./output"])
+      else
+        runProcess_ (proc "./output" [])
+          >> removeFile "./output"
+
+buildRust :: RustHandler
+buildRust contents path handle =
+  hPut handle contents
+    >> runProcess_
+      ( proc
+          "rustc"
+          [ "--emit=link",
+            "--crate-type=bin",
+            "--edition=2018",
+            "-C",
+            "opt-level=z",
+            "-C",
+            "lto=y",
+            "-C",
+            "panic=abort",
+            "-C",
+            "codegen-units=1",
+            "-o",
+            "./output",
+            path
+          ]
+      )
+    >> hClose handle
+    >> runProcess_ (proc "strip" ["./output"])
+    >> runProcess_ (proc "upx" ["--best", "--lzma", "./output"])
