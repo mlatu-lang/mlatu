@@ -1,31 +1,45 @@
-define append-file (string, string ->  <io>) {
-  "append-file" extern
-}
+data readable { r-in | r-file (string) } 
 
-define ask (string -> string <io>) {
-  print "flush-stdout" extern get-line
-}
+data writable { w-out | w-err | w-file (string) } 
 
-define get-line ( -> string <io>) {
-  "get-line" extern
-}
-
-define newline ( ->  <io>) {
-  "\n" print
+define flush (writable ->  <io>) {
+  match
+  | w-out {
+    "flush-stdout" extern
+  }
+  | w-err {
+    "flush-stderr" extern
+  }
+  | w-file {
+    "flush-file" extern
+  }
 }
 
 define print (for t. t ->  <io>) {
-  show "print" extern
+  show w-out write
 }
 
 define println (for t. t ->  <io>) {
-  print newline
+  show "\n" ++ w-out write
 }
 
-define read-file (string -> string <io>) {
-  "read-file" extern
+define read (readable -> string <io>) {
+  match | r-in { "read-stdin" extern } | r-file { "read-file" extern }
 }
 
-define write-file (string, string ->  <io>) {
-  "write-file" extern
+define read-line ( -> string <io>) {
+  "read-line" extern
+}
+
+define write (string, writable ->  <io>) {
+  match
+  | w-out {
+    "write-stdout" extern
+  }
+  | w-err {
+    "write-stderr" extern
+  }
+  | w-file {
+    "write-file" extern
+  }
 }
