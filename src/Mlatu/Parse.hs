@@ -442,7 +442,9 @@ commaParser = void $ parserMatch Token.Comma
 basicTypeParser' :: Parser Signature
 basicTypeParser' =
   Parsec.choice
-    [ groupedParser (quantifiedParser typeParser <|> typeParser),
+    [ do
+        sig <- groupedParser (quantifiedParser typeParser <|> typeParser)
+        pure $ Signature.Grouped sig (Signature.origin sig),
       Parsec.try $ do
         origin <- getTokenOrigin
         name <- nameParser

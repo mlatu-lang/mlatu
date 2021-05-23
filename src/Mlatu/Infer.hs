@@ -524,6 +524,7 @@ typeFromSignature tenv signature0 = do
     go signature = case signature of
       Signature.Application a b _ -> (:@) <$> go a <*> go b
       Signature.Bottom origin -> pure $ Type.Bottom origin
+      Signature.Grouped a _ -> go a
       Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack

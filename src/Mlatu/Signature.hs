@@ -35,6 +35,7 @@ data Signature
     Application !Signature !Signature !Origin
   | -- | An empty stack.
     Bottom !Origin
+  | Grouped !Signature !Origin
   | -- | @A, B -> C, D +P +Q@
     Function ![Signature] ![Signature] ![GeneralName] !Origin
   | -- | @\<R..., T, +P\> (...)@
@@ -59,6 +60,7 @@ makePrisms ''Signature
 -- | Signatures are compared regardless of origin.
 instance Eq Signature where
   Application a b _ == Application c d _ = (a, b) == (c, d)
+  Grouped a _ == Grouped b _ = a == b
   Function a b c _ == Function d e f _ = (a, b, c) == (d, e, f)
   Quantified a b _ == Quantified c d _ = (a, b) == (c, d)
   Variable a _ == Variable b _ = a == b
@@ -71,6 +73,7 @@ deriving instance Ord Signature
 origin :: Signature -> Origin
 origin signature = case signature of
   Application _ _ o -> o
+  Grouped _ o -> o
   Bottom o -> o
   Function _ _ _ o -> o
   Quantified _ _ o -> o

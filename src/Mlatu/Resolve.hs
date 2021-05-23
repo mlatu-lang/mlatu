@@ -114,6 +114,7 @@ signature dictionary vocabulary = go
       Signature.Application
         <$> go a <*> go b <*> pure origin
     go sig@Signature.Bottom {} = pure sig
+    go (Signature.Grouped a origin) = Signature.Grouped <$> go a <*> pure origin
     go (Signature.Function as bs es origin) =
       Signature.Function
         <$> traverse go as

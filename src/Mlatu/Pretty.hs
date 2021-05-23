@@ -220,6 +220,7 @@ prettyKinded name k = case k of
 printSignature :: Signature -> Doc a
 printSignature (Application a b _) = printSimpleSignature b <+> printSimpleSignature a
 printSignature (Bottom _) = "<bottom>"
+printSignature (Grouped a _) = parens (printSignature a)
 printSignature (Function as bs es _) =
   (group . hsep . punctuateComma) (printSimpleSignature <$> as)
     <+> "->"
@@ -244,6 +245,7 @@ printSimpleSignature t@Function {} = parens (printSignature t)
 printSimpleSignature t@StackFunction {} = parens (printSignature t)
 printSimpleSignature t@Variable {} = printSignature t
 printSimpleSignature t@Type {} = printSignature t
+printSimpleSignature t@Grouped {} = printSignature t
 printSimpleSignature t@Bottom {} = printSignature t
 printSimpleSignature t@Application {} = printSignature t
 printSimpleSignature t@Quantified {} = parens (printSignature t)
