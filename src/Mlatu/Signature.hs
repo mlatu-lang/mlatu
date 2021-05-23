@@ -32,10 +32,9 @@ import Relude hiding (Constraint, Type)
 -- | A parsed type signature.
 data Signature
   = -- | @List\<T\>@
-    Application !Signature ![Signature] !Origin
+    Application !Signature !Signature !Origin
   | -- | An empty stack.
     Bottom !Origin
-  | Grouped !Signature !Origin
   | -- | @A, B -> C, D +P +Q@
     Function ![Signature] ![Signature] ![GeneralName] !Origin
   | -- | @\<R..., T, +P\> (...)@
@@ -65,7 +64,6 @@ instance Eq Signature where
   Variable a _ == Variable b _ = a == b
   StackFunction a b c d e _ == StackFunction f g h i j _ =
     (a, b, c, d, e) == (f, g, h, i, j)
-  Grouped a _ == Grouped b _ = a == b
   _ == _ = False
 
 deriving instance Ord Signature
@@ -74,7 +72,6 @@ origin :: Signature -> Origin
 origin signature = case signature of
   Application _ _ o -> o
   Bottom o -> o
-  Grouped _ o -> o
   Function _ _ _ o -> o
   Quantified _ _ o -> o
   Variable _ o -> o

@@ -15,12 +15,14 @@ import Control.Monad.Loops (untilM)
 import Data.ByteString qualified as ByteString
 import Data.Char (isAlphaNum)
 import Data.Map.Strict qualified as Map
+import Mlatu.Definition (mainName)
 import Mlatu.Dictionary (Dictionary, wordEntries)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry (WordEntry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (..))
+import Mlatu.Instantiated qualified as Instantiated
 import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Pretty (printInstantiated, printQualified)
@@ -87,6 +89,9 @@ setToDo = assign _1
 
 modifyToDo :: (WordMap -> WordMap) -> Codegen ()
 modifyToDo = modifying _1
+
+getDone :: Codegen WordMap
+getDone = use _2
 
 modifyDone :: (WordMap -> WordMap) -> Codegen ()
 modifyDone = modifying _2

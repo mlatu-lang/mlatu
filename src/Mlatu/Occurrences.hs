@@ -29,6 +29,7 @@ occurrences tenv0 x = recur
   where
     recur t = case t of
       TypeConstructor {} -> 0
+      TypeValue {} -> ice "Mlatu.Occurrences.occurrences - TODO: occurrences type value"
       TypeVar _ (Var _name y _) -> case Map.lookup y (view TypeEnv.tvs tenv0) of
         Nothing -> if x == y then 1 else 0
         Just t' -> recur t'

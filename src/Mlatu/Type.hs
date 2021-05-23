@@ -41,6 +41,7 @@ data Type
   | TypeVar !Origin !Var
   | TypeConstant !Origin !Var
   | Forall !Origin !Var !Type
+  | TypeValue !Origin !Int
   deriving (Ord, Show)
 
 infixl 1 :@
@@ -76,6 +77,7 @@ origin = \case
   TypeVar o _ -> o
   TypeConstant o _ -> o
   Forall o _ _ -> o
+  TypeValue o _ -> o
 
 setOrigin :: Origin -> Type -> Type
 setOrigin o = go
@@ -86,6 +88,7 @@ setOrigin o = go
       TypeVar _ var -> TypeVar o var
       TypeConstant _ var -> TypeConstant o var
       Forall _ var t -> Forall o var $ go t
+      TypeValue _ x -> TypeValue o x
 
 -- | Type variables are distinguished by globally unique identifiers. This makes
 -- it easier to support capture-avoiding substitution on types.
@@ -107,6 +110,7 @@ instance Hashable Type where
     TypeVar _ a -> hashWithSalt s (2 :: Int, a)
     TypeConstant _ a -> hashWithSalt s (3 :: Int, a)
     Forall _ a b -> hashWithSalt s (4 :: Int, a, b)
+    TypeValue _ a -> hashWithSalt s (5 :: Int, a)
 
 instance Hashable Var where
   -- We ignore the name hint when hashing.

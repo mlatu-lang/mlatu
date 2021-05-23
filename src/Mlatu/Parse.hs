@@ -14,7 +14,7 @@ module Mlatu.Parse
   )
 where
 
-import Data.List (findIndex)
+import Data.List (findIndex, foldl1)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import Mlatu.CodataDefinition (CodataDefinition (..))
@@ -439,21 +439,19 @@ functionTypeParser = (<?> "function type") $ do
 commaParser :: Parser ()
 commaParser = void $ parserMatch Token.Comma
 
+basicTypeParser' :: Parser Signature
+basicTypeParser' =
+  Parsec.choice
+    [ groupedParser (quantifiedParser typeParser <|> typeParser),
+      Parsec.try $ do
+        origin <- getTokenOrigin
+        name <- nameParser
+        guard $ name /= "+"
+        pure $ Signature.Variable name origin
+    ]
+
 basicTypeParser :: Parser Signature
-basicTypeParser =
-  (<?> "basic type") $
-    (\(a : as) -> Signature.Application a as (Signature.origin a)) . reverse
-      <$> Parsec.many1
-        ( Parsec.choice
-            [ (\sig -> Signature.Grouped sig (Signature.origin sig))
-                <$> groupedParser (quantifiedParser typeParser <|> typeParser),
-              Parsec.try $ do
-                origin <- getTokenOrigin
-                name <- nameParser
-                guard $ name /= "+"
-                pure $ Signature.Variable name origin
-            ]
-        )
+basicTypeParser = (<?> "basic type") $ foldl1 (\a b -> Signature.Application a b (Signature.origin a)) . reverse <$> Parsec.many1 basicTypeParser'
 
 parameter :: Parser Parameter
 parameter = do
