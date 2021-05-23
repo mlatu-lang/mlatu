@@ -38,7 +38,7 @@ import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
-import System.Directory (removeFile)
+import System.Directory (createDirectory, removeDirectoryRecursive, withCurrentDirectory)
 import System.IO (hPrint)
 import System.Process.Typed (proc, runProcess_)
 
@@ -71,28 +71,15 @@ cmd input = do
       liftIO $ reportAll reports
     Right dictionary -> do
       put (text <> " " <> toText input, lineNumber + 1)
-      liftIO $ do
-        bs <- Codegen.generate dictionary (Just entryName)
-        writeFileBS "repl.rs" bs
-        runProcess_ (proc "rustfmt" ["repl.rs"])
-        runProcess_
-          ( proc
-              "rustc"
-              [ "--emit=link",
-                "--crate-type=bin",
-                "--edition=2018",
-                "-C",
-                "opt-level=3",
-                "-C",
-                "lto=y",
-                "-C",
-                "panic=abort",
-                "-C",
-                "codegen-units=1",
-                "repl.rs"
-              ]
-          )
-        runProcess_ (proc "./repl" [])
+      liftIO
+        ( Codegen.generate dictionary (Just entryName) >>= \contents ->
+            writeFileBS "t/src/main.rs" contents
+              >> withCurrentDirectory
+                "t"
+                ( runProcess_
+                    (proc "cargo" ["+nightly", "run", "--quiet"])
+                )
+        )
 
 -- TODO
 completer :: String -> ReaderT Dictionary (StateT (Text, Int) IO) [String]
@@ -112,11 +99,9 @@ ini :: MRepl ()
 ini = liftIO $ putStrLn "Welcome!"
 
 final :: MRepl ExitDecision
-final = do
-  liftIO $ putStrLn "Bye!"
-  liftIO $ removeFile "repl.rs"
-  liftIO $ removeFile "./repl"
-  pure Exit
+final =
+  liftIO (putStrLn "Bye!" >> removeDirectoryRecursive "t")
+    >> pure Exit
 
 run :: Prelude -> IO Int
 run prelude = do
@@ -126,9 +111,17 @@ run prelude = do
       reportAll reports
       pure 1
     Right commonDictionary -> do
+      liftIO $ do
+        createDirectory "t"
+        writeFileBS "t/Cargo.toml" cargoToml
+        createDirectory "t/src"
       execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
       pure 0
   where
+    cargoToml =
+      "[package] \n \
+      \ name = \"output\" \n \
+      \ version = \"0.1.0\" "
     replOpts =
       ReplOpts
         { banner = \case

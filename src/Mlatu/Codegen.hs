@@ -41,8 +41,7 @@ generate :: Dictionary -> Maybe Qualified -> IO ByteString
 generate dict mMain = do
   bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (Map.mapKeys rustifyInstantiated (view wordEntries dict), Map.empty) dict
   pure
-    ( "#![allow(non_snake_case, dead_code, unused_mut, unused_variables, unused_assignments, unreachable_code)]\
-      \ fn main() { match "
+    ( "#![allow(warnings)] fn main() { match "
         <> maybe "mmain" rustifyQualified mMain
         <> "(&mut Stack::new(), &Vec::new()) {\
            \Err(AbortCalled(s)) => eprintln!(\"Abort called: {}\", s),\
@@ -50,14 +49,14 @@ generate dict mMain = do
            \Err(IOError) => eprintln!(\"IO error\"),\
            \Ok(()) => {},\
            \} }\
-           \ type StackFn = fn(&mut Stack, &Vec<Rep>) -> StackResult<()>;\
+           \ type StackFn = fn(&mut Stack, &[Rep]) -> StackResult<()>;\
            \ type StackResult<T> = Result<T, Error>;\
            \ #[derive(Clone)] enum Rep { Closure(StackFn, Vec<Rep>), Algebraic(usize, Vec<Rep>), Nat(usize), List(Vec<Rep>), Char(char), Text(String) } \
            \ #[derive(Clone)] enum Error { AbortCalled(String), CompilerError, IOError } \
            \ #[derive(Clone)] struct Stack { inner: Vec<Rep> }\
            \ use Rep::*; use Error::*; \
            \ impl Stack {\
-           \ fn new() -> Self { Self { inner: Vec::new(), } }\
+           \ fn new() -> Self { Self { inner: Vec::with_capacity(12), } }\
            \ fn get(&mut self) -> StackResult<Rep> { if let Some(a) = self.inner.pop() { Ok(a) } else { Err(CompilerError) } }\
            \ fn get_nat(&mut self) -> StackResult<usize> { if let Ok(Nat(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
            \ fn get_text(&mut self) -> StackResult<String> { if let Ok(Text(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
@@ -66,12 +65,12 @@ generate dict mMain = do
            \ fn get_algebraic(&mut self) -> StackResult<(usize, Vec<Rep>)> { if let Ok(Algebraic(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
            \ fn get_list(&mut self) -> StackResult<Vec<Rep>> { if let Ok(List(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
            \ fn push(&mut self, n: Rep) { self.inner.push(n) } \
-           \ fn push_nat(&mut self, n: usize) { self.inner.push(Nat(n)); } \
-           \ fn push_text(&mut self, n: String) { self.inner.push(Text(n)); } \
-           \ fn push_closure(&mut self, a: StackFn, b: Vec<Rep>) { self.inner.push(Closure(a,b)); } \
-           \ fn push_char(&mut self, n: char) { self.inner.push(Char(n)); } \
-           \ fn push_algebraic(&mut self, a: usize, b: Vec<Rep>) { self.inner.push(Algebraic(a,b)); } \
-           \ fn push_list(&mut self, n: Vec<Rep>) { self.inner.push(List(n)); } \
+           \ fn push_nat(&mut self, n: usize) { self.push(Nat(n)); } \
+           \ fn push_text(&mut self, n: String) { self.push(Text(n)); } \
+           \ fn push_closure(&mut self, a: StackFn, b: Vec<Rep>) { self.push(Closure(a,b)); } \
+           \ fn push_char(&mut self, n: char) { self.push(Char(n)); } \
+           \ fn push_algebraic(&mut self, a: usize, b: Vec<Rep>) { self.push(Algebraic(a,b)); } \
+           \ fn push_list(&mut self, n: Vec<Rep>) { self.push(List(n)); } \
            \ fn nat_pred(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n -= 1; } }\
            \ fn nat_succ(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n += 1; } }\
            \}"
@@ -404,7 +403,7 @@ stackFn :: ByteString -> ByteString -> Bool -> ByteString
 stackFn name body containsLocals =
   " fn "
     <> name
-    <> "(stack: &mut Stack, closures: &Vec<Rep>) -> StackResult<()> { "
+    <> "(stack: &mut Stack, closures: &[Rep]) -> StackResult<()> { "
     <> ( if containsLocals
            then letStmt "mut locals: Vec<Rep>" "Vec::new()"
            else ""

@@ -12,7 +12,7 @@ data Options
   = CheckFiles !Prelude ![FilePath]
   | Repl !Prelude
   | FormatFiles ![FilePath]
-  | RunFiles !Prelude !Bool ![FilePath]
+  | RunFiles !Prelude ![FilePath]
   | CompileFiles !Prelude ![FilePath]
 
 options :: Parser Options
@@ -20,9 +20,6 @@ options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> r
 
 preludeFlag :: Parser Prelude
 preludeFlag = (\b -> if b then Foundation else Common) <$> switch (long "foundation-only" <> short 'f' <> help "Include the foundation only as the prelude")
-
-timedFlag :: Parser Bool
-timedFlag = switch (long "timed" <> short 't' <> help "Display the time took to run the program")
 
 filesArgument :: Parser [FilePath]
 filesArgument = some (argument str (metavar "FILES..."))
@@ -37,7 +34,7 @@ checkFilesCommand :: Mod CommandFields Options
 checkFilesCommand = command "check" (info (CheckFiles <$> preludeFlag <*> filesArgument) (progDesc "Checks Mlatu files for correctness without running them"))
 
 runFilesCommand :: Mod CommandFields Options
-runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> timedFlag <*> filesArgument) (progDesc "Runs Mlatu files"))
+runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> filesArgument) (progDesc "Runs Mlatu files"))
 
 compileFilesCommand :: Mod CommandFields Options
 compileFilesCommand = command "build" (info (CompileFiles <$> preludeFlag <*> filesArgument) (progDesc "Builds Mlatu files into an executable"))

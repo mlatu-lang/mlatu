@@ -1,7 +1,6 @@
 module Main where
 
 import Arguments qualified
-import Data.ByteString (hPut)
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
 import Mlatu.Codegen qualified as Codegen
@@ -14,9 +13,8 @@ import Prettyprinter (defaultLayoutOptions, layoutSmart)
 import Prettyprinter.Render.Text (renderIO)
 import Relude
 import Report (reportAll)
-import System.Directory (makeAbsolute, removeFile)
-import System.IO (hClose, hSetEncoding, utf8)
-import System.IO.Temp (withSystemTempFile)
+import System.Directory (copyFile, createDirectory, makeAbsolute, removeDirectoryRecursive, withCurrentDirectory)
+import System.IO (hSetEncoding, utf8)
 import System.Process.Typed (proc, runProcess_)
 
 main :: IO ()
@@ -31,8 +29,8 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles prelude b files -> compileFiles prelude files (runRust b)
-    Arguments.CompileFiles prelude files -> compileFiles prelude files buildRust
+    Arguments.RunFiles prelude files -> runFiles prelude files
+    Arguments.CompileFiles prelude files -> compileFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -65,71 +63,66 @@ checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
-compileFiles :: Prelude -> [FilePath] -> RustHandler -> IO ()
-compileFiles prelude relativePaths handler =
+runFiles :: Prelude -> [FilePath] -> IO ()
+runFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing
-                  >>= (withSystemTempFile "output.rs" . handler)
+              ( Codegen.generate program Nothing >>= \contents ->
+                  createDirectory "t"
+                    >> writeFileBS "t/Cargo.toml" (cargoToml False)
+                    >> createDirectory "t/src"
+                    >> writeFileBS "t/src/main.rs" contents
+                    >> withCurrentDirectory
+                      "t"
+                      ( runProcess_
+                          (proc "cargo" ["+nightly", "run", "--release", "--quiet"])
+                      )
+                    >> removeDirectoryRecursive "t"
               )
         )
 
-type RustHandler = ByteString -> FilePath -> Handle -> IO ()
+compileFiles :: Prelude -> [FilePath] -> IO ()
+compileFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= ( \case
+            Left reports -> handleReports reports
+            Right program ->
+              ( Codegen.generate program Nothing >>= \contents ->
+                  createDirectory "t"
+                    >> writeFileBS "t/Cargo.toml" (cargoToml True)
+                    >> createDirectory "t/src"
+                    >> writeFileBS "t/src/main.rs" contents
+                    >> withCurrentDirectory
+                      "t"
+                      ( runProcess_
+                          ( proc
+                              "cargo"
+                              [ "+nightly",
+                                "build",
+                                "--release",
+                                "--quiet"
+                              ]
+                          )
+                      )
+                    >> copyFile "t/target/release/output" "./output"
+                    >> removeDirectoryRecursive "t"
+                    >> runProcess_ (proc "strip" ["./output"])
+                    >> runProcess_ (proc "upx" ["./output"])
+              )
+        )
 
-runRust :: Bool -> RustHandler
-runRust b contents path handle =
-  hPut handle contents
-    >> runProcess_
-      ( proc
-          "rustc"
-          [ "--emit=link",
-            "--crate-type=bin",
-            "--edition=2018",
-            "-C",
-            "opt-level=3",
-            "-C",
-            "lto=y",
-            "-C",
-            "panic=abort",
-            "-C",
-            "codegen-units=1",
-            "-o",
-            "./output",
-            path
-          ]
-      )
-    >> hClose handle
-    >> if b
-      then runProcess_ (proc "time" ["./output"])
-      else
-        runProcess_ (proc "./output" [])
-          >> removeFile "./output"
-
-buildRust :: RustHandler
-buildRust contents path handle =
-  hPut handle contents
-    >> runProcess_
-      ( proc
-          "rustc"
-          [ "--emit=link",
-            "--crate-type=bin",
-            "--edition=2018",
-            "-C",
-            "opt-level=z",
-            "-C",
-            "lto=y",
-            "-C",
-            "panic=abort",
-            "-C",
-            "codegen-units=1",
-            "-o",
-            "./output",
-            path
-          ]
-      )
-    >> hClose handle
-    >> runProcess_ (proc "strip" ["./output"])
-    >> runProcess_ (proc "upx" ["--best", "--lzma", "./output"])
+cargoToml b =
+  "[package] \n \
+  \ name = \"output\" \n \
+  \ version = \"0.1.0\" \n \
+  \ [profile.release] \n \
+  \ lto = true \n \
+  \ codegen-units = 1 \n\
+  \ panic = 'abort' "
+    <> if b
+      then "\n opt-level = \"s\" \n"
+      else ""
