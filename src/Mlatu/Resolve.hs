@@ -110,10 +110,10 @@ signature :: Dictionary -> Qualifier -> Signature -> Resolved Signature
 signature dictionary vocabulary = go
   where
     go :: Signature -> Resolved Signature
-    go (Signature.Application a b origin) =
-      Signature.Application
-        <$> go a <*> go b <*> pure origin
+    go (Signature.Application a as origin) =
+      Signature.Application <$> go a <*> traverse go as <*> pure origin
     go sig@Signature.Bottom {} = pure sig
+    go (Signature.Grouped a origin) = Signature.Grouped <$> go a <*> pure origin
     go (Signature.Function as bs es origin) =
       Signature.Function
         <$> traverse go as
@@ -125,8 +125,7 @@ signature dictionary vocabulary = go
         <$> foldr (withLocal . (\(Parameter _ name _ _) -> name)) (go a) vars
         <*> pure origin
     go (Signature.Variable name origin) =
-      Signature.Variable
-        <$> typeName dictionary vocabulary name origin <*> pure origin
+      Signature.Variable <$> typeName dictionary vocabulary name origin <*> pure origin
     go (Signature.StackFunction r as s bs es origin) =
       Signature.StackFunction r
         <$> traverse go as

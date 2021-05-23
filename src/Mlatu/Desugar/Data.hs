@@ -24,7 +24,7 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..), Unqualified (..))
+import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..))
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), compose)
 import Optics
@@ -116,15 +116,16 @@ desugarCodataDefinition definition = do
           Definition._signature = constructorSignature
         }
     resultSignature =
-      foldl'
-        (\a b -> Signature.Application a b origin)
+      Signature.Application
         ( Signature.Variable (QualifiedName $ view Codata.name definition) $
             view Codata.origin definition
         )
-        $ ( \(Parameter parameterOrigin parameter _kind _) ->
+        ( ( \(Parameter parameterOrigin parameter _kind _) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
-          <$> view Codata.parameters definition
+            <$> view Codata.parameters definition
+        )
+        origin
     constructorSignature =
       Signature.Quantified
         (view Codata.parameters definition)
@@ -164,15 +165,16 @@ desugarDataDefinition definition =
         }
       where
         resultSignature =
-          foldl'
-            (\a b -> Signature.Application a b origin)
+          Signature.Application
             ( Signature.Variable (QualifiedName $ view Data.name definition) $
                 view Data.origin definition
             )
-            $ ( \(Parameter parameterOrigin parameter _kind _) ->
+            ( ( \(Parameter parameterOrigin parameter _kind _) ->
                   Signature.Variable (UnqualifiedName parameter) parameterOrigin
               )
-              <$> view Data.parameters definition
+                <$> view Data.parameters definition
+            )
+            origin
         constructorSignature =
           Signature.Quantified
             (view Data.parameters definition)

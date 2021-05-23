@@ -179,7 +179,6 @@ printType type0 = recur type0
                   <+> dot
                   <+> recur t
               )
-      TypeValue _ value -> pretty value
 
 type PrettyContext = Map Unqualified [(TypeId, Kind)]
 
@@ -193,7 +192,6 @@ buildContext = go mempty
       TypeVar _ (Var name i k) -> record name i k context
       TypeConstant _ (Var name i k) -> record name i k context
       Forall _ (Var name i k) t -> go (record name i k context) t
-      TypeValue {} -> context
       where
         record name i k = Map.insertWith (<>) name [(i, k)]
 
@@ -218,7 +216,10 @@ prettyKinded name k = case k of
   _otherKind -> printUnqualified name
 
 printSignature :: Signature -> Doc a
-printSignature (Application a b _) = printSimpleSignature b <+> printSimpleSignature a
+printSignature (Application a as _) = case as of
+  [] -> printSignature a
+  _ -> hsep (printSimpleSignature <$> reverse (a : as))
+printSignature (Grouped a _) = parens (printSignature a)
 printSignature (Bottom _) = "<bottom>"
 printSignature (Function as bs es _) =
   (group . hsep . punctuateComma) (printSimpleSignature <$> as)
@@ -240,13 +241,15 @@ printSignature (StackFunction r as s bs es _) =
 printSignature (Type t) = printType t
 
 printSimpleSignature :: Signature -> Doc a
-printSimpleSignature t@Function {} = parens (printSignature t)
-printSimpleSignature t@StackFunction {} = parens (printSignature t)
-printSimpleSignature t@Variable {} = printSignature t
-printSimpleSignature t@Type {} = printSignature t
-printSimpleSignature t@Bottom {} = printSignature t
-printSimpleSignature t@Application {} = printSignature t
-printSimpleSignature t@Quantified {} = parens (printSignature t)
+printSimpleSignature t = case t of
+  Function {} -> parens (printSignature t)
+  StackFunction {} -> parens (printSignature t)
+  Variable {} -> printSignature t
+  Type {} -> printSignature t
+  Grouped {} -> printSignature t
+  Bottom {} -> printSignature t
+  Application {} -> printSignature t
+  Quantified {} -> parens (printSignature t)
 
 printToken :: Token.Token -> Doc a
 printToken = \case
@@ -483,6 +486,7 @@ printMetadata metadata =
 printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
 printDefinition (Definition Category.Constructor _ _ _ _ _ _ _) = Nothing
 printDefinition (Definition Category.Deconstructor _ _ _ _ _ _ _) = Nothing
+printDefinition (Definition Category.Extern _ _ _ _ _ _ _) = Nothing
 printDefinition (Definition Category.Permission name body _ _ _ signature _) =
   Just $
     blockMaybe

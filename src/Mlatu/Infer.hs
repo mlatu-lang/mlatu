@@ -71,10 +71,10 @@ typecheck ::
   M (Term Type, Type)
 typecheck dictionary mDeclaredSignature term = do
   let tenv0 = TypeEnv.empty
-  declaredType <- traverse (typeFromSignature tenv0) mDeclaredSignature
+  declaredType <- traverse (typeFromSignature dictionary tenv0) mDeclaredSignature
   declaredTypes <-
     traverse
-      (\(name, signature) -> (,) name <$> typeFromSignature tenv0 signature)
+      (\(name, signature) -> (,) name <$> typeFromSignature dictionary tenv0 signature)
       $ Dictionary.signatures dictionary
   let tenv1 = over TypeEnv.sigs (Map.union (Map.fromList declaredTypes)) tenv0
   inferType0 dictionary tenv1 declaredType term
@@ -84,8 +84,8 @@ mangleInstance ::
   Dictionary -> Qualified -> Signature -> Signature -> M Instantiated
 mangleInstance dictionary name instanceSignature traitSignature = do
   let tenv0 = TypeEnv.empty
-  instanceType <- typeFromSignature tenv0 instanceSignature
-  traitType <- typeFromSignature tenv0 traitSignature
+  instanceType <- typeFromSignature dictionary tenv0 instanceSignature
+  traitType <- typeFromSignature dictionary tenv0 traitSignature
   instanceCheck traitType instanceType
   (traitType', args, tenv1) <- Instantiate.prenex tenv0 traitType
   tenv2 <- Unify.typ tenv1 instanceType traitType'
@@ -154,7 +154,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       pure (Coercion hint type' origin, typ, tenv0)
   Coercion hint@(Term.AnyCoercion sig) _ origin ->
     while (Term.origin term0) context $ do
-      typ <- typeFromSignature tenv0 sig
+      typ <- typeFromSignature dictionary tenv0 sig
       let type' = Zonk.typ tenvFinal typ
       pure (Coercion hint type' origin, typ, tenv0)
 
@@ -448,7 +448,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Quotation {} -> ice "Mlatu.Infer.inferValue - quotation should not appear during type inference"
   Name name -> case Dictionary.lookupWord (Instantiated name []) dictionary of
     Just (Entry.WordEntry _ _ _ _ (Just signature) _) -> do
-      typ <- typeFromSignature tenv0 signature
+      typ <- typeFromSignature dictionary tenv0 signature
       pure (Name name, typ, tenv0)
     _noBinding ->
       ice $
@@ -503,8 +503,8 @@ inferCall _dictionary _tenvFinal _tenv0 name _ =
 -- | Desugars a parsed signature into an actual type. We resolve whether names
 -- refer to quantified type variables or data definitions, and make stack
 -- polymorphism explicit.
-typeFromSignature :: TypeEnv -> Signature -> M Type
-typeFromSignature tenv signature0 = do
+typeFromSignature :: Dictionary -> TypeEnv -> Signature -> M Type
+typeFromSignature dictionary tenv signature0 = do
   (typ, env) <-
     usingStateT
       SignatureEnv
@@ -520,10 +520,27 @@ typeFromSignature tenv signature0 = do
       (foldr forallVar typ $ Map.elems $ sigEnvVars env)
       $ sigEnvAnonymous env
   where
+    goApplication :: Type -> [(Type, Int)] -> [Type] -> M Type
+    goApplication t [] = pure . foldl' (:@) t
+    goApplication t ((x, n) : xs) = \ys ->
+      let (as, bs) = splitAt n ys
+       in goApplication t xs (foldl' (:@) x as : bs)
+
     go :: Signature -> StateT SignatureEnv M Type
     go signature = case signature of
-      Signature.Application a b _ -> (:@) <$> go a <*> go b
+      Signature.Application a as _ -> do
+        a' <- go a
+        as' <-
+          traverse
+            ( \b -> do
+                b' <- go b
+                a <- lift $ typeArity dictionary b'
+                pure (b', a)
+            )
+            as
+        lift $ goApplication a' (reverse as') []
       Signature.Bottom origin -> pure $ Type.Bottom origin
+      Signature.Grouped a _ -> go a
       Signature.Function as bs es origin -> do
         r <- lift $ freshTypeId tenv
         let var = Var "R" r Stack
@@ -633,6 +650,14 @@ valueKinded dictionary =
   filterM $
     fmap (Value ==) . typeKind dictionary
 
+typeArity :: Dictionary -> Type -> M Int
+typeArity dictionary t = do
+  kind <- typeKind dictionary t
+  pure $ go kind
+  where
+    go (_ :-> b) = 1 + go b
+    go _ = 0
+
 -- | Infers the kind of a type.
 typeKind :: Dictionary -> Type -> M Kind
 typeKind dictionary = go
@@ -672,7 +697,6 @@ typeKind dictionary = go
                       dquotes $ Pretty.printQualified qualified,
                       "in dictionary"
                     ]
-      TypeValue {} -> ice "Mlatu.Infer.typeKind - TODO: infer kind of type value"
       TypeVar _origin (Var _name _ k) -> pure k
       TypeConstant _origin (Var _name _ k) -> pure k
       Forall _origin _ t' -> go t'
