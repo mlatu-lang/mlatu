@@ -191,15 +191,6 @@ termRs x = goTerms $ decompose x
         pure $ matchStmt "stack.get()" (catMaybes cs ++ [("_", e)])
       _ -> pure ""
 
-constructor :: Int -> Int -> Specialness -> ByteString
-constructor 0 0 NatLike = pushNat "0"
-constructor 1 1 NatLike = "stack.nat_succ();"
-constructor 0 0 ListLike = pushList "Vec::new()"
-constructor 1 2 ListLike = letStmt "x" "stack.get()?" <> unwrapList "mut xs" <> "xs.insert(0, x);" <> pushList "xs"
-constructor i 0 NonSpecial = pushAlgebraic (show i) "Vec::new()"
-constructor i 1 NonSpecial = letStmt "v" "vec![stack.get()?]" <> pushAlgebraic (show i) "v"
-constructor i size NonSpecial = letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
-
 inTodo :: ByteString -> Codegen (Maybe WordEntry)
 inTodo bs = Map.lookup bs <$> getToDo
 
@@ -229,7 +220,19 @@ word name args = do
 
 callWord :: Bool -> ByteString -> WordEntry -> Codegen ByteString
 callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body of
-  [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
+  [New _ (ConstructorIndex 0) 0 NatLike _] -> pure $ pushNat "0"
+  [New _ (ConstructorIndex 1) 1 NatLike _] -> pure $ pushNat "stack.nat_succ()"
+  [New _ (ConstructorIndex 1) 1 ListLike _] -> pure $ pushList "Vec::new()"
+  [New _ (ConstructorIndex 1) 2 ListLike _] ->
+    pure $
+      letStmt "x" "stack.get()?" <> unwrapList "mut xs" <> "xs.insert(0, x);" <> pushList "xs"
+  [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure $ pushAlgebraic (show i) "Vec::new()"
+  [New _ (ConstructorIndex i) 1 NonSpecial _] ->
+    pure $
+      letStmt "v" "vec![stack.get()?]" <> pushAlgebraic (show i) "v"
+  [New _ (ConstructorIndex i) size NonSpecial _] ->
+    pure $
+      letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
   _ -> do
     when b $ modifyToDo $ Map.insert name e
     pure $ name <> "(stack, closures)?;"

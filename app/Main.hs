@@ -13,7 +13,7 @@ import Prettyprinter (defaultLayoutOptions, layoutSmart)
 import Prettyprinter.Render.Text (renderIO)
 import Relude
 import Report (reportAll)
-import System.Directory (copyFile, createDirectory, makeAbsolute, removeDirectoryRecursive, withCurrentDirectory)
+import System.Directory (copyFile, createDirectory, makeAbsolute, removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.IO (hSetEncoding, utf8)
 import System.Process.Typed (proc, runProcess_)
 
@@ -31,6 +31,7 @@ main = do
     Arguments.CheckFiles prelude files -> checkFiles prelude files
     Arguments.RunFiles prelude files -> runFiles prelude files
     Arguments.CompileFiles prelude files -> compileFiles prelude files
+    Arguments.BenchFiles prelude files -> benchFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -112,6 +113,37 @@ compileFiles prelude relativePaths =
                     >> removeDirectoryRecursive "t"
                     >> runProcess_ (proc "strip" ["./output"])
                     >> runProcess_ (proc "upx" ["./output"])
+              )
+        )
+
+benchFiles :: Prelude -> [FilePath] -> IO ()
+benchFiles prelude relativePaths =
+  forM relativePaths makeAbsolute
+    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= ( \case
+            Left reports -> handleReports reports
+            Right program ->
+              ( Codegen.generate program Nothing >>= \contents ->
+                  createDirectory "t"
+                    >> writeFileBS "t/Cargo.toml" (cargoToml False)
+                    >> createDirectory "t/src"
+                    >> writeFileBS "t/src/main.rs" contents
+                    >> withCurrentDirectory
+                      "t"
+                      ( runProcess_
+                          ( proc
+                              "cargo"
+                              [ "+nightly",
+                                "build",
+                                "--release",
+                                "--quiet"
+                              ]
+                          )
+                      )
+                    >> copyFile "t/target/release/output" "./output"
+                    >> removeDirectoryRecursive "t"
+                    >> runProcess_ (proc "time" ["./output"])
+                    >> removeFile "./output"
               )
         )
 

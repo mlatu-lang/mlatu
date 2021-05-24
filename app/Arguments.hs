@@ -14,9 +14,10 @@ data Options
   | FormatFiles ![FilePath]
   | RunFiles !Prelude ![FilePath]
   | CompileFiles !Prelude ![FilePath]
+  | BenchFiles !Prelude ![FilePath]
 
 options :: Parser Options
-options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand)
+options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand <> benchFilesCommand)
 
 preludeFlag :: Parser Prelude
 preludeFlag = (\b -> if b then Foundation else Common) <$> switch (long "foundation-only" <> short 'f' <> help "Include the foundation only as the prelude")
@@ -38,3 +39,6 @@ runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> filesArgumen
 
 compileFilesCommand :: Mod CommandFields Options
 compileFilesCommand = command "build" (info (CompileFiles <$> preludeFlag <*> filesArgument) (progDesc "Builds Mlatu files into an executable"))
+
+benchFilesCommand :: Mod CommandFields Options
+benchFilesCommand = command "bench" (info (BenchFiles <$> preludeFlag <*> filesArgument) (progDesc "Benchmarks the running of the produced Mlatu executable"))
