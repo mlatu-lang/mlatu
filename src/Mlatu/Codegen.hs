@@ -39,10 +39,14 @@ instance IsString a => IsString (Codegen a) where
 
 generate :: Dictionary -> Maybe Qualified -> IO ByteString
 generate dict mMain = do
-  bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (Map.mapKeys rustifyInstantiated (view wordEntries dict), Map.empty) dict
+  let firstKey = maybe "mmain" rustifyQualified mMain
+  let firstEntry = case Dictionary.lookupWord (Instantiated (fromMaybe mainName mMain) []) dict of
+        Just e -> e
+        Nothing -> error "Could not find main entry"
+  bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (one (firstKey, firstEntry), Map.empty) (Map.mapKeys rustifyInstantiated (view wordEntries dict))
   pure
     ( "#![allow(warnings)] fn main() { match "
-        <> maybe "mmain" rustifyQualified mMain
+        <> firstKey
         <> "(&mut Stack::new(), &Vec::new()) {\
            \Err(AbortCalled(s)) => eprintln!(\"Abort called: {}\", s),\
            \Err(CompilerError) => eprintln!(\"Internal compiler error\"),\
@@ -79,10 +83,10 @@ generate dict mMain = do
 
 type WordMap = Map ByteString WordEntry
 
-newtype Codegen a = Codegen (StateT (WordMap, WordMap) (ReaderT Dictionary IO) a)
-  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap), MonadReader Dictionary, MonadIO)
+newtype Codegen a = Codegen (StateT (WordMap, WordMap) (ReaderT WordMap IO) a)
+  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap), MonadReader WordMap, MonadIO)
 
-evalCodegen :: Codegen a -> (WordMap, WordMap) -> Dictionary -> IO a
+evalCodegen :: Codegen a -> (WordMap, WordMap) -> WordMap -> IO a
 evalCodegen (Codegen c) initialState = runReaderT (evalStateT c initialState)
 
 getToDo :: Codegen WordMap
@@ -196,29 +200,39 @@ constructor i 0 NonSpecial = pushAlgebraic (show i) "Vec::new()"
 constructor i 1 NonSpecial = letStmt "v" "vec![stack.get()?]" <> pushAlgebraic (show i) "v"
 constructor i size NonSpecial = letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
 
+inTodo :: ByteString -> Codegen (Maybe WordEntry)
+inTodo bs = Map.lookup bs <$> getToDo
+
+inDone :: ByteString -> Codegen (Maybe WordEntry)
+inDone bs = Map.lookup bs <$> getDone
+
 word :: Qualified -> [Type] -> Codegen ByteString
 word name args = do
   let mangled = rustifyInstantiated $ Instantiated name args
-  isInstantiated <- uncurry ((. Map.lookup mangled) . (<|>) . Map.lookup mangled) <$> get
+  isInstantiated <- liftA2 (<|>) (inDone mangled) (inTodo mangled)
   case isInstantiated of
-    Just (Entry.WordEntry _ _ _ _ _ (Just body)) -> case decompose body of
-      [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
-      _ -> pure $ mangled <> "(stack, closures)?;"
+    Just e -> callWord False mangled e
     _ -> do
-      let unMangled = rustifyInstantiated $ Instantiated name []
-      isUninstantiated <- uncurry ((. Map.lookup unMangled) . (<|>) . Map.lookup unMangled) <$> get
-      case isUninstantiated of
-        Just (Entry.WordEntry a b c d e (Just body)) ->
-          liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
-            >>= ( \case
-                    Right body' -> do
-                      modifyToDo $ Map.insert mangled (Entry.WordEntry a b c d e (Just body'))
-                      case decompose body' of
-                        [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
-                        _ -> pure $ mangled <> "(stack, closures)?;"
-                    Left _ -> error "Could not instantiate generic type"
-                )
-        _ -> pure ""
+      dict <- ask
+      case Map.lookup mangled dict of
+        Just e -> callWord True mangled e
+        _ -> do
+          let unMangled = rustifyInstantiated $ Instantiated name []
+          case Map.lookup unMangled dict of
+            Just (Entry.WordEntry a b c d e (Just body)) ->
+              liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
+                >>= ( \case
+                        Right body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body'))
+                        Left _ -> error "Could not instantiate generic type"
+                    )
+            _ -> pure ""
+
+callWord :: Bool -> ByteString -> WordEntry -> Codegen ByteString
+callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body of
+  [New _ (ConstructorIndex i) size b _] -> pure $ constructor i size b
+  _ -> do
+    when b $ modifyToDo $ Map.insert name e
+    pure $ name <> "(stack, closures)?;"
 
 intrinsic :: Text -> Codegen ByteString
 intrinsic = \case
@@ -315,7 +329,7 @@ vecBuilder x = "vec![" <> go x <> "]"
 caseRs :: Case Type -> Codegen (Maybe (ByteString, ByteString))
 caseRs (Case (QualifiedName name) caseBody _) = do
   dict <- ask
-  case Dictionary.lookupWord (Instantiated name []) dict of
+  case Map.lookup (rustifyInstantiated (Instantiated name [])) dict of
     Just (Entry.WordEntry _ _ _ _ _ (Just ctorBody)) ->
       case decompose ctorBody of
         [New _ (ConstructorIndex i) 0 NonSpecial _] ->
