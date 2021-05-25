@@ -19,7 +19,7 @@ define drop (for a. a -> ) {
 }
 
 define swap (for a b. a, b -> b, a) {
-  "swap" extern
+  -> x, y; y x
 }
 
 about call {

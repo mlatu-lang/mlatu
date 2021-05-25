@@ -43,52 +43,126 @@ generate dict mMain = do
   let firstEntry = case Dictionary.lookupWord (Instantiated (fromMaybe mainName mMain) []) dict of
         Just e -> e
         Nothing -> error "Could not find main entry"
-  bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (one (firstKey, firstEntry), Map.empty) (Map.mapKeys rustifyInstantiated (view wordEntries dict))
+  bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (one (firstKey, firstEntry), Map.empty, False) (Map.mapKeys rustifyInstantiated (view wordEntries dict))
   pure
-    ( "#![allow(warnings)] extern crate smallvec; fn main() { match "
+    ( "#![allow(warnings)] extern crate smallvec; \
+      \ macro_rules! get { ($name:ident) => { $name.pop().ok_or(CompilerError)? } } \
+      \ macro_rules! try_nat { ($e:expr) => { if let Nat(a) = $e { a } else { return Err(CompilerError); } }; } \
+      \ macro_rules! try_list { ($e:expr) => { if let List(a) = $e { a } else { return Err(CompilerError); } }; } \
+      \ macro_rules! try_char { ($e:expr) => { if let Char(a) = $e { a } else { return Err(CompilerError); } }; } \
+      \ macro_rules! try_text { ($e:expr) => { if let Text(a) = $e { a } else { return Err(CompilerError); } }; } \
+      \ macro_rules! try_algebraic { ($e:expr) => { if let Algebraic(a,b) = $e { (a,b) } else { return Err(CompilerError); } }; } \
+      \ macro_rules! try_closure { ($e:expr) => { if let Closure(a,b) = $e { (a,b) } else { return Err(CompilerError); } }; } \
+      \ fn main() { match "
         <> firstKey
-        <> "(&mut Stack::new(), &Vec::new()) {\
+        <> "(&mut Vec::with_capacity(6), &Vec::new()) {\
            \Err(AbortCalled(s)) => eprintln!(\"Abort called: {}\", s),\
            \Err(CompilerError) => eprintln!(\"Internal compiler error\"),\
            \Err(IOError) => eprintln!(\"IO error\"),\
            \Ok(()) => {},\
            \} }\
-           \ type StackFn = fn(&mut Stack, &[Rep]) -> StackResult<()>;\
+           \ type StackFn = fn(&mut Vec<Rep>, &[Rep]) -> StackResult<()>;\
            \ type StackResult<T> = Result<T, Error>;\
            \ type AVec = SmallVec<[Box<Rep>; 2]>;\
            \ #[derive(Clone)] enum Rep { Closure(StackFn, Vec<Rep>), Algebraic(usize, AVec), Nat(usize), List(Vec<Rep>), Char(char), Text(String) } \
            \ #[derive(Clone)] enum Error { AbortCalled(String), CompilerError, IOError } \
-           \ #[derive(Clone)] struct Stack { pub inner: Vec<Rep> }\
-           \ use Rep::*; use Error::*; use smallvec::*;\
-           \ impl Stack {\
-           \ #[inline] fn new() -> Self { Self { inner: Vec::with_capacity(6), } }\
-           \ #[inline] fn get(&mut self) -> StackResult<Rep> { if let Some(a) = self.inner.pop() { Ok(a) } else { Err(CompilerError) } }\
-           \ #[inline] fn get_nat(&mut self) -> StackResult<usize> { if let Ok(Nat(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ #[inline] fn get_text(&mut self) -> StackResult<String> { if let Ok(Text(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ #[inline] fn get_closure(&mut self) -> StackResult<(StackFn, Vec<Rep>)> { if let Ok(Closure(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
-           \ #[inline] fn get_char(&mut self) -> StackResult<char> { if let Ok(Char(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ #[inline] fn get_algebraic(&mut self) -> StackResult<(usize, AVec)> { if let Ok(Algebraic(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
-           \ #[inline] fn get_list(&mut self) -> StackResult<Vec<Rep>> { if let Ok(List(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ #[inline] fn push(&mut self, n: Rep) { self.inner.push(n) } \
-           \ #[inline] fn push_nat(&mut self, n: usize) { self.push(Nat(n)); } \
-           \ #[inline] fn push_text(&mut self, n: String) { self.push(Text(n)); } \
-           \ #[inline] fn push_closure(&mut self, a: StackFn, b: Vec<Rep>) { self.push(Closure(a,b)); } \
-           \ #[inline] fn push_char(&mut self, n: char) { self.push(Char(n)); } \
-           \ #[inline] fn push_algebraic(&mut self, a: usize, b: AVec) { self.push(Algebraic(a,b)); } \
-           \ #[inline] fn push_list(&mut self, n: Vec<Rep>) { self.push(List(n)); } \
-           \ #[inline] fn nat_pred(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n -= 1; } }\
-           \ #[inline] fn nat_succ(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n += 1; } }\
-           \}"
-        <> ByteString.concat bs
+           \ use Rep::*; use Error::*; use smallvec::*; "
+        <> toBS (asum bs)
     )
 
 type WordMap = Map ByteString WordEntry
 
-newtype Codegen a = Codegen (StateT (WordMap, WordMap) (ReaderT WordMap IO) a)
-  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap), MonadReader WordMap, MonadIO)
+data Block
+  = FunBlock ByteString [Block]
+  | UnwrapNat ByteString
+  | MatchBlock ByteString [(ByteString, [Block])]
+  | UnwrapChar ByteString
+  | UnwrapText ByteString
+  | UnwrapList ByteString
+  | UnwrapClosure ByteString ByteString
+  | UnwrapAlgebraic ByteString ByteString
+  | Unwrap ByteString
+  | PushNat ByteString
+  | PushChar ByteString
+  | PushText ByteString
+  | PushList ByteString
+  | PushClosure ByteString ByteString
+  | PushAlgebraic ByteString ByteString
+  | Push_ ByteString
+  | Call ByteString
+  | Custom ByteString
+  deriving (Ord, Eq, Show)
 
-evalCodegen :: Codegen a -> (WordMap, WordMap) -> WordMap -> IO a
+letStmt :: ByteString -> ByteString -> ByteString
+letStmt a b = "let " <> a <> " = " <> b <> ";"
+
+couple :: ByteString -> ByteString -> ByteString
+couple a b = "(" <> a <> "," <> b <> ")"
+
+toBS :: [Block] -> ByteString
+toBS = go
+  where
+    go [] = ""
+    go (Push_ a : Unwrap b : rest) = letStmt b a <> toBS rest
+    go (PushNat a : UnwrapNat b : rest) = letStmt b a <> toBS rest
+    go (Push_ a : UnwrapNat b : rest) = letStmt b ("try_nat!(" <> a <> ")") <> toBS rest
+    go (PushNat a : Unwrap b : rest) = letStmt b ("Nat(" <> a <> ")") <> toBS rest
+    go (PushList a : UnwrapList b : rest) = letStmt b a <> toBS rest
+    go (Push_ a : UnwrapList b : rest) = letStmt b ("try_list!(" <> a <> ")") <> toBS rest
+    go (PushList a : Unwrap b : rest) = letStmt b ("List(" <> a <> ")") <> toBS rest
+    go (PushChar a : UnwrapChar b : rest) = letStmt b a <> toBS rest
+    go (Push_ a : UnwrapChar b : rest) = letStmt b ("try_char!(" <> a <> ")") <> toBS rest
+    go (PushChar a : Unwrap b : rest) = letStmt b ("Char(" <> a <> ")") <> toBS rest
+    go (PushText a : UnwrapText b : rest) = letStmt b a <> toBS rest
+    go (Push_ a : UnwrapText b : rest) = letStmt b ("try_text!(" <> a <> ")") <> toBS rest
+    go (PushText a : Unwrap b : rest) = letStmt b ("Text(" <> a <> ")") <> toBS rest
+    go (PushAlgebraic a1 a2 : UnwrapAlgebraic b1 b2 : rest) = letStmt b1 a1 <> letStmt b2 a2 <> toBS rest
+    go (Push_ a : UnwrapAlgebraic b1 b2 : rest) = letStmt (couple b1 b2) ("try_algebraic!(" <> a <> ")") <> toBS rest
+    go (PushAlgebraic a1 a2 : Unwrap b : rest) = letStmt b ("Algebraic" <> couple a1 a2) <> toBS rest
+    go (PushClosure a1 a2 : UnwrapClosure b1 b2 : rest) = letStmt b1 a1 <> letStmt b2 a2 <> toBS rest
+    go (Push_ a : UnwrapClosure b1 b2 : rest) = letStmt (couple b1 b2) ("try_closure!(" <> a <> ")") <> toBS rest
+    go (PushClosure a1 a2 : Unwrap b : rest) = letStmt b ("Closure" <> couple a1 a2) <> toBS rest
+    go (FunBlock name body : rest) =
+      "#[inline] fn " <> name
+        <> "(stack: &mut Vec<Rep>, closures: &[Rep]) -> StackResult<()> { "
+        <> toBS body
+        <> " Ok(()) } "
+        <> toBS rest
+    go (UnwrapNat name : rest) = letStmt name "try_nat!(get!(stack))" <> toBS rest
+    go (UnwrapChar name : rest) = letStmt name "try_char!(get!(stack))" <> toBS rest
+    go (UnwrapText name : rest) = letStmt name "try_text!(get!(stack))" <> toBS rest
+    go (UnwrapList name : rest) = letStmt name "try_list!(get!(stack))" <> toBS rest
+    go (UnwrapClosure name1 name2 : rest) = letStmt (couple name1 name2) "try_closure!(get!(stack))" <> toBS rest
+    go (UnwrapAlgebraic name1 name2 : rest) = letStmt (couple name1 name2) "try_algebraic!(get!(stack))" <> toBS rest
+    go (Unwrap name : rest) = letStmt name "get!(stack)" <> toBS rest
+    go (PushNat body : rest) = "stack.push(Nat(" <> body <> "));" <> toBS rest
+    go (PushChar body : rest) = "stack.push(Char(" <> body <> "));" <> toBS rest
+    go (PushText body : rest) = "stack.push(Text(" <> body <> "));" <> toBS rest
+    go (PushList body : rest) = "stack.push(List(" <> body <> "));" <> toBS rest
+    go (PushClosure body1 body2 : rest) =
+      "stack.push(Closure" <> couple body1 body2 <> ");" <> toBS rest
+    go (PushAlgebraic body1 body2 : rest) =
+      "stack.push(Algebraic" <> couple body1 body2 <> ");" <> toBS rest
+    go (Push_ body : rest) = "stack.push(" <> body <> ");" <> toBS rest
+    go (MatchBlock x xs : rest) =
+      "match " <> x <> " { "
+        <> ByteString.concat ((\(binding, block) -> binding <> " => {" <> toBS block <> "},") <$> xs)
+        <> " };"
+        <> toBS rest
+    go (Call name : rest) = name <> "(stack, closures)?;" <> toBS rest
+    go (Custom body : rest) = body <> toBS rest
+
+newtype Codegen a = Codegen (StateT (WordMap, WordMap, Bool) (ReaderT WordMap IO) a)
+  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap, Bool), MonadReader WordMap, MonadIO)
+
+evalCodegen :: Codegen a -> (WordMap, WordMap, Bool) -> WordMap -> IO a
 evalCodegen (Codegen c) initialState = runReaderT (evalStateT c initialState)
+
+getLocalState :: Codegen Bool
+getLocalState = use _3
+
+setLocalState :: Bool -> Codegen ()
+setLocalState = assign _3
 
 getToDo :: Codegen WordMap
 getToDo = use _1
@@ -105,38 +179,41 @@ getDone = use _2
 modifyDone :: (WordMap -> WordMap) -> Codegen ()
 modifyDone = modifying _2
 
-entryRs :: Codegen ByteString
+entryRs :: Codegen [Block]
 entryRs =
   getToDo
     >>= ( ( \case
-              Nothing -> pure ""
+              Nothing -> pure []
               Just ((i, e), newMap) ->
                 (setToDo newMap >> modifyDone (Map.insert i e))
                   >> ( case e of
                          (Entry.WordEntry _ _ _ _ _ (Just body)) -> do
+                           let n = countLocal body
+                           if n == 1
+                             then setLocalState True
+                             else setLocalState False
                            b <- termRs body
-                           pure $ stackFn i b $ countLocal body
-                         _ -> pure ""
+                           pure [stackFn i b n]
+                         _ -> pure []
                      )
           )
             . Map.minViewWithKey
         )
 
-termRs :: Term Type -> Codegen ByteString
+termRs :: Term Type -> Codegen [Block]
 termRs x = goTerms $ decompose x
   where
     goTerms = \case
-      [] -> pure ""
-      (Push _ (Text x) _ : Word _ (QualifiedName (Global "extern")) _ _ : xs) -> do
-        cg <- intrinsic x
-        rest <- goTerms xs
-        pure (cg <> rest)
+      [] -> pure []
+      (Push _ (Text x) _ : Word _ (QualifiedName (Global "extern")) _ _ : xs) ->
+        liftA2 (<>) (intrinsic x) (goTerms xs)
       (Push _ (Name name) _ : NewClosure _ size _ : xs) ->
         ( ( case size of
-              0 -> pushClosure (rustifyQualified name) "Vec::new()"
+              0 -> [PushClosure (rustifyQualified name) "Vec::new()"]
               _ ->
-                letStmt "v" (vecBuilder size "vec")
-                  <> pushClosure (rustifyQualified name) "v"
+                [ Custom ("let v = " <> vecBuilder size "vec" <> ";"),
+                  PushClosure (rustifyQualified name) "v"
+                ]
           )
             <>
         )
@@ -146,60 +223,65 @@ termRs x = goTerms $ decompose x
             go n ((Word _ (QualifiedName (Qualified _ "succ")) _ _) : xs) = go (n + 1) xs
             go n rest = (n, rest)
             (s, rest) = go 0 xs
-        (pushNat (show s) <>) <$> goTerms rest
-      (y : ys) -> do
-        a <- goTerm y
-        b <- goTerms ys
-        pure $ a <> b
+        (PushNat (show s) :) <$> goTerms rest
+      (y : ys) -> liftA2 (<>) (goTerm y) (goTerms ys)
     goTerm = \case
       Group a -> termRs a
-      Push _ (Character c) _ -> pure $ pushChar $ "'" <> show c <> "'"
+      Push _ (Character c) _ -> pure [PushChar $ "'" <> show c <> "'"]
       Push _ (Text txt) _ ->
-        pure $
-          pushText
-            ( "\""
-                <> encodeUtf8
-                  ( concatMap
-                      ( \case
-                          '\n' -> "\\n"
-                          c -> [c]
-                      )
-                      (toString txt)
-                  )
-                <> "\".to_owned()"
-            )
-      Push _ (Local (LocalIndex 0)) _ -> pure "stack.push(locals.last().unwrap().clone());"
-      Push _ (Local (LocalIndex i)) _ -> pure $ "stack.push(locals[locals.len() - " <> show (1 + i) <> "].clone());"
-      Push _ (Closed (ClosureIndex i)) _ -> pure $ "stack.push(closures[" <> show i <> "].clone());"
-      Word _ (QualifiedName (Qualified _ "le")) [TypeConstructor _ "nat"] _ -> do
-        t <- word (Global "true") []
-        f <- word (Global "false") []
-        pure $
-          unwrapNat "a" <> unwrapNat "b" <> "if b <= a { "
-            <> t
-            <> " } else { "
-            <> f
-            <> "}"
+        pure
+          [ PushText
+              ( "\""
+                  <> encodeUtf8
+                    ( concatMap
+                        ( \case
+                            '\n' -> "\\n"
+                            c -> [c]
+                        )
+                        (toString txt)
+                    )
+                  <> "\".to_owned()"
+              )
+          ]
+      Push _ (Local (LocalIndex i)) _ -> do
+        ls <- getLocalState
+        pure
+          [ Push_
+              ( if ls
+                  then "local1.clone()"
+                  else case i of
+                    0 -> "locals.last().unwrap().clone()"
+                    _ -> "locals[locals.len() - " <> show (1 + i) <> "].clone()"
+              )
+          ]
+      Push _ (Closed (ClosureIndex i)) _ -> pure [Push_ ("closures[" <> show i <> "].clone()")]
       Word _ (QualifiedName (Qualified _ "cmp")) [TypeConstructor _ "nat"] _ ->
-        ((unwrapNat "a" <> unwrapNat "b") <>) <$> cmp "a" "b"
-      Word _ (QualifiedName (Qualified _ "pred")) _ _ -> pure "stack.nat_pred();"
+        (\c -> [UnwrapNat "a", UnwrapNat "b", c]) <$> cmp "a" "b"
+      Word _ (QualifiedName (Qualified _ "pred")) _ _ ->
+        pure [UnwrapNat "a", PushNat "a-1"]
       Word _ (QualifiedName (Qualified _ "+")) _ _ ->
-        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a+b"
+        pure [UnwrapNat "a", UnwrapNat "b", PushNat "a+b"]
       Word _ (QualifiedName (Qualified _ "-")) _ _ ->
-        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a-b"
+        pure [UnwrapNat "a", UnwrapNat "b", PushNat "a-b"]
       Word _ (QualifiedName (Qualified _ "*")) _ _ ->
-        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a*b"
+        pure [UnwrapNat "a", UnwrapNat "b", PushNat "a*b"]
       Word _ (QualifiedName (Qualified _ "/")) _ _ ->
-        pure $ unwrapNat "a" <> unwrapNat "b" <> pushNat "a/b"
+        pure [UnwrapNat "a", UnwrapNat "b", PushNat "a/b"]
       Word _ (QualifiedName name) args _ -> word name args
-      Lambda _ _ _ body _ -> (\a -> "locals.push(stack.get()?);" <> a <> "locals.pop();") <$> termRs body
+      Lambda _ _ _ body _ -> do
+        b <- termRs body
+        ls <- getLocalState
+        pure $
+          if ls
+            then Custom "let local1 = get!(stack);" : b
+            else Custom "locals.push(get!(stack));" : b <> [Custom "locals.pop();"]
       Match _ cases els _ -> do
         cs <- traverse caseRs cases
         e <- case els of
           (Else body _) -> termRs body
           (DefaultElse _ _) -> word (Global "abort-now") []
-        pure $ matchStmt "stack.get()" (catMaybes cs ++ [("_", e)])
-      _ -> pure ""
+        pure [MatchBlock "get!(stack)" (catMaybes cs ++ [("_", e)])]
+      _ -> pure []
 
 inTodo :: ByteString -> Codegen (Maybe WordEntry)
 inTodo bs = Map.lookup bs <$> getToDo
@@ -207,7 +289,7 @@ inTodo bs = Map.lookup bs <$> getToDo
 inDone :: ByteString -> Codegen (Maybe WordEntry)
 inDone bs = Map.lookup bs <$> getDone
 
-word :: Qualified -> [Type] -> Codegen ByteString
+word :: Qualified -> [Type] -> Codegen [Block]
 word name args = do
   let mangled = rustifyInstantiated $ Instantiated name args
   isInstantiated <- liftA2 (<|>) (inDone mangled) (inTodo mangled)
@@ -226,106 +308,109 @@ word name args = do
                         Right body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body'))
                         Left _ -> error "Could not instantiate generic type"
                     )
-            _ -> pure ""
+            _ -> pure []
 
-callWord :: Bool -> ByteString -> WordEntry -> Codegen ByteString
+callWord :: Bool -> ByteString -> WordEntry -> Codegen [Block]
 callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body of
-  [New _ (ConstructorIndex 0) 0 NatLike _] -> pure $ pushNat "0"
-  [New _ (ConstructorIndex 1) 1 NatLike _] -> pure $ pushNat "stack.nat_succ()"
-  [New _ (ConstructorIndex 1) 1 ListLike _] -> pure $ pushList "Vec::new()"
+  [New _ (ConstructorIndex 0) 0 NatLike _] -> pure [PushNat "0"]
+  [New _ (ConstructorIndex 1) 1 NatLike _] -> pure [PushNat "stack.nat_succ()"]
+  [New _ (ConstructorIndex 1) 1 ListLike _] -> pure [PushList "Vec::new()"]
   [New _ (ConstructorIndex 1) 2 ListLike _] ->
-    pure $
-      letStmt "x" "stack.get()?" <> unwrapList "mut xs" <> "xs.insert(0, x);" <> pushList "xs"
-  [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure $ pushAlgebraic (show i) "SmallVec::new()"
+    pure [Custom "let x = get!(stack);", UnwrapList "mut xs", Custom "xs.insert(0, x);", PushList "xs"]
+  [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure [PushAlgebraic (show i) "SmallVec::new()"]
   [New _ (ConstructorIndex i) 1 NonSpecial _] ->
-    pure $
-      letStmt "v" "smallvec![stack.get()?]" <> pushAlgebraic (show i) "v"
+    pure [Custom "let v = smallvec![get!(stack)];", PushAlgebraic (show i) "v"]
   [New _ (ConstructorIndex i) size NonSpecial _] ->
-    pure $
-      letStmt "mut v" (vecBuilder size "smallvec") <> "v.reverse(); " <> pushAlgebraic (show i) "v"
+    pure [Custom ("let mut v = " <> vecBuilder size "smallvec" <> "; v.reverse(); "), PushAlgebraic (show i) "v"]
   _ -> do
     when b $ modifyToDo $ Map.insert name e
-    pure $ name <> "(stack, closures)?;"
+    pure [Call name]
 
-intrinsic :: Text -> Codegen ByteString
+intrinsic :: Text -> Codegen [Block]
 intrinsic = \case
-  "call" -> pure $ unwrapClosure "name" "new" <> "let old = closures; name(stack, &new)?; let closures = old;"
-  "abort" -> pure $ unwrapText "a" <> "return Err(AbortCalled(a));"
-  "exit" -> pure $ unwrapNat "i" <> "std::process::exit(i as i32);"
-  "drop" -> pure $ letStmt "_" "stack.get()?"
-  "swap" -> pure $ ifLetPop2 ("a", "b") "stack.push(a); stack.push(b);"
-  "cmp-char" -> ((unwrapChar "a" <> unwrapChar "b") <>) <$> cmp "a" "b"
-  "cmp-string" -> ((unwrapText "a" <> unwrapText "b") <>) <$> cmp "a" "b"
-  "show-nat" -> pure $ unwrapNat "i" <> pushText "format!(\"{}\", i)"
+  "call" ->
+    pure
+      [ UnwrapClosure "name" "new",
+        Custom "let old = closures; let closures = &new;",
+        Call "name",
+        Custom "let closures = old;"
+      ]
+  "abort" -> pure [UnwrapText "a", Custom "return Err(AbortCalled(a));"]
+  "exit" -> pure [UnwrapNat "i", Custom "std::process::exit(i as i32);"]
+  "drop" -> pure [Custom "let _ = get!(stack)"]
+  "cmp-char" -> (\c -> [UnwrapChar "a", UnwrapChar "b", c]) <$> cmp "a" "b"
+  "cmp-string" -> (\c -> [UnwrapText "a", UnwrapText "b", c]) <$> cmp "a" "b"
+  "show-nat" -> pure [UnwrapNat "i", PushText "format!(\"{}\", i)"]
   "read-nat" -> do
     s <- word (Global "some") []
     n <- word (Global "none") []
-    pure $
-      unwrapText "a"
-        <> "if let Some(a) = a.parse().ok().map(Nat) { stack.push(a); "
-        <> s
-        <> "} else {"
-        <> n
-        <> "}"
-  "string-concat" -> pure $ unwrapText "a" <> unwrapText "mut b" <> "b.push_str(&a);" <> pushText "b"
+    pure
+      [ UnwrapText "a",
+        Custom
+          ( "if let Some(a) = a.parse().ok().map(Nat) { stack.push(a); "
+              <> toBS s
+              <> "} else {"
+              <> toBS n
+              <> "}"
+          )
+      ]
+  "string-concat" -> pure [UnwrapText "a", UnwrapText "mut b", Custom "b.push_str(&a);", PushText "b"]
   "string-from-list" ->
-    pure $
-      unwrapList "a"
-        <> pushText "a.iter().filter_map(|e| if let Char(c) = e { Some(c) } else { None } ).collect::<String>()"
-  "string-to-list" -> pure $ unwrapText "a" <> pushList "a.chars().map(Char).collect::<Vec<_>>()"
+    pure
+      [ UnwrapList "a",
+        PushText "a.iter().filter_map(|e| if let Char(c) = e { Some(c) } else { None } ).collect::<String>()"
+      ]
+  "string-to-list" -> pure [UnwrapText "a", PushList "a.chars().map(Char).collect::<Vec<_>>()"]
   "write-stdout" ->
-    pure $
-      "use std::io::Write;"
-        <> unwrapText "contents"
-        <> "std::io::stdout().write_all(contents.as_bytes()).map_err(|_| IOError)?;"
+    pure
+      [ UnwrapText "contents",
+        Custom "use std::io::Write; std::io::stdout().write_all(contents.as_bytes()).map_err(|_| IOError)?;"
+      ]
   "write-stderr" ->
-    pure $
-      "use std::io::Write;"
-        <> unwrapText "contents"
-        <> "std::io::stderr().write_all(contents.as_bytes()).map_err(|_| IOError)?"
+    pure
+      [ UnwrapText "contents",
+        Custom
+          "use std::io::Write; std::io::stderr().write_all(contents.as_bytes()).map_err(|_| IOError)?"
+      ]
   "write-file" ->
-    pure $
-      "use std::io::Write;"
-        <> unwrapText "filename"
-        <> letStmt "mut file" "std::fs::File::create(filename).map_err(|_| IOError)?"
-        <> unwrapText "contents"
-        <> "file.write_all(contents.as_bytes()).map_err(|_| IOError)?;"
-  "flush-stdout" -> pure $ "use std::io::Write;" <> "std::io::stdout().flush().map_err(|_| IOError)?;"
-  "flush-stderr" -> pure $ "use std::io::Write;" <> "std::io::stderr().flush().map_err(|_| IOError)?"
+    pure
+      [ UnwrapText "filename",
+        UnwrapText "contents",
+        Custom
+          "use std::io::Write; let mut file = std::fs::File::create(filename).map_err(|_| IOError)?; file.write_all(contents.as_bytes()).map_err(|_| IOError)?;"
+      ]
+  "flush-stdout" -> pure [Custom "use std::io::Write; std::io::stdout().flush().map_err(|_| IOError)?;"]
+  "flush-stderr" -> pure [Custom "use std::io::Write; std::io::stderr().flush().map_err(|_| IOError)?"]
   "flush-file" ->
-    pure $
-      "use std::io::Write;"
-        <> unwrapText "filename"
-        <> letStmt "mut file" "std::fs::File::create(filename).map_err(|_| IOError)?"
-        <> "file.flush().map_err(|_| IOError)?;"
+    pure
+      [ UnwrapText "filename",
+        Custom "let mut file = std::fs::File::create(filename).map_err(|_| IOError)?; use std::io::Write; file.flush().map_err(|_| IOError)?;"
+      ]
   "read-line" ->
-    pure $
-      letStmt "mut buffer" "String::new()"
-        <> "std::io::stdin().read_line(&mut buffer).map_err(|_| IOError)?;"
-        <> pushText "buffer"
+    pure
+      [ Custom "let mut buffer = String::new(); std::io::stdin().read_line(&mut buffer).map_err(|_| IOError)?;",
+        PushText "buffer"
+      ]
   "read-file" ->
-    pure $
-      "use std::io::Read;"
-        <> letStmt "mut buffer" "String::new()"
-        <> unwrapText "filename"
-        <> letStmt "mut file" "std::fs::File::open(filename).map_err(|_| IOError)?"
-        <> "file.read_to_string(&mut buffer).map_err(|_| IOError)?;"
-        <> pushText "buffer"
+    pure
+      [ UnwrapText "filename",
+        Custom "let mut file = std::fs::File::open(filename).map_err(|_| IOError)? use std::io::Read; let mut buffer = String::new(); file.read_to_string(&mut buffer).map_err(|_| IOError)?;",
+        PushText "buffer"
+      ]
   "read-stdin" ->
-    pure $
-      "use std::io::Read;"
-        <> letStmt "mut buffer" "String::new()"
-        <> "std::io::stdin().read_to_string(&mut buffer).map_err(|_| IOError)?;"
-        <> pushText "buffer"
+    pure
+      [ Custom "let mut Buffer = String::new(); use std::io::Read; std::io::stdin().read_to_string(&mut buffer).map_err(|_| IOError)?;",
+        PushText "buffer"
+      ]
   x -> error ("No such intrinsic: " <> show x)
 
-cmp :: ByteString -> ByteString -> Codegen ByteString
+cmp :: ByteString -> ByteString -> Codegen Block
 cmp a b = do
   m <- word (Global "more") []
   l <- word (Global "less") []
   e <- word (Global "equal") []
   pure $
-    matchStmt
+    MatchBlock
       (b <> ".cmp(&" <> a <> ")")
       [ ("std::cmp::Ordering::Greater", m),
         ("std::cmp::Ordering::Less", l),
@@ -336,10 +421,10 @@ vecBuilder :: Int -> ByteString -> ByteString
 vecBuilder 0 b = b <> "![]"
 vecBuilder x b = b <> "![" <> go x <> "]"
   where
-    go 1 = "stack.get()?"
-    go num = "stack.get()?, " <> go (num - 1)
+    go 1 = "get!(stack)"
+    go num = "get!(stack), " <> go (num - 1)
 
-caseRs :: Case Type -> Codegen (Maybe (ByteString, ByteString))
+caseRs :: Case Type -> Codegen (Maybe (ByteString, [Block]))
 caseRs (Case (QualifiedName name) caseBody _) = do
   dict <- ask
   case Map.lookup (rustifyInstantiated (Instantiated name [])) dict of
@@ -347,31 +432,31 @@ caseRs (Case (QualifiedName name) caseBody _) = do
       case decompose ctorBody of
         [New _ (ConstructorIndex i) 0 NonSpecial _] ->
           Just
-            . ("Ok(Algebraic(" <> show i <> ", _))",)
+            . ("Algebraic(" <> show i <> ", _)",)
             <$> termRs caseBody
         [New _ (ConstructorIndex i) 1 NonSpecial _] ->
           Just
-            . ("Ok(Algebraic(" <> show i <> ", mut fields))",)
-            . ("stack.push(*fields.swap_remove(0));" <>)
+            . ("Algebraic(" <> show i <> ", mut fields)",)
+            . (Push_ "*fields.swap_remove(0)" :)
             <$> termRs caseBody
         [New _ (ConstructorIndex i) _ NonSpecial _] ->
           Just
-            . ("Ok(Algebraic(" <> show i <> ", fields))",)
-            . ("for field in fields { stack.push(*field); } " <>)
+            . ("Algebraic(" <> show i <> ", fields)",)
+            . (Custom "for field in fields { stack.push(*field); } " :)
             <$> termRs caseBody
         [New _ (ConstructorIndex 0) 0 NatLike _] ->
           Just
-            . ("Ok(Nat(0))",)
+            . ("Nat(0)",)
             <$> termRs caseBody
         [New _ (ConstructorIndex 1) 1 NatLike _] ->
-          Just . ("Ok(Nat(a)) if a > 0 ",)
-            . (pushNat "a-1" <>)
+          Just . ("Nat(a) if a > 0 ",)
+            . (PushNat "a-1" :)
             <$> termRs caseBody
         [New _ (ConstructorIndex 0) 0 ListLike _] ->
-          Just . ("Ok(List(v)) if v.is_empty()",) <$> termRs caseBody
+          Just . ("List(v) if v.is_empty()",) <$> termRs caseBody
         [New _ (ConstructorIndex 1) 2 ListLike _] ->
-          Just . ("Ok(List(mut v)) if !v.is_empty() ",)
-            . ((letStmt "x" "v.remove(0)" <> "stack.push(x);" <> pushList "v") <>)
+          Just . ("List(mut v) if !v.is_empty() ",)
+            . ([Custom "let x = v.remove(0);", Push_ "x", PushList "v"] <>)
             <$> termRs caseBody
         _ -> pure Nothing
     _ -> pure Nothing
@@ -393,50 +478,14 @@ rustifyQualified = rustify . show . printQualified
 rustifyInstantiated :: Instantiated -> ByteString
 rustifyInstantiated = rustify . show . printInstantiated
 
-unwrapNat :: ByteString -> ByteString
-unwrapNat a = letStmt a "stack.get_nat()?"
-
-pushNat :: ByteString -> ByteString
-pushNat a = "stack.push_nat(" <> a <> ");"
-
-unwrapText :: ByteString -> ByteString
-unwrapText a = letStmt a "stack.get_text()?"
-
-pushText :: ByteString -> ByteString
-pushText a = "stack.push_text(" <> a <> ");"
-
-unwrapClosure :: ByteString -> ByteString -> ByteString
-unwrapClosure a b = letStmt ("(" <> a <> "," <> b <> ")") "stack.get_closure()?"
-
-pushClosure :: ByteString -> ByteString -> ByteString
-pushClosure a b = "stack.push_closure(" <> a <> "," <> b <> ");"
-
-unwrapChar :: ByteString -> ByteString
-unwrapChar a = letStmt a "stack.get_char()?"
-
-pushChar :: ByteString -> ByteString
-pushChar a = "stack.push_char(" <> a <> ");"
-
-pushAlgebraic :: ByteString -> ByteString -> ByteString
-pushAlgebraic a b = "stack.push_algebraic(" <> a <> "," <> b <> ");"
-
-unwrapList :: ByteString -> ByteString
-unwrapList a = letStmt a "stack.get_list()?"
-
-pushList :: ByteString -> ByteString
-pushList a = "stack.push_list(" <> a <> ");"
-
-stackFn :: ByteString -> ByteString -> Int -> ByteString
+stackFn :: ByteString -> [Block] -> Int -> Block
 stackFn name body count =
-  " #[inline]  fn "
-    <> name
-    <> "(stack: &mut Stack, closures: &[Rep]) -> StackResult<()> { "
-    <> ( case count of
-           0 -> ""
-           n -> letStmt "mut locals: Vec<Rep>" ("Vec::with_capacity(" <> show n <> ")")
-       )
-    <> body
-    <> " Ok(()) }"
+  FunBlock
+    name
+    ( if count <= 1
+        then body
+        else Custom ("let mut locals: Vec<Rep> = Vec::with_capacity(" <> show count <> ");") : body
+    )
 
 countLocal :: Term a -> Int
 countLocal t =
@@ -453,18 +502,3 @@ countLocal t =
       )
         <$> decompose t
     )
-
-ifLetPop :: ByteString -> ByteString -> ByteString
-ifLetPop binding body =
-  "if let Ok(" <> binding <> ") = stack.get() { "
-    <> body
-    <> " } else { return Err(AbortCalled(\"Inexhaustive pattern match\".to_owned())); }"
-
-ifLetPop2 :: (ByteString, ByteString) -> ByteString -> ByteString
-ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)
-
-matchStmt :: ByteString -> [(ByteString, ByteString)] -> ByteString
-matchStmt target cases = "match " <> target <> " { " <> ByteString.concat ((\(binding, block) -> binding <> " => {" <> block <> "},") <$> cases) <> " };"
-
-letStmt :: ByteString -> ByteString -> ByteString
-letStmt binding expression = "let " <> binding <> " = " <> expression <> ";"
