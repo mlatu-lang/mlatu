@@ -45,7 +45,7 @@ generate dict mMain = do
         Nothing -> error "Could not find main entry"
   bs <- evalCodegen (untilM entryRs (Map.null <$> getToDo)) (one (firstKey, firstEntry), Map.empty) (Map.mapKeys rustifyInstantiated (view wordEntries dict))
   pure
-    ( "#![allow(warnings)] fn main() { match "
+    ( "#![allow(warnings)] extern crate smallvec; fn main() { match "
         <> firstKey
         <> "(&mut Stack::new(), &Vec::new()) {\
            \Err(AbortCalled(s)) => eprintln!(\"Abort called: {}\", s),\
@@ -55,28 +55,29 @@ generate dict mMain = do
            \} }\
            \ type StackFn = fn(&mut Stack, &[Rep]) -> StackResult<()>;\
            \ type StackResult<T> = Result<T, Error>;\
-           \ #[derive(Clone)] enum Rep { Closure(StackFn, Vec<Rep>), Algebraic(usize, Vec<Rep>), Nat(usize), List(Vec<Rep>), Char(char), Text(String) } \
+           \ type AVec = SmallVec<[Box<Rep>; 2]>;\
+           \ #[derive(Clone)] enum Rep { Closure(StackFn, Vec<Rep>), Algebraic(usize, AVec), Nat(usize), List(Vec<Rep>), Char(char), Text(String) } \
            \ #[derive(Clone)] enum Error { AbortCalled(String), CompilerError, IOError } \
-           \ #[derive(Clone)] struct Stack { inner: Vec<Rep> }\
-           \ use Rep::*; use Error::*; \
+           \ #[derive(Clone)] struct Stack { pub inner: Vec<Rep> }\
+           \ use Rep::*; use Error::*; use smallvec::*;\
            \ impl Stack {\
-           \ fn new() -> Self { Self { inner: Vec::with_capacity(12), } }\
-           \ fn get(&mut self) -> StackResult<Rep> { if let Some(a) = self.inner.pop() { Ok(a) } else { Err(CompilerError) } }\
-           \ fn get_nat(&mut self) -> StackResult<usize> { if let Ok(Nat(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ fn get_text(&mut self) -> StackResult<String> { if let Ok(Text(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ fn get_closure(&mut self) -> StackResult<(StackFn, Vec<Rep>)> { if let Ok(Closure(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
-           \ fn get_char(&mut self) -> StackResult<char> { if let Ok(Char(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ fn get_algebraic(&mut self) -> StackResult<(usize, Vec<Rep>)> { if let Ok(Algebraic(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
-           \ fn get_list(&mut self) -> StackResult<Vec<Rep>> { if let Ok(List(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
-           \ fn push(&mut self, n: Rep) { self.inner.push(n) } \
-           \ fn push_nat(&mut self, n: usize) { self.push(Nat(n)); } \
-           \ fn push_text(&mut self, n: String) { self.push(Text(n)); } \
-           \ fn push_closure(&mut self, a: StackFn, b: Vec<Rep>) { self.push(Closure(a,b)); } \
-           \ fn push_char(&mut self, n: char) { self.push(Char(n)); } \
-           \ fn push_algebraic(&mut self, a: usize, b: Vec<Rep>) { self.push(Algebraic(a,b)); } \
-           \ fn push_list(&mut self, n: Vec<Rep>) { self.push(List(n)); } \
-           \ fn nat_pred(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n -= 1; } }\
-           \ fn nat_succ(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n += 1; } }\
+           \ #[inline] fn new() -> Self { Self { inner: Vec::with_capacity(6), } }\
+           \ #[inline] fn get(&mut self) -> StackResult<Rep> { if let Some(a) = self.inner.pop() { Ok(a) } else { Err(CompilerError) } }\
+           \ #[inline] fn get_nat(&mut self) -> StackResult<usize> { if let Ok(Nat(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
+           \ #[inline] fn get_text(&mut self) -> StackResult<String> { if let Ok(Text(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
+           \ #[inline] fn get_closure(&mut self) -> StackResult<(StackFn, Vec<Rep>)> { if let Ok(Closure(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
+           \ #[inline] fn get_char(&mut self) -> StackResult<char> { if let Ok(Char(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
+           \ #[inline] fn get_algebraic(&mut self) -> StackResult<(usize, AVec)> { if let Ok(Algebraic(a, b)) = self.get() { Ok((a, b)) } else { Err(CompilerError) }} \
+           \ #[inline] fn get_list(&mut self) -> StackResult<Vec<Rep>> { if let Ok(List(a)) = self.get() { Ok(a) } else { Err(CompilerError) }} \
+           \ #[inline] fn push(&mut self, n: Rep) { self.inner.push(n) } \
+           \ #[inline] fn push_nat(&mut self, n: usize) { self.push(Nat(n)); } \
+           \ #[inline] fn push_text(&mut self, n: String) { self.push(Text(n)); } \
+           \ #[inline] fn push_closure(&mut self, a: StackFn, b: Vec<Rep>) { self.push(Closure(a,b)); } \
+           \ #[inline] fn push_char(&mut self, n: char) { self.push(Char(n)); } \
+           \ #[inline] fn push_algebraic(&mut self, a: usize, b: AVec) { self.push(Algebraic(a,b)); } \
+           \ #[inline] fn push_list(&mut self, n: Vec<Rep>) { self.push(List(n)); } \
+           \ #[inline] fn nat_pred(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n -= 1; } }\
+           \ #[inline] fn nat_succ(&mut self) { if let Some(Nat(n)) = self.inner.last_mut() { *n += 1; } }\
            \}"
         <> ByteString.concat bs
     )
@@ -114,7 +115,7 @@ entryRs =
                   >> ( case e of
                          (Entry.WordEntry _ _ _ _ _ (Just body)) -> do
                            b <- termRs body
-                           pure $ stackFn i b $ containsLocals body
+                           pure $ stackFn i b $ countLocal body
                          _ -> pure ""
                      )
           )
@@ -134,7 +135,7 @@ termRs x = goTerms $ decompose x
         ( ( case size of
               0 -> pushClosure (rustifyQualified name) "Vec::new()"
               _ ->
-                letStmt "v" (vecBuilder size)
+                letStmt "v" (vecBuilder size "vec")
                   <> pushClosure (rustifyQualified name) "v"
           )
             <>
@@ -170,6 +171,15 @@ termRs x = goTerms $ decompose x
       Push _ (Local (LocalIndex 0)) _ -> pure "stack.push(locals.last().unwrap().clone());"
       Push _ (Local (LocalIndex i)) _ -> pure $ "stack.push(locals[locals.len() - " <> show (1 + i) <> "].clone());"
       Push _ (Closed (ClosureIndex i)) _ -> pure $ "stack.push(closures[" <> show i <> "].clone());"
+      Word _ (QualifiedName (Qualified _ "le")) [TypeConstructor _ "nat"] _ -> do
+        t <- word (Global "true") []
+        f <- word (Global "false") []
+        pure $
+          unwrapNat "a" <> unwrapNat "b" <> "if b <= a { "
+            <> t
+            <> " } else { "
+            <> f
+            <> "}"
       Word _ (QualifiedName (Qualified _ "cmp")) [TypeConstructor _ "nat"] _ ->
         ((unwrapNat "a" <> unwrapNat "b") <>) <$> cmp "a" "b"
       Word _ (QualifiedName (Qualified _ "pred")) _ _ -> pure "stack.nat_pred();"
@@ -226,13 +236,13 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body 
   [New _ (ConstructorIndex 1) 2 ListLike _] ->
     pure $
       letStmt "x" "stack.get()?" <> unwrapList "mut xs" <> "xs.insert(0, x);" <> pushList "xs"
-  [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure $ pushAlgebraic (show i) "Vec::new()"
+  [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure $ pushAlgebraic (show i) "SmallVec::new()"
   [New _ (ConstructorIndex i) 1 NonSpecial _] ->
     pure $
-      letStmt "v" "vec![stack.get()?]" <> pushAlgebraic (show i) "v"
+      letStmt "v" "smallvec![stack.get()?]" <> pushAlgebraic (show i) "v"
   [New _ (ConstructorIndex i) size NonSpecial _] ->
     pure $
-      letStmt "mut v" (vecBuilder size) <> "v.reverse(); " <> pushAlgebraic (show i) "v"
+      letStmt "mut v" (vecBuilder size "smallvec") <> "v.reverse(); " <> pushAlgebraic (show i) "v"
   _ -> do
     when b $ modifyToDo $ Map.insert name e
     pure $ name <> "(stack, closures)?;"
@@ -322,9 +332,9 @@ cmp a b = do
         ("std::cmp::Ordering::Equal", e)
       ]
 
-vecBuilder :: Int -> ByteString
-vecBuilder 0 = "Vec::new()"
-vecBuilder x = "vec![" <> go x <> "]"
+vecBuilder :: Int -> ByteString -> ByteString
+vecBuilder 0 b = b <> "![]"
+vecBuilder x b = b <> "![" <> go x <> "]"
   where
     go 1 = "stack.get()?"
     go num = "stack.get()?, " <> go (num - 1)
@@ -342,12 +352,12 @@ caseRs (Case (QualifiedName name) caseBody _) = do
         [New _ (ConstructorIndex i) 1 NonSpecial _] ->
           Just
             . ("Ok(Algebraic(" <> show i <> ", mut fields))",)
-            . ("stack.push(fields.swap_remove(0));" <>)
+            . ("stack.push(*fields.swap_remove(0));" <>)
             <$> termRs caseBody
         [New _ (ConstructorIndex i) _ NonSpecial _] ->
           Just
             . ("Ok(Algebraic(" <> show i <> ", fields))",)
-            . ("for field in fields { stack.push(field); } " <>)
+            . ("for field in fields { stack.push(*field); } " <>)
             <$> termRs caseBody
         [New _ (ConstructorIndex 0) 0 NatLike _] ->
           Just
@@ -416,39 +426,39 @@ unwrapList a = letStmt a "stack.get_list()?"
 pushList :: ByteString -> ByteString
 pushList a = "stack.push_list(" <> a <> ");"
 
-stackFn :: ByteString -> ByteString -> Bool -> ByteString
-stackFn name body containsLocals =
-  " fn "
+stackFn :: ByteString -> ByteString -> Int -> ByteString
+stackFn name body count =
+  " #[inline]  fn "
     <> name
     <> "(stack: &mut Stack, closures: &[Rep]) -> StackResult<()> { "
-    <> ( if containsLocals
-           then letStmt "mut locals: Vec<Rep>" "Vec::new()"
-           else ""
+    <> ( case count of
+           0 -> ""
+           n -> letStmt "mut locals: Vec<Rep>" ("Vec::with_capacity(" <> show n <> ")")
        )
     <> body
     <> " Ok(()) }"
 
-containsLocals :: Term a -> Bool
-containsLocals t =
-  any
-    ( \case
-        Push _ (Local _) _ -> True
-        Lambda {} -> True
-        Match _ cases e _ ->
-          any (\case Case _ t _ -> containsLocals t) cases
-            || ( case e of
-                   DefaultElse {} -> False
-                   Else t _ -> containsLocals t
-               )
-        _ -> False
+countLocal :: Term a -> Int
+countLocal t =
+  sum
+    ( ( \case
+          Lambda _ _ _ body _ -> countLocal body + 1
+          Match _ cases e _ ->
+            sum ((\case Case _ t _ -> countLocal t) <$> cases)
+              + ( case e of
+                    DefaultElse {} -> 0
+                    Else t _ -> countLocal t
+                )
+          _ -> 0
+      )
+        <$> decompose t
     )
-    (decompose t)
 
 ifLetPop :: ByteString -> ByteString -> ByteString
 ifLetPop binding body =
-  matchStmt
-    "stack.get()"
-    [("Ok(" <> binding <> ")", body), ("_", "return Err(AbortCalled(\"Inexhaustive pattern match\".to_owned()));")]
+  "if let Ok(" <> binding <> ") = stack.get() { "
+    <> body
+    <> " } else { return Err(AbortCalled(\"Inexhaustive pattern match\".to_owned())); }"
 
 ifLetPop2 :: (ByteString, ByteString) -> ByteString -> ByteString
 ifLetPop2 (b1, b2) body = ifLetPop b1 (ifLetPop b2 body)

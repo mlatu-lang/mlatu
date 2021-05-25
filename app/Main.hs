@@ -151,6 +151,9 @@ cargoToml b =
   "[package] \n \
   \ name = \"output\" \n \
   \ version = \"0.1.0\" \n \
+  \ [dependencies.smallvec] \n \
+  \ version = \"1.6.1\" \n \
+  \ features = [\"union\"] \n\
   \ [profile.release] \n \
   \ lto = true \n \
   \ codegen-units = 1 \n\
