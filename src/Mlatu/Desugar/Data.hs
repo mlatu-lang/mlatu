@@ -25,6 +25,8 @@ import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
 import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..), Unqualified (..))
+import Mlatu.Origin (Origin)
+import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), compose)
 import Optics
@@ -64,7 +66,8 @@ desugarCodataDefinition definition = do
   let ds = zipWith3 id (desugarDeconstructor <$> view Codata.deconstructors definition) list (reverse list)
   pure (c : ds)
   where
-    desugarDeconstructor (name, sig, origin) = \lo hi ->
+    desugarDeconstructor :: (Unqualified, [Signature], [Signature], Origin) -> Int -> Int -> Definition ()
+    desugarDeconstructor (name, pre, post, origin) lo hi =
       Definition
         { Definition._body =
             Match
@@ -91,7 +94,7 @@ desugarCodataDefinition definition = do
           Definition._signature =
             Signature.Quantified
               (view Codata.parameters definition)
-              (Signature.Function [resultSignature] [sig] [] origin)
+              (Signature.Function pre post [] origin)
               origin
         }
     constructorName =
@@ -129,7 +132,7 @@ desugarCodataDefinition definition = do
       Signature.Quantified
         (view Codata.parameters definition)
         ( Signature.Function
-            (view _2 <$> view Codata.deconstructors definition)
+            (asum (view _3 <$> view Codata.deconstructors definition))
             [resultSignature]
             []
             origin
@@ -141,23 +144,24 @@ desugarDataDefinition :: DataDefinition -> Desugar [Definition ()]
 desugarDataDefinition definition =
   traverse desugarConstructor $ view Data.constructors definition
   where
-    desugarConstructor constructor = makeDefinition $ \index ->
+    desugarConstructor :: (Unqualified, [Signature], [Signature], Origin) -> Desugar (Definition ())
+    desugarConstructor (name, input, output, origin) = makeDefinition $ \index ->
       Definition
         { Definition._body =
             New
               ()
               (ConstructorIndex index)
-              (length $ view _2 constructor)
+              (length input)
               ( case unqualifiedName (view Data.name definition) of
                   "nat" -> NatLike
                   "list" -> ListLike
                   _ -> NonSpecial
               )
-              $ view _3 constructor,
+              origin,
           Definition._category = Category.Constructor,
           Definition._inferSignature = False,
           Definition._merge = Merge.Deny,
-          Definition._name = Qualified qualifier $ view _1 constructor,
+          Definition._name = Qualified qualifier name,
           Definition._origin = origin,
           Definition._parent = Just $ Parent.Type $ view Data.name definition,
           Definition._signature = constructorSignature
@@ -177,13 +181,12 @@ desugarDataDefinition definition =
           Signature.Quantified
             (view Data.parameters definition)
             ( Signature.Function
-                (view _2 constructor)
-                [resultSignature]
+                input
+                output
                 []
                 origin
             )
             origin
-        origin = view _3 constructor
         qualifier = qualifierName $ view Data.name definition
 
 makeDefinition :: (Int -> Definition ()) -> Desugar (Definition ())

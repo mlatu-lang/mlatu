@@ -25,7 +25,7 @@ import Optics.TH (makeLenses)
 import Relude hiding (Constraint)
 
 data DataDefinition = DataDefinition
-  { _constructors :: ![(Unqualified, [Signature], Origin)],
+  { _constructors :: ![(Unqualified, [Signature], [Signature], Origin)],
     _name :: !Qualified,
     _origin :: !Origin,
     _parameters :: ![Parameter]

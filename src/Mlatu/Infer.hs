@@ -390,9 +390,9 @@ inferCase ::
   Dictionary ->
   TypeEnv ->
   TypeEnv ->
-  [(Unqualified, [Signature], Origin)] ->
+  [(Unqualified, [Signature], [Signature], Origin)] ->
   Case a ->
-  M (Case Type, Type, [(Unqualified, [Signature], Origin)], TypeEnv)
+  M (Case Type, Type, [(Unqualified, [Signature], [Signature], Origin)], TypeEnv)
 inferCase
   dictionary
   tenvFinal

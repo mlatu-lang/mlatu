@@ -1,4 +1,4 @@
-data (t) list { nil | cons (t, t list) } 
+data (t) list { nil (-> t list) | cons (t, t list -> t list) }
 
 instance cmp (for t. t list, t list -> ord) {
   -> xs, ys;

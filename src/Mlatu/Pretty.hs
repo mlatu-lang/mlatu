@@ -309,9 +309,14 @@ printDataDefinition (DataDefinition constructors name _ parameters) =
     typeName = case parameters of
       [] -> printQualified name
       _ -> (parens . hsep) (printParameter <$> reverse parameters) <+> printQualified name
-    printDataConstructor (name, fields, _) =
+    printDataConstructor (name, pre, post, _) =
       printUnqualified name
-        <> if not $ null fields then space <> tupled (printSignature <$> fields) else emptyDoc
+        <> space
+        <> parens
+          ( (hsep . punctuateComma) (printSignature <$> pre)
+              <+> "->"
+              <+> (hsep . punctuateComma) (printSignature <$> post)
+          )
 
 printCodataDefinition :: CodataDefinition -> Doc a
 printCodataDefinition (CodataDefinition constructors name _ parameters) =
@@ -320,7 +325,14 @@ printCodataDefinition (CodataDefinition constructors name _ parameters) =
     typeName = case parameters of
       [] -> printQualified name
       _ -> (parens . hsep) (printParameter <$> reverse parameters) <+> printQualified name
-    printDataDeconstructor (name, sig, _) = printUnqualified name <+> parens (printSignature sig)
+    printDataDeconstructor (name, pre, post, _) =
+      printUnqualified name
+        <> space
+        <> parens
+          ( (hsep . punctuateComma) (printSignature <$> pre)
+              <+> "->"
+              <+> (hsep . punctuateComma) (printSignature <$> post)
+          )
 
 printTerm :: Term a -> Doc b
 printTerm t = fromMaybe emptyDoc (maybePrintTerms (decompose t))

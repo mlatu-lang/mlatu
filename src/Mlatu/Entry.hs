@@ -32,7 +32,7 @@ data WordEntry = WordEntry !Category !Merge !Origin !(Maybe Parent) !(Maybe Sign
 data MetadataEntry = MetadataEntry !Origin !(Term ())
   deriving (Show)
 
-data TypeEntry = TypeEntry !Origin ![Parameter] ![(Unqualified, [Signature], Origin)]
+data TypeEntry = TypeEntry !Origin ![Parameter] ![(Unqualified, [Signature], [Signature], Origin)]
   deriving (Show)
 
 data TraitEntry = TraitEntry !Origin !Signature

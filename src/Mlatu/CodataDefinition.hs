@@ -25,7 +25,7 @@ import Optics.TH (makeLenses)
 import Relude hiding (Constraint)
 
 data CodataDefinition = CodataDefinition
-  { _deconstructors :: ![(Unqualified, Signature, Origin)],
+  { _deconstructors :: ![(Unqualified, [Signature], [Signature], Origin)],
     _name :: !Qualified,
     _origin :: !Origin,
     _parameters :: ![Parameter]

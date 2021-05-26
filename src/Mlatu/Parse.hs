@@ -328,10 +328,16 @@ dataParser = (<?> "data definition") $ do
       ( ( ( do
               origin <- getTokenOrigin
               name <- lowerNameParser <?> "constructor name"
-              fields <-
+              (lefts, rights) <-
                 (<?> "constructor fields") $
-                  Parsec.option [] $ groupedParser (typeParser `Parsec.sepEndBy` commaParser)
-              pure (name, fields, origin)
+                  groupedParser
+                    ( do
+                        leftTypes <- left
+                        origin <- arrow
+                        rightTypes <- right
+                        pure (leftTypes, rightTypes)
+                    )
+              pure (name, lefts, rights, origin)
           )
             <?> "constructor definition"
         )
@@ -355,8 +361,16 @@ codataParser = (<?> "codata definition") $ do
       ( ( ( do
               origin <- getTokenOrigin
               name <- lowerNameParser <?> "destructor name"
-              sig <- groupedParser typeParser <?> "destructor signature"
-              pure (name, sig, origin)
+              (lefts, rights) <-
+                (<?> "destructor signature") $
+                  groupedParser
+                    ( do
+                        leftTypes <- left
+                        origin <- arrow
+                        rightTypes <- right
+                        pure (leftTypes, rightTypes)
+                    )
+              pure (name, lefts, rights, origin)
           )
             <?> "destructor definition"
         )
@@ -395,46 +409,46 @@ functionTypeParser = (<?> "function type") $ do
       ]
   perms <- Parsec.option [] permissions
   pure (effect perms origin)
+
+stackSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
+stackSignature = (<?> "stack function type") $ do
+  leftparameter <- UnqualifiedName <$> stack
+  leftTypes <- Parsec.option [] (commaParser *> left)
+  origin <- arrow
+  rightparameter <- UnqualifiedName <$> stack
+  rightTypes <- Parsec.option [] (commaParser *> right)
+  pure
+    ( Signature.StackFunction
+        (Signature.Variable leftparameter origin)
+        leftTypes
+        (Signature.Variable rightparameter origin)
+        rightTypes,
+      origin
+    )
   where
-    stackSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
-    stackSignature = (<?> "stack function type") $ do
-      leftparameter <- UnqualifiedName <$> stack
-      leftTypes <- Parsec.option [] (commaParser *> left)
-      origin <- arrow
-      rightparameter <- UnqualifiedName <$> stack
-      rightTypes <- Parsec.option [] (commaParser *> right)
-      pure
-        ( Signature.StackFunction
-            (Signature.Variable leftparameter origin)
-            leftTypes
-            (Signature.Variable rightparameter origin)
-            rightTypes,
-          origin
-        )
-      where
-        stack :: Parser Unqualified
-        stack = upperNameParser
+    stack :: Parser Unqualified
+    stack = upperNameParser
 
-    arrowSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
-    arrowSignature = (<?> "arrow function type") $ do
-      leftTypes <- left
-      origin <- arrow
-      rightTypes <- right
-      pure (Signature.Function leftTypes rightTypes, origin)
+arrowSignature :: Parser ([GeneralName] -> Origin -> Signature, Origin)
+arrowSignature = (<?> "arrow function type") $ do
+  leftTypes <- left
+  origin <- arrow
+  rightTypes <- right
+  pure (Signature.Function leftTypes rightTypes, origin)
 
-    permissions :: Parser [GeneralName]
-    permissions = (<?> "permission labels") $ do
-      parserMatch_ Token.AngleBegin
-      ps <- nameParser `Parsec.sepBy1` parserMatchOperator "+"
-      parserMatch_ Token.AngleEnd
-      pure ps
+permissions :: Parser [GeneralName]
+permissions = (<?> "permission labels") $ do
+  parserMatch_ Token.AngleBegin
+  ps <- nameParser `Parsec.sepBy1` parserMatchOperator "+"
+  parserMatch_ Token.AngleEnd
+  pure ps
 
-    left, right :: Parser [Signature]
-    left = basicTypeParser `Parsec.sepEndBy` commaParser
-    right = typeParser `Parsec.sepEndBy` commaParser
+left, right :: Parser [Signature]
+left = basicTypeParser `Parsec.sepEndBy` commaParser
+right = typeParser `Parsec.sepEndBy` commaParser
 
-    arrow :: Parser Origin
-    arrow = getTokenOrigin <* parserMatch Token.Arrow
+arrow :: Parser Origin
+arrow = getTokenOrigin <* parserMatch Token.Arrow
 
 commaParser :: Parser ()
 commaParser = void $ parserMatch Token.Comma

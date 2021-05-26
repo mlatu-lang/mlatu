@@ -1,6 +1,6 @@
-data readable { r-in | r-file (string) } 
+data readable { r-in (-> readable) | r-file (string -> readable) }
 
-data writable { w-out | w-err | w-file (string) } 
+data writable { w-out (-> writable) | w-err (-> writable) | w-file (string -> writable) } 
 
 define flush (writable ->  <io>) {
   match

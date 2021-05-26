@@ -61,6 +61,7 @@ import Mlatu.Vocabulary
 import Optics
 import Prettyprinter (dquotes, hsep)
 import Relude
+import Relude.Unsafe as Unsafe
 
 -- | Enters a program fragment into a dictionary.
 fragment :: Fragment () -> Dictionary -> M Dictionary
@@ -171,7 +172,8 @@ declareCodata dictionary typ =
                   (view CodataDefinition.origin typ)
                   (view CodataDefinition.parameters typ)
                   [ ( "mk-" <> unqualifiedName (view CodataDefinition.name typ),
-                      view _2 <$> view CodataDefinition.deconstructors typ,
+                      asum (view _2 <$> view CodataDefinition.deconstructors typ),
+                      Unsafe.head (view _3 <$> view CodataDefinition.deconstructors typ),
                       view CodataDefinition.origin typ
                     )
                   ]
