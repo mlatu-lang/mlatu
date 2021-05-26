@@ -2,11 +2,13 @@
 
 [![](https://tokei.rs/b1/github/brightly-salty/mlatu)](https://github.com/XAMPPRocky/tokei) [![Join the chat at https://gitter.im/mlatu-lang/community](https://badges.gitter.im/mlatu-lang/community.svg)](https://gitter.im/mlatu-lang/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+https://brightly-salty.github.io/mlatu/
+
 Mlatu is a statically typed, stack-based purely functional programming language designed for simplicity, speed, and safety.
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 
-I make announcements, discuss the languaage, and am available to answer questions on [this Discord channel](https://discord.gg/qNQV6nnAZj) and [this Gitter community](https://gitter.im/mlatu-lang/community).
+I make announcements, discuss the languaage, and am available to answer questions on [this Discord server](https://discord.gg/qNQV6nnAZj).
 
 ## Features
 
@@ -41,17 +43,7 @@ See the `/examples` folder for more examples.
 
 ### Installation
 
-These installation instructions presume you have the Haskell Tool Stack installed. If you don't you can install it [here](https://docs.haskellstack.org/en/stable/install_and_upgrade/).
-
-Via `stack`:
-
-```
-git clone https://github.com/brightly-salty/mlatu.git
-cd mlatu
-stack install
-```
-
-Note: `cabal v2-install exe:mlatu` should also work.
+See https://brightly-salty.github.io/mlatu/installation
 
 ### Usage
 

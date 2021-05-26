@@ -1,6 +1,7 @@
 # Mlatu
 
 Factorial
+
 ```ml
 define fact (nat -> nat) {
   dup                         // duplicates the input so we can use it later
@@ -11,6 +12,7 @@ define fact (nat -> nat) {
 ```
 
 Fibonacci
+
 ```ml
 define fib (nat -> nat) {
   -> x; match (x 2 le) | true { 1 } | false { x pred fib x pred pred fib + }
@@ -41,4 +43,8 @@ Mlatu is high-level - you don't have to worry about bits and null when you progr
 
 ## Now what?
 
-Now that you've seen what Mlatu is, what are you waiting for? Go play around in the REPL or run the examples, and see for yourself how nice Mlatu makes programming!
+Now that you've seen what Mlatu is, what are you waiting for? 
+
+[Install Mlatu](/installation.md)
+
+Then play around in the REPL or run the examples, and see for yourself how nice Mlatu makes programming!
