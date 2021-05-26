@@ -90,67 +90,71 @@ data Block
   | PushAlgebraic ByteString ByteString
   | Push_ ByteString
   | Call ByteString
+  | Let ByteString ByteString
   | Custom ByteString
   deriving (Ord, Eq, Show)
-
-letStmt :: ByteString -> ByteString -> ByteString
-letStmt a b = "let " <> a <> " = " <> b <> ";"
 
 couple :: ByteString -> ByteString -> ByteString
 couple a b = "(" <> a <> "," <> b <> ")"
 
 toBS :: [Block] -> ByteString
-toBS = go
+toBS = toBytes . optimize
   where
-    go [] = ""
-    go (Push_ a : Unwrap b : rest) = letStmt b a <> toBS rest
-    go (PushNat a : UnwrapNat b : rest) = letStmt b a <> toBS rest
-    go (Push_ a : UnwrapNat b : rest) = letStmt b ("try_nat!(" <> a <> ")") <> toBS rest
-    go (PushNat a : Unwrap b : rest) = letStmt b ("Nat(" <> a <> ")") <> toBS rest
-    go (PushList a : UnwrapList b : rest) = letStmt b a <> toBS rest
-    go (Push_ a : UnwrapList b : rest) = letStmt b ("try_list!(" <> a <> ")") <> toBS rest
-    go (PushList a : Unwrap b : rest) = letStmt b ("List(" <> a <> ")") <> toBS rest
-    go (PushChar a : UnwrapChar b : rest) = letStmt b a <> toBS rest
-    go (Push_ a : UnwrapChar b : rest) = letStmt b ("try_char!(" <> a <> ")") <> toBS rest
-    go (PushChar a : Unwrap b : rest) = letStmt b ("Char(" <> a <> ")") <> toBS rest
-    go (PushText a : UnwrapText b : rest) = letStmt b a <> toBS rest
-    go (Push_ a : UnwrapText b : rest) = letStmt b ("try_text!(" <> a <> ")") <> toBS rest
-    go (PushText a : Unwrap b : rest) = letStmt b ("Text(" <> a <> ")") <> toBS rest
-    go (PushAlgebraic a1 a2 : UnwrapAlgebraic b1 b2 : rest) = letStmt b1 a1 <> letStmt b2 a2 <> toBS rest
-    go (Push_ a : UnwrapAlgebraic b1 b2 : rest) = letStmt (couple b1 b2) ("try_algebraic!(" <> a <> ")") <> toBS rest
-    go (PushAlgebraic a1 a2 : Unwrap b : rest) = letStmt b ("Algebraic" <> couple a1 a2) <> toBS rest
-    go (PushClosure a1 a2 : UnwrapClosure b1 b2 : rest) = letStmt b1 a1 <> letStmt b2 a2 <> toBS rest
-    go (Push_ a : UnwrapClosure b1 b2 : rest) = letStmt (couple b1 b2) ("try_closure!(" <> a <> ")") <> toBS rest
-    go (PushClosure a1 a2 : Unwrap b : rest) = letStmt b ("Closure" <> couple a1 a2) <> toBS rest
-    go (FunBlock name body : rest) =
+    optimize [] = []
+    optimize (Push_ a : Unwrap b : rest) = optimize (Let b a : rest)
+    optimize (Push_ a : UnwrapNat b : rest) = optimize (Let b ("try_nat!(" <> a <> ")") : rest)
+    optimize (Push_ a : UnwrapList b : rest) = optimize (Let b ("try_list!(" <> a <> ")") : rest)
+    optimize (Push_ a : UnwrapChar b : rest) = optimize (Let b ("try_char!(" <> a <> ")") : rest)
+    optimize (Push_ a : UnwrapText b : rest) = optimize (Let b ("try_text!(" <> a <> ")") : rest)
+    optimize (Push_ a : UnwrapAlgebraic b1 b2 : rest) = optimize (Let (couple b1 b2) ("try_algebraic!(" <> a <> ")") : rest)
+    optimize (Push_ a : UnwrapClosure b1 b2 : rest) = optimize (Let (couple b1 b2) ("try_closure!(" <> a <> ")") : rest)
+    optimize (PushNat a : Unwrap b : rest) = optimize (Let b ("Nat(" <> a <> ")") : rest)
+    optimize (PushList a : Unwrap b : rest) = optimize (Let b ("List(" <> a <> ")") : rest)
+    optimize (PushChar a : Unwrap b : rest) = optimize (Let b ("Char(" <> a <> ")") : rest)
+    optimize (PushText a : Unwrap b : rest) = optimize (Let b ("Text(" <> a <> ")") : rest)
+    optimize (PushAlgebraic a1 a2 : Unwrap b : rest) = optimize (Let b ("Algebraic" <> couple a1 a2) : rest)
+    optimize (PushClosure a1 a2 : Unwrap b : rest) = optimize (Let b ("Closure" <> couple a1 a2) : rest)
+    optimize (PushNat a : UnwrapNat b : rest) = optimize (Let b a : rest)
+    optimize (PushList a : UnwrapList b : rest) = optimize (Let b a : rest)
+    optimize (PushChar a : UnwrapChar b : rest) = optimize (Let b a : rest)
+    optimize (PushText a : UnwrapText b : rest) = optimize (Let b a : rest)
+    optimize (PushAlgebraic a1 a2 : UnwrapAlgebraic b1 b2 : rest) = optimize (Let b1 a1 : (Let b2 a2 : rest))
+    optimize (PushClosure a1 a2 : UnwrapClosure b1 b2 : rest) = optimize (Let b1 a1 : (Let b2 a2 : rest))
+    optimize (UnwrapNat name : rest) = optimize (Let name "try_nat!(get!(stack))" : rest)
+    optimize (UnwrapChar name : rest) = optimize (Let name "try_char!(get!(stack))" : rest)
+    optimize (UnwrapText name : rest) = optimize (Let name "try_text!(get!(stack))" : rest)
+    optimize (UnwrapList name : rest) = optimize (Let name "try_list!(get!(stack))" : rest)
+    optimize (UnwrapClosure name1 name2 : rest) = optimize (Let (couple name1 name2) "try_closure!(get!(stack))" : rest)
+    optimize (UnwrapAlgebraic name1 name2 : rest) = optimize (Let (couple name1 name2) "try_algebraic!(get!(stack))" : rest)
+    optimize (Unwrap name : rest) = optimize (Let name "get!(stack)" : rest)
+    optimize (FunBlock name body : rest) = FunBlock name (optimize body) : optimize rest
+    optimize (a : rest) = a : optimize rest
+
+    toBytes [] = ""
+    toBytes (FunBlock name body : rest) =
       "#[inline] fn " <> name
         <> "(stack: &mut Vec<Rep>, closures: &[Rep]) -> StackResult<()> { "
         <> toBS body
         <> " Ok(()) } "
-        <> toBS rest
-    go (UnwrapNat name : rest) = letStmt name "try_nat!(get!(stack))" <> toBS rest
-    go (UnwrapChar name : rest) = letStmt name "try_char!(get!(stack))" <> toBS rest
-    go (UnwrapText name : rest) = letStmt name "try_text!(get!(stack))" <> toBS rest
-    go (UnwrapList name : rest) = letStmt name "try_list!(get!(stack))" <> toBS rest
-    go (UnwrapClosure name1 name2 : rest) = letStmt (couple name1 name2) "try_closure!(get!(stack))" <> toBS rest
-    go (UnwrapAlgebraic name1 name2 : rest) = letStmt (couple name1 name2) "try_algebraic!(get!(stack))" <> toBS rest
-    go (Unwrap name : rest) = letStmt name "get!(stack)" <> toBS rest
-    go (PushNat body : rest) = "stack.push(Nat(" <> body <> "));" <> toBS rest
-    go (PushChar body : rest) = "stack.push(Char(" <> body <> "));" <> toBS rest
-    go (PushText body : rest) = "stack.push(Text(" <> body <> "));" <> toBS rest
-    go (PushList body : rest) = "stack.push(List(" <> body <> "));" <> toBS rest
-    go (PushClosure body1 body2 : rest) =
-      "stack.push(Closure" <> couple body1 body2 <> ");" <> toBS rest
-    go (PushAlgebraic body1 body2 : rest) =
-      "stack.push(Algebraic" <> couple body1 body2 <> ");" <> toBS rest
-    go (Push_ body : rest) = "stack.push(" <> body <> ");" <> toBS rest
-    go (MatchBlock x xs : rest) =
+        <> toBytes rest
+    toBytes (PushNat body : rest) = "stack.push(Nat(" <> body <> "));" <> toBytes rest
+    toBytes (PushChar body : rest) = "stack.push(Char(" <> body <> "));" <> toBytes rest
+    toBytes (PushText body : rest) = "stack.push(Text(" <> body <> "));" <> toBytes rest
+    toBytes (PushList body : rest) = "stack.push(List(" <> body <> "));" <> toBytes rest
+    toBytes (PushClosure body1 body2 : rest) =
+      "stack.push(Closure" <> couple body1 body2 <> ");" <> toBytes rest
+    toBytes (PushAlgebraic body1 body2 : rest) =
+      "stack.push(Algebraic" <> couple body1 body2 <> ");" <> toBytes rest
+    toBytes (Push_ body : rest) = "stack.push(" <> body <> ");" <> toBytes rest
+    toBytes (MatchBlock x xs : rest) =
       "match " <> x <> " { "
         <> ByteString.concat ((\(binding, block) -> binding <> " => {" <> toBS block <> "},") <$> xs)
         <> " };"
         <> toBS rest
-    go (Call name : rest) = name <> "(stack, closures)?;" <> toBS rest
-    go (Custom body : rest) = body <> toBS rest
+    toBytes (Call name : rest) = name <> "(stack, closures)?;" <> toBytes rest
+    toBytes (Let a b : rest) = "let " <> a <> " = " <> b <> ";" <> toBytes rest
+    toBytes (Custom body : rest) = body <> toBytes rest
+    toBytes (_ : rest) = toBytes rest
 
 newtype Codegen a = Codegen (StateT (WordMap, WordMap, Bool) (ReaderT WordMap IO) a)
   deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap, Bool), MonadReader WordMap, MonadIO)
@@ -211,7 +215,7 @@ termRs x = goTerms $ decompose x
         ( ( case size of
               0 -> [PushClosure (rustifyQualified name) "Vec::new()"]
               _ ->
-                [ Custom ("let v = " <> vecBuilder size "vec" <> ";"),
+                [ Let "v" (vecBuilder size "vec"),
                   PushClosure (rustifyQualified name) "v"
                 ]
           )
@@ -273,14 +277,14 @@ termRs x = goTerms $ decompose x
         ls <- getLocalState
         pure $
           if ls
-            then Custom "let local1 = get!(stack);" : b
+            then Let "local1" "get!(stack)" : b
             else Custom "locals.push(get!(stack));" : b <> [Custom "locals.pop();"]
       Match _ cases els _ -> do
         cs <- traverse caseRs cases
         e <- case els of
           (Else body _) -> termRs body
           (DefaultElse _ _) -> word (Global "abort-now") []
-        pure [MatchBlock "get!(stack)" (catMaybes cs ++ [("_", e)])]
+        pure [Unwrap "scrutinee", MatchBlock "scrutinee" (catMaybes cs ++ [("_", e)])]
       _ -> pure []
 
 inTodo :: ByteString -> Codegen (Maybe WordEntry)
@@ -316,12 +320,12 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body 
   [New _ (ConstructorIndex 1) 1 NatLike _] -> pure [PushNat "stack.nat_succ()"]
   [New _ (ConstructorIndex 1) 1 ListLike _] -> pure [PushList "Vec::new()"]
   [New _ (ConstructorIndex 1) 2 ListLike _] ->
-    pure [Custom "let x = get!(stack);", UnwrapList "mut xs", Custom "xs.insert(0, x);", PushList "xs"]
+    pure [Unwrap "x", UnwrapList "mut xs", Custom "xs.insert(0, x);", PushList "xs"]
   [New _ (ConstructorIndex i) 0 NonSpecial _] -> pure [PushAlgebraic (show i) "SmallVec::new()"]
   [New _ (ConstructorIndex i) 1 NonSpecial _] ->
-    pure [Custom "let v = smallvec![get!(stack)];", PushAlgebraic (show i) "v"]
+    pure [Let "v" "smallvec![get!(stack)];", PushAlgebraic (show i) "v"]
   [New _ (ConstructorIndex i) size NonSpecial _] ->
-    pure [Custom ("let mut v = " <> vecBuilder size "smallvec" <> "; v.reverse(); "), PushAlgebraic (show i) "v"]
+    pure [Let "mut v" (vecBuilder size "smallvec"), Custom "v.reverse();", PushAlgebraic (show i) "v"]
   _ -> do
     when b $ modifyToDo $ Map.insert name e
     pure [Call name]
@@ -331,13 +335,14 @@ intrinsic = \case
   "call" ->
     pure
       [ UnwrapClosure "name" "new",
-        Custom "let old = closures; let closures = &new;",
+        Let "old" "closures",
+        Let "closures" "&new",
         Call "name",
-        Custom "let closures = old;"
+        Let "closures" "old"
       ]
   "abort" -> pure [UnwrapText "a", Custom "return Err(AbortCalled(a));"]
   "exit" -> pure [UnwrapNat "i", Custom "std::process::exit(i as i32);"]
-  "drop" -> pure [Custom "let _ = get!(stack)"]
+  "drop" -> pure [Let "_" "get!(stack)"]
   "cmp-char" -> (\c -> [UnwrapChar "a", UnwrapChar "b", c]) <$> cmp "a" "b"
   "cmp-string" -> (\c -> [UnwrapText "a", UnwrapText "b", c]) <$> cmp "a" "b"
   "show-nat" -> pure [UnwrapNat "i", PushText "format!(\"{}\", i)"]
@@ -376,30 +381,36 @@ intrinsic = \case
     pure
       [ UnwrapText "filename",
         UnwrapText "contents",
+        Let "mut file" "std::fs::File::create(filename).map_err(|_| IOError)?",
         Custom
-          "use std::io::Write; let mut file = std::fs::File::create(filename).map_err(|_| IOError)?; file.write_all(contents.as_bytes()).map_err(|_| IOError)?;"
+          "use std::io::Write; file.write_all(contents.as_bytes()).map_err(|_| IOError)?;"
       ]
   "flush-stdout" -> pure [Custom "use std::io::Write; std::io::stdout().flush().map_err(|_| IOError)?;"]
   "flush-stderr" -> pure [Custom "use std::io::Write; std::io::stderr().flush().map_err(|_| IOError)?"]
   "flush-file" ->
     pure
       [ UnwrapText "filename",
-        Custom "let mut file = std::fs::File::create(filename).map_err(|_| IOError)?; use std::io::Write; file.flush().map_err(|_| IOError)?;"
+        Let "mut file" "std::fs::File::create(filename).map_err(|_| IOError)?",
+        Custom "use std::io::Write; file.flush().map_err(|_| IOError)?;"
       ]
   "read-line" ->
     pure
-      [ Custom "let mut buffer = String::new(); std::io::stdin().read_line(&mut buffer).map_err(|_| IOError)?;",
+      [ Let "mut buffer" "String::new()",
+        Custom "std::io::stdin().read_line(&mut buffer).map_err(|_| IOError)?;",
         PushText "buffer"
       ]
   "read-file" ->
     pure
       [ UnwrapText "filename",
-        Custom "let mut file = std::fs::File::open(filename).map_err(|_| IOError)? use std::io::Read; let mut buffer = String::new(); file.read_to_string(&mut buffer).map_err(|_| IOError)?;",
+        Let "mut file" "std::fs::File::open(filename).map_err(|_| IOError)?",
+        Let "mut buffer" "String::new()",
+        Custom "file.read_to_string(&mut buffer).map_err(|_| IOError)?;",
         PushText "buffer"
       ]
   "read-stdin" ->
     pure
-      [ Custom "let mut Buffer = String::new(); use std::io::Read; std::io::stdin().read_to_string(&mut buffer).map_err(|_| IOError)?;",
+      [ Let "mut buffer" "String::new()",
+        Custom "use std::io::Read; std::io::stdin().read_to_string(&mut buffer).map_err(|_| IOError)?;",
         PushText "buffer"
       ]
   x -> error ("No such intrinsic: " <> show x)
@@ -456,7 +467,7 @@ caseRs (Case (QualifiedName name) caseBody _) = do
           Just . ("List(v) if v.is_empty()",) <$> termRs caseBody
         [New _ (ConstructorIndex 1) 2 ListLike _] ->
           Just . ("List(mut v) if !v.is_empty() ",)
-            . ([Custom "let x = v.remove(0);", Push_ "x", PushList "v"] <>)
+            . ([Let "x" "v.remove(0)", Push_ "x", PushList "v"] <>)
             <$> termRs caseBody
         _ -> pure Nothing
     _ -> pure Nothing
@@ -484,7 +495,11 @@ stackFn name body count =
     name
     ( if count <= 1
         then body
-        else Custom ("let mut locals: Vec<Rep> = Vec::with_capacity(" <> show count <> ");") : body
+        else
+          Let
+            ("mut locals: SmallVec<[Box<Rep>; " <> show count <> "]>")
+            "SmallVec::new()" :
+          body
     )
 
 countLocal :: Term a -> Int
