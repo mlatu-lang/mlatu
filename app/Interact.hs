@@ -72,7 +72,7 @@ cmd input = do
     Right dictionary -> do
       put (text <> " " <> toText input, lineNumber + 1)
       liftIO
-        ( Codegen.generate dictionary (Just entryName) >>= \contents ->
+        ( Codegen.generate dictionary (Just entryName) False >>= \contents ->
             writeFileBS "t/src/main.rs" contents
               >> withCurrentDirectory
                 "t"

@@ -56,7 +56,7 @@ import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..), compose)
+import Mlatu.Term (Term (..), Value (..), compose)
 import Mlatu.Term qualified as Term
 import Mlatu.Token (Token)
 import Mlatu.Token qualified as Token
@@ -106,7 +106,7 @@ fragment line path mainPermissions mainName tokens =
           ( Definition.main
               mainPermissions
               mainName
-              (Term.identityCoercion () (Origin.point path line 1))
+              (Term.identityCoercion (Origin.point path line 1) ())
               :
           )
           f
@@ -174,8 +174,8 @@ partitionElements mainPermissions mainName = foldr go mempty
           -- include subsequent expressions.
 
           composeUnderLambda :: Term () -> Term () -> Term ()
-          composeUnderLambda (Lambda typ name parameterType body origin) term =
-            Lambda typ name parameterType (composeUnderLambda body term) origin
+          composeUnderLambda (Lambda origin typ name parameterType body) term =
+            Lambda origin typ name parameterType (composeUnderLambda body term)
           composeUnderLambda a b = Compose () a b
 
 moduleParser :: Parser [Element ()]
@@ -213,7 +213,7 @@ groupedParser =
 groupParser :: Parser (Term ())
 groupParser = do
   origin <- getTokenOrigin
-  groupedParser $ Group . compose () origin <$> Parsec.many1 termParser
+  groupedParser $ Group . compose origin () <$> Parsec.many1 termParser
 
 bracketedParser :: Parser a -> Parser a
 bracketedParser =
@@ -290,7 +290,7 @@ elementParser =
         Element.Codata <$> codataParser,
         do
           origin <- getTokenOrigin
-          Element.Term . compose () origin <$> Parsec.many1 termParser
+          Element.Term . compose origin () <$> Parsec.many1 termParser
       ]
 
 metadataParser :: Parser Metadata
@@ -556,7 +556,7 @@ reference =
     *> Parsec.choice
       [ do
           origin <- getTokenOrigin
-          Word () <$> nameParser <*> pure [] <*> pure origin,
+          Word origin () <$> nameParser <*> pure [],
         termParser
       ]
 
@@ -567,23 +567,23 @@ blockContentsParser = do
   let origin' = case terms of
         x : _ -> Term.origin x
         _emptyList -> origin
-  pure $ foldr (Compose ()) (Term.identityCoercion () origin') terms
+  pure $ foldr (Compose ()) (Term.identityCoercion origin' ()) terms
 
 termParser :: Parser (Term ())
 termParser = (<?> "expression") $ do
   origin <- getTokenOrigin
   Parsec.choice
     [ Parsec.try intParser,
-      Parsec.try (uncurry (Push ()) <$> parseOne toLiteral <?> "literal"),
+      Parsec.try ((\(v, o) -> Push o () v) <$> parseOne toLiteral <?> "literal"),
       do
         name <- nameParser
-        pure (Word () name [] origin),
+        pure (Word origin () name []),
       Parsec.try sectionParser,
       Parsec.try groupParser <?> "parenthesized expression",
       vectorParser,
       lambdaParser,
       matchParser,
-      Push () <$> blockValue <*> pure origin,
+      Push origin () <$> blockValue,
       withParser,
       asParser
     ]
@@ -605,10 +605,10 @@ intParser = do
           Token.Integer x -> Just (x, Located.origin token)
           _ -> Nothing
       )
-  let go 0 = [Word () "zero" [] origin]
-      go n = go (n - 1) ++ [Word () "succ" [] origin]
+  let go 0 = [Word origin () "zero" []]
+      go n = go (n - 1) ++ [Word origin () "succ" []]
 
-  pure $ compose () origin (go num)
+  pure $ compose origin () (go num)
 
 sectionParser :: Parser (Term ())
 sectionParser =
@@ -620,15 +620,15 @@ sectionParser =
             function <- operatorNameParser
             let call =
                   Word
+                    origin
                     ()
                     (UnqualifiedName function)
                     []
-                    origin
             Parsec.choice
               [ do
                   operandOrigin <- getTokenOrigin
                   operand <- Parsec.many1 termParser
-                  pure $ compose () operandOrigin $ operand ++ [call],
+                  pure $ compose operandOrigin () $ operand ++ [call],
                 pure call
               ],
           do
@@ -639,19 +639,19 @@ sectionParser =
             origin <- getTokenOrigin
             function <- operatorNameParser
             pure $
-              compose () operandOrigin $
+              compose operandOrigin () $
                 operand
-                  ++ [ Push () (Text "swap") origin,
-                       Word () "extern" [] origin,
-                       Word () (UnqualifiedName function) [] origin
+                  ++ [ Push origin () (Text "swap"),
+                       Word origin () "extern" [],
+                       Word origin () (UnqualifiedName function) []
                      ]
         ]
 
 vectorParser :: Parser (Term ())
 vectorParser = (<?> "list literal") $ do
   origin <- getTokenOrigin
-  es <- bracketedParser $ (compose () origin <$> Parsec.many1 termParser) `Parsec.sepEndBy` commaParser
-  pure $ compose () origin ((Group <$> es) ++ [Word () "nil" [] origin] ++ replicate (length es) (Word () "cons" [] origin))
+  es <- bracketedParser $ (compose origin () <$> Parsec.many1 termParser) `Parsec.sepEndBy` commaParser
+  pure $ compose origin () ((Group <$> es) ++ [Word origin () "nil" []] ++ replicate (length es) (Word origin () "cons" []))
 
 lambdaParser :: Parser (Term ())
 lambdaParser = (<?> "parameteriable introduction") $ do
@@ -664,7 +664,7 @@ lambdaParser = (<?> "parameteriable introduction") $ do
       do
         origin <- getTokenOrigin
         body <- blockParser
-        pure $ Push () (Quotation $ makeLambda names body origin) origin
+        pure $ Push origin () (Quotation $ makeLambda names body origin)
     ]
 
 matchParser :: Parser (Term ())
@@ -680,20 +680,20 @@ matchParser = (<?> "match") $ do
             origin <- getTokenOrigin <* parserMatch Token.Case
             name <- nameParser
             body <- blockLikeParser
-            pure $ Case name body origin
+            pure (origin, name, body)
     mElse' <- Parsec.optionMaybe $ do
       origin <- getTokenOrigin <* parserMatch Token.Case
       parserMatch_ Token.Ignore
       body <- blockParser
-      pure $ Else body origin
+      pure (origin, Right body)
     pure $
       (,) cases' $
         fromMaybe
-          (DefaultElse () matchOrigin)
+          (matchOrigin, Left ())
           mElse'
-  let match = Match () cases else_ matchOrigin
+  let match = Match matchOrigin () cases else_
   pure $ case mScrutinee of
-    Just scrutinee -> compose () scrutineeOrigin [scrutinee, match]
+    Just scrutinee -> compose scrutineeOrigin () [scrutinee, match]
     Nothing -> match
 
 blockValue :: Parser (Value ())
@@ -703,7 +703,7 @@ asParser :: Parser (Term ())
 asParser = (<?> "'as' expression") $ do
   origin <- getTokenOrigin <* parserMatch_ Token.As
   signatures <- groupedParser $ basicTypeParser `Parsec.sepEndBy` commaParser
-  pure $ Term.asCoercion () origin signatures
+  pure $ Term.asCoercion origin () signatures
 
 -- A 'with' term is parsed as a coercion followed by a call.
 withParser :: Parser (Term ())
@@ -712,11 +712,11 @@ withParser = (<?> "'with' expression") $ do
   permits <- groupedParser $ Parsec.many1 permitParser
   pure $
     Term.compose
-      ()
       origin
-      [ Term.permissionCoercion permits () origin,
-        Push () (Text "call") origin,
-        Word () "extern" [] origin
+      ()
+      [ Term.permissionCoercion origin () permits,
+        Push origin () (Text "call"),
+        Word origin () "extern" []
       ]
 
 permitParser :: Parser Term.Permit
@@ -757,11 +757,11 @@ makeLambda parsed body origin =
     ( \(nameMaybe, nameOrigin) acc ->
         maybe
           ( compose
-              ()
               origin
-              [Push () (Text "drop") origin, Word () "extern" [] origin, acc]
+              ()
+              [Push origin () (Text "drop"), Word origin () "extern" [], acc]
           )
-          (\name -> Lambda () name () acc nameOrigin)
+          (\name -> Lambda nameOrigin () name () acc)
           nameMaybe
     )
     body

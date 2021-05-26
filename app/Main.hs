@@ -29,9 +29,9 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles prelude files -> runFiles prelude files
-    Arguments.CompileFiles prelude files -> compileFiles prelude files
-    Arguments.BenchFiles prelude files -> benchFiles prelude files
+    Arguments.RunFiles prelude o files -> runFiles prelude o files
+    Arguments.CompileFiles prelude o files -> compileFiles prelude o files
+    Arguments.BenchFiles prelude o files -> benchFiles prelude o files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -64,16 +64,16 @@ checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
-runFiles :: Prelude -> [FilePath] -> IO ()
-runFiles prelude relativePaths =
+runFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
+runFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml False)
+                    >> writeFileBS "t/Cargo.toml" (cargoToml False (o == Arguments.Online))
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
@@ -85,16 +85,16 @@ runFiles prelude relativePaths =
               )
         )
 
-compileFiles :: Prelude -> [FilePath] -> IO ()
-compileFiles prelude relativePaths =
+compileFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
+compileFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml True)
+                    >> writeFileBS "t/Cargo.toml" (cargoToml True (o == Arguments.Online))
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
@@ -116,16 +116,16 @@ compileFiles prelude relativePaths =
               )
         )
 
-benchFiles :: Prelude -> [FilePath] -> IO ()
-benchFiles prelude relativePaths =
+benchFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
+benchFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml False)
+                    >> writeFileBS "t/Cargo.toml" (cargoToml False (o == Arguments.Online))
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
@@ -147,17 +147,18 @@ benchFiles prelude relativePaths =
               )
         )
 
-cargoToml b =
+cargoToml b o =
   "[package] \n \
   \ name = \"output\" \n \
-  \ version = \"0.1.0\" \n \
-  \ [dependencies.smallvec] \n \
-  \ version = \"1.6.1\" \n \
-  \ features = [\"union\"] \n\
-  \ [profile.release] \n \
-  \ lto = true \n \
-  \ codegen-units = 1 \n\
-  \ panic = 'abort' "
+  \ version = \"0.1.0\" \n "
+    <> ( if o
+           then "[dependencies.smallvec] \nversion = \"1.6.1\" \nfeatures = [\"union\"] \n"
+           else ""
+       )
+    <> " [profile.release] \n \
+       \ lto = true \n \
+       \ codegen-units = 1 \n\
+       \ panic = 'abort' "
     <> if b
       then "\n opt-level = \"s\" \n"
       else ""

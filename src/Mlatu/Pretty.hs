@@ -42,9 +42,10 @@ import Mlatu.Kind (Kind (..))
 import Mlatu.Metadata (Metadata (..))
 import Mlatu.Metadata qualified as Metadata
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
+import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Signature (Signature (..))
-import Mlatu.Term (Case (..), CoercionHint (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (CoercionHint (..), Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Token qualified as Token
 import Mlatu.Trait (Trait (..))
@@ -342,10 +343,11 @@ printTerm t = fromMaybe emptyDoc (maybePrintTerms (decompose t))
 maybePrintTerms :: [Term a] -> Maybe (Doc b)
 maybePrintTerms = \case
   [] -> Nothing
-  (Group a : Match _ cases (DefaultElse _ _) _ : xs) -> printMatch (Just a) cases Nothing `maySep` maybePrintTerms xs
-  (Group a : Match _ cases (Else elseBody _) _ : xs) -> printMatch (Just a) cases (Just elseBody) `maySep` maybePrintTerms xs
-  (Push _ (Quotation (Word _ name args _)) _ : Group a : xs) -> (backslash <> printWord name args) `maySep` maybePrintTerms (Group a : xs)
+  (Group a : Match _ _ cases (_, e) : xs) -> printMatch (Just a) cases (rightToMaybe e) `maySep` maybePrintTerms xs
+  (Push _ _ (Quotation (Word _ _ name args)) : Group a : xs) -> (backslash <> printWord name args) `maySep` maybePrintTerms (Group a : xs)
   ( Coercion
+      _
+      _
       ( AnyCoercion
           ( Quantified
               [ Parameter _ "R" Stack Nothing,
@@ -367,10 +369,8 @@ maybePrintTerms = \case
               _
             )
         )
-      _
-      _
-      : Push _ (Text "call") _
-      : Word _ (UnqualifiedName "extern") _ _
+      : Push _ _ (Text "call")
+      : Word _ _ (UnqualifiedName "extern") _
       : xs
     ) ->
       ( "with" <> space
@@ -382,23 +382,21 @@ maybePrintTerms = \case
             )
       )
         `maySep` maybePrintTerms xs
-  (Coercion (AnyCoercion _) _ _ : xs) -> maybePrintTerms xs
+  (Coercion _ _ (AnyCoercion _) : xs) -> maybePrintTerms xs
   (Group (Group a) : xs) -> printGroup a `maybeSep` maybePrintTerms xs
   (Group a : xs) -> printGroup a `maybeSep` maybePrintTerms xs
-  (Lambda _ name _ body _ : xs) -> printLambda name body `maySep` maybePrintTerms xs
-  (Match _ cases (DefaultElse _ _) _ : xs) ->
-    printMatch Nothing cases Nothing `maySep` maybePrintTerms xs
-  (Match _ cases (Else elseBody _) _ : xs) ->
-    printMatch Nothing cases (Just elseBody) `maySep` maybePrintTerms xs
-  (Push _ value _ : xs) -> printValue value `maySep` maybePrintTerms xs
-  (Word _ (QualifiedName (Qualified _ "drop")) [] o : xs) ->
-    Just (printLambda "_" (Term.compose () o (Term.stripMetadata <$> xs)))
-  (Word _ (UnqualifiedName "zero") _ _ : xs) ->
+  (Lambda _ _ name _ body : xs) -> printLambda name body `maySep` maybePrintTerms xs
+  (Match _ _ cases (_, e) : xs) ->
+    printMatch Nothing cases (rightToMaybe e) `maySep` maybePrintTerms xs
+  (Push _ _ value : xs) -> printValue value `maySep` maybePrintTerms xs
+  (Word o _ (QualifiedName (Qualified _ "drop")) [] : xs) ->
+    Just (printLambda "_" (Term.compose o () (Term.stripMetadata <$> xs)))
+  (Word _ _ (UnqualifiedName "zero") _ : xs) ->
     let go :: Int -> [Term a] -> (Int, [Term a])
-        go n ((Word _ (UnqualifiedName "succ") _ _) : xs') = go (n + 1) xs'
+        go n ((Word _ _ (UnqualifiedName "succ") _) : xs') = go (n + 1) xs'
         go n rest = (n, rest)
      in let (s, rest) = go 0 xs in pretty s `maySep` maybePrintTerms rest
-  (Word _ name args _ : xs) -> printWord name args `maySep` maybePrintTerms xs
+  (Word _ _ name args : xs) -> printWord name args `maySep` maybePrintTerms xs
   (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
 
 maySep :: Doc a -> Maybe (Doc a) -> Maybe (Doc a)
@@ -425,26 +423,26 @@ printLambda name body =
         Just a -> sep [lambda, a]
   where
     (names, newBody) = go [name] body
-    go ns (Lambda _ n _ b _) = go (n : ns) b
+    go ns (Lambda _ _ n _ b) = go (n : ns) b
     go ns b = (ns, b)
 
-printMatch :: Maybe (Term a) -> [Case a] -> Maybe (Term a) -> Doc b
+printMatch :: Maybe (Term a) -> [(Origin, GeneralName, Term a)] -> Maybe (Term a) -> Doc b
 printMatch cond cases else_ =
   sep
     ( maybe "match" ("match" <+>) (cond >>= printGroup) :
-      ( ((\(Case n b _) -> printCase n b) <$> cases)
+      ( ((\(_, n, b) -> printCase n b) <$> cases)
           <> maybe [] (\e -> [blockMaybe "| _ " (maybePrintTerm e)]) else_
       )
     )
 
 printCase :: GeneralName -> Term a -> Doc b
-printCase n (Lambda _ name _ body _) =
+printCase n (Lambda _ _ name _ body) =
   blockMaybe
     (pipe <+> printGeneralName n <+> "->" <+> (hsep . punctuateComma) (printUnqualified <$> names))
     (maybePrintTerm newBody)
   where
     (names, newBody) = go [name] body
-    go ns (Lambda _ ln _ b _) = go (ln : ns) b
+    go ns (Lambda _ _ ln _ b) = go (ln : ns) b
     go ns b = (ns, b)
 printCase n b = blockMaybe (pipe <+> printGeneralName n) (maybePrintTerm b)
 

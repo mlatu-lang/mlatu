@@ -29,7 +29,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Vocabulary
 import Optics
@@ -56,45 +56,30 @@ term :: Dictionary -> Qualifier -> Term () -> Resolved (Term ())
 term dictionary vocabulary = recur
   where
     recur :: Term () -> Resolved (Term ())
-    recur (Coercion (Term.AnyCoercion sig) a b) =
-      Coercion
-        <$> (Term.AnyCoercion <$> signature dictionary vocabulary sig)
-        <*> pure a
-        <*> pure b
+    recur (Coercion a b (Term.AnyCoercion sig)) =
+      Coercion a b <$> (Term.AnyCoercion <$> signature dictionary vocabulary sig)
     recur unresolved@Coercion {} = pure unresolved
     recur (Compose _ a b) = Compose () <$> recur a <*> recur b
     recur Generic {} =
       ice
         "Mlatu.Resolve.term - generic expression should not appear before name resolution"
     recur (Group a) = Group <$> recur a
-    recur (Lambda _ name _ t origin) =
-      withLocal name $
-        Lambda () name () <$> recur t <*> pure origin
-    recur (Match _ cases else_ origin) =
-      Match ()
-        <$> traverse resolveCase cases
-        <*> resolveElse else_
-        <*> pure origin
+    recur (Lambda origin _ name _ t) = withLocal name $ Lambda origin () name () <$> recur t
+    recur (Match origin _ cases else_) =
+      Match origin () <$> traverse resolveCase cases <*> resolveElse else_
       where
-        resolveCase :: Case () -> Resolved (Case ())
-        resolveCase (Case name t caseOrigin) = do
-          resolved <- definitionName dictionary vocabulary name caseOrigin
-          Case resolved <$> recur t <*> pure caseOrigin
+        resolveCase (co, name, t) = do
+          resolved <- definitionName dictionary vocabulary name co
+          (co,resolved,) <$> recur t
 
-        resolveElse :: Else () -> Resolved (Else ())
-        resolveElse (DefaultElse a b) = pure $ DefaultElse a b
-        resolveElse (Else t elseOrigin) =
-          Else <$> recur t <*> pure elseOrigin
+        resolveElse (o, Left a) = pure (o, Left a)
+        resolveElse (o, Right t) = (\x -> (o, Right x)) <$> recur t
     recur unresolved@New {} = pure unresolved
     recur unresolved@NewClosure {} = pure unresolved
-    recur (Push _ v origin) =
-      Push ()
-        <$> value dictionary vocabulary v <*> pure origin
-    recur (Word _ name params origin) =
-      Word ()
-        <$> definitionName dictionary vocabulary name origin
-        <*> pure params
-        <*> pure origin
+    recur (Push origin _ v) =
+      Push origin () <$> value dictionary vocabulary v
+    recur (Word origin _ name params) =
+      Word origin () <$> definitionName dictionary vocabulary name origin <*> pure params
 
 value :: Dictionary -> Qualifier -> Value () -> Resolved (Value ())
 value _ _ Capture {} = ice "Mlatu.Resolve.value - closure should not appear before name resolution"

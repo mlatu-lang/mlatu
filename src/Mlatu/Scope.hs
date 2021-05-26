@@ -14,7 +14,8 @@ where
 import Data.List (elemIndex)
 import Mlatu.Ice (ice)
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..))
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Term (..), Value (..))
+import Optics
 import Relude hiding (Compose)
 import Relude.Extra (next)
 
@@ -36,34 +37,26 @@ scope = scopeTerm [0]
         recur Group {} =
           ice
             "Mlatu.Scope.scope - group expression should not appear after infix desugaring"
-        recur (Lambda _ name _ a origin) =
+        recur (Lambda origin _ name _ a) =
           Lambda
+            origin
             ()
             name
             ()
             (scopeTerm (mapHead next stack) a)
-            origin
-        recur (Match _ cases else_ origin) =
+        recur (Match origin _ cases else_) =
           Match
-            ()
-            ( ( \(Case name a caseOrigin) ->
-                  Case name (recur a) caseOrigin
-              )
-                <$> cases
-            )
-            ( ( \case
-                  (DefaultElse a elseOrigin) -> (DefaultElse a elseOrigin)
-                  (Else a elseOrigin) ->
-                    Else (recur a) elseOrigin
-              )
-                else_
-            )
             origin
+            ()
+            (over _3 recur <$> cases)
+            ( case else_ of
+                (eo, Left a) -> (eo, Left a)
+                (eo, Right a) -> (eo, Right (recur a))
+            )
         recur term@New {} = term
         recur term@NewClosure {} = term
-        recur (Push _ value origin) = Push () (scopeValue stack value) origin
-        recur (Word _ (LocalName index) _ origin) =
-          Push () (scopeValue stack (Local index)) origin
+        recur (Push origin _ value) = Push origin () (scopeValue stack value)
+        recur (Word origin _ (LocalName index) _) = Push origin () (scopeValue stack (Local index))
         recur term@Word {} = term
 
     scopeValue :: [Int] -> Value () -> Value ()
@@ -109,28 +102,23 @@ captureTerm term = case term of
   Group {} ->
     ice
       "Mlatu.Scope.captureTerm - group expression should not appear after infix desugaring"
-  Lambda _ name _ a origin ->
+  Lambda origin _ name _ a ->
     let inside env =
           env
             { scopeStack = mapHead next (scopeStack env),
               scopeDepth = next (scopeDepth env)
             }
-     in Lambda () name ()
-          <$> local inside (captureTerm a) <*> pure origin
-  Match _ cases else_ origin ->
-    Match () <$> traverse captureCase cases <*> captureElse else_ <*> pure origin
+     in Lambda origin () name () <$> local inside (captureTerm a)
+  Match origin _ cases else_ ->
+    Match origin () <$> traverse captureCase cases <*> captureElse else_
     where
-      captureCase :: Case () -> Captured (Case ())
-      captureCase (Case name a caseOrigin) =
-        Case name <$> captureTerm a <*> pure caseOrigin
+      captureCase (a, b, c) = (a,b,) <$> captureTerm c
 
-      captureElse :: Else () -> Captured (Else ())
-      captureElse (DefaultElse a b) = pure $ DefaultElse a b
-      captureElse (Else a elseOrigin) =
-        Else <$> captureTerm a <*> pure elseOrigin
+      captureElse (o, Left a) = pure (o, Left a)
+      captureElse (o, Right a) = (\x -> (o, Right x)) <$> captureTerm a
   New {} -> pure term
   NewClosure {} -> pure term
-  Push _ value origin -> Push () <$> captureValue value <*> pure origin
+  Push origin _ value -> Push origin () <$> captureValue value
   Word {} -> pure term
 
 captureValue :: Value () -> Captured (Value ())

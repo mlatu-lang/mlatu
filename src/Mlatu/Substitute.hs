@@ -16,7 +16,7 @@ import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
 import Mlatu.Kind qualified as Kind
 import Mlatu.Monad (M)
-import Mlatu.Term (Case (..), Else (..), Term (..))
+import Mlatu.Term (Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Relude hiding (Compose, Type)
@@ -42,47 +42,34 @@ term :: TypeEnv -> TypeId -> Type -> Term Type -> M (Term Type)
 term tenv x a = recur
   where
     recur t = case t of
-      Coercion hint tref origin -> Coercion hint <$> go tref <*> pure origin
+      Coercion origin tref hint -> Coercion origin <$> go tref <*> pure hint
       Compose tref t1 t2 -> Compose <$> go tref <*> recur t1 <*> recur t2
-      Generic name x' body origin -> do
+      Generic origin name x' body -> do
         -- FIXME: Generics could eventually quantify over non-value kinds.
         let k = Kind.Value
         z <- freshTypeId tenv
         body' <- term tenv x' (TypeVar origin $ Var name z k) body
-        Generic name z <$> recur body' <*> pure origin
+        Generic origin name z <$> recur body'
       Group body -> recur body
-      Lambda tref name varType body origin ->
-        Lambda <$> go tref
+      Lambda origin tref name varType body ->
+        Lambda origin <$> go tref
           <*> pure name
           <*> go varType
           <*> recur body
-          <*> pure origin
-      Match tref cases else_ origin ->
-        Match <$> go tref
+      Match origin tref cases else_ ->
+        Match origin <$> go tref
           <*> traverse goCase cases
           <*> goElse else_
-          <*> pure origin
         where
-          goCase :: Case Type -> M (Case Type)
-          goCase (Case name body caseOrigin) = Case name <$> recur body <*> pure caseOrigin
+          goCase (caseOrigin, name, body) = (caseOrigin,name,) <$> recur body
 
-          goElse :: Else Type -> M (Else Type)
-          goElse (DefaultElse elseType elseOrigin) = pure $ DefaultElse elseType elseOrigin
-          goElse (Else body elseOrigin) = Else <$> recur body <*> pure elseOrigin
-      New tref index size isNat origin ->
-        New
-          <$> go tref <*> pure index <*> pure size <*> pure isNat <*> pure origin
-      NewClosure tref size origin ->
-        NewClosure <$> go tref
-          <*> pure size
-          <*> pure origin
-      Push tref value origin -> Push <$> go tref <*> pure value <*> pure origin
-      Word tref name args origin ->
-        Word <$> go tref
-          <*> pure name
-          <*> traverse go args
-          <*> pure origin
-    {-# INLINEABLE recur #-}
+          goElse (eo, Left a) = pure (eo, Left a)
+          goElse (eo, Right a) = (\x -> (eo, Right x)) <$> recur a
+      New origin tref index size isNat ->
+        New origin <$> go tref <*> pure index <*> pure size <*> pure isNat
+      NewClosure origin tref size -> NewClosure origin <$> go tref <*> pure size
+      Push origin tref value -> Push origin <$> go tref <*> pure value
+      Word origin tref name args ->
+        Word origin <$> go tref <*> pure name <*> traverse go args
 
     go = typ tenv x a
-{-# INLINEABLE term #-}

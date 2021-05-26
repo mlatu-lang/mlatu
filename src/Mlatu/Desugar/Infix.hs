@@ -19,7 +19,7 @@ import Mlatu.Monad (M)
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Report qualified as Report
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Optics
 import Relude hiding (Compose)
@@ -42,7 +42,7 @@ desugar definition = do
               termSatisfy $ \case
                 Lambda {} -> False
                 _otherTerm -> True
-            pure $ Term.compose () origin results
+            pure $ Term.compose origin () results
 
       desugarTerms :: [Term ()] -> M (Term ())
       desugarTerms terms = do
@@ -53,14 +53,14 @@ desugar definition = do
               let origin = case desugaredTerms of
                     term : _ -> Term.origin term
                     _noTerms -> view Definition.origin definition
-              pure $ Term.compose () origin desugaredTerms
+              pure $ Term.compose origin () desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
             report $ Report.parseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
                   _noTerms -> view Definition.origin definition
-            pure $ Term.compose () origin terms
+            pure $ Term.compose origin () terms
           Right result -> pure result
 
       desugarTerm :: Term () -> M (Term ())
@@ -71,23 +71,19 @@ desugar definition = do
           ice
             "Mlatu.Desugar.Infix.desugar - generic expression should not appear before infix desugaring"
         Group a -> desugarTerms' a
-        Lambda _ name _ body origin ->
-          Lambda () name ()
-            <$> desugarTerms' body <*> pure origin
-        Match _ cases else_ origin ->
-          Match () <$> traverse desugarCase cases <*> desugarElse else_ <*> pure origin
+        Lambda origin _ name _ body ->
+          Lambda origin () name () <$> desugarTerms' body
+        Match origin _ cases else_ ->
+          Match origin () <$> traverse desugarCase cases <*> desugarElse else_
           where
-            desugarCase :: Case () -> M (Case ())
-            desugarCase (Case name body caseOrigin) =
-              Case name <$> desugarTerms' body <*> pure caseOrigin
+            desugarCase (co, name, body) = (co,name,) <$> desugarTerms' body
 
-            desugarElse :: Else () -> M (Else ())
-            desugarElse (DefaultElse metadata o) = pure $ DefaultElse metadata o
-            desugarElse (Else body elseOrigin) =
-              Else <$> desugarTerms' body <*> pure elseOrigin
+            desugarElse (o, Left metadata) = pure (o, Left metadata)
+            desugarElse (o, Right body) =
+              (\x -> (o, Right x)) <$> desugarTerms' body
         New {} -> pure term
         NewClosure {} -> pure term
-        Push _ value origin -> Push () <$> desugarValue value <*> pure origin
+        Push origin _ value -> Push origin () <$> desugarValue value
         Word {} -> pure term
 
       desugarTerms' :: Term () -> M (Term ())

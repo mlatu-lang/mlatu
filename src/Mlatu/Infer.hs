@@ -42,7 +42,7 @@ import Mlatu.Regeneralize (regeneralize)
 import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..), defaultElseBody)
+import Mlatu.Term (Term (..), Value (..), defaultElseBody)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor (..), Type (..), Var (..))
 import Mlatu.Type qualified as Type
@@ -141,7 +141,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- the stack; or to an arbitrary type, in order to unsafely reinterpret-cast
   -- between types, e.g., to grant or revoke permissions.
 
-  Coercion hint@Term.IdentityCoercion _ origin ->
+  Coercion origin _ hint@Term.IdentityCoercion ->
     while (Term.origin term0) context $ do
       [a, p] <-
         fresh
@@ -151,12 +151,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           ]
       let typ = Type.Fun origin a a p
       let type' = Zonk.typ tenvFinal typ
-      pure (Coercion hint type' origin, typ, tenv0)
-  Coercion hint@(Term.AnyCoercion sig) _ origin ->
+      pure (Coercion origin type' hint, typ, tenv0)
+  Coercion origin _ hint@(Term.AnyCoercion sig) ->
     while (Term.origin term0) context $ do
       typ <- typeFromSignature tenv0 sig
       let type' = Zonk.typ tenvFinal typ
-      pure (Coercion hint type' origin, typ, tenv0)
+      pure (Coercion origin type' hint, typ, tenv0)
 
   -- The type of the composition of two expressions is the composition of the
   -- types of those expressions.
@@ -175,7 +175,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     pure (Compose type' term1' term2', typ, tenv6)
 
   -- TODO: Verify that this is correct.
-  Generic _name _ t _ -> inferType' tenv0 t
+  Generic _name _ _ t -> inferType' tenv0 t
   Group {} ->
     ice "Mlatu.Infer.inferType - group expression should not appear during type inference"
   -- A local variable binding in Mlatu is in fact a lambda term in the ordinary
@@ -183,7 +183,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- extended with a fresh local bound to a fresh type variable, and produce a
   -- type of the form 'R..., A -> S... +P'.
 
-  Lambda _ name@(Unqualified unqualified) _ term origin -> do
+  Lambda origin _ name@(Unqualified unqualified) _ term -> do
     let varTypeName = Unqualified ("Local" <> capitalize unqualified)
     a <- TypeEnv.freshTv tenv0 varTypeName origin Value
     let oldLocals = view TypeEnv.vs tenv0
@@ -195,7 +195,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
         type' = Zonk.typ tenvFinal typ
         varType' = Zonk.typ tenvFinal a
     pure
-      ( Lambda type' name varType' term' origin,
+      ( Lambda origin type' name varType' term',
         typ,
         tenv3
       )
@@ -208,12 +208,12 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- 'match' without an else branch raises 'abort', causing the 'match' to require
   -- the +Fail permission.
 
-  Match _ cases else_ origin -> while (Term.origin term0) context $ do
+  Match origin _ cases else_ -> while (Term.origin term0) context $ do
     let constructors = case cases of
           -- Curiously, because an empty match works on any type, no
           -- constructors are actually permitted.
           [] -> []
-          Case (QualifiedName ctorName) _ _ : _ ->
+          (_, QualifiedName ctorName, _) : _ ->
             case Dictionary.lookupWord (Instantiated ctorName []) dictionary of
               Just (Entry.WordEntry _ _ _ (Just (Parent.Type typeName)) _ _) ->
                 case Dictionary.lookupType (Instantiated typeName []) dictionary of
@@ -229,8 +229,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     -- Checkpoint to halt after redundant cases are reported.
     errorCheckpoint
     (else', elseType, tenv2) <- case else_ of
-      DefaultElse elseMetadata elseOrigin -> do
-        (body', bodyType, tenv') <- inferType' tenv1 (defaultElseBody elseMetadata elseOrigin)
+      (elseOrigin, Left elseMetadata) -> do
+        (body', bodyType, tenv') <- inferType' tenv1 (defaultElseBody elseOrigin elseMetadata)
         -- The type of a match is the union of the types of the cases, and
         -- since the cases consume the scrutinee, the 'else' branch must have
         -- a dummy (fully polymorphic) type for the scrutinee. This may be
@@ -250,8 +250,8 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
                 (Type.Prod elseOrigin a unusedScrutinee)
                 b
                 e
-        pure (Else body' elseOrigin, elseType, tenv'')
-      Else body elseOrigin -> do
+        pure ((elseOrigin, Right body'), elseType, tenv'')
+      (elseOrigin, Right body) -> do
         (body', bodyType, tenv') <- inferType' tenv1 body
         -- The type of a match is the union of the types of the cases, and
         -- since the cases consume the scrutinee, the 'else' branch must have
@@ -272,7 +272,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
                 (Type.Prod elseOrigin a unusedScrutinee)
                 b
                 e
-        pure (Else body' elseOrigin, elseType, tenv'')
+        pure ((elseOrigin, Right body'), elseType, tenv'')
     (typ, tenv3) <- case constructors' of
       -- FIXME: Assumes caseTypes is non-empty.
       [] -> do
@@ -292,7 +292,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
             caseTypes
         pure (Type.setOrigin origin elseType, tenv')
     let type' = Zonk.typ tenvFinal typ
-    pure (Match type' cases' else' origin, typ, tenv3)
+    pure (Match origin type' cases' else', typ, tenv3)
     where
       inferCase' (cases', types, remaining, tenv) case_ = do
         (case', typ, remaining', tenv') <-
@@ -304,7 +304,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   -- the type signature of the desugared data constructor definition to make this
   -- type-safe, since only the compiler can generate 'new' expressions.
 
-  New _ constructor size isNat origin ->
+  New origin _ constructor size isNat ->
     while (Term.origin term0) context $ do
       [a, b, e] <-
         fresh
@@ -315,7 +315,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
           ]
       let typ = Type.Fun origin a b e
       let type' = Zonk.typ tenvFinal typ
-      pure (New type' constructor size isNat origin, typ, tenv0)
+      pure (New origin type' constructor size isNat, typ, tenv0)
 
   -- Unlike with 'new', we cannot simply type a 'new closure' expression as an
   -- unsafe cast because we need to know its effect on the stack within the body
@@ -324,7 +324,7 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
   --     ∀ρστα̂. ρ × α₀ × … × αₓ × (σ → τ) → ρ × (σ → τ)
   --
 
-  NewClosure _ size origin ->
+  NewClosure origin _ size ->
     while (Term.origin term0) context $ do
       as <-
         fresh origin $
@@ -350,10 +350,10 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
               (Type.Prod origin r f)
               p2
           type' = Zonk.typ tenvFinal typ
-      pure (NewClosure type' size origin, typ, tenv0)
+      pure (NewClosure origin type' size, typ, tenv0)
   -- Pushing a value results in a stack with that value on top.
 
-  Push _ value origin ->
+  Push origin _ value ->
     while (Term.origin term0) context $ do
       [a, e] <-
         fresh
@@ -364,10 +364,10 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
       (value', t, tenv1) <- inferValue dictionary tenvFinal tenv0 origin value
       let typ = Type.Fun origin a (Type.Prod origin a t) e
       let type' = Zonk.typ tenvFinal typ
-      pure (Push type' value' origin, typ, tenv1)
+      pure (Push origin type' value', typ, tenv1)
 
   -- FIXME: Should generic parameters be restricted to none?
-  Word _ name _ origin ->
+  Word origin _ name _ ->
     while (Term.origin term0) context $
       inferCall dictionary tenvFinal tenv0 name origin
   where
@@ -391,14 +391,14 @@ inferCase ::
   TypeEnv ->
   TypeEnv ->
   [(Unqualified, [Signature], [Signature], Origin)] ->
-  Case a ->
-  M (Case Type, Type, [(Unqualified, [Signature], [Signature], Origin)], TypeEnv)
+  (Origin, GeneralName, Term a) ->
+  M ((Origin, GeneralName, Term Type), Type, [(Unqualified, [Signature], [Signature], Origin)], TypeEnv)
 inferCase
   dictionary
   tenvFinal
   tenv0
   dataConstructors
-  (Case qualified@(QualifiedName name) body origin) = do
+  (origin, qualified@(QualifiedName name), body) = do
     (body', bodyType, tenv1) <- inferType dictionary tenvFinal tenv0 body
     (a1, b1, e1, tenv2) <- Unify.function tenv1 bodyType
     case Map.lookup name $ view TypeEnv.sigs tenv2 of
@@ -416,7 +416,7 @@ inferCase
             report $ Report.makeError $ Report.RedundantCase origin
             pure remaining
           (_covered, remaining) -> pure remaining
-        pure (Case qualified body' origin, typ, dataConstructors', tenv5)
+        pure ((origin, qualified, body'), typ, dataConstructors', tenv5)
       Nothing ->
         ice
           "Mlatu.Infer.inferCase - case constructor missing signature after name resolution"
@@ -483,10 +483,10 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
       let mangled = QualifiedName name
       pure
         ( Word
+            origin
             type''
             mangled
-            params''
-            origin,
+            params'',
           type',
           tenv1
         )

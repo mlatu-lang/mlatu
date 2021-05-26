@@ -13,7 +13,7 @@ module Mlatu.Zonk
 where
 
 import Data.Map qualified as Map
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Term (..), Value (..))
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv
@@ -49,20 +49,20 @@ term tenv0 = go
     go t = case t of
       Coercion hint tref origin -> Coercion hint (zonk tref) origin
       Compose tref a b -> Compose (zonk tref) (go a) (go b)
-      Generic name i a origin -> Generic name i (go a) origin
+      Generic origin name i a -> Generic origin name i (go a)
       Group a -> go a
-      Lambda tref name varType body origin ->
-        Lambda (zonk tref) name (zonk varType) (go body) origin
-      Match tref cases else_ origin ->
-        Match (zonk tref) (goCase <$> cases) (goElse else_) origin
+      Lambda origin tref name varType body ->
+        Lambda origin (zonk tref) name (zonk varType) (go body)
+      Match origin tref cases else_ ->
+        Match origin (zonk tref) (goCase <$> cases) (goElse else_)
         where
-          goCase (Case name body caseOrigin) = Case name (go body) caseOrigin
-          goElse (DefaultElse a b) = DefaultElse a b
-          goElse (Else body elseOrigin) = Else (go body) elseOrigin
-      New tref index size isNat origin -> New (zonk tref) index size isNat origin
-      NewClosure tref index origin -> NewClosure (zonk tref) index origin
-      Push tref value' origin -> Push (zonk tref) (value tenv0 value') origin
-      Word tref name params origin -> Word (zonk tref) name params origin
+          goCase = over _3 go
+          goElse (o, Left a) = (o, Left a)
+          goElse (o, Right body) = (o, Right (go body))
+      New origin tref index size isNat -> New origin (zonk tref) index size isNat
+      NewClosure origin tref index -> NewClosure origin (zonk tref) index
+      Push origin tref value' -> Push origin (zonk tref) (value tenv0 value')
+      Word origin tref name params -> Word origin (zonk tref) name params
 
 value :: TypeEnv -> Value Type -> Value Type
 value tenv0 = go

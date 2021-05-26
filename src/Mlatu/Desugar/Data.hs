@@ -28,7 +28,7 @@ import Mlatu.Name (ConstructorIndex (..), GeneralName (..), Qualified (..), Unqu
 import Mlatu.Origin (Origin)
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Specialness (..), Term (..), compose)
+import Mlatu.Term (Specialness (..), Term (..), compose)
 import Optics
 import Relude
 
@@ -71,20 +71,19 @@ desugarCodataDefinition definition = do
       Definition
         { Definition._body =
             Match
+              origin
               ()
-              [ Case
-                  (QualifiedName constructorName)
-                  ( compose
-                      ()
-                      origin
-                      ( replicate hi (Word () "drop" [] origin)
-                          <> replicate lo (Word () "nip" [] origin)
-                      )
-                  )
-                  origin
+              [ ( origin,
+                  QualifiedName constructorName,
+                  compose
+                    origin
+                    ()
+                    ( replicate hi (Word origin () "drop" [])
+                        <> replicate lo (Word origin () "nip" [])
+                    )
+                )
               ]
-              (DefaultElse () origin)
-              origin,
+              (origin, Left ()),
           Definition._category = Category.Deconstructor,
           Definition._inferSignature = False,
           Definition._merge = Merge.Deny,
@@ -105,11 +104,11 @@ desugarCodataDefinition definition = do
       Definition
         { Definition._body =
             New
+              (view Codata.origin definition)
               ()
               (ConstructorIndex index)
               (length $ view Codata.deconstructors definition)
-              NonSpecial
-              $ view Codata.origin definition,
+              NonSpecial,
           Definition._category = Category.Deconstructor,
           Definition._inferSignature = False,
           Definition._merge = Merge.Deny,
@@ -149,6 +148,7 @@ desugarDataDefinition definition =
       Definition
         { Definition._body =
             New
+              origin
               ()
               (ConstructorIndex index)
               (length input)
@@ -156,8 +156,7 @@ desugarDataDefinition definition =
                   "nat" -> NatLike
                   "list" -> ListLike
                   _ -> NonSpecial
-              )
-              origin,
+              ),
           Definition._category = Category.Constructor,
           Definition._inferSignature = False,
           Definition._merge = Merge.Deny,

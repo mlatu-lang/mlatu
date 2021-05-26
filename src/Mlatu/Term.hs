@@ -1,3 +1,6 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module      : Mlatu.Term
 -- Description : The core language
@@ -7,9 +10,7 @@
 -- Stability   : experimental
 -- Portability : GHC
 module Mlatu.Term
-  ( Case (..),
-    CoercionHint (..),
-    Else (..),
+  ( CoercionHint (..),
     Permit (..),
     Term (..),
     Value (..),
@@ -45,6 +46,7 @@ import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Type (Type, TypeId)
 import Mlatu.Vocabulary
+import Optics
 import Relude hiding (Compose, Type)
 
 -- | This is the core language. It permits pushing values to the stack, invoking
@@ -58,28 +60,17 @@ import Relude hiding (Compose, Type)
 -- A value of type @'Term' a@ is a term annotated with a value of type @a@. A
 -- parsed term may have a type like @'Term' ()@, while a type-inferred term may
 -- have a type like @'Term' 'Type'@.
-data Term a
-  = -- | @id@, @as (T)@, @with (+A -B)@: coerces the stack to a particular type.
-    Coercion !CoercionHint !a !Origin
-  | -- | @e1 e2@: composes two terms.
-    Compose !a !(Term a) !(Term a)
-  | -- | @Λx. e@: generic terms that can be specialized.
-    Generic !Unqualified !TypeId !(Term a) !Origin
-  | -- | @(e)@: precedence grouping for infix operators.
-    Group !(Term a)
-  | -- | @→ x; e@: local variable introductions.
-    Lambda !a !Unqualified !a !(Term a) !Origin
-  | -- | @match { case C {...}... else {...} }@, @if {...} else {...}@:
-    -- pattern-matching.
-    Match !a ![Case a] !(Else a) !Origin
-  | -- | @new.n@: ADT allocation.
-    New !a !ConstructorIndex !Int !Specialness !Origin
-  | -- | @new.closure.n@: closure allocation.
-    NewClosure !a !Int !Origin
-  | -- | @push v@: push of a value.
-    Push !a !(Value a) !Origin
-  | -- | @f@: an invocation of a word.
-    Word !a !GeneralName ![Type] !Origin
+data Term a where
+  Coercion :: Origin -> a -> CoercionHint -> Term a
+  Compose :: a -> Term a -> Term a -> Term a
+  Generic :: Origin -> Unqualified -> TypeId -> Term a -> Term a
+  Group :: Term a -> Term a
+  Lambda :: Origin -> a -> Unqualified -> a -> Term a -> Term a
+  Match :: Origin -> a -> [(Origin, GeneralName, Term a)] -> (Origin, Either a (Term a)) -> Term a
+  New :: Origin -> a -> ConstructorIndex -> Int -> Specialness -> Term a
+  NewClosure :: Origin -> a -> Int -> Term a
+  Push :: Origin -> a -> Value a -> Term a
+  Word :: Origin -> a -> GeneralName -> [Type] -> Term a
   deriving (Ord, Eq, Show)
 
 data Specialness = NatLike | ListLike | NonSpecial
@@ -93,19 +84,8 @@ data CoercionHint
     AnyCoercion !Signature
   deriving (Ord, Eq, Show)
 
--- | A case branch in a @match@ expression.
-data Case a
-  = Case !GeneralName !(Term a) !Origin
-  deriving (Ord, Eq, Show)
-
--- | An @else@ branch in a @match@ (or @if@) expression.
-data Else a
-  = DefaultElse !a !Origin
-  | Else !(Term a) !Origin
-  deriving (Ord, Eq, Show)
-
-defaultElseBody :: a -> Origin -> Term a
-defaultElseBody a = Word a (QualifiedName (Global "abort-now")) []
+defaultElseBody :: Origin -> a -> Term a
+defaultElseBody o a = Word o a (QualifiedName (Global "abort-now")) []
 
 -- | A permission to grant or revoke in a @with@ expression.
 data Permit = Permit
@@ -116,37 +96,29 @@ data Permit = Permit
 
 -- | A value, used to represent literals in a parsed program, as well as runtime
 -- values in the interpreter.
-data Value a
-  = -- | A quotation with explicit variable capture; see "Mlatu.Scope".
-    Capture ![Closed] !(Term a)
-  | -- | A character literal.
-    Character !Char
-  | -- | A captured variable.
-    Closed !ClosureIndex
-  | -- | A local variable.
-    Local !LocalIndex
-  | -- | A reference to a name.
-    Name !Qualified
-  | -- | A parsed quotation.
-    Quotation !(Term a)
-  | -- | A text literal.
-    Text !Text
+data Value a where
+  Capture :: [Closed] -> Term a -> Value a
+  Character :: Char -> Value a
+  Closed :: ClosureIndex -> Value a
+  Local :: LocalIndex -> Value a
+  Name :: Qualified -> Value a
+  Quotation :: Term a -> Value a
+  Text :: Text -> Value a
   deriving (Ord, Eq, Show)
 
--- FIXME: 'compose' should work on 'Term ()'.
-compose :: a -> Origin -> [Term a] -> Term a
-compose x o = foldr (Compose x) (identityCoercion x o)
+compose :: Origin -> a -> [Term a] -> Term a
+compose o x = foldr (Compose x) (identityCoercion o x)
 
-asCoercion :: a -> Origin -> [Signature] -> Term a
-asCoercion x o ts = Coercion (AnyCoercion signature) x o
+asCoercion :: Origin -> a -> [Signature] -> Term a
+asCoercion o x ts = Coercion o x (AnyCoercion signature)
   where
     signature = Signature.Quantified [] (Signature.Function ts ts [] o) o
 
-identityCoercion :: a -> Origin -> Term a
-identityCoercion = Coercion IdentityCoercion
+identityCoercion :: Origin -> a -> Term a
+identityCoercion o x = Coercion o x IdentityCoercion
 
-permissionCoercion :: [Permit] -> a -> Origin -> Term a
-permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
+permissionCoercion :: Origin -> a -> [Permit] -> Term a
+permissionCoercion o x permits = Coercion o x (AnyCoercion signature)
   where
     signature =
       Signature.Quantified
@@ -178,29 +150,29 @@ permissionCoercion permits x o = Coercion (AnyCoercion signature) x o
 
 decompose :: Term a -> [Term a]
 -- TODO: Verify that this is correct.
-decompose (Generic _ _ t _) = decompose t
+decompose (Generic _ _ _ t) = decompose t
 decompose (Compose _ a b) = decompose a ++ decompose b
-decompose (Coercion IdentityCoercion _ _) = []
+decompose (Coercion _ _ IdentityCoercion) = []
 decompose (Group (Group a)) = [Group a]
 decompose term = [term]
 
 origin :: Term a -> Origin
 origin term = case term of
-  Coercion _ _ o -> o
+  Coercion o _ _ -> o
   Compose _ a _ -> origin a
-  Generic _ _ _ o -> o
+  Generic o _ _ _ -> o
   Group a -> origin a
-  Lambda _ _ _ _ o -> o
-  New _ _ _ _ o -> o
-  NewClosure _ _ o -> o
-  Match _ _ _ o -> o
-  Push _ _ o -> o
-  Word _ _ _ o -> o
+  Lambda o _ _ _ _ -> o
+  New o _ _ _ _ -> o
+  NewClosure o _ _ -> o
+  Match o _ _ _ -> o
+  Push o _ _ -> o
+  Word o _ _ _ -> o
 
 quantifierCount :: Term a -> Int
 quantifierCount = countFrom 0
   where
-    countFrom !c (Generic _ _ body _) = countFrom (c + 1) body
+    countFrom !c (Generic _ _ _ body) = countFrom (c + 1) body
     countFrom c _ = c
 
 -- Deduces the explicit type of a term.
@@ -212,36 +184,34 @@ metadata :: Term a -> a
 metadata term = case term of
   Coercion _ t _ -> t
   Compose t _ _ -> t
-  Generic _ _ term' _ -> metadata term'
+  Generic _ _ _ term' -> metadata term'
   Group term' -> metadata term'
-  Lambda t _ _ _ _ -> t
-  Match t _ _ _ -> t
-  New t _ _ _ _ -> t
-  NewClosure t _ _ -> t
-  Push t _ _ -> t
-  Word t _ _ _ -> t
+  Lambda _ t _ _ _ -> t
+  Match _ t _ _ -> t
+  New _ t _ _ _ -> t
+  NewClosure _ t _ -> t
+  Push _ t _ -> t
+  Word _ t _ _ -> t
 
 stripMetadata :: Term a -> Term ()
 stripMetadata term = case term of
   Coercion a _ b -> Coercion a () b
   Compose _ a b -> Compose () (stripMetadata a) (stripMetadata b)
-  Generic a b term' c -> Generic a b (stripMetadata term') c
+  Generic a b c term' -> Generic a b c (stripMetadata term')
   Group term' -> stripMetadata term'
-  Lambda _ a _ b c -> Lambda () a () (stripMetadata b) c
-  Match _ a b c -> Match () (stripCase <$> a) (stripElse b) c
-  New _ a b c d -> New () a b c d
-  NewClosure _ a b -> NewClosure () a b
-  Push _ a b -> Push () (stripValue a) b
-  Word _ a b c -> Word () a b c
+  Lambda a _ b _ c -> Lambda a () b () (stripMetadata c)
+  Match a _ b c -> Match a () (stripCase <$> b) (stripElse c)
+  New a _ b c d -> New a () b c d
+  NewClosure a _ b -> NewClosure a () b
+  Push a _ b -> Push a () (stripValue b)
+  Word a _ b c -> Word a () b c
   where
-    stripCase :: Case a -> Case ()
-    stripCase case_ = case case_ of
-      Case a b c -> Case a (stripMetadata b) c
+    stripCase :: (Origin, GeneralName, Term a) -> (Origin, GeneralName, Term ())
+    stripCase = over _3 stripMetadata
 
-    stripElse :: Else a -> Else ()
-    stripElse else_ = case else_ of
-      Else a b -> Else (stripMetadata a) b
-      DefaultElse _ b -> DefaultElse () b
+    stripElse :: (Origin, Either a (Term a)) -> (Origin, Either () (Term ()))
+    stripElse (o, Left _) = (o, Left ())
+    stripElse (o, Right t) = (o, Right (stripMetadata t))
 
 stripValue :: Value a -> Value ()
 stripValue v = case v of

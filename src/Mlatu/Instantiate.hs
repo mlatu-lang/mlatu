@@ -60,7 +60,7 @@ prenex tenv0 t = pure (t, [], tenv0)
 term :: TypeEnv -> Term Type -> [Type] -> M (Term Type)
 term tenv t args = foldlM go t args
   where
-    go (Generic _name x expr _origin) arg = Substitute.term tenv x arg expr
+    go (Generic _origin _name x expr) arg = Substitute.term tenv x arg expr
     go _ _ = do
       report $ Report.makeError $ Report.TypeArgumentCountMismatch t $ Zonk.typ tenv <$> args
       halt

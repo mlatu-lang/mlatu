@@ -24,7 +24,7 @@ import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Monad (M)
 import Mlatu.Name (Closed (..), Qualified (..), Qualifier, Unqualified (..))
 import Mlatu.Signature qualified as Signature
-import Mlatu.Term (Case (..), Else (..), Term (..), Value (..))
+import Mlatu.Term (Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), Var (..))
 import Mlatu.TypeEnv (TypeEnv)
@@ -58,34 +58,34 @@ desugar dictionary qualifier term0 = do
         (a', tenv1) <- go tenv0 a
         (b', tenv2) <- go tenv1 b
         pure (Compose typ a' b', tenv2)
-      Generic name typ a origin -> do
+      Generic origin name typ a -> do
         (a', tenv1) <- go tenv0 a
-        pure (Generic name typ a' origin, tenv1)
+        pure (Generic origin name typ a', tenv1)
       Group {} -> error "group should not appear after infix desugaring"
-      Lambda typ name varType a origin -> do
+      Lambda origin typ name varType a -> do
         let oldLocals = view TypeEnv.vs tenv0
             localEnv = over TypeEnv.vs (varType :) tenv0
         (a', tenv1) <- go localEnv a
         let tenv2 = set TypeEnv.vs oldLocals tenv1
-        pure (Lambda typ name varType a' origin, tenv2)
-      Match typ cases else_ origin -> do
+        pure (Lambda origin typ name varType a', tenv2)
+      Match origin typ cases else_ -> do
         (cases', tenv1) <-
           foldrM
-            ( \(Case name a caseOrigin) (acc, tenv) -> do
+            ( \(caseOrigin, name, a) (acc, tenv) -> do
                 (a', tenv') <- go tenv a
-                pure (Case name a' caseOrigin : acc, tenv')
+                pure ((caseOrigin, name, a') : acc, tenv')
             )
             ([], tenv0)
             cases
         (else', tenv2) <- case else_ of
-          DefaultElse a elseOrigin -> pure (DefaultElse a elseOrigin, tenv1)
-          Else a elseOrigin -> do
+          (elseOrigin, Left a) -> pure ((elseOrigin, Left a), tenv1)
+          (elseOrigin, Right a) -> do
             (a', tenv') <- go tenv1 a
-            pure (Else a' elseOrigin, tenv')
-        pure (Match typ cases' else' origin, tenv2)
+            pure ((elseOrigin, Right a'), tenv')
+        pure (Match origin typ cases' else', tenv2)
       New {} -> done
       NewClosure {} -> done
-      Push _type (Capture closed a) origin -> do
+      Push origin _type (Capture closed a) -> do
         let types = mapMaybe (TypeEnv.getClosed tenv0) closed
             oldClosure = view TypeEnv.closure tenv0
             localEnv = set TypeEnv.closure types tenv0
@@ -115,22 +115,22 @@ desugar dictionary qualifier term0 = do
         (typechecked, _) <-
           lift $
             inferType0 dict tenv2 Nothing $
-              Term.compose () origin $
+              Term.compose origin () $
                 (pushClosed <$> closed)
-                  ++ [ Push () (Name name) origin,
-                       NewClosure () (length closed) origin
+                  ++ [ Push origin () (Name name),
+                       NewClosure origin () (length closed)
                      ]
         pure (typechecked, tenv2)
         where
           pushClosed :: Closed -> Term ()
           pushClosed name =
             Push
+              origin
               ()
               ( case name of
                   ClosedLocal index -> Local index
                   ClosedClosure index -> Closed index
               )
-              origin
       Push {} -> done
       Word {} -> done
       where
