@@ -21,12 +21,10 @@ import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry.Parameter (Parameter (Parameter))
-import Mlatu.Ice (ice)
-import Mlatu.Informer (Informer (..))
-import Mlatu.Monad (M)
+import Mlatu.Informer (M, ice, reportCannotResolveName)
+import Mlatu.Informer qualified as Report
 import Mlatu.Name
 import Mlatu.Origin (Origin)
-import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..), Value (..))
@@ -164,7 +162,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
               if isDefined global
                 then pure (QualifiedName global)
                 else do
-                  lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
+                  lift $ reportCannotResolveName origin category name
                   pure name
 
     -- A qualified name may refer to an intrinsic or a definition.
@@ -180,7 +178,7 @@ generalName category resolveLocal isDefined vocabulary name origin =
           if isDefined qualified'
             then pure $ QualifiedName qualified'
             else do
-              lift $ report $ Report.makeError $ Report.CannotResolveName origin category name
+              lift $ reportCannotResolveName origin category name
               pure name
     LocalName {} -> ice "Mlatu.Resolve.generalName - local name should not appear before name resolution"
 

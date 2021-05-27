@@ -36,7 +36,6 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment (Fragment (..))
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Ice (ice)
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Metadata (Metadata (..))
@@ -57,6 +56,9 @@ import Prettyprinter
 import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
+
+instance Eq (Doc ()) where
+  d1 == d2 = (show d1 :: Text) == (show d2 :: Text)
 
 punctuateComma :: [Doc a] -> [Doc a]
 punctuateComma = punctuate comma
@@ -397,7 +399,7 @@ maybePrintTerms = \case
         go n rest = (n, rest)
      in let (s, rest) = go 0 xs in pretty s `maySep` maybePrintTerms rest
   (Word _ _ name args : xs) -> printWord name args `maySep` maybePrintTerms xs
-  (t : _) -> ice $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
+  (t : _) -> error $ "Mlatu.Pretty.maybePrintTerms - Formatting failed: " <> show (Term.stripMetadata t)
 
 maySep :: Doc a -> Maybe (Doc a) -> Maybe (Doc a)
 maySep a (Just b) = Just (sep [a, b])

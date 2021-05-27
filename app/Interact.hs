@@ -13,12 +13,10 @@ import Mlatu.Enter qualified as Enter
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Ice (ice)
 import Mlatu.Infer (typeFromSignature, typecheck)
-import Mlatu.Informer (errorCheckpoint, warnCheckpoint)
+import Mlatu.Informer (errorCheckpoint, ice, runMlatu, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified),
@@ -54,7 +52,7 @@ cmd input = do
           (Qualifier Absolute ["interactive"])
           $ Unqualified entryNameUnqualified
   mResults <- liftIO $
-    runMlatuExceptT $ do
+    runMlatu $ do
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Global "io"]
@@ -105,7 +103,7 @@ final =
 
 run :: Prelude -> IO Int
 run prelude = do
-  result <- runMlatuExceptT $ Mlatu.compilePrelude prelude [QualifiedName $ Global "io"] Nothing
+  result <- runMlatu $ Mlatu.compilePrelude prelude [QualifiedName $ Global "io"] Nothing
   case result of
     Left reports -> do
       reportAll reports

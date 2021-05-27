@@ -28,18 +28,26 @@ import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry qualified as Entry
 import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
-import Mlatu.Ice (ice)
-import Mlatu.Informer (Informer (..), errorCheckpoint)
+import Mlatu.Informer
+  ( M,
+    errorCheckpoint,
+    halt,
+    ice,
+    reportCannotResolveType,
+    reportMissingTypeSignature,
+    reportMultiplePermissionVariables,
+    reportRedundantCase,
+    while,
+  )
+import Mlatu.Informer qualified as Report
 import Mlatu.InstanceCheck (instanceCheck)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (M)
 import Mlatu.Name (ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty qualified as Pretty
 import Mlatu.Regeneralize (regeneralize)
-import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..), Value (..), defaultElseBody)
@@ -413,7 +421,7 @@ inferCase
         -- let type' = Zonk.typ tenvFinal typ
         dataConstructors' <- case partition (\ctor -> view _1 ctor == unqualifiedName name) dataConstructors of
           ([], remaining) -> do
-            report $ Report.makeError $ Report.RedundantCase origin
+            reportRedundantCase origin
             pure remaining
           (_covered, remaining) -> pure remaining
         pure ((origin, qualified, body'), typ, dataConstructors', tenv5)
@@ -492,7 +500,7 @@ inferCall dictionary tenvFinal tenv0 (QualifiedName name) origin =
         )
     Just {} -> ice "Mlatu.Infer.inferCall - what is a non-quantified type doing as a type signature?"
     Nothing -> do
-      report $ Report.makeError $ Report.MissingTypeSignature origin name
+      reportMissingTypeSignature origin name
       halt
 inferCall _dictionary _tenvFinal _tenv0 name _ =
   ice $
@@ -569,7 +577,7 @@ typeFromSignature tenv signature0 = do
       Just (preceding, typ, following) -> case find isTypeVar following of
         Nothing -> pure (Just typ, preceding ++ following)
         Just type' -> do
-          report $ Report.makeError $ Report.MultiplePermissionVariables origin typ type'
+          reportMultiplePermissionVariables origin typ type'
           halt
       Nothing -> pure (Nothing, types)
       where
@@ -582,7 +590,7 @@ typeFromSignature tenv signature0 = do
       case existing of
         Just (var, varOrigin) -> pure $ TypeVar varOrigin var
         Nothing -> lift $ do
-          report $ Report.makeError $ Report.CannotResolveType origin $ UnqualifiedName name
+          reportCannotResolveType origin $ UnqualifiedName name
           halt
     fromVar origin (QualifiedName name) =
       pure $ TypeConstructor origin $ Constructor name

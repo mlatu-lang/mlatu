@@ -30,14 +30,13 @@ import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Entry.Parameter (Parameter (..))
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Ice (ice)
 import Mlatu.Infer (mangleInstance, typecheck)
-import Mlatu.Informer (errorCheckpoint, report)
+import Mlatu.Informer (M, errorCheckpoint, ice, reportWordRedeclaration, reportWordRedefinition)
+import Mlatu.Informer qualified as Report
 import Mlatu.Instantiated (Instantiated (Instantiated))
 import Mlatu.Kind (Kind (..))
 import Mlatu.Metadata (Metadata)
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Monad (M)
 import Mlatu.Name
   ( GeneralName (..),
     Qualified (..),
@@ -48,7 +47,6 @@ import Mlatu.Origin (point)
 import Mlatu.Parse qualified as Parse
 import Mlatu.Pretty (printQualified)
 import Mlatu.Quantify qualified as Quantify
-import Mlatu.Report qualified as Report
 import Mlatu.Resolve qualified as Resolve
 import Mlatu.Scope (scope)
 import Mlatu.Signature qualified as Signature
@@ -191,14 +189,12 @@ declareWord dictionary definition =
             pure dictionary
           | otherwise ->
             do
-              report $
-                Report.makeError $
-                  Report.WordRedeclaration
-                    (Signature.origin signature)
-                    name
-                    signature
-                    originalOrigin
-                    mSignature
+              reportWordRedeclaration
+                (Signature.origin signature)
+                name
+                signature
+                originalOrigin
+                mSignature
               pure dictionary
         _ -> case Dictionary.lookupTrait (Instantiated name []) dictionary of
           -- Already declared or defined as a trait.
@@ -374,12 +370,10 @@ defineWord dictionary definition = do
           pure $ Dictionary.insertWord (Instantiated name []) entry dictionary'
       -- Already defined, not concatenable.
       Just (Entry.WordEntry _ Merge.Deny originalOrigin _ (Just _sig) _) -> do
-        report $
-          Report.makeError $
-            Report.WordRedefinition
-              (view Definition.origin definition)
-              name
-              originalOrigin
+        reportWordRedefinition
+          (view Definition.origin definition)
+          name
+          originalOrigin
 
         pure dictionary
       -- Not previously declared as word.

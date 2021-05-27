@@ -13,12 +13,10 @@ where
 
 import Mlatu.Definition (Definition)
 import Mlatu.Definition qualified as Definition
-import Mlatu.Ice (ice)
-import Mlatu.Informer (Informer (..))
-import Mlatu.Monad (M)
+import Mlatu.Informer (M, ice, reportParseError)
+import Mlatu.Informer qualified as Report
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
-import Mlatu.Report qualified as Report
 import Mlatu.Term (Term (..), Value (..))
 import Mlatu.Term qualified as Term
 import Optics
@@ -56,7 +54,7 @@ desugar definition = do
               pure $ Term.compose origin () desugaredTerms
         case Parsec.runParser expression' () "" terms' of
           Left parseError -> do
-            report $ Report.parseError parseError
+            reportParseError parseError
             let origin = case terms of
                   term : _ -> Term.origin term
                   _noTerms -> view Definition.origin definition

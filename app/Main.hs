@@ -2,11 +2,11 @@ module Main where
 
 import Arguments qualified
 import Interact qualified
-import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatuExceptT)
+import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
 import Mlatu.Codegen qualified as Codegen
+import Mlatu.Informer (Report)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
-import Mlatu.Report (Report)
 import Mlatu.Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Prettyprinter (defaultLayoutOptions, layoutSmart)
@@ -52,7 +52,7 @@ formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
-  result <- runMlatuExceptT $ fragmentFromSource mainPermissions Nothing 0 path text
+  result <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
   case result of
     Left reports -> handleReports reports
     Right fragment -> do
@@ -62,12 +62,12 @@ formatFiles paths = for_ paths $ \relativePath -> do
 checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
-    >>= (\paths -> runMlatuExceptT (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
+    >>= (\paths -> runMlatu (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
 runFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
 runFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
-    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
@@ -88,7 +88,7 @@ runFiles prelude o relativePaths =
 compileFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
 compileFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
-    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
@@ -119,7 +119,7 @@ compileFiles prelude o relativePaths =
 benchFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
 benchFiles prelude o relativePaths =
   forM relativePaths makeAbsolute
-    >>= (runMlatuExceptT . compileWithPrelude prelude mainPermissions Nothing)
+    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
@@ -147,6 +147,7 @@ benchFiles prelude o relativePaths =
               )
         )
 
+cargoToml :: Bool -> Bool -> ByteString
 cargoToml b o =
   "[package] \n \
   \ name = \"output\" \n \

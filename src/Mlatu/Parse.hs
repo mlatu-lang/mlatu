@@ -33,14 +33,13 @@ import Mlatu.Entry.Parameter (Parameter (Parameter))
 import Mlatu.Entry.Parent qualified as Parent
 import Mlatu.Fragment (Fragment)
 import Mlatu.Fragment qualified as Fragment
-import Mlatu.Ice (ice)
-import Mlatu.Informer (Informer (..), errorCheckpoint)
+import Mlatu.Informer (M, MT, errorCheckpoint, halt, ice, reportParseError)
+import Mlatu.Informer qualified as Report
 import Mlatu.Kind (Kind (..))
 import Mlatu.Located (Located)
 import Mlatu.Located qualified as Located
 import Mlatu.Metadata (Metadata (Metadata))
 import Mlatu.Metadata qualified as Metadata
-import Mlatu.Monad (M)
 import Mlatu.Name
   ( GeneralName (..),
     Qualified (Qualified),
@@ -53,7 +52,6 @@ import Mlatu.Name
 import Mlatu.Origin (Origin)
 import Mlatu.Origin qualified as Origin
 import Mlatu.Parser (Parser, getTokenOrigin, parserMatch, parserMatch_)
-import Mlatu.Report qualified as Report
 import Mlatu.Signature (Signature)
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..), Value (..), compose)
@@ -93,7 +91,7 @@ fragment line path mainPermissions mainName tokens =
           tokens
    in case parsed of
         Left parseError -> do
-          report $ Report.parseError parseError
+          reportParseError parseError
           halt
         Right result -> pure (Data.desugar (insertMain result))
   where
@@ -112,14 +110,14 @@ fragment line path mainPermissions mainName tokens =
           f
 
 -- | Parses only a name.
-generalName :: (Informer m) => Int -> FilePath -> Text -> m GeneralName
+generalName :: (Monad m) => Int -> FilePath -> Text -> MT m GeneralName
 generalName line path text = do
   tokens <- tokenize line path text
   errorCheckpoint
   let parsed = Parsec.runParser nameParser (Qualifier Absolute []) path tokens
   case parsed of
     Left parseError -> do
-      report $ Report.parseError parseError
+      reportParseError parseError
       halt
     Right name -> pure name
 

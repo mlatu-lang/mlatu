@@ -20,8 +20,8 @@ import Mlatu.Entry.Category qualified as Category
 import Mlatu.Entry.Merge qualified as Merge
 import Mlatu.Free qualified as Free
 import Mlatu.Infer (inferType0)
+import Mlatu.Informer (M)
 import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Monad (M)
 import Mlatu.Name (Closed (..), Qualified (..), Qualifier, Unqualified (..))
 import Mlatu.Signature qualified as Signature
 import Mlatu.Term (Term (..), Value (..))

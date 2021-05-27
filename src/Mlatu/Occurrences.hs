@@ -13,7 +13,7 @@ module Mlatu.Occurrences
 where
 
 import Data.Map qualified as Map
-import Mlatu.Ice (ice)
+import Mlatu.Informer (ice)
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv)
 import Mlatu.TypeEnv qualified as TypeEnv

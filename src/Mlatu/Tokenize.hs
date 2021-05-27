@@ -16,11 +16,11 @@ where
 import Data.ByteString qualified as BS
 import Data.Char (isLetter, isLower, isPunctuation, isSymbol, isUpper)
 import Data.Text qualified as Text
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (MT, halt, reportParseError)
+import Mlatu.Informer qualified as Report
 import Mlatu.Located (Located (..))
 import Mlatu.Name (Unqualified (..))
 import Mlatu.Origin qualified as Origin
-import Mlatu.Report qualified as Report
 import Mlatu.Token (Token (..))
 import Prettyprinter (dquotes)
 import Prettyprinter.Internal (Pretty (pretty))
@@ -33,7 +33,7 @@ import Text.Parsec.Pos qualified as Parsec
 -- | Lexes a source fragment into a list of tokens, annotated with their source
 -- locations and indent levels.
 tokenize ::
-  (Informer m) =>
+  (Monad m) =>
   -- | Initial source line.
   Int ->
   -- | Source file path.
@@ -41,14 +41,14 @@ tokenize ::
   -- | Source text.
   Text ->
   -- | Lexed tokens.
-  m [Located Token]
+  MT m [Located Token]
 tokenize line path txt = case Parsec.runParser
   (setPos *> fileTokenizer)
   1
   path
   txt of
   Left parseError -> do
-    report $ Report.parseError parseError
+    reportParseError parseError
     halt
   Right result -> pure result
   where

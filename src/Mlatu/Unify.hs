@@ -13,13 +13,11 @@ module Mlatu.Unify
 where
 
 import Data.Map qualified as Map
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (M, halt, reportOccursTypeMismatch, reportStackDepthMismatch, reportTypeMismatch, while)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Kind (Kind (..))
-import Mlatu.Monad (M)
 import Mlatu.Occurrences (occurs)
 import Mlatu.Origin (Origin)
-import Mlatu.Report qualified as Report
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.Type qualified as Type
 import Mlatu.TypeEnv (TypeEnv, freshTv)
@@ -48,7 +46,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
           Just (x, t) -> typ (over TypeEnv.tvs (Map.insert x t) tenv1) r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
-        report $ Report.makeError $ Report.TypeMismatch t1' t2'
+        reportTypeMismatch t1' t2'
         halt
   (_, Type.Join {}) -> commute
   -- We fall back to regular unification for value type constructors. This makes
@@ -59,7 +57,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     tenv1 <- typ tenv0 a c
     typ tenv1 b d
   _mismatch -> do
-    report $ Report.makeError $ Report.TypeMismatch t1' t2'
+    reportTypeMismatch t1' t2'
     halt
 
     -- Unification is commutative. If we fail to handle a case, this can result in
@@ -90,18 +88,13 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
     if occurs tenv0 x (Zonk.typ tenv0 t)
       then
         let t' = Zonk.typ tenv0 t
-         in do
-              report $
-                Report.makeError $
-                  Report.Chain $
-                    [ Report.TypeMismatch (TypeVar origin v) t',
-                      Report.OccursCheckFailure (TypeVar origin v) t'
-                    ]
-                      ++ case t' of
-                        Type.Prod {} -> [Report.StackDepthMismatch (Type.origin t')]
-                        _nonProd -> []
-
-              halt
+         in case t' of
+              Type.Prod {} -> do
+                reportStackDepthMismatch (TypeVar origin v) t' (TypeVar origin v) t' (Type.origin t')
+                halt
+              _nonProd -> do
+                reportOccursTypeMismatch (TypeVar origin v) t' (TypeVar origin v) t'
+                halt
       else declare
   where
     declare = pure $ over TypeEnv.tvs (Map.insert x t) tenv0

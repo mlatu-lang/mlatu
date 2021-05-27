@@ -14,11 +14,10 @@ where
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (M, attempt, halt, reportFailedInstanceCheck, reportMissingPermissionLabel, while)
+import Mlatu.Informer qualified as Report
 import Mlatu.Instantiate qualified as Instantiate
-import Mlatu.Monad (M, attempt)
 import Mlatu.Origin (Origin)
-import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Type (Constructor (..), Type (..), TypeId, Var (..))
 import Mlatu.Type qualified as Type
@@ -46,7 +45,7 @@ instanceCheck aScheme bScheme = do
   let bad = Set.filter (`Set.member` escaped) ids
   unless (Set.null bad) failure
   where
-    failure = report $ Report.makeError $ Report.FailedInstanceCheck aScheme bScheme
+    failure = reportFailedInstanceCheck aScheme bScheme
 
 -- | Skolemization replaces each quantified type variable with a type constant
 -- that unifies only with itself.
@@ -92,7 +91,7 @@ subsumptionCheckFun tenv0 a b e a' b' e' = do
       labels' = permissionList $ Zonk.typ tenv2 e'
   for_ labels $ \(origin, label) -> case find ((label ==) . snd) labels' of
     Just {} -> pass
-    Nothing -> report $ Report.makeError $ Report.MissingPermissionLabel e e' origin label
+    Nothing -> reportMissingPermissionLabel e e' origin label
   pure tenv2
   where
     permissionList :: Type -> [(Origin, Constructor)]

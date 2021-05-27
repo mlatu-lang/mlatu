@@ -13,13 +13,12 @@ module Mlatu.Instantiate
   )
 where
 
-import Mlatu.Informer (Informer (..))
+import Mlatu.Informer (M, halt, reportTypeArgumentCountMismatch, while)
+import Mlatu.Informer qualified as Report
 import Mlatu.Kind (Kind)
-import Mlatu.Monad (M)
 import Mlatu.Name (Unqualified)
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty (printType)
-import Mlatu.Report qualified as Report
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
@@ -62,7 +61,7 @@ term tenv t args = foldlM go t args
   where
     go (Generic _origin _name x expr) arg = Substitute.term tenv x arg expr
     go _ _ = do
-      report $ Report.makeError $ Report.TypeArgumentCountMismatch t $ Zonk.typ tenv <$> args
+      reportTypeArgumentCountMismatch t $ Zonk.typ tenv <$> args
       halt
     {-# INLINEABLE go #-}
 {-# INLINEABLE term #-}

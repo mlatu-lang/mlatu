@@ -14,8 +14,8 @@ where
 
 import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
+import Mlatu.Informer (M)
 import Mlatu.Kind qualified as Kind
-import Mlatu.Monad (M)
 import Mlatu.Term (Term (..))
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)

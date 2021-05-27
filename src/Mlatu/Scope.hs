@@ -12,7 +12,7 @@ module Mlatu.Scope
 where
 
 import Data.List (elemIndex)
-import Mlatu.Ice (ice)
+import Mlatu.Informer (ice)
 import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..))
 import Mlatu.Term (Term (..), Value (..))
 import Optics

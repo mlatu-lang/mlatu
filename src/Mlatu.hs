@@ -13,7 +13,6 @@ module Mlatu
     Prelude (..),
     compile,
     runMlatu,
-    runMlatuExceptT,
     tokenize,
     compilePrelude,
     compileWithPrelude,
@@ -24,7 +23,7 @@ import Data.FileEmbed (embedDir, embedFile)
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Monad (M, runMlatu, runMlatuExceptT)
+import Mlatu.Informer (M, runMlatu)
 import Mlatu.Name (GeneralName, Qualified)
 import Mlatu.Tokenize (tokenize)
 import Relude

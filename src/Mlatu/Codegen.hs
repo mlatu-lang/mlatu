@@ -20,10 +20,10 @@ import Mlatu.Dictionary (Dictionary, wordEntries)
 import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Entry (WordEntry)
 import Mlatu.Entry qualified as Entry
+import Mlatu.Informer (runMlatu)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (..))
 import Mlatu.Instantiated qualified as Instantiated
-import Mlatu.Monad (runMlatuExceptT)
 import Mlatu.Name (ClosureIndex (..), ConstructorIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Unqualified (..))
 import Mlatu.Origin (Origin)
 import Mlatu.Pretty (printInstantiated, printQualified)
@@ -348,7 +348,7 @@ word name args = do
           let unMangled = rustifyInstantiated $ Instantiated name []
           case Map.lookup unMangled dict of
             Just (Entry.WordEntry a b c d e (Just body)) ->
-              liftIO (runMlatuExceptT $ Instantiate.term TypeEnv.empty body args)
+              liftIO (runMlatu $ Instantiate.term TypeEnv.empty body args)
                 >>= ( \case
                         Right body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body'))
                         Left _ -> error "Could not instantiate generic type"

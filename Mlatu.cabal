@@ -39,7 +39,6 @@ library
       Mlatu.Entry.Parent
       Mlatu.Fragment
       Mlatu.Free
-      Mlatu.Ice
       Mlatu.Infer
       Mlatu.Informer
       Mlatu.InstanceCheck
@@ -48,7 +47,6 @@ library
       Mlatu.Kind
       Mlatu.Located
       Mlatu.Metadata
-      Mlatu.Monad
       Mlatu.Name
       Mlatu.Occurrences
       Mlatu.Origin
@@ -58,7 +56,6 @@ library
       Mlatu.Quantify
       Mlatu.Queue
       Mlatu.Regeneralize
-      Mlatu.Report
       Mlatu.Resolve
       Mlatu.Scope
       Mlatu.Signature
