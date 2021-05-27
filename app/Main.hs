@@ -29,9 +29,9 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles prelude o files -> runFiles prelude o files
-    Arguments.CompileFiles prelude o files -> compileFiles prelude o files
-    Arguments.BenchFiles prelude o files -> benchFiles prelude o files
+    Arguments.RunFiles prelude files -> runFiles prelude files
+    Arguments.CompileFiles prelude files -> compileFiles prelude files
+    Arguments.BenchFiles prelude files -> benchFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -64,37 +64,37 @@ checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (\paths -> runMlatu (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
 
-runFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
-runFiles prelude o relativePaths =
+runFiles :: Prelude -> [FilePath] -> IO ()
+runFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
+              ( Codegen.generate program Nothing >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml False (o == Arguments.Online))
+                    >> writeFileBS "t/Cargo.toml" cargoToml
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
                       "t"
                       ( runProcess_
-                          (proc "cargo" ["+nightly", "run", "--release", "--quiet"])
+                          (proc "cargo" ["+nightly", "run", "--quiet"])
                       )
                     >> removeDirectoryRecursive "t"
               )
         )
 
-compileFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
-compileFiles prelude o relativePaths =
+compileFiles :: Prelude -> [FilePath] -> IO ()
+compileFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
+              ( Codegen.generate program Nothing >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml True (o == Arguments.Online))
+                    >> writeFileBS "t/Cargo.toml" cargoToml
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
@@ -104,28 +104,27 @@ compileFiles prelude o relativePaths =
                               "cargo"
                               [ "+nightly",
                                 "build",
-                                "--release",
                                 "--quiet"
                               ]
                           )
                       )
-                    >> copyFile "t/target/release/output" "./output"
+                    >> copyFile "t/target/debug/output" "./output"
                     >> removeDirectoryRecursive "t"
                     >> runProcess_ (proc "strip" ["./output"])
                     >> runProcess_ (proc "upx" ["./output"])
               )
         )
 
-benchFiles :: Prelude -> Arguments.Onlineness -> [FilePath] -> IO ()
-benchFiles prelude o relativePaths =
+benchFiles :: Prelude -> [FilePath] -> IO ()
+benchFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \case
             Left reports -> handleReports reports
             Right program ->
-              ( Codegen.generate program Nothing (o == Arguments.Online) >>= \contents ->
+              ( Codegen.generate program Nothing >>= \contents ->
                   createDirectory "t"
-                    >> writeFileBS "t/Cargo.toml" (cargoToml False (o == Arguments.Online))
+                    >> writeFileBS "t/Cargo.toml" cargoToml
                     >> createDirectory "t/src"
                     >> writeFileBS "t/src/main.rs" contents
                     >> withCurrentDirectory
@@ -135,31 +134,22 @@ benchFiles prelude o relativePaths =
                               "cargo"
                               [ "+nightly",
                                 "build",
-                                "--release",
                                 "--quiet"
                               ]
                           )
                       )
-                    >> copyFile "t/target/release/output" "./output"
+                    >> copyFile "t/target/debug/output" "./output"
                     >> removeDirectoryRecursive "t"
                     >> runProcess_ (proc "time" ["./output"])
                     >> removeFile "./output"
               )
         )
 
-cargoToml :: Bool -> Bool -> ByteString
-cargoToml b o =
-  "[package] \n \
-  \ name = \"output\" \n \
-  \ version = \"0.1.0\" \n "
-    <> ( if o
-           then "[dependencies.smallvec] \nversion = \"1.6.1\" \nfeatures = [\"union\"] \n"
-           else ""
-       )
-    <> " [profile.release] \n \
-       \ lto = true \n \
-       \ codegen-units = 1 \n\
-       \ panic = 'abort' "
-    <> if b
-      then "\n opt-level = \"s\" \n"
-      else ""
+cargoToml :: ByteString
+cargoToml =
+  "[package] \n\
+  \name = \"output\" \n\
+  \version = \"0.1.0\" \n\
+  \[dependencies.smallvec] \n\
+  \version = \"1.6.1\" \n\
+  \features = [\"union\"]"

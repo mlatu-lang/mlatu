@@ -38,8 +38,8 @@ import Text.Printf (printf)
 instance IsString a => IsString (Codegen a) where
   fromString = pure . fromString
 
-generate :: Dictionary -> Maybe Qualified -> Bool -> IO ByteString
-generate dict mMain isOnline = do
+generate :: Dictionary -> Maybe Qualified -> IO ByteString
+generate dict mMain = do
   let firstKey = maybe "mmain" rustifyQualified mMain
   let firstEntry = case Dictionary.lookupWord (Instantiated (fromMaybe mainName mMain) []) dict of
         Just e -> e
@@ -48,14 +48,11 @@ generate dict mMain isOnline = do
     evalCodegen
       (untilM entryRs (Map.null <$> getToDo))
       (one (firstKey, firstEntry), Map.empty, 0)
-      (Map.mapKeys rustifyInstantiated (view wordEntries dict), isOnline)
+      (Map.mapKeys rustifyInstantiated (view wordEntries dict))
   pure
-    ( "#![allow(warnings)] #[inline] fn get(stack: &mut Vec<Rep>) -> StackResult<Rep> { stack.pop().ok_or(CompilerError) }"
-        <> ( if isOnline
-               then "extern crate smallvec; use smallvec::*; type AVec = SmallVec<[Box<Rep>; 2]>;"
-               else "type AVec = Vec<Rep>;"
-           )
-        <> " fn main() { match "
+    ( "#![allow(warnings)] #[inline] fn get(stack: &mut Vec<Rep>) -> StackResult<Rep> { stack.pop().ok_or(CompilerError) }\
+      \ extern crate smallvec; use smallvec::*; type AVec = SmallVec<[Box<Rep>; 2]>;\
+      \  fn main() { match "
         <> firstKey
         <> "(&mut Vec::with_capacity(6), &Vec::new()) {\
            \Err(AbortCalled(s)) => eprintln!(\"Abort called: {}\", s),\
@@ -200,10 +197,10 @@ toBS = toBytes . optimize
     toBytes (Custom body : rest) = body <> toBytes rest
     toBytes (x : rest) = error $ show x
 
-newtype Codegen a = Codegen (StateT (WordMap, WordMap, Int) (ReaderT (WordMap, Bool) IO) a)
-  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap, Int), MonadReader (WordMap, Bool), MonadIO)
+newtype Codegen a = Codegen (StateT (WordMap, WordMap, Int) (ReaderT WordMap IO) a)
+  deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap, Int), MonadReader WordMap, MonadIO)
 
-evalCodegen :: Codegen a -> (WordMap, WordMap, Int) -> (WordMap, Bool) -> IO a
+evalCodegen :: Codegen a -> (WordMap, WordMap, Int) -> WordMap -> IO a
 evalCodegen (Codegen c) initialState = runReaderT (evalStateT c initialState)
 
 getLocal :: Codegen Int
@@ -227,11 +224,8 @@ modifyToDo = modifying _1
 getDone :: Codegen WordMap
 getDone = use _2
 
-isOnline :: Codegen Bool
-isOnline = view _2 <$> ask
-
 getDict :: Codegen WordMap
-getDict = view _1 <$> ask
+getDict = ask
 
 modifyDone :: (WordMap -> WordMap) -> Codegen ()
 modifyDone = modifying _2
@@ -362,16 +356,12 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) = case decompose body 
   [New _ _ (ConstructorIndex 1) 1 ListLike] -> pure [PushList "Vec::new()"]
   [New _ _ (ConstructorIndex 1) 2 ListLike] ->
     pure [Unwrap "x", UnwrapList "mut xs", Custom "xs.insert(0, x);", PushList "xs"]
-  [New _ _ (ConstructorIndex i) 0 NonSpecial] -> do
-    io <- isOnline
-    pure [PushAlgebraic (show i) ((if io then "Small" else "") <> "Vec::new()")]
-  [New _ _ (ConstructorIndex i) 1 NonSpecial] -> do
-    io <- isOnline
-    pure [Let "v" ((if io then "small" else "") <> "vec![" <> get <> "];"), PushAlgebraic (show i) "v"]
+  [New _ _ (ConstructorIndex i) 0 NonSpecial] -> pure [PushAlgebraic (show i) "SmallVec::new()"]
+  [New _ _ (ConstructorIndex i) 1 NonSpecial] ->
+    pure [Let "v" ("smallvec![" <> get <> "];"), PushAlgebraic (show i) "v"]
   [New _ _ (ConstructorIndex i) size NonSpecial] -> do
-    io <- isOnline
     pure
-      [ Let "mut v" (vecBuilder size (if io then "smallvec" else "vec")),
+      [ Let "mut v" (vecBuilder size "smallvec"),
         Custom "v.reverse();",
         PushAlgebraic (show i) "v"
       ]
