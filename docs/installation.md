@@ -47,3 +47,8 @@ To be able to compile Mlatu programs offline and decrease build times, prefetch 
 cargo install cargo-prefetch
 cargo prefetch smallvec
 ```
+
+If you are on macOS and do not have `zld` installed, run (requires Xcode to be installed)
+```sh
+brew install michaeleisel/zld/zld
+```

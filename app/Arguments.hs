@@ -12,15 +12,20 @@ data Options
   = CheckFiles !Prelude ![FilePath]
   | Repl !Prelude
   | FormatFiles ![FilePath]
-  | RunFiles !Prelude ![FilePath]
-  | CompileFiles !Prelude ![FilePath]
-  | BenchFiles !Prelude ![FilePath]
+  | RunFiles !Bool !Prelude !Bool ![FilePath]
+  | CompileFiles !Prelude !Bool ![FilePath]
 
 options :: Parser Options
-options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand <> benchFilesCommand)
+options = subparser (replCommand <> checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand)
 
 preludeFlag :: Parser Prelude
 preludeFlag = (\b -> if b then Foundation else Common) <$> switch (long "foundation-only" <> short 'f' <> help "Include the foundation only as the prelude")
+
+releaseFlag :: Parser Bool
+releaseFlag = switch (long "release" <> short 'r' <> help "Release mode")
+
+benchFlag :: Parser Bool
+benchFlag = switch (long "bench" <> short 'b' <> help "Benchmark the time taken to run")
 
 filesArgument :: Parser [FilePath]
 filesArgument = some (argument str (metavar "FILES..."))
@@ -35,10 +40,7 @@ checkFilesCommand :: Mod CommandFields Options
 checkFilesCommand = command "check" (info (CheckFiles <$> preludeFlag <*> filesArgument) (progDesc "Checks Mlatu files for correctness without running them"))
 
 runFilesCommand :: Mod CommandFields Options
-runFilesCommand = command "run" (info (RunFiles <$> preludeFlag <*> filesArgument) (progDesc "Runs Mlatu files"))
+runFilesCommand = command "run" (info (RunFiles <$> benchFlag <*> preludeFlag <*> releaseFlag <*> filesArgument) (progDesc "Runs Mlatu files"))
 
 compileFilesCommand :: Mod CommandFields Options
-compileFilesCommand = command "build" (info (CompileFiles <$> preludeFlag <*> filesArgument) (progDesc "Builds Mlatu files into an executable"))
-
-benchFilesCommand :: Mod CommandFields Options
-benchFilesCommand = command "bench" (info (BenchFiles <$> preludeFlag <*> filesArgument) (progDesc "Benchmarks the running of the produced Mlatu executable"))
+compileFilesCommand = command "build" (info (CompileFiles <$> preludeFlag <*> releaseFlag <*> filesArgument) (progDesc "Builds Mlatu files into an executable"))
