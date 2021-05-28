@@ -19,6 +19,7 @@ module Mlatu.Origin
     beginColumn,
     endLine,
     endColumn,
+    between,
   )
 where
 
@@ -76,4 +77,14 @@ range a b =
       _beginColumn = sourceColumn a,
       _endLine = sourceLine b,
       _endColumn = sourceColumn b
+    }
+
+between :: Origin -> Origin -> Origin
+between a b =
+  Origin
+    { _name = view name a,
+      _beginLine = view beginLine a,
+      _beginColumn = view beginColumn a,
+      _endLine = view endLine b,
+      _endColumn = view endColumn b
     }

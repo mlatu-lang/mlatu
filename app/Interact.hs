@@ -6,13 +6,8 @@ where
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
 import Mlatu.Codegen qualified as Codegen
-import Mlatu.Definition qualified as Definition
 import Mlatu.Dictionary (Dictionary)
-import Mlatu.Dictionary qualified as Dictionary
 import Mlatu.Enter qualified as Enter
-import Mlatu.Entry qualified as Entry
-import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Fragment qualified as Fragment
 import Mlatu.Infer (typeFromSignature, typecheck)
 import Mlatu.Informer (errorCheckpoint, ice, runMlatu, warnCheckpoint)
 import Mlatu.Instantiated (Instantiated (Instantiated))

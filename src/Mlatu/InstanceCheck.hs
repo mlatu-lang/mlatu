@@ -14,7 +14,7 @@ where
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Mlatu.Free qualified as Free
-import Mlatu.Informer (M, attempt, halt, reportFailedInstanceCheck, reportMissingPermissionLabel, while)
+import Mlatu.Informer (M, attempt, halt, reportFailedInstanceCheck, reportMissingPermissionLabel)
 import Mlatu.Informer qualified as Report
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Origin (Origin)
@@ -45,7 +45,7 @@ instanceCheck aScheme bScheme = do
   let bad = Set.filter (`Set.member` escaped) ids
   unless (Set.null bad) failure
   where
-    failure = reportFailedInstanceCheck aScheme bScheme
+    failure = reportFailedInstanceCheck aScheme bScheme (Type.origin aScheme)
 
 -- | Skolemization replaces each quantified type variable with a type constant
 -- that unifies only with itself.

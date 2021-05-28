@@ -4,7 +4,7 @@ import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
 import Mlatu.Codegen qualified as Codegen
-import Mlatu.Informer (Report)
+import Mlatu.Informer (Report, warnCheckpoint)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
 import Mlatu.Vocabulary
@@ -62,7 +62,15 @@ formatFiles paths = for_ paths $ \relativePath -> do
 checkFiles :: Prelude -> [FilePath] -> IO ()
 checkFiles prelude relativePaths =
   forM relativePaths makeAbsolute
-    >>= (\paths -> runMlatu (compileWithPrelude prelude mainPermissions Nothing paths) >>= (`whenLeft_` handleReports))
+    >>= ( \paths ->
+            runMlatu
+              ( do
+                  dict <- compileWithPrelude prelude mainPermissions Nothing paths
+                  warnCheckpoint
+                  pure dict
+              )
+              >>= (`whenLeft_` handleReports)
+        )
 
 careTaken :: FilePath -> IO () -> IO ()
 careTaken name action =

@@ -21,6 +21,7 @@ import Mlatu.Origin (Origin)
 import Mlatu.Pretty (printType)
 import Mlatu.Substitute qualified as Substitute
 import Mlatu.Term (Term (..))
+import Mlatu.Term qualified as Term
 import Mlatu.Type (Type (..), TypeId, Var (..))
 import Mlatu.TypeEnv (TypeEnv, freshTypeId)
 import Mlatu.Zonk qualified as Zonk
@@ -61,7 +62,7 @@ term tenv t args = foldlM go t args
   where
     go (Generic _origin _name x expr) arg = Substitute.term tenv x arg expr
     go _ _ = do
-      reportTypeArgumentCountMismatch t $ Zonk.typ tenv <$> args
+      reportTypeArgumentCountMismatch t (Zonk.typ tenv <$> args) (Term.origin t)
       halt
     {-# INLINEABLE go #-}
 {-# INLINEABLE term #-}

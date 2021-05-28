@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Mlatu.Informer
 -- Description : Error-reporting monad
@@ -20,9 +18,7 @@ module Mlatu.Informer
     runMlatu,
     errorCheckpoint,
     warnCheckpoint,
-    infoCheckpoint,
     ice,
-    human,
     reportParseError,
     reportTypeMismatch,
     reportCannotResolveName,
@@ -51,8 +47,6 @@ import Mlatu.Signature (Signature)
 import Mlatu.Term (Term)
 import Mlatu.Term qualified as Term
 import Mlatu.Type (Constructor, Type)
-import Mlatu.Type qualified as Type
-import Optics.TH (makePrisms)
 import Prettyprinter (Doc, Pretty (pretty), colon, comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>))
 import Relude hiding (Type)
 import System.IO.Unsafe (unsafeInterleaveIO)
@@ -68,308 +62,96 @@ ice msg =
     \Error: "
       <> msg
 
-reportError :: (Monad m) => ReportKind -> MT m ()
-reportError = report . Report Error
-
-reportWarning :: (Monad m) => ReportKind -> MT m ()
-reportWarning = report . Report Warn
-
 errorCheckpoint :: (Applicative m) => MT m ()
 errorCheckpoint = checkpoint Error
 
 warnCheckpoint :: (Applicative m) => MT m ()
 warnCheckpoint = checkpoint Warn
 
-infoCheckpoint :: (Applicative m) => MT m ()
-infoCheckpoint = checkpoint Info
-
 -- | A Mlatu action atop a 'Monad' 'm', pureing a result of type 'a', which
 -- maintains a '[(Origin, Doc ())]' stack and can fail with a list of '[Report]'.
-newtype MT m a = MT
-  { unMT :: [(Origin, Doc ())] -> [Report] -> ExceptT [Report] m (a, [Report])
-  }
+newtype MT m a = MT (ReaderT [(Origin, Doc ())] (MaybeT (StateT [Report] m)) a)
+  deriving (Functor, Applicative, Monad, MonadReader [(Origin, Doc ())], MonadState [Report], MonadIO, MonadFix, MonadFail)
 
 type M = MT IO
+
+mt :: ([(Origin, Doc ())] -> [Report] -> m (Maybe a, [Report])) -> MT m a
+mt f = MT (ReaderT (MaybeT . StateT . f))
+
+unMT :: MT m a -> [(Origin, Doc ())] -> [Report] -> m (Maybe a, [Report])
+unMT (MT action) context = runStateT (runMaybeT (runReaderT action context))
 
 -- | Runs a nested action, pureing whether it completed successfully, that is,
 -- without generating any reports.
 attempt :: (Monad m) => MT m a -> MT m Bool
-attempt action = MT $ \context reports ->
-  ExceptT $
-    runExceptT (unMT action context reports)
-      <&> Right . either (False,) ((True,) . snd)
+attempt action =
+  mt
+    ( \context reports ->
+        ( \case
+            (Just x, rs) -> (Just True, rs)
+            (Nothing, rs) -> (Just False, rs)
+        )
+          <$> unMT action context reports
+    )
 
 runMlatu :: (Monad m) => MT m a -> m (Either [Report] a)
-runMlatu (MT m) = runExceptT $ m [] [] <&> fst
-
-instance (Monad m) => Functor (MT m) where
-  fmap f (MT ax) = MT $ flip flip (first f) . ((<&>) .) . ax
-  {-# INLINEABLE fmap #-}
-
-instance (Monad m) => Applicative (MT m) where
-  pure x = MT $ const (pure . (x,))
-  MT af <*> MT ax = MT $ ap (flip . ((>>=) .) . af) (uncurry . (. first) . flip . ((<&>) .) . ax)
-  {-# INLINEABLE (<*>) #-}
-
-instance (Monad m) => Monad (MT m) where
-  return = pure
-  MT ax >>= f = MT $ ap (flip . ((>>=) .) . ax) (uncurry . (. f) . flip unMT)
-  {-# INLINEABLE (>>=) #-}
-
-instance (MonadIO m) => MonadFix (MT m) where
-  mfix k = MT $ \context reports ->
-    newEmptyMVar
-      >>= ap
-        ((>>=) . liftIO . unsafeInterleaveIO . takeMVar)
-        ((<=< flip (flip unMT context . k) reports) . (liftIO .) . (`ap` pure) . ((>>) .) . (. fst) . putMVar)
-
-instance (MonadIO m) => MonadIO (MT m) where
-  liftIO m = MT $ const ((liftIO m <&>) . flip (,))
-
-instance (Monad m) => MonadFail (MT m) where
-  fail = ice "Mlatu.monadFail -- fail was called somewhere, somehow"
+runMlatu action =
+  ( \case
+      (Just x, _) -> Right x
+      (Nothing, rs) -> Left rs
+  )
+    <$> unMT action [] []
 
 checkpoint :: (Applicative m) => Level -> MT m ()
-checkpoint minLvl = MT $ \_ reports ->
-  hoistEither $
-    if all (\(Report lvl _) -> lvl < minLvl) reports
-      then Right ((), reports)
-      else Left reports
+checkpoint minLvl =
+  mt $ \_ reports ->
+    pure $
+      if all (\(Report lvl _ _) -> lvl < minLvl) reports
+        then (Just (), reports)
+        else (Nothing, reports)
 
 halt :: (Applicative m) => MT m a
-halt = MT $ const (hoistEither . Left)
+halt = mt $ const (\reports -> pure (Nothing, reports))
+
+showOriginPrefix :: Origin.Origin -> Doc a
+showOriginPrefix origin = printOrigin origin <> colon
 
 report :: (Monad m) => Report -> MT m ()
-report r = MT $ \context reports ->
-  pure . (,) () $
-    (\ctxt -> (if null ctxt then r else Report Info (Context ctxt r)) : reports)
-      context
+report r@(Report l o kind) =
+  mt $ \context reports ->
+    pure . (Just (),) $
+      ( if null context
+          then r : reports
+          else
+            Report
+              l
+              o
+              ( vsep
+                  ( ((\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc]) <$> context)
+                      ++ [kind]
+                  )
+              ) :
+            reports
+      )
 
 while :: Origin -> Doc () -> MT m a -> MT m a
-while origin message action = MT $ unMT action . ((origin, message) :)
+while origin message action = mt $ unMT action . ((origin, message) :)
 
 data NameCategory = WordName | TypeName
   deriving (Eq, Show)
 
 data Level
-  = Info
-  | Warn
+  = Warn
   | Error
   deriving (Ord, Eq, Show)
 
-data Report = Report Level ReportKind
+data Report = Report Level Origin (Doc ())
   deriving (Eq, Show)
 
-data ReportKind
-  = MissingTypeSignature !Origin !Qualified
-  | MultiplePermissionVariables !Origin !Type !Type
-  | CannotResolveType !Origin !GeneralName
-  | FailedInstanceCheck !Type !Type
-  | MissingPermissionLabel !Type !Type !Origin !Constructor
-  | TypeArgumentCountMismatch !(Term Type) ![Type]
-  | CannotResolveName !Origin !NameCategory !GeneralName
-  | MultipleDefinitions !Origin !Qualified ![Origin]
-  | WordRedefinition !Origin !Qualified !Origin
-  | WordRedeclaration !Origin !Qualified !Signature !Origin !(Maybe Signature)
-  | TypeMismatch !Type !Type
-  | RedundantCase !Origin
-  | Chain ![ReportKind]
-  | OccursCheckFailure !Type !Type
-  | StackDepthMismatch !Origin
-  | InvalidOperatorMetadata !Origin !Qualified !(Term ())
-  | ParseError !Origin ![Doc ()] !(Doc ())
-  | Context ![(Origin, Doc ())] !Report
-  deriving (Eq, Show)
-
-makePrisms ''ReportKind
-
-human :: Report -> Doc ()
-human (Report _ kind) = kindMsg kind
-  where
-    kindMsg = \case
-      (MissingTypeSignature origin name) ->
-        showOriginPrefix origin
-          <+> "I can't find a type signature for the word"
-          <+> dquotes (printQualified name)
-      (MultiplePermissionVariables origin a b) ->
-        hsep
-          [ showOriginPrefix origin,
-            "I found multiple permission variables:",
-            dquotes $ printType a,
-            "and",
-            dquotes $ printType b,
-            "but only one is allowed per function"
-          ]
-      (CannotResolveType origin name) ->
-        hsep
-          [ showOriginPrefix origin,
-            "I can't tell which type",
-            dquotes $ printGeneralName name,
-            "refers to",
-            parens "did you mean to add it as a type parameter?"
-          ]
-      (FailedInstanceCheck a b) ->
-        hsep
-          -- TODO: Show type kind.
-          [ "I expected",
-            dquotes $ printType a,
-            "to be at least as polymorphic as",
-            dquotes $ printType b,
-            "but it isn't"
-          ]
-      (MissingPermissionLabel a b origin name) ->
-        hsep
-          [ showOriginPrefix origin,
-            "the permission label",
-            dquotes $ printConstructor name,
-            "was missing when I tried to match the permission type",
-            dquotes $ printType a,
-            "with the permission type",
-            dquotes $ printType b
-          ]
-      (TypeArgumentCountMismatch term args) ->
-        hsep
-          [ showOriginPrefix $ Term.origin term,
-            "I expected",
-            pretty $ Term.quantifierCount term,
-            "type arguments to",
-            dquotes $ printTerm term,
-            "but",
-            pretty (length args),
-            "were provided:",
-            list $ dquotes . printType <$> args
-          ]
-      (CannotResolveName origin category name) ->
-        hsep
-          -- TODO: Suggest similar names in scope.
-          [ showOriginPrefix origin,
-            "I can't find the",
-            case category of
-              WordName -> "word"
-              TypeName -> "type",
-            "that the",
-            case category of
-              WordName -> "word"
-              TypeName -> "type",
-            "name",
-            dquotes $ printGeneralName name,
-            "refers to"
-          ]
-      (MultipleDefinitions origin name duplicates) ->
-        vsep $
-          hsep
-            [ showOriginPrefix origin,
-              "I found multiple definitions of",
-              dquotes $ printQualified name,
-              parens "did you mean to declare it as a trait?"
-            ] :
-          ( ( \duplicateOrigin ->
-                hsep
-                  ["also defined at", printOrigin duplicateOrigin]
-            )
-              <$> duplicates
-          )
-      (WordRedefinition origin name originalOrigin) ->
-        vsep
-          [ hsep
-              [ showOriginPrefix origin,
-                "I can't redefine the word",
-                dquotes $ printQualified name,
-                "because it already exists",
-                parens "did you mean to declare it as a trait?"
-              ],
-            hsep
-              [ showOriginPrefix originalOrigin,
-                "it was originally defined here"
-              ]
-          ]
-      ( WordRedeclaration
-          origin
-          name
-          signature
-          originalOrigin
-          mOriginalSignature
-        ) ->
-          vsep $
-            hsep
-              [ showOriginPrefix origin,
-                "I can't redeclare the word",
-                dquotes $ printQualified name,
-                "with the signature",
-                dquotes $ printSignature signature
-              ] :
-            hsep
-              [ showOriginPrefix originalOrigin,
-                "because it was declared or defined already"
-              ] :
-              [ hsep
-                  [ "with the signature",
-                    dquotes $ printSignature originalSignature
-                  ]
-                | Just originalSignature <- [mOriginalSignature]
-              ]
-      -- TODO: Report type kind.
-      (TypeMismatch a b) ->
-        vsep
-          [ hsep
-              [ showOriginPrefix $ Type.origin a,
-                "I can't match the type",
-                dquotes $ printType a
-              ],
-            hsep
-              [ showOriginPrefix $ Type.origin b,
-                "with the type",
-                dquotes $ printType b
-              ]
-          ]
-      (RedundantCase origin) ->
-        hsep
-          [ showOriginPrefix origin,
-            "this case is redundant and will never match"
-          ]
-      (Chain reports) -> vsep $ kindMsg <$> reports
-      (OccursCheckFailure a b) ->
-        vsep
-          [ hsep
-              [ showOriginPrefix $ Type.origin a,
-                "the type",
-                dquotes $ printType a
-              ],
-            hsep
-              [ showOriginPrefix $ Type.origin b,
-                "occurs in the type",
-                dquotes $ printType b,
-                parens "which often indicates an infinite type"
-              ]
-          ]
-      (StackDepthMismatch origin) ->
-        hsep
-          [ showOriginPrefix origin,
-            "you may have a stack depth mismatch"
-          ]
-      (InvalidOperatorMetadata origin name term) ->
-        hsep
-          [ showOriginPrefix origin,
-            " invalid operator metadata for ",
-            dquotes $ printQualified name,
-            ":",
-            printTerm term
-          ]
-      (ParseError origin unexpectedThing expectedThing) ->
-        hsep $
-          (showOriginPrefix origin :) $ intersperse "; " $ unexpectedThing ++ [expectedThing]
-      (Context context message) ->
-        vsep $
-          ( (\(origin, doc) -> hsep [showOriginPrefix origin, "while", doc])
-              <$> context
-          )
-            ++ [human message]
-
-showOriginPrefix :: Origin.Origin -> Doc a
-showOriginPrefix origin = printOrigin origin <> colon
-
-parseError :: Parsec.ParseError -> ReportKind
-parseError parsecError = ParseError origin unexpected' expected'
+parseError :: Parsec.ParseError -> Doc ()
+parseError parsecError =
+  hsep $
+    (showOriginPrefix origin :) $ intersperse "; " $ unexpected' ++ [expected']
   where
     origin :: Origin
     origin = Origin.pos $ Parsec.errorPos parsecError
@@ -412,30 +194,250 @@ unexpectedMessage message =
             else pretty string
         ]
 
-reportParseError x = reportError (parseError x)
+reportParseError :: (Monad m) => Parsec.ParseError -> MT m ()
+reportParseError x = report $ Report Error (Origin.pos $ Parsec.errorPos x) (parseError x)
 
-reportTypeMismatch x y = reportError (TypeMismatch x y)
+reportTypeMismatch :: (Monad m) => Type -> Type -> Origin -> MT m ()
+reportTypeMismatch a b origin =
+  report $
+    Report
+      Error
+      origin
+      ( vsep
+          [ hsep
+              [ "I can't match the type",
+                dquotes $ printType a
+              ],
+            hsep
+              [ "with the type",
+                dquotes $ printType b
+              ]
+          ]
+      )
 
-reportCannotResolveName x y z = reportError (CannotResolveName x y z)
+reportCannotResolveName :: (Monad m) => Origin -> NameCategory -> GeneralName -> MT m ()
+reportCannotResolveName origin category name =
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I can't find the",
+            case category of
+              WordName -> "word"
+              TypeName -> "type",
+            "that the",
+            case category of
+              WordName -> "word"
+              TypeName -> "type",
+            "name",
+            dquotes $ printGeneralName name,
+            "refers to"
+          ]
+      )
 
-reportOccursTypeMismatch a b c d = reportError (Chain [TypeMismatch a b, OccursCheckFailure c d])
+reportOccursTypeMismatch :: (Monad m) => Type -> Type -> Origin -> MT m ()
+reportOccursTypeMismatch a b origin =
+  report $
+    Report
+      Error
+      origin
+      ( vsep
+          [ vsep
+              [ hsep
+                  [ "I can't match the type",
+                    dquotes $ printType a
+                  ],
+                hsep
+                  [ "with the type",
+                    dquotes $ printType b
+                  ]
+              ],
+            vsep
+              [ hsep
+                  [ "the type",
+                    dquotes $ printType a
+                  ],
+                hsep
+                  [ "occurs in the type",
+                    dquotes $ printType b,
+                    parens "which often indicates an infinite type"
+                  ]
+              ]
+          ]
+      )
 
-reportStackDepthMismatch a b c d e = reportError (Chain [TypeMismatch a b, OccursCheckFailure c d, StackDepthMismatch e])
+reportStackDepthMismatch :: (Monad m) => Type -> Type -> Origin -> MT m ()
+reportStackDepthMismatch a b origin =
+  report $
+    Report
+      Error
+      origin
+      ( vsep
+          [ vsep
+              [ hsep
+                  [ "I can't match the type",
+                    dquotes $ printType a
+                  ],
+                hsep
+                  [ "with the type",
+                    dquotes $ printType b
+                  ]
+              ],
+            vsep
+              [ hsep
+                  [ "the type",
+                    dquotes $ printType a
+                  ],
+                hsep
+                  [ "occurs in the type",
+                    dquotes $ printType b,
+                    parens "which often indicates an infinite type"
+                  ]
+              ],
+            hsep
+              [ "you may have a stack depth mismatch"
+              ]
+          ]
+      )
 
-reportTypeArgumentCountMismatch x y = reportError (TypeArgumentCountMismatch x y)
+reportTypeArgumentCountMismatch :: (Monad m) => Term a -> [Type] -> Origin -> MT m ()
+reportTypeArgumentCountMismatch term args origin =
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I expected",
+            pretty $ Term.quantifierCount term,
+            "type arguments to",
+            dquotes $ printTerm term,
+            "but",
+            pretty (length args),
+            "were provided:",
+            list $ dquotes . printType <$> args
+          ]
+      )
 
-reportWordRedefinition x y z = reportError (WordRedefinition x y z)
+reportWordRedefinition :: (Monad m) => Origin -> Qualified -> Origin -> MT m ()
+reportWordRedefinition origin name originalOrigin = do
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I can't redefine the word",
+            dquotes $ printQualified name,
+            "because it already exists",
+            parens "did you mean to declare it as a trait?"
+          ]
+      )
+  report $ Report Error originalOrigin "it was originally defined here"
 
-reportMissingPermissionLabel a b c d = reportError (MissingPermissionLabel a b c d)
+reportMissingPermissionLabel :: (Monad m) => Type -> Type -> Origin -> Constructor -> MT m ()
+reportMissingPermissionLabel a b origin name =
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "the permission label",
+            dquotes $ printConstructor name,
+            "was missing when I tried to match the permission type",
+            dquotes $ printType a,
+            "with the permission type",
+            dquotes $ printType b
+          ]
+      )
 
-reportFailedInstanceCheck x y = reportError (FailedInstanceCheck x y)
+reportFailedInstanceCheck :: (Monad m) => Type -> Type -> Origin -> MT m ()
+reportFailedInstanceCheck a b origin = do
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          -- TODO: Show type kind.
+          [ "I expected",
+            dquotes $ printType a,
+            "to be at least as polymorphic as",
+            dquotes $ printType b,
+            "but it isn't"
+          ]
+      )
 
-reportWordRedeclaration a b c d e = reportError (WordRedeclaration a b c d e)
+reportWordRedeclaration :: (Monad m) => Origin -> Qualified -> Signature -> Origin -> Maybe Signature -> MT m ()
+reportWordRedeclaration origin name signature originalOrigin mOriginalSignature = do
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I can't redeclare the word",
+            dquotes $ printQualified name,
+            "with the signature",
+            dquotes $ printSignature signature
+          ]
+      )
+  report $
+    Report
+      Error
+      originalOrigin
+      ( hsep
+          ( "because it was declared or defined already here" :
+            ( case mOriginalSignature of
+                Just originalSignature ->
+                  [ "with the signature",
+                    dquotes $ printSignature originalSignature
+                  ]
+                Nothing -> []
+            )
+          )
+      )
 
-reportMissingTypeSignature x y = reportError (MissingTypeSignature x y)
+reportMissingTypeSignature :: (Monad m) => Origin -> Qualified -> MT m ()
+reportMissingTypeSignature origin name =
+  report $
+    Report
+      Error
+      origin
+      ( "I can't find a type signature for the word"
+          <+> dquotes (printQualified name)
+      )
 
-reportMultiplePermissionVariables x y z = reportError (MultiplePermissionVariables x y z)
+reportMultiplePermissionVariables :: (Monad m) => Origin -> Type -> Type -> MT m ()
+reportMultiplePermissionVariables origin a b =
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I found multiple permission variables:",
+            dquotes $ printType a,
+            "and",
+            dquotes $ printType b,
+            "but only one is allowed per function"
+          ]
+      )
 
-reportCannotResolveType x y = reportError (CannotResolveType x y)
+reportCannotResolveType :: (Monad m) => Origin -> GeneralName -> MT m ()
+reportCannotResolveType origin name =
+  report $
+    Report
+      Error
+      origin
+      ( hsep
+          [ "I can't tell which type",
+            dquotes $ printGeneralName name,
+            "refers to",
+            parens "did you mean to add it as a type parameter?"
+          ]
+      )
 
-reportRedundantCase x = reportWarning (RedundantCase x)
+reportRedundantCase :: (Monad m) => Origin -> MT m ()
+reportRedundantCase origin =
+  report $
+    Report
+      Warn
+      origin
+      "this case is redundant and will never match"

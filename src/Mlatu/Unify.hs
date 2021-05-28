@@ -13,7 +13,7 @@ module Mlatu.Unify
 where
 
 import Data.Map qualified as Map
-import Mlatu.Informer (M, halt, reportOccursTypeMismatch, reportStackDepthMismatch, reportTypeMismatch, while)
+import Mlatu.Informer (M, halt, reportOccursTypeMismatch, reportStackDepthMismatch, reportTypeMismatch)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Kind (Kind (..))
 import Mlatu.Occurrences (occurs)
@@ -46,7 +46,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
           Just (x, t) -> typ (over TypeEnv.tvs (Map.insert x t) tenv1) r s'
           Nothing -> typ tenv1 r s'
       Nothing -> do
-        reportTypeMismatch t1' t2'
+        reportTypeMismatch t1' t2' (Type.origin t1')
         halt
   (_, Type.Join {}) -> commute
   -- We fall back to regular unification for value type constructors. This makes
@@ -57,7 +57,7 @@ typ tenv0 t1 t2 = case (t1', t2') of
     tenv1 <- typ tenv0 a c
     typ tenv1 b d
   _mismatch -> do
-    reportTypeMismatch t1' t2'
+    reportTypeMismatch t1' t2' (Type.origin t1')
     halt
 
     -- Unification is commutative. If we fail to handle a case, this can result in
@@ -90,10 +90,10 @@ unifyTv tenv0 origin v@(Var _name x _) t = case t of
         let t' = Zonk.typ tenv0 t
          in case t' of
               Type.Prod {} -> do
-                reportStackDepthMismatch (TypeVar origin v) t' (TypeVar origin v) t' (Type.origin t')
+                reportStackDepthMismatch (TypeVar origin v) t' (Type.origin t')
                 halt
               _nonProd -> do
-                reportOccursTypeMismatch (TypeVar origin v) t' (TypeVar origin v) t'
+                reportOccursTypeMismatch (TypeVar origin v) t' (Type.origin t')
                 halt
       else declare
   where

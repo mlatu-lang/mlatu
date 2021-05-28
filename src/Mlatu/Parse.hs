@@ -675,15 +675,16 @@ matchParser = (<?> "match") $ do
       many $
         (<?> "case") $
           Parsec.try $ do
-            origin <- getTokenOrigin <* parserMatch Token.Case
+            o1 <- getTokenOrigin <* parserMatch Token.Case
             name <- nameParser
+            o2 <- getTokenOrigin
             body <- blockLikeParser
-            pure (origin, name, body)
+            pure (Origin.between o1 o2, name, body)
     mElse' <- Parsec.optionMaybe $ do
-      origin <- getTokenOrigin <* parserMatch Token.Case
-      parserMatch_ Token.Ignore
+      o1 <- getTokenOrigin <* parserMatch Token.Case
+      o2 <- getTokenOrigin <* parserMatch Token.Ignore
       body <- blockParser
-      pure (origin, Right body)
+      pure (Origin.between o1 o2, Right body)
     pure $
       (,) cases' $
         fromMaybe

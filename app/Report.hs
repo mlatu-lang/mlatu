@@ -3,16 +3,29 @@ module Report
   )
 where
 
-import Mlatu.Informer (Level (..), Report (..), human)
+import Mlatu.Informer (Level (..), Report (..))
+import Mlatu.Origin (Origin, beginColumn, beginLine, endColumn, endLine, name)
+import Mlatu.Pretty (printOrigin)
+import Optics
 import Relude
-import System.IO (hPutStrLn)
+import Relude.Unsafe qualified as Unsafe
+import System.Directory (makeAbsolute)
+import System.IO (hPrint, hPutStrLn)
 
 reportAll :: [Report] -> IO ()
 reportAll reports = do
-  unless (null errors) $ traverse_ (hPutStrLn stderr) $ "Errors: " : errors
-  unless (null warnings) $ traverse_ (hPutStrLn stderr) $ "Warnings: " : warnings
-  unless (null infos) $ traverse_ (hPutStrLn stderr) $ "Infos: " : infos
+  traverse_ printReport (ordNub ((\(Report _ o d) -> (o, show d)) <$> reports))
   where
-    errors = ordNub $ show . human <$> filter (\(Report level _) -> level == Error) reports
-    warnings = ordNub $ show . human <$> filter (\(Report level _) -> level == Warn) reports
-    infos = ordNub $ show . human <$> filter (\(Report level _) -> level == Info) reports
+    printReport (o, doc) = do
+      hPrint stderr (printOrigin o)
+      let (bl, bc) = (view beginLine o, view beginColumn o)
+      let (el, ec) = (view endLine o, view endColumn o)
+      when (bl == el) $ do
+        absolute <- makeAbsolute (toString (view name o))
+        contents <- decodeUtf8 <$> readFileBS absolute
+        let rightLine = case lines contents !!? (bl - 1) of
+              Just line -> line
+              Nothing -> Unsafe.head (lines contents)
+        hPutStrLn stderr (toString rightLine)
+        hPutStrLn stderr (replicate (bc - 1) ' ' <> replicate (ec - bc) '^')
+      hPutStrLn stderr doc
