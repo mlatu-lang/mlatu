@@ -342,10 +342,10 @@ word name args = do
           let unMangled = rustifyInstantiated $ Instantiated name []
           case Map.lookup unMangled dict of
             Just (Entry.WordEntry a b c d e (Just body)) ->
-              liftIO (runMlatu $ Instantiate.term TypeEnv.empty body args)
+              liftIO (fst <$> runMlatu (Instantiate.term TypeEnv.empty body args))
                 >>= ( \case
-                        Right body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body'))
-                        Left _ -> error "Could not instantiate generic type"
+                        Just body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body'))
+                        Nothing -> error "Could not instantiate generic type"
                     )
             _ -> pure []
 

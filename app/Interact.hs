@@ -31,7 +31,7 @@ import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
-import System.Directory (createDirectory, removeDirectoryRecursive, withCurrentDirectory)
+import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.IO (hPrint)
 import System.Process.Typed (proc, runProcess_)
 
@@ -46,33 +46,30 @@ cmd input = do
         Qualified
           (Qualifier Absolute ["interactive"])
           $ Unqualified entryNameUnqualified
-  mResults <- liftIO $
-    runMlatu $ do
+  update <- liftIO $ do
+    writeFile "interactive.mlt" input
+    (result, reports) <- runMlatu $ do
       fragment <-
         Mlatu.fragmentFromSource
           [QualifiedName $ Global "io"]
           (Just entryName)
           lineNumber
-          "<interactive>"
+          "interactive.mlt"
           (text <> " " <> toText input)
       errorCheckpoint
       dictionary <- Enter.fragment fragment commonDictionary
       errorCheckpoint
       pure dictionary
-  case mResults of
-    Left reports -> do
-      liftIO $ reportAll reports
-    Right dictionary -> do
-      put (text <> " " <> toText input, lineNumber + 1)
-      liftIO
-        ( Codegen.generate dictionary (Just entryName) >>= \contents ->
-            writeFileBS "t/src/main.rs" contents
-              >> withCurrentDirectory
-                "t"
-                ( runProcess_
-                    (proc "cargo" ["+nightly", "run", "--quiet"])
-                )
-        )
+    reportAll reports
+    removeFile "interactive.mlt"
+    case result of
+      Nothing -> pure False
+      Just dictionary -> do
+        contents <- Codegen.generate dictionary (Just entryName)
+        writeFileBS "t/src/main.rs" contents
+        withCurrentDirectory "t" (runProcess_ "cargo +nightly run --quiet")
+        pure True
+  when update $ put (text <> " " <> toText input, lineNumber + 1)
 
 -- TODO
 completer :: String -> ReaderT Dictionary (StateT (Text, Int) IO) [String]
@@ -92,29 +89,41 @@ ini :: MRepl ()
 ini = liftIO $ putStrLn "Welcome!"
 
 final :: MRepl ExitDecision
-final =
-  liftIO (putStrLn "Bye!" >> removeDirectoryRecursive "t")
-    >> pure Exit
+final = liftIO (putStrLn "Bye!") >> pure Exit
 
 run :: Prelude -> IO Int
 run prelude = do
-  result <- runMlatu $ Mlatu.compilePrelude prelude [QualifiedName $ Global "io"] Nothing
+  (result, reports) <- runMlatu $ Mlatu.compilePrelude prelude [QualifiedName $ Global "io"] Nothing
+  reportAll reports
   case result of
-    Left reports -> do
-      reportAll reports
-      pure 1
-    Right commonDictionary -> do
+    Nothing -> pure 1
+    Just commonDictionary -> do
       liftIO $ do
         createDirectory "t"
         writeFileBS "t/Cargo.toml" cargoToml
+        createDirectory "t/.cargo"
+        writeFileBS "t/.cargo/config.toml" configToml
         createDirectory "t/src"
       execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
+      liftIO $ removeDirectoryRecursive "t"
       pure 0
   where
     cargoToml =
-      "[package] \n \
-      \ name = \"output\" \n \
-      \ version = \"0.1.0\" "
+      "[package] \n\
+      \name = \"output\" \n\
+      \version = \"0.1.0\" \n\
+      \[dependencies.smallvec] \n\
+      \version = \"1.6.1\" \n\
+      \features = [\"union\"]"
+    configToml =
+      "[target.x86_64-unknown-linux-gnu]\n\
+      \linker = \"/usr/bin/clang\"\n\
+      \rustflags = [\"-Clink-arg=-fuse-ld=lld\", \"-Zshare-generics=y\"]\n\
+      \[target.x86_64-apple-darwin]\n\
+      \rustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/bin/zld\", \"-Zshare-generics=y\", \"-Csplit-debuginfo=unpacked\"]\n\
+      \[target.x86_64-pc-windows-msvc]\n\
+      \linker = \"rust-lld.exe\"\n\
+      \rustflags = [\"-Zshare-generics=y\"]"
     replOpts =
       ReplOpts
         { banner = \case

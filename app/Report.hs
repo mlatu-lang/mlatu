@@ -18,10 +18,11 @@ reportAll reports = do
   where
     printReport (o, doc) = do
       hPrint stderr (printOrigin o)
+      let n = view name o
       let (bl, bc) = (view beginLine o, view beginColumn o)
       let (el, ec) = (view endLine o, view endColumn o)
-      when (bl == el) $ do
-        absolute <- makeAbsolute (toString (view name o))
+      when (bl == el && n == "<interactive>") $ do
+        absolute <- makeAbsolute (toString n)
         contents <- decodeUtf8 <$> readFileBS absolute
         let rightLine = case lines contents !!? (bl - 1) of
               Just line -> line

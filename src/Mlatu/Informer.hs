@@ -94,13 +94,8 @@ attempt action =
           <$> unMT action context reports
     )
 
-runMlatu :: (Monad m) => MT m a -> m (Either [Report] a)
-runMlatu action =
-  ( \case
-      (Just x, _) -> Right x
-      (Nothing, rs) -> Left rs
-  )
-    <$> unMT action [] []
+runMlatu :: (Monad m) => MT m a -> m (Maybe a, [Report])
+runMlatu action = unMT action [] []
 
 checkpoint :: (Applicative m) => Level -> MT m ()
 checkpoint minLvl =
@@ -151,7 +146,7 @@ data Report = Report Level Origin (Doc ())
 parseError :: Parsec.ParseError -> Doc ()
 parseError parsecError =
   hsep $
-    (showOriginPrefix origin :) $ intersperse "; " $ unexpected' ++ [expected']
+    "I didn't expect to find: " : intersperse "; " (unexpected' ++ [expected'])
   where
     origin :: Origin
     origin = Origin.pos $ Parsec.errorPos parsecError
@@ -170,7 +165,7 @@ parseError parsecError =
     expected' :: Doc ()
     expected' =
       hsep
-        ( "expected" :
+        ( "I expected to find one of the following: " :
           punctuate
             comma
             ( pretty
@@ -203,15 +198,12 @@ reportTypeMismatch a b origin =
     Report
       Error
       origin
-      ( vsep
-          [ hsep
-              [ "I can't match the type",
-                dquotes $ printType a
-              ],
-            hsep
-              [ "with the type",
-                dquotes $ printType b
-              ]
+      ( hsep
+          [ "I expected to be able to match the type",
+            dquotes $ printType a,
+            "with the type",
+            dquotes $ printType b,
+            "but I can't"
           ]
       )
 
@@ -226,13 +218,9 @@ reportCannotResolveName origin category name =
             case category of
               WordName -> "word"
               TypeName -> "type",
-            "that the",
-            case category of
-              WordName -> "word"
-              TypeName -> "type",
-            "name",
+            "that the name",
             dquotes $ printGeneralName name,
-            "refers to"
+            "refers to here"
           ]
       )
 
@@ -243,26 +231,19 @@ reportOccursTypeMismatch a b origin =
       Error
       origin
       ( vsep
-          [ vsep
-              [ hsep
-                  [ "I can't match the type",
-                    dquotes $ printType a
-                  ],
-                hsep
-                  [ "with the type",
-                    dquotes $ printType b
-                  ]
+          [ hsep
+              [ "I expected to be able to match the type",
+                dquotes $ printType a,
+                "with the type",
+                dquotes $ printType b,
+                "but I can't"
               ],
-            vsep
-              [ hsep
-                  [ "the type",
-                    dquotes $ printType a
-                  ],
-                hsep
-                  [ "occurs in the type",
-                    dquotes $ printType b,
-                    parens "which often indicates an infinite type"
-                  ]
+            hsep
+              [ "the type",
+                dquotes $ printType a,
+                "occurs in the type",
+                dquotes $ printType b,
+                "which could indicate an infinite type"
               ]
           ]
       )
@@ -274,30 +255,21 @@ reportStackDepthMismatch a b origin =
       Error
       origin
       ( vsep
-          [ vsep
-              [ hsep
-                  [ "I can't match the type",
-                    dquotes $ printType a
-                  ],
-                hsep
-                  [ "with the type",
-                    dquotes $ printType b
-                  ]
-              ],
-            vsep
-              [ hsep
-                  [ "the type",
-                    dquotes $ printType a
-                  ],
-                hsep
-                  [ "occurs in the type",
-                    dquotes $ printType b,
-                    parens "which often indicates an infinite type"
-                  ]
+          [ hsep
+              [ "I expected to be able to match the type",
+                dquotes $ printType a,
+                "with the type",
+                dquotes $ printType b,
+                "but I can't"
               ],
             hsep
-              [ "you may have a stack depth mismatch"
-              ]
+              [ "the type",
+                dquotes $ printType a,
+                "occurs in the type",
+                dquotes $ printType b,
+                "which could indicate an infinite type"
+              ],
+            "you may have a stack depth mismatch here"
           ]
       )
 
@@ -308,13 +280,13 @@ reportTypeArgumentCountMismatch term args origin =
       Error
       origin
       ( hsep
-          [ "I expected",
+          [ "I expect",
             pretty $ Term.quantifierCount term,
             "type arguments to",
             dquotes $ printTerm term,
             "but",
             pretty (length args),
-            "were provided:",
+            "were provided instead:",
             list $ dquotes . printType <$> args
           ]
       )
@@ -341,12 +313,13 @@ reportMissingPermissionLabel a b origin name =
       Error
       origin
       ( hsep
-          [ "the permission label",
-            dquotes $ printConstructor name,
-            "was missing when I tried to match the permission type",
+          [ "I expected to be able to match the permission type",
             dquotes $ printType a,
             "with the permission type",
-            dquotes $ printType b
+            dquotes $ printType b,
+            ", but the permission label",
+            dquotes $ printConstructor name,
+            "was missing"
           ]
       )
 
@@ -360,9 +333,9 @@ reportFailedInstanceCheck a b origin = do
           -- TODO: Show type kind.
           [ "I expected",
             dquotes $ printType a,
-            "to be at least as polymorphic as",
+            "to be as general or more general then",
             dquotes $ printType b,
-            "but it isn't"
+            "but it is less general instead"
           ]
       )
 
@@ -401,8 +374,11 @@ reportMissingTypeSignature origin name =
     Report
       Error
       origin
-      ( "I can't find a type signature for the word"
-          <+> dquotes (printQualified name)
+      ( hsep
+          [ "I expect every word to have a type signature,",
+            "but I'm not seeing a type signature for the word",
+            dquotes (printQualified name)
+          ]
       )
 
 reportMultiplePermissionVariables :: (Monad m) => Origin -> Type -> Type -> MT m ()
@@ -412,11 +388,11 @@ reportMultiplePermissionVariables origin a b =
       Error
       origin
       ( hsep
-          [ "I found multiple permission variables:",
+          [ "I expect just one permission variable per function,",
+            "but I'm seeing multiple permission variables in this function instead:",
             dquotes $ printType a,
             "and",
-            dquotes $ printType b,
-            "but only one is allowed per function"
+            dquotes $ printType b
           ]
       )
 
@@ -429,7 +405,7 @@ reportCannotResolveType origin name =
       ( hsep
           [ "I can't tell which type",
             dquotes $ printGeneralName name,
-            "refers to",
+            "is supposed to refer to",
             parens "did you mean to add it as a type parameter?"
           ]
       )
@@ -440,4 +416,4 @@ reportRedundantCase origin =
     Report
       Warn
       origin
-      "this case is redundant and will never match"
+      "I'm not seeing a value this case matches - maybe its redundant and should be removed?"

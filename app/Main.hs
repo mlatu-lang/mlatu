@@ -52,10 +52,11 @@ formatFiles paths = for_ paths $ \relativePath -> do
   path <- makeAbsolute relativePath
   bs <- readFileBS path
   let text = decodeUtf8 bs
-  result <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
+  (result, reports) <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
+  reportAll reports
   case result of
-    Left reports -> handleReports reports
-    Right fragment -> do
+    Nothing -> exitFailure
+    Just fragment -> do
       withFile path WriteMode (`renderIO` layoutSmart defaultLayoutOptions (printFragment fragment))
       putStrLn ("Formatted " <> path <> " successfully")
 
@@ -69,7 +70,7 @@ checkFiles prelude relativePaths =
                   warnCheckpoint
                   pure dict
               )
-              >>= (`whenLeft_` handleReports)
+              >>= reportAll . snd
         )
 
 careTaken :: FilePath -> IO () -> IO ()
@@ -82,10 +83,11 @@ runFiles :: Prelude -> Bool -> [FilePath] -> IO ()
 runFiles prelude release relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \case
-            Left reports -> handleReports reports
-            Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+    >>= ( \(result, reports) ->
+            reportAll reports >> case result of
+              Nothing -> exitFailure
+              Just program ->
+                Codegen.generate program Nothing >>= \contents ->
                   careTaken
                     "out"
                     ( writeFileBS "Cargo.toml" cargoToml
@@ -102,17 +104,17 @@ runFiles prelude release relativePaths =
                               else "cargo +nightly run --quiet"
                           )
                     )
-              )
         )
 
 compileFiles :: Prelude -> Bool -> [FilePath] -> IO ()
 compileFiles prelude release relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \case
-            Left reports -> handleReports reports
-            Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+    >>= ( \(result, reports) ->
+            reportAll reports >> case result of
+              Nothing -> exitFailure
+              Just program ->
+                Codegen.generate program Nothing >>= \contents ->
                   careTaken
                     "out"
                     ( writeFileBS "Cargo.toml" cargoToml
@@ -130,17 +132,17 @@ compileFiles prelude release relativePaths =
                           )
                     )
                     >> putStrLn "Produced the executable ./output"
-              )
         )
 
 benchFiles :: Prelude -> Bool -> [FilePath] -> IO ()
 benchFiles prelude release relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \case
-            Left reports -> handleReports reports
-            Right program ->
-              ( Codegen.generate program Nothing >>= \contents ->
+    >>= ( \(result, reports) ->
+            reportAll reports >> case result of
+              Nothing -> exitFailure
+              Just program ->
+                Codegen.generate program Nothing >>= \contents ->
                   careTaken
                     "out"
                     ( writeFileBS "Cargo.toml" cargoToml
@@ -159,7 +161,6 @@ benchFiles prelude release relativePaths =
                     )
                     >> runProcess_ (proc "time" ["./output"])
                     >> removeFile "./output"
-              )
         )
 
 cargoToml :: ByteString
