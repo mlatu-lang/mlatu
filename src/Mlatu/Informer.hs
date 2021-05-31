@@ -145,8 +145,7 @@ data Report = Report Level Origin (Doc ())
 
 parseError :: Parsec.ParseError -> Doc ()
 parseError parsecError =
-  hsep $
-    "I didn't expect to find: " : intersperse "; " (unexpected' ++ [expected'])
+  hsep (("I am not wanting to see" : intersperse ", " unexpected') ++ ("here; instead" : expected'))
   where
     origin :: Origin
     origin = Origin.pos $ Parsec.errorPos parsecError
@@ -162,18 +161,16 @@ parseError parsecError =
     unexpected' :: [Doc ()]
     unexpected' = ((++) `on` unexpectedMessages) sysUnexpected unexpected
 
-    expected' :: Doc ()
+    expected' :: [Doc ()]
     expected' =
-      hsep
-        ( "I expected to find one of the following: " :
-          punctuate
-            comma
-            ( pretty
-                <$> ordNub
-                  ( filter (not . null) $ -- TODO: Replace with "end of input"
-                      Parsec.messageString <$> expected
-                  )
-            )
+      "I want to see " :
+      punctuate
+        comma
+        ( pretty
+            <$> ordNub
+              ( filter (not . null) $ -- TODO: Replace with "end of input"
+                  Parsec.messageString <$> expected
+              )
         )
 
 unexpectedMessages :: [Parsec.Message] -> [Doc ()]
@@ -199,11 +196,11 @@ reportTypeMismatch a b origin =
       Error
       origin
       ( hsep
-          [ "I expected to be able to match the type",
+          [ "I want to match the type",
             dquotes $ printType a,
             "with the type",
             dquotes $ printType b,
-            "but I can't"
+            "but I am not able to."
           ]
       )
 
@@ -214,13 +211,13 @@ reportCannotResolveName origin category name =
       Error
       origin
       ( hsep
-          [ "I can't find the",
+          [ "I want to see the ",
             case category of
               WordName -> "word"
               TypeName -> "type",
             "that the name",
             dquotes $ printGeneralName name,
-            "refers to here"
+            "refers to here, but I am not seeing it."
           ]
       )
 
@@ -232,18 +229,18 @@ reportOccursTypeMismatch a b origin =
       origin
       ( vsep
           [ hsep
-              [ "I expected to be able to match the type",
+              [ "I want to match the type",
                 dquotes $ printType a,
                 "with the type",
                 dquotes $ printType b,
-                "but I can't"
+                "but I am not able to."
               ],
             hsep
-              [ "the type",
+              [ "The type",
                 dquotes $ printType a,
                 "occurs in the type",
                 dquotes $ printType b,
-                "which could indicate an infinite type"
+                "which could indicate an infinite type."
               ]
           ]
       )
@@ -256,20 +253,20 @@ reportStackDepthMismatch a b origin =
       origin
       ( vsep
           [ hsep
-              [ "I expected to be able to match the type",
+              [ "I want to match the type",
                 dquotes $ printType a,
                 "with the type",
                 dquotes $ printType b,
-                "but I can't"
+                "but I am not able to."
               ],
             hsep
-              [ "the type",
+              [ "The type",
                 dquotes $ printType a,
                 "occurs in the type",
                 dquotes $ printType b,
-                "which could indicate an infinite type"
+                "which could indicate an infinite type."
               ],
-            "you may have a stack depth mismatch here"
+            "You may have a stack depth mismatch here."
           ]
       )
 
@@ -280,13 +277,13 @@ reportTypeArgumentCountMismatch term args origin =
       Error
       origin
       ( hsep
-          [ "I expect",
+          [ "I want to find",
             pretty $ Term.quantifierCount term,
             "type arguments to",
             dquotes $ printTerm term,
-            "but",
+            "but I only found",
             pretty (length args),
-            "were provided instead:",
+            "instead:",
             list $ dquotes . printType <$> args
           ]
       )
@@ -298,13 +295,13 @@ reportWordRedefinition origin name originalOrigin = do
       Error
       origin
       ( hsep
-          [ "I can't redefine the word",
+          [ "I want for there to be just one definition for",
             dquotes $ printQualified name,
-            "because it already exists",
+            "but instead it was already defined",
             parens "did you mean to declare it as a trait?"
           ]
       )
-  report $ Report Error originalOrigin "it was originally defined here"
+  report $ Report Error originalOrigin "It was originally defined here."
 
 reportMissingPermissionLabel :: (Monad m) => Type -> Type -> Origin -> Constructor -> MT m ()
 reportMissingPermissionLabel a b origin name =
@@ -313,13 +310,13 @@ reportMissingPermissionLabel a b origin name =
       Error
       origin
       ( hsep
-          [ "I expected to be able to match the permission type",
+          [ "I want to match the permission type",
             dquotes $ printType a,
             "with the permission type",
             dquotes $ printType b,
             ", but the permission label",
             dquotes $ printConstructor name,
-            "was missing"
+            "is missing."
           ]
       )
 
@@ -331,11 +328,11 @@ reportFailedInstanceCheck a b origin = do
       origin
       ( hsep
           -- TODO: Show type kind.
-          [ "I expected",
+          [ "I want",
             dquotes $ printType a,
             "to be as general or more general then",
             dquotes $ printType b,
-            "but it is less general instead"
+            "but it is less general instead."
           ]
       )
 
@@ -349,7 +346,8 @@ reportWordRedeclaration origin name signature originalOrigin mOriginalSignature 
           [ "I can't redeclare the word",
             dquotes $ printQualified name,
             "with the signature",
-            dquotes $ printSignature signature
+            dquotes $ printSignature signature,
+            "."
           ]
       )
   report $
@@ -361,9 +359,10 @@ reportWordRedeclaration origin name signature originalOrigin mOriginalSignature 
             ( case mOriginalSignature of
                 Just originalSignature ->
                   [ "with the signature",
-                    dquotes $ printSignature originalSignature
+                    dquotes $ printSignature originalSignature,
+                    "."
                   ]
-                Nothing -> []
+                Nothing -> ["."]
             )
           )
       )
@@ -375,9 +374,10 @@ reportMissingTypeSignature origin name =
       Error
       origin
       ( hsep
-          [ "I expect every word to have a type signature,",
+          [ "I want every word to have a type signature,",
             "but I'm not seeing a type signature for the word",
-            dquotes (printQualified name)
+            dquotes (printQualified name),
+            "."
           ]
       )
 
@@ -388,11 +388,12 @@ reportMultiplePermissionVariables origin a b =
       Error
       origin
       ( hsep
-          [ "I expect just one permission variable per function,",
-            "but I'm seeing multiple permission variables in this function instead:",
+          [ "I want every function to have just one permission variable,",
+            "but I'm seeing more than one permission variable in this function instead:",
             dquotes $ printType a,
             "and",
-            dquotes $ printType b
+            dquotes $ printType b,
+            "."
           ]
       )
 
@@ -403,9 +404,9 @@ reportCannotResolveType origin name =
       Error
       origin
       ( hsep
-          [ "I can't tell which type",
+          [ "I want to see the type",
             dquotes $ printGeneralName name,
-            "is supposed to refer to",
+            "is supposed to refer to, but I am not seeing it",
             parens "did you mean to add it as a type parameter?"
           ]
       )
