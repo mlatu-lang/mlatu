@@ -7,11 +7,8 @@ import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
 import Mlatu.Codegen qualified as Codegen
 import Mlatu.Dictionary (Dictionary)
+import Mlatu.Informer (errorCheckpoint, runMlatu)
 import Mlatu.Enter qualified as Enter
-import Mlatu.Infer (typeFromSignature, typecheck)
-import Mlatu.Informer (errorCheckpoint, ice, runMlatu, warnCheckpoint)
-import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Kind (Kind (..))
 import Mlatu.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified),
@@ -19,21 +16,12 @@ import Mlatu.Name
     Root (Absolute),
     Unqualified (Unqualified),
   )
-import Mlatu.Origin qualified as Origin
-import Mlatu.Pretty (printQualified, printType)
-import Mlatu.Signature qualified as Signature
-import Mlatu.Term qualified as Term
-import Mlatu.TypeEnv qualified as TypeEnv
-import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary
-import Optics
-import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
 import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, withCurrentDirectory)
-import System.IO (hPrint)
-import System.Process.Typed (proc, runProcess_)
+import System.Process.Typed (runProcess_)
 
 type MRepl = HaskelineT (ReaderT Dictionary (StateT (Text, Int) IO))
 
@@ -73,7 +61,7 @@ cmd input = do
 
 -- TODO
 completer :: String -> ReaderT Dictionary (StateT (Text, Int) IO) [String]
-completer n = pure []
+completer _ = pure []
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
@@ -104,7 +92,7 @@ run prelude = do
         createDirectory "t/.cargo"
         writeFileBS "t/.cargo/config.toml" configToml
         createDirectory "t/src"
-      execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
+      _ <- execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
       liftIO $ removeDirectoryRecursive "t"
       pure 0
   where
