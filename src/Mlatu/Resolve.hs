@@ -106,7 +106,7 @@ signature dictionary vocabulary = go
         <*> pure origin
     go (Signature.Quantified vars a origin) =
       Signature.Quantified vars
-        <$> foldr (withLocal . (\(Parameter _ name _ _) -> name)) (go a) vars
+        <$> foldr (withLocal . (\(Parameter _ name _) -> name)) (go a) vars
         <*> pure origin
     go (Signature.Variable name origin) =
       Signature.Variable

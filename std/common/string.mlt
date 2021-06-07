@@ -1,27 +1,22 @@
-trait read (for t. string -> t optional)
+data char {  } 
 
-trait show (for t. t -> string)
-
-
-data string {  } 
-
-instance ++ (string, string -> string) {
-  "string-concat" extern
+instance cmp (char, char -> ord) {
+  "cmp-char" extern
 }
 
-instance cmp (string, string -> ord) {
-  "cmp-string" extern
-}
+trait read (for t. char list -> t optional)
 
-instance read (string -> nat optional) {
+trait show (for t. t -> char list)
+
+instance read (char list -> nat optional) {
   "read-nat" extern
 }
 
-instance read (string -> char optional) {
-  chars dup length 1 eq match | true { hd } | false { drop none }
+instance read (char list -> char optional) {
+  hd
 }
 
-instance read (string -> bool optional) {
+instance read (char list -> bool optional) {
   dup
   match ("true" eq)
   | true {
@@ -32,36 +27,28 @@ instance read (string -> bool optional) {
   }
 }
 
-instance read (string -> string optional) {
+instance read (char list -> (char list) optional) {
   some
 }
 
-instance show (string -> string) {}
+instance show (char list -> char list) {}
 
-instance show (for a b. b a either -> string) {
-  match | left { show " left" ++ } | right { show " right" ++ }
+instance show (for a b. b a either -> char list) {
+  match | left { show " left" append } | right { show " right" append }
 }
 
-instance show (for t. t optional -> string) {
-  match | some { show " some" ++ } | none { "none" }
+instance show (for t. t optional -> char list) {
+  match | some { show " some" append } | none { "none" }
 }
 
-instance show (bool -> string) {
+instance show (bool -> char list) {
   match | true { "true" } | false { "false" }
 }
 
-instance show (nat -> string) {
+instance show (nat -> char list) {
   "show-nat" extern
 }
 
-instance show (char -> string) {
-  once from-chars
-}
-
-define chars (string -> char list) {
-  "string-to-list" extern
-}
-
-define from-chars (char list -> string) {
-  "string-from-list" extern
+instance show (char -> char list) {
+  once
 }

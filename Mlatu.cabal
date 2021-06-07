@@ -23,7 +23,6 @@ library
   exposed-modules:
       Mlatu
       Mlatu.CodataDefinition
-      Mlatu.Codegen
       Mlatu.DataDefinition
       Mlatu.Definition
       Mlatu.Desugar.Data
@@ -37,6 +36,7 @@ library
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
+      Mlatu.Erlang
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Infer

@@ -122,8 +122,8 @@ permissionCoercion o x permits = Coercion o x (AnyCoercion signature)
   where
     signature =
       Signature.Quantified
-        [ Parameter o "R" Kind.Stack Nothing,
-          Parameter o "S" Kind.Stack Nothing
+        [ Parameter o "R" Kind.Stack,
+          Parameter o "S" Kind.Stack
         ]
         ( Signature.Function
             [ Signature.StackFunction

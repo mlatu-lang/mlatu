@@ -3,7 +3,7 @@ module Main where
 import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
-import Mlatu.Codegen qualified as Codegen
+import Mlatu.Erlang qualified as Erlang
 import Mlatu.Informer (Report, warnCheckpoint)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
@@ -87,24 +87,9 @@ runFiles prelude release relativePaths =
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
-                  careTaken
-                    "out"
-                    ( writeFileBS "Cargo.toml" cargoToml
-                        >> unless
-                          release
-                          ( createDirectory ".cargo"
-                              >> writeFileBS ".cargo/config.toml" configToml
-                          )
-                        >> createDirectory "src"
-                        >> writeFileBS "src/main.rs" contents
-                        >> runProcess_
-                          ( if release
-                              then "cargo +nightly run --quiet --release"
-                              else "cargo +nightly run --quiet"
-                          )
+                Erlang.generate program Nothing >>= \contents ->
+                  writeFileBS "mlatu.erl" contents
                     )
-        )
 
 compileFiles :: Prelude -> Bool -> [FilePath] -> IO ()
 compileFiles prelude release relativePaths =
@@ -114,7 +99,7 @@ compileFiles prelude release relativePaths =
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
+                Erlang.generate program Nothing >>= \contents ->
                   careTaken
                     "out"
                     ( writeFileBS "Cargo.toml" cargoToml
@@ -142,7 +127,7 @@ benchFiles prelude release relativePaths =
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
+                Erlang.generate program Nothing >>= \contents ->
                   careTaken
                     "out"
                     ( writeFileBS "Cargo.toml" cargoToml

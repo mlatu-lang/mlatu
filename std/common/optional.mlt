@@ -15,7 +15,7 @@ define from-optional (for t. t optional, t -> t) {
   -> default; match | some {} | _  { default }
 }
 
-define from-some (for t. t optional, string -> t <fail>) {
+define from-some (for t. t optional, char list -> t <fail>) {
   -> message; match | some {} | _  { message fail-now }
 }
 

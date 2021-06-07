@@ -114,12 +114,12 @@ enterExtern dictionary = do
           Nothing
           ( Just
               ( Signature.Quantified
-                  [ Parameter origin "R" Stack Nothing,
-                    Parameter origin "S" Stack Nothing
+                  [ Parameter origin "R" Stack,
+                    Parameter origin "S" Stack
                   ]
                   ( Signature.StackFunction
                       (Signature.Variable "R" origin)
-                      [Signature.Variable "string" origin]
+                      [Signature.Application (Signature.Variable "list" origin) (Signature.Variable "char" origin) origin]
                       (Signature.Variable "S" origin)
                       []
                       []

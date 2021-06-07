@@ -15,11 +15,11 @@ define either-fun (for R S a b. R, b a either, (R, a -> S), (R, b -> S) -> S) {
   -> f, g; match | left { f call } | right { g call }
 }
 
-define from-left (for a b. b a either, string -> a <fail>) {
+define from-left (for a b. b a either, char list -> a <fail>) {
   -> message; match | left {} | _  { message fail-now }
 }
 
-define from-right (for a b. b a either, string -> b <fail>) {
+define from-right (for a b. b a either, char list -> b <fail>) {
   -> message; match | right {} | _  { message fail-now }
 }
 

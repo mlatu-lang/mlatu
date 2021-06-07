@@ -476,7 +476,7 @@ parameter = do
         (Stack,) <$> upperNameParser,
         (Value,) <$> lowerNameParser
       ]
-  pure $ Parameter origin name kind Nothing
+  pure $ Parameter origin name kind
 
 quantifiedParser :: Parser Signature -> Parser Signature
 quantifiedParser thing = do

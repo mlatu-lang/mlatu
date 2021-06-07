@@ -2,12 +2,12 @@ define abort-now (for R S. R -> S <fail>) {
   "abort called" fail-now
 }
 
-define assert (for +p. string, ( -> bool <p>) ->  <fail + p>) {
+define assert (for +p. char list, ( -> bool <p>) ->  <fail + p>) {
   -> message, test;
   { test call } with (-fail) match | false { message fail-now } | true {}
 }
 
-define assert-eq (for t. string, t, t ->  <fail>) {
+define assert-eq (for t. char list, t, t ->  <fail>) {
   -> x, y; { x y eq } assert
 }
 
@@ -15,6 +15,6 @@ define exit-now (for R S. R, nat -> S <exit>) {
   "exit" extern
 }
 
-define fail-now (for R S. R, string -> S <fail>) {
+define fail-now (for R S. R, char list -> S <fail>) {
   "abort" extern
 }

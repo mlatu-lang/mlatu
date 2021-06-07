@@ -5,7 +5,7 @@ where
 
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
-import Mlatu.Codegen qualified as Codegen
+import Mlatu.Erlang qualified as Erlang
 import Mlatu.Dictionary (Dictionary)
 import Mlatu.Informer (errorCheckpoint, runMlatu)
 import Mlatu.Enter qualified as Enter
@@ -53,7 +53,7 @@ cmd input = do
     case result of
       Nothing -> pure False
       Just dictionary -> do
-        contents <- Codegen.generate dictionary (Just entryName)
+        contents <- Erlang.generate dictionary (Just entryName)
         writeFileBS "t/src/main.rs" contents
         withCurrentDirectory "t" (runProcess_ "cargo +nightly run --quiet")
         pure True
