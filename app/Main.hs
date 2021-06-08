@@ -3,7 +3,7 @@ module Main where
 import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
-import Mlatu.Codegen qualified as Codegen
+import Mlatu.Erlang qualified as Erlang
 import Mlatu.Informer (Report, warnCheckpoint)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
@@ -29,9 +29,9 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles False prelude release files -> runFiles prelude release files
-    Arguments.RunFiles True prelude release files -> benchFiles prelude release files
-    Arguments.CompileFiles prelude release files -> compileFiles prelude release files
+    Arguments.RunFiles False prelude  files -> runFiles prelude files
+    Arguments.RunFiles True prelude files -> benchFiles prelude files
+    Arguments.CompileFiles prelude  files -> compileFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -79,106 +79,48 @@ careTaken name action =
     >> withCurrentDirectory name action
     >> removeDirectoryRecursive name
 
-runFiles :: Prelude -> Bool -> [FilePath] -> IO ()
-runFiles prelude release relativePaths =
+runFiles :: Prelude  -> [FilePath] -> IO ()
+runFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \(result, reports) ->
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
-                  careTaken
-                    "out"
-                    ( writeFileBS "Cargo.toml" cargoToml
-                        >> unless
-                          release
-                          ( createDirectory ".cargo"
-                              >> writeFileBS ".cargo/config.toml" configToml
-                          )
-                        >> createDirectory "src"
-                        >> writeFileBS "src/main.rs" contents
-                        >> runProcess_
-                          ( if release
-                              then "cargo +nightly run --quiet --release"
-                              else "cargo +nightly run --quiet"
-                          )
+                Erlang.generate program Nothing >>= \contents ->
+                  writeFileText "mlatu.erl" contents >>
+                  runProcess_ "escript mlatu.erl" >>
+                  removeFile "mlatu.erl"
                     )
-        )
 
-compileFiles :: Prelude -> Bool -> [FilePath] -> IO ()
-compileFiles prelude release relativePaths =
+compileFiles :: Prelude -> [FilePath] -> IO ()
+compileFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \(result, reports) ->
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
-                  careTaken
-                    "out"
-                    ( writeFileBS "Cargo.toml" cargoToml
-                        >> unless
-                          release
-                          ( createDirectory ".cargo"
-                              >> writeFileBS ".cargo/config.toml" configToml
-                          )
-                        >> createDirectory "src"
-                        >> writeFileBS "src/main.rs" contents
-                        >> runProcess_
-                          ( if release
-                              then "cargo +nightly build --quiet -Z unstable-options --out-dir .. --release"
-                              else "cargo +nightly build --quiet -Z unstable-options --out-dir .."
-                          )
-                    )
-                    >> putStrLn "Produced the executable ./output"
+                Erlang.generate program Nothing >>= \contents ->
+                  writeFileText "mlatu.erl" contents >>
+                  runProcess_ "erlc -W0 mlatu.erl" >>
+                  removeFile "mlatu.erl"
+                    >> putStrLn "Produced the BEAM bytecode file `mlatu.beam`"
         )
 
-benchFiles :: Prelude -> Bool -> [FilePath] -> IO ()
-benchFiles prelude release relativePaths =
+benchFiles :: Prelude -> [FilePath] -> IO ()
+benchFiles prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \(result, reports) ->
             reportAll reports >> case result of
               Nothing -> exitFailure
               Just program ->
-                Codegen.generate program Nothing >>= \contents ->
-                  careTaken
-                    "out"
-                    ( writeFileBS "Cargo.toml" cargoToml
-                        >> unless
-                          release
-                          ( createDirectory ".cargo"
-                              >> writeFileBS ".cargo/config.toml" configToml
-                          )
-                        >> createDirectory "src"
-                        >> writeFileBS "src/main.rs" contents
-                        >> runProcess_
-                          ( if release
-                              then "cargo +nightly build --quiet -Z unstable-options --out-dir .. --release"
-                              else "cargo +nightly build --quiet -Z unstable-options --out-dir .."
-                          )
-                    )
-                    >> runProcess_ (proc "time" ["./output"])
-                    >> removeFile "./output"
+                Erlang.generate program Nothing >>= \contents ->
+                  writeFileText "mlatu.erl" contents >>
+                  runProcess_ "erlc -W0 mlatu.erl" >>
+                  runProcess_ "time escript mlatu.beam" >>
+                  removeFile "mlatu.erl" >>
+                  removeFile "mlatu.beam"
         )
 
-cargoToml :: ByteString
-cargoToml =
-  "[package] \n\
-  \name = \"output\" \n\
-  \version = \"0.1.0\" \n\
-  \[dependencies.smallvec] \n\
-  \version = \"1.6.1\" \n\
-  \features = [\"union\"]"
-
-configToml :: ByteString
-configToml =
-  "[target.x86_64-unknown-linux-gnu]\n\
-  \linker = \"/usr/bin/clang\"\n\
-  \rustflags = [\"-Clink-arg=-fuse-ld=lld\", \"-Zshare-generics=y\"]\n\
-  \[target.x86_64-apple-darwin]\n\
-  \rustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/bin/zld\", \"-Zshare-generics=y\", \"-Csplit-debuginfo=unpacked\"]\n\
-  \[target.x86_64-pc-windows-msvc]\n\
-  \linker = \"rust-lld.exe\"\n\
-  \rustflags = [\"-Zshare-generics=y\"]"

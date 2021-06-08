@@ -23,7 +23,6 @@ library
   exposed-modules:
       Mlatu
       Mlatu.CodataDefinition
-      Mlatu.Codegen
       Mlatu.DataDefinition
       Mlatu.Definition
       Mlatu.Desugar.Data
@@ -37,6 +36,7 @@ library
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
+      Mlatu.Erlang
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Infer
@@ -124,6 +124,7 @@ library
     , optics
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , text
     , transformers
@@ -191,6 +192,7 @@ executable mlatu
     , optparse-applicative
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , repline
     , temporary
@@ -268,6 +270,7 @@ test-suite test
     , optics
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , text
     , transformers

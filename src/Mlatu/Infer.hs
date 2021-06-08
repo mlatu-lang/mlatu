@@ -469,7 +469,7 @@ inferValue dictionary tenvFinal tenv0 origin = \case
   Text x ->
     pure
       ( Text x,
-        TypeConstructor origin "string",
+        (TypeConstructor origin "list") :@ (TypeConstructor origin "char"),
         tenv0
       )
 
@@ -557,7 +557,7 @@ typeFromSignature tenv signature0 = do
             Parameter ->
             (Map Unqualified (Var, Origin), [Var]) ->
             M (Map Unqualified (Var, Origin), [Var])
-          declare (Parameter varOrigin name kind _) (envVars, freshVars) = do
+          declare (Parameter varOrigin name kind) (envVars, freshVars) = do
             x <- freshTypeId tenv
             let var = Var name x kind
             pure (Map.insert name (var, varOrigin) envVars, var : freshVars)
@@ -655,7 +655,7 @@ typeKind dictionary = go
             _list ->
               pure $
                 foldr
-                  ((:->) . (\(Parameter _ _ k _) -> k))
+                  ((:->) . (\(Parameter _ _ k) -> k))
                   Value
                   parameters
           _noParameters -> case qualified of

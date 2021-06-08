@@ -1,4 +1,4 @@
-data nat { zero (-> nat) | succ (nat -> nat) }
+data nat { zero ( -> nat) | succ (nat -> nat) } 
 
 instance cmp (nat, nat -> ord) {
   -> a, b;

@@ -1,45 +1,27 @@
-data readable { r-in (-> readable) | r-file (string -> readable) }
-
-data writable { w-out (-> writable) | w-err (-> writable) | w-file (string -> writable) } 
-
-define flush (writable ->  <io>) {
-  match
-  | w-out {
-    "flush-stdout" extern
-  }
-  | w-err {
-    "flush-stderr" extern
-  }
-  | w-file {
-    "flush-file" extern
-  }
-}
+data writable { stdout ( -> writable) | stderr ( -> writable) } 
 
 define print (for t. t ->  <io>) {
-  show w-out write
+  show stdout write
 }
 
 define println (for t. t ->  <io>) {
-  show "\n" ++ w-out write
+  show stdout writeln
 }
 
-define read (readable -> string <io>) {
-  match | r-in { "read-stdin" extern } | r-file { "read-file" extern }
+define read-line ( -> char list <io>) {
+  "read-stdin" extern
 }
 
-define read-line ( -> string <io>) {
-  "read-line" extern
+define write (char list, writable ->  <io>) {
+  match | stdout { "write-stdout" extern } | stderr { "write-stderr" extern }
 }
 
-define write (string, writable ->  <io>) {
+define writeln (char list, writable ->  <io>) {
   match
-  | w-out {
-    "write-stdout" extern
+  | stdout {
+    "writeln-stdout" extern
   }
-  | w-err {
-    "write-stderr" extern
-  }
-  | w-file {
-    "write-file" extern
+  | stderr {
+    "writeln-stderr" extern
   }
 }

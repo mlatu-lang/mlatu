@@ -64,11 +64,11 @@ punctuateComma :: [Doc a] -> [Doc a]
 punctuateComma = punctuate comma
 
 printParameter :: Parameter -> Doc a
-printParameter (Parameter _ name Value _) = printUnqualified name
-printParameter (Parameter _ name Stack _) = printUnqualified name
-printParameter (Parameter _ name Label _) = "+" <> printUnqualified name
-printParameter (Parameter _ name Permission _) = "+" <> printUnqualified name
-printParameter (Parameter _ name (_ :-> _) _) = printUnqualified name <> "[_]"
+printParameter (Parameter _ name Value) = printUnqualified name
+printParameter (Parameter _ name Stack) = printUnqualified name
+printParameter (Parameter _ name Label) = "+" <> printUnqualified name
+printParameter (Parameter _ name Permission) = "+" <> printUnqualified name
+printParameter (Parameter _ name (_ :-> _)) = printUnqualified name <> "[_]"
 
 printQualified :: Qualified -> Doc a
 printQualified (Qualified (Qualifier Absolute []) unqualifiedName) = printUnqualified unqualifiedName
@@ -352,8 +352,8 @@ maybePrintTerms = \case
       _
       ( AnyCoercion
           ( Quantified
-              [ Parameter _ "R" Stack Nothing,
-                Parameter _ "S" Stack Nothing
+              [ Parameter _ "R" Stack,
+                Parameter _ "S" Stack
                 ]
               ( Function
                   [ StackFunction

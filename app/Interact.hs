@@ -5,13 +5,10 @@ where
 
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
-import Mlatu.Codegen qualified as Codegen
+import Mlatu.Erlang qualified as Erlang
 import Mlatu.Dictionary (Dictionary)
+import Mlatu.Informer (errorCheckpoint, runMlatu)
 import Mlatu.Enter qualified as Enter
-import Mlatu.Infer (typeFromSignature, typecheck)
-import Mlatu.Informer (errorCheckpoint, ice, runMlatu, warnCheckpoint)
-import Mlatu.Instantiated (Instantiated (Instantiated))
-import Mlatu.Kind (Kind (..))
 import Mlatu.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified),
@@ -19,21 +16,12 @@ import Mlatu.Name
     Root (Absolute),
     Unqualified (Unqualified),
   )
-import Mlatu.Origin qualified as Origin
-import Mlatu.Pretty (printQualified, printType)
-import Mlatu.Signature qualified as Signature
-import Mlatu.Term qualified as Term
-import Mlatu.TypeEnv qualified as TypeEnv
-import Mlatu.Unify qualified as Unify
 import Mlatu.Vocabulary
-import Optics
-import Prettyprinter (vcat)
 import Relude
 import Report (reportAll)
 import System.Console.Repline
 import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, withCurrentDirectory)
-import System.IO (hPrint)
-import System.Process.Typed (proc, runProcess_)
+import System.Process.Typed (runProcess_)
 
 type MRepl = HaskelineT (ReaderT Dictionary (StateT (Text, Int) IO))
 
@@ -65,15 +53,15 @@ cmd input = do
     case result of
       Nothing -> pure False
       Just dictionary -> do
-        contents <- Codegen.generate dictionary (Just entryName)
-        writeFileBS "t/src/main.rs" contents
-        withCurrentDirectory "t" (runProcess_ "cargo +nightly run --quiet")
+        contents <- Erlang.generate dictionary (Just entryName)
+        writeFileText "mlatu.erl" contents
+        runProcess_ "escript mlatu.erl"
         pure True
   when update $ put (text <> " " <> toText input, lineNumber + 1)
 
 -- TODO
 completer :: String -> ReaderT Dictionary (StateT (Text, Int) IO) [String]
-completer n = pure []
+completer _ = pure []
 
 helpCmd :: String -> MRepl ()
 helpCmd s = liftIO $ case words (toText s) of
@@ -98,32 +86,10 @@ run prelude = do
   case result of
     Nothing -> pure 1
     Just commonDictionary -> do
-      liftIO $ do
-        createDirectory "t"
-        writeFileBS "t/Cargo.toml" cargoToml
-        createDirectory "t/.cargo"
-        writeFileBS "t/.cargo/config.toml" configToml
-        createDirectory "t/src"
-      execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
-      liftIO $ removeDirectoryRecursive "t"
+      _ <- execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
+      liftIO $ removeFile "mlatu.erl"
       pure 0
   where
-    cargoToml =
-      "[package] \n\
-      \name = \"output\" \n\
-      \version = \"0.1.0\" \n\
-      \[dependencies.smallvec] \n\
-      \version = \"1.6.1\" \n\
-      \features = [\"union\"]"
-    configToml =
-      "[target.x86_64-unknown-linux-gnu]\n\
-      \linker = \"/usr/bin/clang\"\n\
-      \rustflags = [\"-Clink-arg=-fuse-ld=lld\", \"-Zshare-generics=y\"]\n\
-      \[target.x86_64-apple-darwin]\n\
-      \rustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/bin/zld\", \"-Zshare-generics=y\", \"-Csplit-debuginfo=unpacked\"]\n\
-      \[target.x86_64-pc-windows-msvc]\n\
-      \linker = \"rust-lld.exe\"\n\
-      \rustflags = [\"-Zshare-generics=y\"]"
     replOpts =
       ReplOpts
         { banner = \case

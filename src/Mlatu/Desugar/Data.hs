@@ -123,7 +123,7 @@ desugarCodataDefinition definition = do
         ( Signature.Variable (QualifiedName $ view Codata.name definition) $
             view Codata.origin definition
         )
-        $ ( \(Parameter parameterOrigin parameter _kind _) ->
+        $ ( \(Parameter parameterOrigin parameter _kind) ->
               Signature.Variable (UnqualifiedName parameter) parameterOrigin
           )
           <$> view Codata.parameters definition
@@ -172,7 +172,7 @@ desugarDataDefinition definition =
             ( Signature.Variable (QualifiedName $ view Data.name definition) $
                 view Data.origin definition
             )
-            $ ( \(Parameter parameterOrigin parameter _kind _) ->
+            $ ( \(Parameter parameterOrigin parameter _kind) ->
                   Signature.Variable (UnqualifiedName parameter) parameterOrigin
               )
               <$> view Data.parameters definition

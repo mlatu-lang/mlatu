@@ -2,7 +2,7 @@ define divisible (nat, nat -> bool) {
   % 0 eq
 }
 
-define fizzbuzz (nat -> string) {
+define fizzbuzz (nat -> char list) {
   -> n;
   { n 5 divisible n 3 divisible }
   with (+fail)

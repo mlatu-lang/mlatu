@@ -3,8 +3,8 @@ module Report
   )
 where
 
-import Mlatu.Informer (Level (..), Report (..))
-import Mlatu.Origin (Origin, beginColumn, beginLine, endColumn, endLine, name)
+import Mlatu.Informer ( Report (..))
+import Mlatu.Origin ( beginColumn, beginLine, endColumn, endLine, name)
 import Mlatu.Pretty (printOrigin)
 import Optics
 import Relude
