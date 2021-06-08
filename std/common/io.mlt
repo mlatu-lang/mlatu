@@ -5,7 +5,7 @@ define print (for t. t -> <io>) {
 }
 
 define println (for t. t -> <io>) {
-  show "\n" append stdout write
+  show stdout writeln
 }
 
 define read-line ( -> char list <io>) {
@@ -19,5 +19,15 @@ define write (char list, writable ->  <io>) {
   }
   | stderr {
     "write-stderr" extern
+  }
+}
+
+define writeln (char list, writable -> <io>) {
+  match 
+  | stdout {
+    "writeln-stdout" extern
+  }
+  | stderr {
+    "writeln-stderr" extern
   }
 }

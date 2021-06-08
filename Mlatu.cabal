@@ -124,6 +124,7 @@ library
     , optics
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , text
     , transformers
@@ -191,6 +192,7 @@ executable mlatu
     , optparse-applicative
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , repline
     , temporary
@@ -268,6 +270,7 @@ test-suite test
     , optics
     , parsec
     , prettyprinter
+    , random
     , relude ==0.7.0.0
     , text
     , transformers

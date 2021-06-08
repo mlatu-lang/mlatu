@@ -54,8 +54,8 @@ cmd input = do
       Nothing -> pure False
       Just dictionary -> do
         contents <- Erlang.generate dictionary (Just entryName)
-        writeFileBS "t/src/main.rs" contents
-        withCurrentDirectory "t" (runProcess_ "cargo +nightly run --quiet")
+        writeFileText "mlatu.erl" contents
+        runProcess_ "escript mlatu.erl"
         pure True
   when update $ put (text <> " " <> toText input, lineNumber + 1)
 
@@ -86,32 +86,10 @@ run prelude = do
   case result of
     Nothing -> pure 1
     Just commonDictionary -> do
-      liftIO $ do
-        createDirectory "t"
-        writeFileBS "t/Cargo.toml" cargoToml
-        createDirectory "t/.cargo"
-        writeFileBS "t/.cargo/config.toml" configToml
-        createDirectory "t/src"
       _ <- execStateT (runReaderT (evalReplOpts replOpts) commonDictionary) ("", 1)
-      liftIO $ removeDirectoryRecursive "t"
+      liftIO $ removeFile "mlatu.erl"
       pure 0
   where
-    cargoToml =
-      "[package] \n\
-      \name = \"output\" \n\
-      \version = \"0.1.0\" \n\
-      \[dependencies.smallvec] \n\
-      \version = \"1.6.1\" \n\
-      \features = [\"union\"]"
-    configToml =
-      "[target.x86_64-unknown-linux-gnu]\n\
-      \linker = \"/usr/bin/clang\"\n\
-      \rustflags = [\"-Clink-arg=-fuse-ld=lld\", \"-Zshare-generics=y\"]\n\
-      \[target.x86_64-apple-darwin]\n\
-      \rustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/local/bin/zld\", \"-Zshare-generics=y\", \"-Csplit-debuginfo=unpacked\"]\n\
-      \[target.x86_64-pc-windows-msvc]\n\
-      \linker = \"rust-lld.exe\"\n\
-      \rustflags = [\"-Zshare-generics=y\"]"
     replOpts =
       ReplOpts
         { banner = \case

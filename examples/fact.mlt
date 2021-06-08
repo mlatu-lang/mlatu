@@ -1,3 +1,5 @@
 define fact (nat -> nat) {
   dup match | zero { succ } | succ { fact * }
 }
+
+10 fact println
