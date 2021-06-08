@@ -36,19 +36,6 @@ cabal v2-install exe:mlatu
 
 ## Before you use Mlatu
 
-Nightly Rust is expected to be available. If you don't have it installed already, run (only works on Unix)
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup install nightly
-```
+You will need to have the executables `erlc` and `escript` in your `PATH` variable so that `mlatu` can call them.
 
-To be able to compile Mlatu programs offline and decrease build times, prefetch `smallvec` by running
-```sh
-cargo install cargo-prefetch
-cargo prefetch smallvec
-```
-
-If you are on macOS and do not have `zld` installed, run (requires Xcode to be installed)
-```sh
-brew install michaeleisel/zld/zld
-```
+If you don't already have these installed, refer to https://adoptingerlang.org/docs/development/setup/.

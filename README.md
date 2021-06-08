@@ -4,7 +4,7 @@
 
 https://brightly-salty.github.io/mlatu/
 
-Mlatu is a statically typed, stack-based purely functional programming language designed for simplicity, speed, and safety.
+Mlatu is a statically typed, stack-based purely functional programming language designed for simplicity, speed, and safety. It transpiles to BEAM VM bytecode.
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
 

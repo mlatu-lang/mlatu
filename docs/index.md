@@ -23,7 +23,7 @@ define fib (nat -> nat) {
 
 ## What is Mlatu?
 
-Mlatu is a statically-typed purely-functional concatenative high-level programming language. That's a bit of a mouthful, so let's break that down.
+Mlatu is a statically-typed purely-functional concatenative high-level programming language on the BEAM VM. That's a bit of a mouthful, so let's break that down.
 
 ### Statically typed
 
@@ -40,6 +40,11 @@ Mlatu is concatenative, like Forth. You program and read in the same direction d
 ### High-level
 
 Mlatu is high-level - you don't have to worry about bits and null when you program in Mlatu. You can write in a way that maps well to the abstractions in your head without caring about performance because the compiler will worry about that for you.
+
+
+### On the BEAM VM
+
+Mlatu source programs compile into BEAM bytecode - the same VM used by Erlang, Elixir, and other languages in the BEAM ecosystem. This means that Mlatu can easily take advantage of Erlang concurrency primitives and can be used as a pure typed frontend to conventional Erlang or Elixir applications.
 
 ## Now what?
 
