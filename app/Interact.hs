@@ -20,7 +20,7 @@ import Mlatu.Vocabulary
 import Relude
 import Report (reportAll)
 import System.Console.Repline
-import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, withCurrentDirectory)
+import System.Directory (removeFile)
 import System.Process.Typed (runProcess_)
 
 type MRepl = HaskelineT (ReaderT Dictionary (StateT (Text, Int) IO))

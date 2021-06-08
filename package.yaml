@@ -56,6 +56,7 @@ dependencies:
   - base >=4.8
   - bytestring
   - containers
+  - errata
   - file-embed
   - monad-loops
   - optics
@@ -86,12 +87,3 @@ executables:
       - typed-process
       - temporary
       - mlatu
-
-tests:
-  test:
-    main: Main.hs
-    source-dirs: test
-    dependencies:
-      - HUnit
-      - hspec
-      - knob

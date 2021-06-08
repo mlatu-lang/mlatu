@@ -15,7 +15,7 @@ import Relude
 import Report (reportAll)
 import System.Directory (createDirectory, makeAbsolute, removeDirectoryRecursive, removeFile, withCurrentDirectory)
 import System.IO (hSetEncoding, utf8)
-import System.Process.Typed (proc, runProcess_)
+import System.Process.Typed (runProcess_)
 
 main :: IO ()
 main = do
@@ -72,12 +72,6 @@ checkFiles prelude relativePaths =
               )
               >>= reportAll . snd
         )
-
-careTaken :: FilePath -> IO () -> IO ()
-careTaken name action =
-  createDirectory name
-    >> withCurrentDirectory name action
-    >> removeDirectoryRecursive name
 
 runFiles :: Prelude  -> [FilePath] -> IO ()
 runFiles prelude relativePaths =

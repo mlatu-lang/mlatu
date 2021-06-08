@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.4", "8.10.3"]
+        ghc: ["8.10.4"]
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
@@ -29,14 +29,12 @@ jobs:
           GHC_VER: ${{ matrix.ghc }}
         run: |
           echo "EXE_EXT=.exe" >> $GITHUB_ENV
-          GHC_VER=$(echo $GHC_VER | sed 's/8.10.2.2/8.10.2/g')
           echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
       - name: Set some Linux-specific things
         if: matrix.os == 'ubuntu-latest'
         env:
           GHC_VER: ${{ matrix.ghc }}
         run: |
-          echo "LINUX_CABAL_ARGS=--datadir=$HOME/.mlatu" >> $GITHUB_ENV
           echo "GHC_VERSION=$GHC_VER" >> $GITHUB_ENV
       - name: Set some macOs-specific things
         if: matrix.os == 'macOS-latest'
@@ -48,8 +46,8 @@ jobs:
           Build
           # Try building it twice in case of flakey builds on Windows
         run: |
-          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS || \
-          cabal build exe:mlatu -O2 $LINUX_CABAL_ARGS -j1
+          cabal build exe:mlatu -O2 || \
+          cabal build exe:mlatu -O2 -j1
       - name: Compress binary
         id: compress_binary
         run: |
@@ -75,5 +73,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ steps.compress_binary.outputs.path }}
-          asset_name: mlatu-${{ runner.OS }}-${{ env.GHC_VERSION }}${{env.EXE_EXT}}.${{ steps.compress_binary.outputs.extension }}
+          asset_name: mlatu-${{ runner.OS }}${{env.EXE_EXT}}.${{ steps.compress_binary.outputs.extension }}
           asset_content_type: ${{ steps.compress_binary.outputs.content_type }}

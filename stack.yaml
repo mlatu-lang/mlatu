@@ -37,7 +37,7 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-  - knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+  - errata-0.3.0.0@sha256:3537e4b29a22c0fd9866dce5d7fac2ad16e9ff636b6ecbe819ab21a56366cc8d,2086
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

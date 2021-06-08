@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+    hackage: errata-0.3.0.0@sha256:3537e4b29a22c0fd9866dce5d7fac2ad16e9ff636b6ecbe819ab21a56366cc8d,2086
     pantry-tree:
-      size: 507
-      sha256: 3cdacac3d8d6a75fc501c77fc419c65e1dcdb0f1f4212e99c5e7c3ceb2998454
+      size: 683
+      sha256: 137a43b8531539661c590dd6fdf322bd00a8303d0df031e313c4aed271dea415
   original:
-    hackage: knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118,1401
+    hackage: errata-0.3.0.0@sha256:3537e4b29a22c0fd9866dce5d7fac2ad16e9ff636b6ecbe819ab21a56366cc8d,2086
 snapshots:
 - completed:
     size: 568884

@@ -119,6 +119,7 @@ library
       base >=4.8
     , bytestring
     , containers
+    , errata
     , file-embed
     , monad-loops
     , optics
@@ -185,6 +186,7 @@ executable mlatu
     , bytestring
     , containers
     , directory
+    , errata
     , file-embed
     , mlatu
     , monad-loops
@@ -199,79 +201,4 @@ executable mlatu
     , text
     , transformers
     , typed-process
-  default-language: Haskell2010
-
-test-suite test
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      Test.Common
-      Test.Infer
-      Test.InstanceCheck
-      Test.Interpret
-      Test.Origin
-      Test.Parse
-      Test.Resolve
-      Test.Tokenize
-      Test.Zonk
-      Paths_mlatu
-  hs-source-dirs:
-      test
-  default-extensions:
-      NoImplicitPrelude
-      LambdaCase
-      OverloadedStrings
-      EmptyCase
-      PostfixOperators
-      TupleSections
-      ImportQualifiedPost
-      NamedFieldPuns
-      BangPatterns
-      BinaryLiterals
-      HexFloatLiterals
-      NumericUnderscores
-      GADTSyntax
-      RankNTypes
-      TypeApplications
-      PolyKinds
-      StandaloneKindSignatures
-      ExistentialQuantification
-      TypeOperators
-      ConstraintKinds
-      ExplicitForAll
-      KindSignatures
-      NamedWildCards
-      ScopedTypeVariables
-      FlexibleContexts
-      FlexibleInstances
-      MultiParamTypeClasses
-      ConstrainedClassMethods
-      InstanceSigs
-      TypeSynonymInstances
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveTraversable
-      StandaloneDeriving
-      EmptyDataDeriving
-      DeriveLift
-      GeneralizedNewtypeDeriving
-      DeriveGeneric
-  ghc-options: -Wall
-  build-depends:
-      HUnit
-    , base >=4.8
-    , bytestring
-    , containers
-    , file-embed
-    , hspec
-    , knob
-    , monad-loops
-    , optics
-    , parsec
-    , prettyprinter
-    , random
-    , relude ==0.7.0.0
-    , text
-    , transformers
   default-language: Haskell2010
