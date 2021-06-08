@@ -1,12 +1,13 @@
+trait read (for t. char list -> t optional)
+
+trait show (for t. t -> char list)
+
+
 data char {  } 
 
 instance cmp (char, char -> ord) {
   "cmp-char" extern
 }
-
-trait read (for t. char list -> t optional)
-
-trait show (for t. t -> char list)
 
 instance read (char list -> nat optional) {
   "read-nat" extern

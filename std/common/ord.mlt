@@ -1,7 +1,7 @@
 trait cmp (for t. t, t -> ord)
 
 
-data ord { less (-> ord) | more (-> ord) | equal (-> ord) }
+data ord { less ( -> ord) | more ( -> ord) | equal ( -> ord) } 
 
 define eq (for t. t, t -> bool) {
   match (cmp) | equal { true } | _  { false }

@@ -1,29 +1,23 @@
-data writable { stdout (-> writable) | stderr (-> writable) } 
+data writable { stdout ( -> writable) | stderr ( -> writable) } 
 
-define print (for t. t -> <io>) {
+define print (for t. t ->  <io>) {
   show stdout write
 }
 
-define println (for t. t -> <io>) {
+define println (for t. t ->  <io>) {
   show stdout writeln
 }
 
 define read-line ( -> char list <io>) {
-  "read-stdin" extern 
+  "read-stdin" extern
 }
 
 define write (char list, writable ->  <io>) {
-  match
-  | stdout {
-    "write-stdout" extern
-  }
-  | stderr {
-    "write-stderr" extern
-  }
+  match | stdout { "write-stdout" extern } | stderr { "write-stderr" extern }
 }
 
-define writeln (char list, writable -> <io>) {
-  match 
+define writeln (char list, writable ->  <io>) {
+  match
   | stdout {
     "writeln-stdout" extern
   }
