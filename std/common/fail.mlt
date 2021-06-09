@@ -11,6 +11,11 @@ define assert-eq (for t. char list, t, t ->  <fail>) {
   -> x, y; { x y eq } assert
 }
 
+define assert-not (for +p. char list, ( -> bool <p>) ->  <fail + p>) {
+  -> message, test;
+  { test call } with (-fail) match | true { message fail-now } | false {}
+}
+
 define exit-now (for R S. R, nat -> S <exit>) {
   "exit" extern
 }

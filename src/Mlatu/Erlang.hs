@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- |
 -- Module      : Mlatu.Interpret
 -- Description : Simple interpreter
@@ -42,7 +44,7 @@ instance IsString a => IsString (Codegen a) where
 
 generate :: Dictionary -> Maybe Qualified -> IO Text
 generate dict mMain = do
-  let firstKey = maybe "mmain" erlifyQ mMain
+  let firstKey = maybe "main" erlifyQ mMain
   let firstEntry = case Dictionary.lookupWord (Instantiated (fromMaybe mainName mMain) []) dict of
         Just e -> e
         Nothing -> error "Could not find main entry"
@@ -52,7 +54,7 @@ generate dict mMain = do
       (one (firstKey, firstEntry), Map.empty, 0, 0, 0)
       (Map.mapKeys erlifyI (view wordEntries dict))
   pure
-    ( "-module(mlatu).\n -export([main/1]).\n main(_) -> "
+    ( "-module(mlatu).\n -export([main/1]).\n main(_) -> m"
         <> firstKey
         <> "({[], []}).\n"
         <> Text.concat funs
@@ -85,7 +87,7 @@ data Expr
   | ECallFun FunIdent [Expr]
   | EVar VarIdent
   | ESet Pattern Expr
-  | EOrElse Expr Expr
+  | EOrElse [Expr]
   | EAndAlso [Expr]
   | EList [Expr]
   | EAtom AtomIdent
@@ -103,63 +105,122 @@ serPattern (PList xs) =
     <> ( case xs of
            [] -> ""
            [x] -> serPattern x
-           _ -> Text.concat (intersperse "," (serPattern <$> Unsafe.init xs)) <> "|" <> serPattern (Unsafe.last xs)
+           _ -> Text.concat (intersperse " , " (serPattern <$> Unsafe.init xs)) <> " | " <> serPattern (Unsafe.last xs)
        )
     <> " ]"
 serPattern (PVar var) = var
 serPattern (PAtom a) = a
 serPattern (PInt i) = show i
-serPattern (PWhen pattern cond) = serPattern pattern <> " when " <> serExpr cond
-serPattern (PTuple xs) = "{" <> Text.concat (intersperse "," (serPattern <$> xs)) <> "}"
+serPattern (PWhen p cond) = serPattern p <> " when " <> serExpr cond
+serPattern (PTuple xs) = "{" <> Text.concat (intersperse " , " (serPattern <$> xs)) <> "}"
+
+pattern PCouple :: Pattern -> Pattern -> Pattern
+pattern PCouple a b = PTuple [a, b]
+
+pattern ECouple :: Expr -> Expr -> Expr
+pattern ECouple a b = ETuple [a, b]
+
+pattern ECallCouple :: FunIdent -> Expr -> Expr -> Expr
+pattern ECallCouple n a b = ECallFun n [ECouple a b]
+
+pattern ESetCouple :: Pattern -> Pattern -> Expr -> Expr
+pattern ESetCouple a b expr = ESet (PCouple a b) expr
+
+pattern ESetVar :: VarIdent -> Expr -> Expr
+pattern ESetVar var expr = ESet (PVar var) expr
 
 serExpr :: Expr -> Text
 serExpr (ECase scrutinee cases) =
   " case " <> serExpr scrutinee <> " of "
-    <> Text.concat (intersperse ";" ((\(pattern, body) -> serPattern pattern <> " -> " <> serExpr body) <$> cases))
+    <> Text.concat (intersperse " ; " ((\(p, body) -> serPattern p <> " -> " <> serExpr body) <$> cases))
     <> " end "
-serExpr (ECallFun name args) = name <> "(" <> Text.concat (intersperse "," (serExpr <$> args)) <> " )"
+serExpr (ECallFun name args) = name <> "(" <> Text.concat (intersperse " , " (serExpr <$> args)) <> " )"
 serExpr (EVar var) = var
 serExpr (ESet var expr) = serPattern var <> " = " <> serExpr expr
-serExpr (EOrElse x y) = serExpr x <> " ; " <> serExpr y
-serExpr (EAndAlso xs) = go xs
-  where
-    go [] = ""
-    go [x] = serExpr x
-    go ((ESet (PTuple [PVar setFirst, PVar setSecond]) expr) : (ESet pattern (ECallFun name [ETuple [EVar getFirst, EVar getSecond]])) : xs)
-      | setFirst == getFirst && setSecond == getSecond = go (ESet pattern (ECallFun name [expr]) : xs)
-    go ((ESet (PVar setVarName) expr) : (ESet pattern (ECallFun name [ETuple [firstElem, EVar getVarName]])) : xs)
-      | setVarName == getVarName = go ((ESet pattern (ECallFun name [ETuple [firstElem, expr]])) : xs)
-    go ((ESet (PVar setVarName) expr) : (ESet pattern (ECallFun name [ETuple [EVar getVarName, secondElem]])) : xs)
-      | setVarName == getVarName = go ((ESet pattern (ECallFun name [ETuple [expr, secondElem]])) : xs)
-    go ((ESet (PTuple [PVar setFirst, PVar setSecond]) expr) : (ECallFun name [ETuple [EVar getFirst, EVar getSecond]]) : xs)
-      | setFirst == getFirst && setSecond == getSecond = go ((ECallFun name [expr]) : xs)
-    go ((ESet (PVar setVarName) expr) : (ECallFun name [ETuple [firstElem, EVar getVarName]]) : xs)
-      | setVarName == getVarName = go ((ECallFun name [ETuple [firstElem, expr]]) : xs)
-    go ((ESet (PVar setVarName) expr) : (ECallFun name [ETuple [EVar getVarName, secondElem]]) : xs)
-      | setVarName == getVarName = go ((ECallFun name [ETuple [expr, secondElem]]) : xs)
-    go ((ESet (PTuple [PVar setFirst, PVar setSecond]) expr) : (ETuple [EVar getFirst, EVar getSecond]) : xs)
-      | setFirst == getFirst && setSecond == getSecond = go (expr : xs)
-    go ((ESet (PVar setVarName) expr) : (ETuple [firstElem, EVar getVarName]) : xs)
-      | setVarName == getVarName = go (ETuple [firstElem, expr] : xs)
-    go ((ESet (PVar setVarName) expr) : (ETuple [EVar getVarName, secondElem]) : xs)
-      | setVarName == getVarName = go (ETuple [expr, secondElem] : xs)
-    go (x : xs) = serExpr x <> "," <> go xs
+serExpr (EOrElse xs) = Text.concat (intersperse " ; " (serExpr <$> xs))
+serExpr (EAndAlso xs) = Text.concat (intersperse " , " (serExpr <$> xs))
 serExpr (EList xs) =
-  "[ "
+  "["
     <> ( case xs of
            [] -> ""
            [x] -> serExpr x
-           _ -> Text.concat (intersperse "," (serExpr <$> Unsafe.init xs)) <> "|" <> serExpr (Unsafe.last xs)
+           _ -> Text.concat (intersperse " , " (serExpr <$> Unsafe.init xs)) <> " | " <> serExpr (Unsafe.last xs)
        )
-    <> " ]"
+    <> "]"
 serExpr (EAtom a) = a
 serExpr (EIf xs) =
-  " if " <> Text.concat (intersperse ";" ((\(cond, body) -> serExpr cond <> " -> " <> serExpr body) <$> xs)) <> " end "
+  " if " <> Text.concat (intersperse " ; " ((\(cond, body) -> serExpr cond <> " -> " <> serExpr body) <$> xs)) <> " end "
 serExpr (EInt i) = show i
 serExpr (EFun name arity) = "fun " <> name <> "/" <> show arity
 serExpr (EString s) = "\"" <> fromString s <> "\""
-serExpr (EOp left op right) = "(" <> serExpr left <> op <> serExpr right <> ")"
-serExpr (ETuple xs) = "{ " <> Text.concat (intersperse "," (serExpr <$> xs)) <> " }"
+serExpr (EOp left op right) = "(" <> serExpr left <> " " <> op <> " " <> serExpr right <> ")"
+serExpr (ETuple xs) = "{ " <> Text.concat (intersperse " , " (serExpr <$> xs)) <> " }"
+
+rewrite :: Expr -> Expr
+rewrite = \case
+  (ECase scrutinee cases) -> rewriteCase scrutinee cases
+  (ECallFun name args) -> rewriteCall name args
+  (EVar name) -> EVar name
+  (ESet pat expr) -> rewriteSet pat expr
+  (EOrElse xs) -> rewriteOr xs
+  (EAndAlso xs) -> rewriteAnd xs
+  (EList xs) -> rewriteList xs
+  (EAtom atom) -> EAtom atom
+  (EInt i) -> EInt i
+  (EString s) -> EString s
+  (EOp left op right) -> rewriteOp left op right
+  (ETuple xs) -> rewriteTuple xs
+  (EFun name arity) -> EFun name arity
+  (EIf xs) -> rewriteIf xs
+
+rewriteCase scrutinee cases =
+  ECase
+    (rewrite scrutinee)
+    ( ( \case
+          (PCouple (PList [head, PVar first]) closure, ECase (EVar second) [((PList xs), b)])
+            | first == second -> (PCouple (PList (head : xs)) closure, rewrite b)
+          (p, b) -> (p, rewrite b)
+      )
+        <$> cases
+    )
+
+rewriteCall name args = ECallFun name (rewrite <$> args)
+
+rewriteSet pat expr = ESet pat (rewrite expr)
+
+rewriteOr xs = EOrElse (rewrite <$> xs)
+
+rewriteAnd = EAndAlso . go
+  where
+    go = \case
+      (ESetVar a (EList list) : ESetVar b (EList [head, EVar a']) : xs)
+        | a == a' -> go (ESetVar b (EList (head : list)) : xs)
+      (ESetCouple (PVar a) (PVar b) expr : ECallCouple name (EVar a') (EVar b') : xs)
+        | a == a' && b == b' -> go (ECallFun name [expr] : xs)
+      (ESetCouple (PVar a) (PVar b) expr : ECouple (EVar a') (EVar b') : xs)
+        | a == a' && b == b' -> go (expr : xs)
+      (ESetVar a expr : ECouple (EVar a') second : xs)
+        | a == a' -> go ((ECouple expr second) : xs)
+      (ESetVar a expr : ECouple first (EVar a') : xs)
+        | a == a' -> go ((ECouple first expr) : xs)
+      (x : xs) -> (rewrite x) : (go xs)
+      [] -> []
+
+rewriteList xs = EList (rewrite <$> xs)
+
+rewriteOp left op right = case (rewrite left, op, rewrite right) of
+  (EInt i1, "+", EInt i2) -> EInt (i1 + i2)
+  (EInt i1, "-", EInt i2) -> EInt (i1 - i2)
+  (EInt i1, "*", EInt i2) -> EInt (i1 * i2)
+  (EInt i1, "/", EInt i2) -> EInt (i1 `div` i2)
+  (EAtom first, "and", EAtom second)
+    | first == "true" && second == "true" -> EAtom "true"
+    | otherwise -> EAtom "false"
+  (x, op, y) -> EOp x op y
+
+rewriteTuple xs = ETuple (rewrite <$> xs)
+
+rewriteIf xs = EIf ((\(a, b) -> (rewrite a, rewrite b)) <$> xs)
 
 newtype Codegen a = Codegen (StateT (WordMap, WordMap, Int, Int, Int) (ReaderT WordMap IO) a)
   deriving (Monad, Functor, Applicative, MonadState (WordMap, WordMap, Int, Int, Int), MonadReader WordMap, MonadIO)
@@ -248,9 +309,34 @@ entryErl = do
                 )
             ) of
             Just action ->
-              ( \case
-                  (ECase (EVar "Rest0") [(pattern, body)]) -> i <> "({" <> serPattern pattern <> ", Closure0}) ->" <> serExpr body <> ".\n"
-                  body -> i <> "({Rest0, Closure0}) ->" <> serExpr body <> ".\n"
+              ( \x -> case rewrite x of
+                  (ECase (EVar "Rest0") cases) ->
+                    Text.concat
+                      ( intersperse
+                          " ;\n"
+                          ( ( \(p, body) ->
+                                "m" <> i <> "({" <> serPattern p
+                                  <> ", Closure0}) ->"
+                                  <> serExpr body
+                            )
+                              <$> cases
+                          )
+                      )
+                      <> ".\n\n"
+                  (ECase (EVar "Closure0") cases) ->
+                    Text.concat
+                      ( intersperse
+                          " ;\n"
+                          ( ( \(p, body) ->
+                                "m" <> i <> "({Rest0," <> serPattern p
+                                  <> "}) ->"
+                                  <> serExpr body
+                            )
+                              <$> cases
+                          )
+                      )
+                      <> ".\n\n"
+                  body -> "m" <> i <> "({Rest0, Closure0}) ->" <> serExpr body <> ".\n\n"
               )
                 <$> action
             Nothing -> pure ""
@@ -264,32 +350,18 @@ termErl x = goTerms (decompose x)
       [] -> after
       (Push _ _ (Text x) : Word _ _ (QualifiedName (Global "extern")) _ : rest) ->
         Just (intrinsic x (goTerms rest after))
+      (Push _ _ (Name name) : NewClosure _ _ 0 : rest) -> Just $ do
+        _ <- contained (word name [] Nothing)
+        pushE [ECouple (EFun ("m" <> erlifyQ name) 1) (EList [])] (goTerms rest after)
       (Push _ _ (Name name) : NewClosure _ _ size : rest) -> Just $ do
+        _ <- contained (word name [] Nothing)
         elements <- replicateM size newVar
         let names = zipWith (\name num -> name <> show num) elements [0 ..]
-        currentClosure <- getClosureVar
-        newClosure <- incClosureVar
-        currentRest <- getRestVar
-        newRest <- incRestVar
         tail <- newVar
-        ( \expr ->
-            ECase
-              (EVar currentRest)
-              [ ( PList (PVar <$> (names ++ [tail])),
-                  EAndAlso [ESet (PVar newRest) (EVar tail), expr]
-                )
-              ]
-          )
-          <$> andMaybe
-            ( ESet
-                (PVar newClosure)
-                ( EList
-                    [ ETuple [EFun (erlifyQ name) 2, EList (EVar <$> (reverse names))],
-                      EVar currentClosure
-                    ]
-                )
-            )
-            (goTerms rest after)
+        modifyE
+          (PList (PVar <$> (names ++ [tail])))
+          (EList [ETuple [EFun ("m" <> erlifyQ name) 1, EList (EVar <$> (reverse names))], EVar tail])
+          (goTerms rest after)
       (Word _ _ (QualifiedName (Qualified _ "zero")) _ : xs) -> Just $ do
         let go :: Int -> [Term a] -> (Int, [Term a])
             go n ((Word _ _ (QualifiedName (Qualified _ "succ")) _) : xs) = go (n + 1) xs
@@ -305,6 +377,9 @@ termErl x = goTerms (decompose x)
         ls <- getLocal
         let localName = "Local" <> show (ls - i)
         pushE [EVar localName] (goTerms rest after)
+      (Push _ _ (Closed (ClosureIndex 0)) : rest) -> Just $ do
+        closure <- getClosureVar
+        pushE [ECallFun "hd" [EVar closure]] (goTerms rest after)
       (Push _ _ (Closed (ClosureIndex i)) : rest) -> Just $ do
         closure <- getClosureVar
         pushE [ECallFun "lists:n" [EVar closure, EInt i]] (goTerms rest after)
@@ -322,8 +397,8 @@ termErl x = goTerms (decompose x)
         current <- getRestVar
         cs <- traverse (\c -> caseErl c (goTerms rest after)) cases
         e <- case termErl body (goTerms rest after) of
-          Just action -> contained $ do 
-            new <- incRestVar 
+          Just action -> contained $ do
+            new <- incRestVar
             e <- action
             pure (Just (PList [PVar "_", PVar new], e))
           Nothing -> pure Nothing
@@ -332,7 +407,7 @@ termErl x = goTerms (decompose x)
         current <- getRestVar
         cs <- catMaybes <$> traverse (\c -> caseErl c (goTerms rest after)) cases
         e <- contained $ do
-          new <- incRestVar 
+          new <- incRestVar
           e <- word (Global "abort-now") [] (goTerms rest after)
           pure (PList [PVar "_", PVar new], e)
         pure (ECase (EVar current) (cs ++ [e]))
@@ -345,6 +420,40 @@ inDone :: Text -> Codegen (Maybe WordEntry)
 inDone bs = Map.lookup bs <$> getDone
 
 word :: Qualified -> [Type] -> Maybe (Codegen Expr) -> Codegen Expr
+word (Qualified _ "abort-now") _ after = do
+  list <- newVar
+  andMaybe (ECallFun "erlang:exit" [EString "abort called"]) after
+word (Qualified _ "and") _ after = do
+  first <- newVar
+  second <- newVar
+  tail <- newVar
+  modifyE
+    (PList [PVar first, PVar second, PVar tail])
+    (EList [EOp (EVar first) "and" (EVar second), EVar tail])
+    after
+word (Qualified _ "or") _ after = do
+  first <- newVar
+  second <- newVar
+  tail <- newVar
+  modifyE
+    (PList [PVar first, PVar second, PVar tail])
+    (EList [EOp (EVar first) "or" (EVar second), EVar tail])
+    after
+word (Qualified _ "not") _ after = do
+  head <- newVar
+  tail <- newVar
+  modifyE
+    (PList [PVar head, PVar tail])
+    (EList [ECallFun "not" [EVar head], EVar tail])
+    after
+word (Qualified _ "xor") _ after = do
+  first <- newVar
+  second <- newVar
+  tail <- newVar
+  modifyE
+    (PList [PVar first, PVar second, PVar tail])
+    (EList [EOp (EVar first) "xor" (EVar second), EVar tail])
+    after
 word (Qualified _ "pred") _ after = do
   head <- newVar
   tail <- newVar
@@ -405,23 +514,36 @@ word name args after = do
             _ -> error "unknown word"
 
 andMaybe :: Expr -> Maybe (Codegen Expr) -> Codegen Expr
+andMaybe (EAndAlso es) = \case
+  Nothing -> pure (EAndAlso es)
+  Just action ->
+    ( \case
+        EAndAlso es' -> EAndAlso (es ++ es')
+        e -> EAndAlso (es ++ [e])
+    )
+      <$> action
 andMaybe expr = \case
   Nothing -> pure expr
-  Just action -> (\e -> EAndAlso [expr, e]) <$> action
+  Just action ->
+    ( \case
+        EAndAlso es' -> EAndAlso (expr : es')
+        e -> EAndAlso [expr, e]
+    )
+      <$> action
 
 pushE :: [Expr] -> Maybe (Codegen Expr) -> Codegen Expr
 pushE newHeads after = do
   current <- EVar <$> getRestVar
   new <- incRestVar
-  andMaybe (ESet (PVar new) (EList (newHeads ++ [current]))) after
+  andMaybe (ESetVar new (EList (newHeads ++ [current]))) after
 
 modifyE :: Pattern -> Expr -> Maybe (Codegen Expr) -> Codegen Expr
-modifyE pattern expr after = do
+modifyE p expr after = do
   current <- getRestVar
-  new <- PVar <$> incRestVar
+  new <- incRestVar
   case after of
-    Nothing -> pure (ECase (EVar current) [(pattern, ESet new expr)])
-    Just action -> (\e -> ECase (EVar current) [(pattern, EAndAlso [ESet new expr, e])]) <$> action
+    Nothing -> pure (ECase (EVar current) [(p, ESetVar new expr)])
+    Just action -> (\e -> ECase (EVar current) [(p, EAndAlso [ESetVar new expr, e])]) <$> action
 
 callWord :: Bool -> Text -> WordEntry -> Maybe (Codegen Expr) -> Codegen Expr
 callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose body of
@@ -458,9 +580,10 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose
     newRest <- PVar <$> incRestVar
     newClosure <- PVar <$> incClosureVar
     andMaybe
-      ( ESet
-          (PTuple [newRest, newClosure])
-          (ECallFun name [ETuple [EVar rest, EVar closure]])
+      ( ESetCouple
+          newRest
+          newClosure
+          (ECallCouple ("m" <> name) (EVar rest) (EVar closure))
       )
       after
 
@@ -471,8 +594,8 @@ intrinsic text after = case text of
     closure <- newVar
     tail <- newVar
     modifyE
-      (PList [PTuple [PVar name, PVar closure], PVar tail])
-      (ECallFun name [ETuple [EVar tail, EVar closure]])
+      (PList [PCouple (PVar name) (PVar closure), PVar tail])
+      (ECallCouple name (EVar tail) (EVar closure))
       after
   "abort" -> do
     current <- getRestVar
@@ -480,7 +603,7 @@ intrinsic text after = case text of
   "drop" -> do
     current <- getRestVar
     new <- incRestVar
-    andMaybe (ESet (PVar new) (ECallFun "tl" [EVar current])) after
+    andMaybe (ESetVar new (ECallFun "tl" [EVar current])) after
   "swap" -> do
     first <- newVar
     second <- newVar
@@ -492,7 +615,7 @@ intrinsic text after = case text of
   "dup" -> do
     current <- getRestVar
     new <- incRestVar
-    andMaybe (ESet (PVar new) (EList [ECallFun "hd" [EVar current], EVar current])) after
+    andMaybe (ESetVar new (EList [ECallFun "hd" [EVar current], EVar current])) after
   "cmp-char" -> cmp after
   "show-nat" -> do
     head <- newVar
@@ -509,18 +632,18 @@ intrinsic text after = case text of
     some <- pushE [EVar number] $ Just $ word (Global "some") [] Nothing
     none <- word (Global "none") [] Nothing
     current <- getRestVar
-    new <- PVar <$> incRestVar
+    new <- incRestVar
     let expr =
           EAndAlso
-            [ ESet
-                (PVar output)
+            [ ESetVar
+                output
                 ( ECase
                     (EVar readable)
-                    [ (PTuple [PAtom "error", PVar "_"], none),
-                      (PTuple [PVar "Int", PVar "_"], some)
+                    [ (PCouple (PAtom "error") (PVar "_"), none),
+                      (PCouple (PVar "Int") (PVar "_"), some)
                     ]
                 ),
-              ESet new (EList [EVar output, EVar tail])
+              ESetVar new (EList [EVar output, EVar tail])
             ]
     (\expr -> ECase (EVar current) [(PList [PVar readable, PVar tail], expr)]) <$> andMaybe expr after
   "writeln-stdout" -> do
@@ -584,8 +707,9 @@ intrinsic text after = case text of
   "read-line" -> do
     output <- newVar
     andMaybe
-      ( ESet
-          (PTuple [PAtom "ok", PVar output])
+      ( ESetCouple
+          (PAtom "ok")
+          (PVar output)
           (ECallFun "io::fwrite" [EString "", EString "~s"])
       )
       (Just (pushE [EVar output] after))
@@ -606,7 +730,7 @@ cmp after = do
       (EVar current)
       [ ( PList [PVar first, PVar second, PVar tail],
           EAndAlso
-            [ ESet (PVar new) (EVar tail),
+            [ ESetVar new (EVar tail),
               EIf
                 [ (EOp (EVar first) "<" (EVar second), m),
                   (EOp (EVar first) ">" (EVar second), l),
@@ -620,62 +744,55 @@ caseErl :: (Origin, GeneralName, Term Type) -> Maybe (Codegen Expr) -> Codegen (
 caseErl (_, QualifiedName name, caseBody) after = do
   dict <- getDict
   let erlyName = erlifyQ name
-  contained $ case Map.lookup (erlifyI (Instantiated name [])) dict of
+  contained $ case Map.lookup erlyName dict of
     Just (Entry.WordEntry _ _ _ _ _ (Just ctorBody)) ->
       case decompose ctorBody of
         [New _ _ _ 0 NonSpecial] -> do
           new <- incRestVar
-          let pattern = PList [PAtom erlyName, PVar new]
           case termErl caseBody after of
             Nothing -> pure Nothing
-            Just action -> (Just . (pattern,)) <$> action
+            Just action -> (Just . (PList [PAtom erlyName, PVar new],)) <$> action
         [New _ _ _ 1 NonSpecial] -> do
           new <- incRestVar
           element <- newVar
-          let pattern = PList [PTuple [PAtom erlyName, PList [PVar element]], PVar new]
           expr <- pushE [EVar element] (termErl caseBody after)
-          pure (Just (pattern, expr))
+          pure (Just (PList [PTuple [PAtom erlyName, PList [PVar element]], PVar new], expr))
         [New _ _ _ size NonSpecial] -> do
           new <- incRestVar
           elements <- replicateM size newVar
           let names = zipWith (\name num -> name <> show num) elements [0 ..]
-          let pattern = PList [PTuple (PAtom erlyName : (PVar <$> names)), PVar new]
           expr <- pushE (EVar <$> (reverse names)) (termErl caseBody after)
-          pure (Just (pattern, expr))
+          pure (Just (PList [PTuple (PAtom erlyName : (PVar <$> names)), PVar new], expr))
         [New _ _ (ConstructorIndex 0) 0 NatLike] -> do
           new <- incRestVar
-          let pattern = PList [PInt 0, PVar new]
           case termErl caseBody after of
             Nothing -> pure Nothing
-            Just action -> (Just . (pattern,)) <$> action
+            Just action -> (Just . (PList [PInt 0, PVar new],)) <$> action
         [New _ _ (ConstructorIndex 1) 1 NatLike] -> do
           new <- incRestVar
           number <- newVar
-          let pattern = PWhen (PList [PVar number, PVar new]) (EOp (EVar number) ">" (EInt 0))
           expr <- pushE [EOp (EVar number) "-" (EInt 1)] (termErl caseBody after)
-          pure (Just (pattern, expr))
+          pure (Just (PWhen (PList [PVar number, PVar new]) (EOp (EVar number) ">" (EInt 0)), expr))
         [New _ _ (ConstructorIndex 0) 0 ListLike] -> do
           new <- incRestVar
-          let pattern = PList [PList [], PVar new]
           case termErl caseBody after of
             Nothing -> pure Nothing
-            Just action -> (Just . (pattern,)) <$> action
+            Just action -> (Just . (PList [PList [], PVar new],)) <$> action
         [New _ _ (ConstructorIndex 1) 2 ListLike] -> do
           new <- incRestVar
           head <- newVar
           tail <- newVar
-          let pattern = PList [PList [PVar head, PVar tail], PVar new]
           expr <- pushE [EVar head, EVar tail] (termErl caseBody after)
-          pure (Just (pattern, expr))
+          pure (Just (PList [PList [PVar head, PVar tail], PVar new], expr))
         _ -> pure Nothing
     _ -> pure Nothing
 caseErl _ _ = pure Nothing
 
-erlify = Text.replace "-" "_"
+erlify = Text.replace " " "_" . Text.replace "." "_" . Text.replace "-" "_"
 
 erlifyQ :: Qualified -> Text
 erlifyQ = erlify . show . printQualified
 
 erlifyI :: Instantiated -> Text
 erlifyI (Instantiated q []) = erlifyQ q
-erlifyI (Instantiated q ts) = erlifyQ q <> "__" <> Text.concat (intersperse "_" ((erlify . show . printType) <$> ts)) <> "__"
+erlifyI (Instantiated q ts) = erlifyQ q <> "_" <> Text.concat (intersperse "_" ((erlify . show . printType) <$> ts)) <> "_"

@@ -88,6 +88,10 @@ define pick (for a b c. a, b, c -> a, b, c, a) {
   -> x, y, z; x y z x
 }
 
+define repeat (for +p. nat, ( ->  <p>) ->  <p>) {
+  -> f; match | zero {} | succ { -> nc; f call nc f repeat }
+}
+
 define swapped (for R S a b. (R, a, b -> R) -> (R, b, a -> R)) {
   \swap swap compose
 }

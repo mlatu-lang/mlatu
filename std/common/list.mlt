@@ -330,13 +330,7 @@ define remove-nth (for t. t list, nat -> t list) {
 
 define replicate (for t. t, nat -> t list) {
   -> value, count;
-  match (count 0 le)
-  | true {
-    nil
-  }
-  | false {
-    value count 1 "swap" extern - replicate value suffix
-  }
+  match (count) | zero { nil } | succ { -> nc; value nc replicate value suffix }
 }
 
 define rev (for t. t list -> t list) {
