@@ -5,10 +5,10 @@ where
 
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
-import Mlatu.Erlang qualified as Erlang
 import Mlatu.Dictionary (Dictionary)
-import Mlatu.Informer (errorCheckpoint, runMlatu)
 import Mlatu.Enter qualified as Enter
+import Mlatu.Erlang.Print qualified as Erlang
+import Mlatu.Informer (errorCheckpoint, runMlatu)
 import Mlatu.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified),

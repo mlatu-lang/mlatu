@@ -3,7 +3,7 @@ module Main where
 import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
-import Mlatu.Erlang qualified as Erlang
+import Mlatu.Erlang.Print qualified as Erlang
 import Mlatu.Informer (Report, warnCheckpoint)
 import Mlatu.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
@@ -29,9 +29,9 @@ main = do
         0 -> exitSuccess
         _ -> exitFailure
     Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles False prelude  files -> runFiles prelude files
+    Arguments.RunFiles False prelude files -> runFiles prelude files
     Arguments.RunFiles True prelude files -> benchFiles prelude files
-    Arguments.CompileFiles prelude  files -> compileFiles prelude files
+    Arguments.CompileFiles prelude files -> compileFiles prelude files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -73,14 +73,8 @@ checkFiles prelude relativePaths =
               >>= reportAll . snd
         )
 
-careTaken :: FilePath -> IO () -> IO ()
-careTaken name action =
-  createDirectory name
-    >> withCurrentDirectory name action
-    >> removeDirectoryRecursive name
-
-runFiles :: Prelude  -> [FilePath] -> IO ()
-runFiles prelude relativePaths =
+base :: IO () -> Prelude -> [FilePath] -> IO ()
+base after prelude relativePaths =
   forM relativePaths makeAbsolute
     >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
     >>= ( \(result, reports) ->
@@ -88,39 +82,17 @@ runFiles prelude relativePaths =
               Nothing -> exitFailure
               Just program ->
                 Erlang.generate program Nothing >>= \contents ->
-                  writeFileText "mlatu.erl" contents >>
-                  runProcess_ "escript mlatu.erl" >>
-                  removeFile "mlatu.erl"
-                    )
+                  writeFileText "mlatu.erl" contents
+                    >> runProcess_ "erlc -W0 mlatu.erl"
+                    >> removeFile "mlatu.erl"
+                    >> after
+        )
+
+runFiles :: Prelude -> [FilePath] -> IO ()
+runFiles = base (runProcess_ "escript mlatu.beam" >> removeFile "mlatu.beam")
 
 compileFiles :: Prelude -> [FilePath] -> IO ()
-compileFiles prelude relativePaths =
-  forM relativePaths makeAbsolute
-    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \(result, reports) ->
-            reportAll reports >> case result of
-              Nothing -> exitFailure
-              Just program ->
-                Erlang.generate program Nothing >>= \contents ->
-                  writeFileText "mlatu.erl" contents >>
-                  runProcess_ "erlc -W0 mlatu.erl" >>
-                  removeFile "mlatu.erl"
-                    >> putStrLn "Produced the BEAM bytecode file `mlatu.beam`"
-        )
+compileFiles = base (putStrLn "Produced the BEAM bytecode file `mlatu.beam`.\nExecute it by running `escript mlatu.beam`")
 
 benchFiles :: Prelude -> [FilePath] -> IO ()
-benchFiles prelude relativePaths =
-  forM relativePaths makeAbsolute
-    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \(result, reports) ->
-            reportAll reports >> case result of
-              Nothing -> exitFailure
-              Just program ->
-                Erlang.generate program Nothing >>= \contents ->
-                  writeFileText "mlatu.erl" contents >>
-                  runProcess_ "erlc -W0 mlatu.erl" >>
-                  runProcess_ "time escript mlatu.beam" >>
-                  removeFile "mlatu.erl" >>
-                  removeFile "mlatu.beam"
-        )
-
+benchFiles = base (runProcess_ "time escript mlatu.beam" >> removeFile "mlatu.beam")

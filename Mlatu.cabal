@@ -36,7 +36,10 @@ library
       Mlatu.Entry.Merge
       Mlatu.Entry.Parameter
       Mlatu.Entry.Parent
-      Mlatu.Erlang
+      Mlatu.Erlang.AST
+      Mlatu.Erlang.Erlify
+      Mlatu.Erlang.Optimize
+      Mlatu.Erlang.Print
       Mlatu.Fragment
       Mlatu.Free
       Mlatu.Infer
