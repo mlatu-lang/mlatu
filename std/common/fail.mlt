@@ -16,10 +16,6 @@ define assert-not (for +p. char list, ( -> bool <p>) ->  <fail + p>) {
   { test call } with (-fail) match | true { message fail-now } | false {}
 }
 
-define exit-now (for R S. R, nat -> S <exit>) {
-  "exit" extern
-}
-
 define fail-now (for R S. R, char list -> S <fail>) {
   "abort" extern
 }

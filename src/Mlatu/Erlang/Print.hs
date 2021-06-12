@@ -29,7 +29,7 @@ generate dict mMain = do
   pure
     ( "-module(mlatu).\n -export([main/1]).\n main(_) -> m"
         <> firstKey
-        <> "({[], []}).\n"
+        <> "({[], []}).\n\n"
         <> Text.concat (serFun <$> funs)
     )
 

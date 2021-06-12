@@ -639,8 +639,7 @@ sectionParser =
             pure $
               compose operandOrigin () $
                 operand
-                  ++ [ Push origin () (Text "swap"),
-                       Word origin () "extern" [],
+                  ++ [ Word origin () (UnqualifiedName "swap") [],
                        Word origin () (UnqualifiedName function) []
                      ]
         ]

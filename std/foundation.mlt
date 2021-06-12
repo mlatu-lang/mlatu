@@ -1,5 +1,5 @@
-permission exit (for R S +p. R, (R -> S <exit + p>) -> S <p>) {
-  with (+exit)
+permission otp (for R S +p. R, (R -> S <otp + p>) -> S <p>) {
+  with (+otp)
 }
 
 permission fail (for R S +p. R, (R -> S <fail + p>) -> S <p>) {

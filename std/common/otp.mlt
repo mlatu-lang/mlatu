@@ -1,0 +1,13 @@
+data pid {}
+
+instance cmp (pid, pid -> ord) {
+    "cmp" extern
+}
+
+define self (-> pid <otp>) {
+    "self" extern
+}
+
+define kill (pid -> <otp>) {
+    "kill" extern
+}

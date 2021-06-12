@@ -1,4 +1,3 @@
-trait read (for t. char list -> t optional)
 
 trait show (for t. t -> char list)
 
@@ -6,30 +5,7 @@ trait show (for t. t -> char list)
 data char {  } 
 
 instance cmp (char, char -> ord) {
-  "cmp-char" extern
-}
-
-instance read (char list -> nat optional) {
-  "read-nat" extern
-}
-
-instance read (char list -> char optional) {
-  hd
-}
-
-instance read (char list -> bool optional) {
-  dup
-  match ("true" eq)
-  | true {
-    drop true some
-  }
-  | false {
-    match ("false" eq) | true { false some } | false { none }
-  }
-}
-
-instance read (char list -> (char list) optional) {
-  some
+  "cmp" extern
 }
 
 instance show (char list -> char list) {}

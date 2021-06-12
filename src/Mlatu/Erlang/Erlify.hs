@@ -8,17 +8,6 @@ import Data.Text qualified as Text
 import Mlatu.Entry (WordEntry)
 import Mlatu.Entry qualified as Entry
 import Mlatu.Erlang.AST
-  ( EFun (..),
-    Expr (..),
-    Pattern (..),
-    VarIdent,
-    mkAnd,
-    pattern ECallCouple,
-    pattern ECouple,
-    pattern ESetCouple,
-    pattern ESetVar,
-    pattern PCouple,
-  )
 import Mlatu.Informer (runMlatu)
 import Mlatu.Instantiate qualified as Instantiate
 import Mlatu.Instantiated (Instantiated (..))
@@ -203,6 +192,12 @@ inDone :: Text -> Codegen (Maybe WordEntry)
 inDone bs = Map.lookup bs <$> getDone
 
 word :: Qualified -> [Type] -> Maybe (Codegen Expr) -> Codegen Expr
+word (Qualified _ "eq") _ after = binaryBool "==" "=/=" after
+word (Qualified _ "neq") _ after = binaryBool "=/=" "==" after
+word (Qualified _ "gt") _ after = binaryBool ">" "=<" after
+word (Qualified _ "ge") _ after = binaryBool ">=" "<" after
+word (Qualified _ "lt") _ after = binaryBool "<" ">=" after
+word (Qualified _ "le") _ after = binaryBool "=<" ">" after
 word (Qualified _ "abort-now") _ after = do
   list <- newVar
   andMaybe (ECallFun "erlang:exit" [EString "abort called"]) after
@@ -374,24 +369,42 @@ intrinsic text after = case text of
       (ECallCouple name (EVar tail) (EVar closure))
       after
   "abort" -> do
+    head <- newVar
+    tail <- newVar
     current <- getRestVar
-    andMaybe (ECallFun "erlang:exit" [ECallFun "hd" [EVar current]]) after
+    new <- getRestVar
+    ( \e ->
+        ECase
+          (EVar current)
+          [(PCons (PVar head) (PVar tail), e)]
+      )
+      <$> andMaybe (EAnd [ESetVar new (EVar tail), ECallFun "erlang:exit" [EVar head]]) after
   "drop" -> do
     current <- getRestVar
     new <- incRestVar
     andMaybe (ESetVar new (ECallFun "tl" [EVar current])) after
-  "swap" -> do
-    first <- newVar
-    second <- newVar
-    tail <- newVar
-    modifyE
-      (foldr PCons (PVar tail) [PVar first, PVar second])
-      (foldr ECons (EVar tail) [EVar second, EVar first])
-      after
   "dup" -> do
     current <- getRestVar
     pushE (ECallFun "hd" [EVar current]) after
-  "cmp-char" -> cmp after
+  "cmp" -> cmp after
+  "self" -> pushE (ECallFun "erlang:self" []) after
+  "kill" -> do
+    head <- newVar
+    tail <- newVar
+    current <- getRestVar
+    new <- getRestVar
+    ( \e ->
+        ECase (EVar current) [(PCons (PVar head) (PVar tail), e)]
+      )
+      <$> andMaybe
+        ( EAnd
+            [ ESetVar new (EVar tail),
+              ECallFun
+                "erlang:exit"
+                [ECallFun head [ECouple ENil ENil], EAtom "kill"]
+            ]
+        )
+        after
   "show-nat" -> do
     head <- newVar
     tail <- newVar
@@ -399,28 +412,6 @@ intrinsic text after = case text of
       (PCons (PVar head) (PVar tail))
       (ECons (ECallFun "erlang:integer_to_list" [EVar head]) (EVar tail))
       after
-  "read-nat" -> do
-    output <- newVar
-    number <- newVar
-    readable <- newVar
-    tail <- newVar
-    some <- pushE (EVar number) $ Just $ word (Global "some") [] Nothing
-    none <- word (Global "none") [] Nothing
-    current <- getRestVar
-    new <- incRestVar
-    let expr =
-          EAnd
-            [ ESetVar
-                output
-                ( ECase
-                    (EVar readable)
-                    [ (PCouple (PAtom "error") (PVar "_"), none),
-                      (PCouple (PVar "Int") (PVar "_"), some)
-                    ]
-                ),
-              ESetVar new (ECons (EVar output) (EVar tail))
-            ]
-    (\expr -> ECase (EVar current) [(PCons (PVar readable) (PVar tail), expr)]) <$> andMaybe expr after
   "writeln-stdout" -> do
     head <- newVar
     tail <- newVar
@@ -510,6 +501,29 @@ cmp after = do
                 [ (EOp (EVar first) "<" (EVar second), m),
                   (EOp (EVar first) ">" (EVar second), l),
                   (EOp (EVar first) "==" (EVar second), e)
+                ]
+            ]
+        )
+      ]
+
+binaryBool :: OpIdent -> OpIdent -> Maybe (Codegen Expr) -> Codegen Expr
+binaryBool tOp fOp after = do
+  first <- newVar
+  second <- newVar
+  tail <- newVar
+  current <- getRestVar
+  new <- incRestVar
+  t <- contained (pushE (EAtom "true") after)
+  f <- contained (pushE (EAtom "false") after)
+  pure $
+    ECase
+      (EVar current)
+      [ ( foldr PCons (PVar tail) [PVar first, PVar second],
+          EAnd
+            [ ESetVar new (EVar tail),
+              EIf
+                [ (EOp (EVar second) tOp (EVar first), t),
+                  (EOp (EVar second) fOp (EVar first), f)
                 ]
             ]
         )
