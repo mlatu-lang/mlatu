@@ -19,7 +19,6 @@ module Mlatu.Pretty
     printType,
     printDefinition,
     printDataDefinition,
-    printInstantiated,
     printKind,
     printFragment,
     printQualifier,
@@ -29,33 +28,30 @@ where
 import Data.List (findIndex, groupBy)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
-import Mlatu.CodataDefinition (CodataDefinition (..))
-import Mlatu.DataDefinition (DataDefinition (..))
-import Mlatu.Definition (Definition (Definition), mainName)
-import Mlatu.Entry.Category qualified as Category
-import Mlatu.Entry.Parameter (Parameter (..))
-import Mlatu.Fragment (Fragment (..))
-import Mlatu.Fragment qualified as Fragment
-import Mlatu.Instantiated (Instantiated (..))
-import Mlatu.Kind (Kind (..))
-import Mlatu.Metadata (Metadata (..))
-import Mlatu.Metadata qualified as Metadata
-import Mlatu.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
-import Mlatu.Origin (Origin)
-import Mlatu.Origin qualified as Origin
-import Mlatu.Signature (Signature (..))
-import Mlatu.Term (CoercionHint (..), Term (..), Value (..))
-import Mlatu.Term qualified as Term
-import Mlatu.Token qualified as Token
-import Mlatu.Trait (Trait (..))
-import Mlatu.Trait qualified as Trait
-import Mlatu.Type (Constructor (..), Type (..), TypeId (..), Var (..))
-import Mlatu.Type qualified as Type
-import Optics
+import Mlatu.Base.Kind (Kind (..))
+import Mlatu.Base.Name (Closed (..), ClosureIndex (..), GeneralName (..), LocalIndex (..), Qualified (..), Qualifier (..), Root (..), Unqualified (..))
+import Mlatu.Base.Origin (Origin)
+import Mlatu.Base.Origin qualified as Origin
+import Mlatu.Base.Type (Constructor (..), Type (..), TypeId (..), Var (..))
+import Mlatu.Base.Type qualified as Type
+import Mlatu.Front.CodataDefinition (CodataDefinition (..))
+import Mlatu.Front.DataDefinition (DataDefinition (..))
+import Mlatu.Front.Definition (Category (..), Definition (Definition), mainName)
+import Mlatu.Front.Fragment (Fragment (..))
+import Mlatu.Front.Fragment qualified as Fragment
+import Mlatu.Front.Metadata (Metadata (..))
+import Mlatu.Front.Metadata qualified as Metadata
+import Mlatu.Front.Parameter (Parameter (..))
+import Mlatu.Front.Signature (Signature (..))
+import Mlatu.Front.Term (CoercionHint (..), Term (..), Value (..))
+import Mlatu.Front.Term qualified as Term
+import Mlatu.Front.Token qualified as Token
+import Mlatu.Front.Trait (Trait (..))
+import Mlatu.Front.Trait qualified as Trait
 import Prettyprinter
-import Relude hiding (Compose, Constraint, Type, group)
 import Relude.Unsafe qualified as Unsafe
 import Text.Show qualified
+import Prelude hiding (group, groupBy)
 
 instance Eq (Doc ()) where
   d1 == d2 = (show d1 :: Text) == (show d2 :: Text)
@@ -296,11 +292,6 @@ printToken = \case
 instance Show Token.Token where
   show x = "`" <> show (printToken x) <> "`"
 
-printInstantiated :: Instantiated -> Doc a
-printInstantiated (Instantiated n []) = printQualified n
-printInstantiated (Instantiated n ts) =
-  printQualified n <> dot <> list (printType <$> ts)
-
 printDeclaration :: Trait -> Doc a
 printDeclaration (Trait name _ signature) =
   "trait" <+> printUnqualified (unqualifiedName name) <+> parens (printSignature signature)
@@ -495,16 +486,14 @@ printMetadata metadata =
       ++ [rbrace]
 
 printDefinition :: (Show a) => Definition a -> Maybe (Doc b)
-printDefinition (Definition Category.Constructor _ _ _ _ _ _ _) = Nothing
-printDefinition (Definition Category.Deconstructor _ _ _ _ _ _ _) = Nothing
-printDefinition (Definition Category.Permission name body _ _ _ signature _) =
+printDefinition (Definition PermissionWord name body _ _ _ signature _) =
   Just $
     blockMaybe
       ( "permission"
           <+> (printQualified name <+> parens (printSignature signature))
       )
       (maybePrintTerm body)
-printDefinition (Definition Category.Instance name body _ _ _ signature _) =
+printDefinition (Definition InstanceWord name body _ _ _ signature _) =
   Just $
     blockMaybe
       ( "instance"
@@ -513,7 +502,7 @@ printDefinition (Definition Category.Instance name body _ _ _ signature _) =
               )
       )
       (maybePrintTerm body)
-printDefinition (Definition Category.Word name body _ _ _ signature _)
+printDefinition (Definition DefinedWord name body _ _ _ signature _)
   | name == mainName = maybePrintTerm body
   | otherwise =
     Just $
@@ -524,6 +513,7 @@ printDefinition (Definition Category.Word name body _ _ _ signature _)
                 )
         )
         (maybePrintTerm body)
+printDefinition _ = Nothing
 
 printFragment :: (Show a, Ord a) => Fragment a -> Doc b
 printFragment fragment =

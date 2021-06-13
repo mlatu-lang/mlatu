@@ -20,13 +20,12 @@ module Mlatu
 where
 
 import Data.FileEmbed (embedDir, embedFile)
-import Mlatu.Dictionary (Dictionary)
-import Mlatu.Dictionary qualified as Dictionary
-import Mlatu.Enter qualified as Enter
+import Mlatu.Base.Name (GeneralName, Qualified)
+import Mlatu.Front.Tokenize (tokenize)
 import Mlatu.Informer (M, runMlatu)
-import Mlatu.Name (GeneralName, Qualified)
-import Mlatu.Tokenize (tokenize)
-import Relude
+import Mlatu.Middle.Dictionary (Dictionary)
+import Mlatu.Middle.Dictionary qualified as Dictionary
+import Mlatu.Middle.Enter qualified as Enter
 
 common :: [(FilePath, ByteString)]
 common = $(embedDir "./std/common")

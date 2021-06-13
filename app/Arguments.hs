@@ -6,7 +6,6 @@ where
 
 import Mlatu (Prelude (..))
 import Options.Applicative
-import Relude
 
 data Options
   = CheckFiles !Prelude ![FilePath]

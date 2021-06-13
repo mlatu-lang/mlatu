@@ -5,22 +5,21 @@ where
 
 import Mlatu (Prelude (..), compilePrelude)
 import Mlatu qualified
-import Mlatu.Dictionary (Dictionary)
-import Mlatu.Enter qualified as Enter
-import Mlatu.Erlang.Print qualified as Erlang
+import Mlatu.Middle.Dictionary (Dictionary)
+import Mlatu.Middle.Enter qualified as Enter
+import Mlatu.Back.Print qualified as Erlang
 import Mlatu.Informer (errorCheckpoint, runMlatu)
-import Mlatu.Name
+import Mlatu.Base.Name
   ( GeneralName (QualifiedName),
     Qualified (Qualified),
     Qualifier (Qualifier),
     Root (Absolute),
     Unqualified (Unqualified),
   )
-import Mlatu.Vocabulary
-import Relude
+import Mlatu.Base.Vocabulary
 import Report (reportAll)
 import System.Console.Repline
-import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, withCurrentDirectory)
+import System.Directory (removeFile)
 import System.Process.Typed (runProcess_)
 
 type MRepl = HaskelineT (ReaderT Dictionary (StateT (Text, Int) IO))

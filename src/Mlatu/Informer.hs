@@ -36,31 +36,36 @@ module Mlatu.Informer
   )
 where
 
-import Control.Monad (ap)
 import Control.Monad.Fix (MonadFix (..))
 import GHC.List (span)
-import Mlatu.Name (GeneralName, Qualified)
-import Mlatu.Origin (Origin)
-import Mlatu.Origin qualified as Origin
+import Mlatu.Base.Name (GeneralName, Qualified)
+import Mlatu.Base.Origin (Origin)
+import Mlatu.Base.Origin qualified as Origin
+import Mlatu.Base.Type (Constructor, Type)
+import Mlatu.Front.Signature (Signature)
+import Mlatu.Front.Term (Term)
+import Mlatu.Front.Term qualified as Term
 import Mlatu.Pretty (printConstructor, printGeneralName, printOrigin, printQualified, printSignature, printTerm, printType)
-import Mlatu.Signature (Signature)
-import Mlatu.Term (Term)
-import Mlatu.Term qualified as Term
-import Mlatu.Type (Constructor, Type)
-import Prettyprinter (Doc, Pretty (pretty), colon, comma, dquotes, hsep, list, parens, punctuate, vsep, (<+>))
-import Relude hiding (Type)
-import System.IO.Unsafe (unsafeInterleaveIO)
+import Prettyprinter (Doc, Pretty (pretty), colon, comma, dquotes, hsep, list, parens, punctuate, vsep)
 import Text.Parsec qualified as Parsec
 import Text.Parsec.Error qualified as Parsec
-import Prelude (errorWithoutStackTrace)
 
-ice :: String -> a
-ice msg =
-  errorWithoutStackTrace $
-    "Internal Compiler Error: Mlatu has failed internally.\n\
-    \Please submit a bug report at https://github.com/brightly-salty/mlatu/issues/new\n\
-    \Error: "
-      <> msg
+newtype InternalCompilerError
+  = CustomICE Text
+  deriving (Ord, Eq, Show)
+
+instance Exception InternalCompilerError where
+  displayException (CustomICE txt) =
+    toString
+      ( "Internal Compiler Error: Mlatu has encountered a failure that should never occur.\n\
+        \Please submit a bug report at https://github.com/brightly-salty/mlatu/issues/new\n\
+        \Error messaage: \""
+          <> txt
+          <> "\""
+      )
+
+ice :: Text -> a
+ice txt = bug (CustomICE txt)
 
 errorCheckpoint :: (Applicative m) => MT m ()
 errorCheckpoint = checkpoint Error
@@ -88,7 +93,7 @@ attempt action =
   mt
     ( \context reports ->
         ( \case
-            (Just x, rs) -> (Just True, rs)
+            (Just _, rs) -> (Just True, rs)
             (Nothing, rs) -> (Just False, rs)
         )
           <$> unMT action context reports
@@ -147,9 +152,6 @@ parseError :: Parsec.ParseError -> Doc ()
 parseError parsecError =
   hsep (("I am not wanting to see" : intersperse ", " unexpected') ++ ("here; instead" : expected'))
   where
-    origin :: Origin
-    origin = Origin.pos $ Parsec.errorPos parsecError
-
     sysUnexpected, unexpected, expected :: [Parsec.Message]
     (sysUnexpected, unexpected, expected) =
       flip evalState (Parsec.errorMessages parsecError) $

@@ -4,10 +4,8 @@ module Report
 where
 
 import Mlatu.Informer (Report (..))
-import Mlatu.Origin (beginColumn, beginLine, endColumn, endLine, name)
+import Mlatu.Base.Origin (beginColumn, beginLine, endColumn, endLine, name)
 import Mlatu.Pretty (printOrigin)
-import Optics
-import Relude
 import Relude.Unsafe qualified as Unsafe
 import System.Directory (makeAbsolute)
 import System.IO (hPrint, hPutStrLn)

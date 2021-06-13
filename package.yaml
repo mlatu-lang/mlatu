@@ -9,11 +9,12 @@ license-file: LICENSE.md
 
 ghc-options:
   - -Wall
+  - -Wno-name-shadowing
 
 default-extensions:
-  - NoImplicitPrelude
   - LambdaCase
   - OverloadedStrings
+  - PatternSynonyms
   #  - GHC2021
   - EmptyCase
   - PostfixOperators
@@ -53,18 +54,18 @@ default-extensions:
   - DeriveGeneric
 
 dependencies:
-  - base >=4.8
+  - base-noprelude
   - bytestring
   - containers
   - file-embed
   - monad-loops
+  - mtl
   - optics
   - parsec
   - prettyprinter
   - random
   - relude ==0.7.0.0
   - text
-  - transformers
 
 library:
   source-dirs: src
@@ -84,14 +85,4 @@ executables:
       - repline
       - optparse-applicative
       - typed-process
-      - temporary
       - mlatu
-
-tests:
-  test:
-    main: Main.hs
-    source-dirs: test
-    dependencies:
-      - HUnit
-      - hspec
-      - knob

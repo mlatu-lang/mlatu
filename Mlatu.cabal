@@ -22,65 +22,59 @@ source-repository head
 library
   exposed-modules:
       Mlatu
-      Mlatu.CodataDefinition
-      Mlatu.DataDefinition
-      Mlatu.Definition
-      Mlatu.Desugar.Data
-      Mlatu.Desugar.Infix
-      Mlatu.Desugar.Quotations
-      Mlatu.Dictionary
-      Mlatu.Element
-      Mlatu.Enter
-      Mlatu.Entry
-      Mlatu.Entry.Category
-      Mlatu.Entry.Merge
-      Mlatu.Entry.Parameter
-      Mlatu.Entry.Parent
-      Mlatu.Erlang.AST
-      Mlatu.Erlang.Erlify
-      Mlatu.Erlang.Optimize
-      Mlatu.Erlang.Print
-      Mlatu.Fragment
-      Mlatu.Free
-      Mlatu.Infer
+      Mlatu.Back.AST
+      Mlatu.Back.Erlify
+      Mlatu.Back.Optimize
+      Mlatu.Back.Print
+      Mlatu.Base.Kind
+      Mlatu.Base.Located
+      Mlatu.Base.Name
+      Mlatu.Base.Origin
+      Mlatu.Base.Type
+      Mlatu.Base.Vocabulary
+      Mlatu.Front.CodataDefinition
+      Mlatu.Front.DataDefinition
+      Mlatu.Front.Definition
+      Mlatu.Front.DesugarTypes
+      Mlatu.Front.Fragment
+      Mlatu.Front.Metadata
+      Mlatu.Front.Parameter
+      Mlatu.Front.Parse
+      Mlatu.Front.Parser
+      Mlatu.Front.Signature
+      Mlatu.Front.Term
+      Mlatu.Front.Token
+      Mlatu.Front.Tokenize
+      Mlatu.Front.Trait
       Mlatu.Informer
-      Mlatu.InstanceCheck
-      Mlatu.Instantiate
-      Mlatu.Instantiated
-      Mlatu.Kind
-      Mlatu.Located
-      Mlatu.Metadata
-      Mlatu.Name
-      Mlatu.Occurrences
-      Mlatu.Origin
-      Mlatu.Parse
-      Mlatu.Parser
+      Mlatu.Middle.DesugarInfix
+      Mlatu.Middle.DesugarQuotations
+      Mlatu.Middle.Dictionary
+      Mlatu.Middle.Enter
+      Mlatu.Middle.Entry
+      Mlatu.Middle.Instantiated
+      Mlatu.Middle.Resolve
+      Mlatu.Middle.Scope
       Mlatu.Pretty
-      Mlatu.Quantify
-      Mlatu.Queue
-      Mlatu.Regeneralize
-      Mlatu.Resolve
-      Mlatu.Scope
-      Mlatu.Signature
-      Mlatu.Stack
-      Mlatu.Substitute
-      Mlatu.Term
-      Mlatu.Token
-      Mlatu.Tokenize
-      Mlatu.Trait
-      Mlatu.Type
-      Mlatu.TypeEnv
-      Mlatu.Unify
-      Mlatu.Vocabulary
-      Mlatu.Zonk
+      Mlatu.TypeSystem.Free
+      Mlatu.TypeSystem.Infer
+      Mlatu.TypeSystem.InstanceCheck
+      Mlatu.TypeSystem.Instantiate
+      Mlatu.TypeSystem.Occurrences
+      Mlatu.TypeSystem.Regeneralize
+      Mlatu.TypeSystem.Substitute
+      Mlatu.TypeSystem.TypeEnv
+      Mlatu.TypeSystem.Unify
+      Mlatu.TypeSystem.Zonk
+      Prelude
   other-modules:
       Paths_mlatu
   hs-source-dirs:
       src
   default-extensions:
-      NoImplicitPrelude
       LambdaCase
       OverloadedStrings
+      PatternSynonyms
       EmptyCase
       PostfixOperators
       TupleSections
@@ -117,20 +111,20 @@ library
       DeriveLift
       GeneralizedNewtypeDeriving
       DeriveGeneric
-  ghc-options: -Wall
+  ghc-options: -Wall -Wno-name-shadowing
   build-depends:
-      base >=4.8
+      base-noprelude
     , bytestring
     , containers
     , file-embed
     , monad-loops
+    , mtl
     , optics
     , parsec
     , prettyprinter
     , random
     , relude ==0.7.0.0
     , text
-    , transformers
   default-language: Haskell2010
 
 executable mlatu
@@ -143,9 +137,9 @@ executable mlatu
   hs-source-dirs:
       app
   default-extensions:
-      NoImplicitPrelude
       LambdaCase
       OverloadedStrings
+      PatternSynonyms
       EmptyCase
       PostfixOperators
       TupleSections
@@ -182,15 +176,16 @@ executable mlatu
       DeriveLift
       GeneralizedNewtypeDeriving
       DeriveGeneric
-  ghc-options: -Wall -threaded -O2
+  ghc-options: -Wall -Wno-name-shadowing -threaded -O2
   build-depends:
-      base >=4.8
+      base-noprelude
     , bytestring
     , containers
     , directory
     , file-embed
     , mlatu
     , monad-loops
+    , mtl
     , optics
     , optparse-applicative
     , parsec
@@ -198,83 +193,6 @@ executable mlatu
     , random
     , relude ==0.7.0.0
     , repline
-    , temporary
     , text
-    , transformers
     , typed-process
-  default-language: Haskell2010
-
-test-suite test
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      Test.Common
-      Test.Infer
-      Test.InstanceCheck
-      Test.Interpret
-      Test.Origin
-      Test.Parse
-      Test.Resolve
-      Test.Tokenize
-      Test.Zonk
-      Paths_mlatu
-  hs-source-dirs:
-      test
-  default-extensions:
-      NoImplicitPrelude
-      LambdaCase
-      OverloadedStrings
-      EmptyCase
-      PostfixOperators
-      TupleSections
-      ImportQualifiedPost
-      NamedFieldPuns
-      BangPatterns
-      BinaryLiterals
-      HexFloatLiterals
-      NumericUnderscores
-      GADTSyntax
-      RankNTypes
-      TypeApplications
-      PolyKinds
-      StandaloneKindSignatures
-      ExistentialQuantification
-      TypeOperators
-      ConstraintKinds
-      ExplicitForAll
-      KindSignatures
-      NamedWildCards
-      ScopedTypeVariables
-      FlexibleContexts
-      FlexibleInstances
-      MultiParamTypeClasses
-      ConstrainedClassMethods
-      InstanceSigs
-      TypeSynonymInstances
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveTraversable
-      StandaloneDeriving
-      EmptyDataDeriving
-      DeriveLift
-      GeneralizedNewtypeDeriving
-      DeriveGeneric
-  ghc-options: -Wall
-  build-depends:
-      HUnit
-    , base >=4.8
-    , bytestring
-    , containers
-    , file-embed
-    , hspec
-    , knob
-    , monad-loops
-    , optics
-    , parsec
-    , prettyprinter
-    , random
-    , relude ==0.7.0.0
-    , text
-    , transformers
   default-language: Haskell2010

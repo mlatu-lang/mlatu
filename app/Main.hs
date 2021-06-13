@@ -3,19 +3,18 @@ module Main where
 import Arguments qualified
 import Interact qualified
 import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
-import Mlatu.Erlang.Print qualified as Erlang
+import Mlatu.Back.Print qualified as Erlang
 import Mlatu.Informer (Report, warnCheckpoint)
-import Mlatu.Name (GeneralName (..))
+import Mlatu.Base.Name (GeneralName (..))
 import Mlatu.Pretty (printFragment)
-import Mlatu.Vocabulary
+import Mlatu.Base.Vocabulary
 import Options.Applicative (execParser, header, helper, info)
 import Prettyprinter (defaultLayoutOptions, layoutSmart)
 import Prettyprinter.Render.Text (renderIO)
-import Relude
 import Report (reportAll)
-import System.Directory (createDirectory, makeAbsolute, removeDirectoryRecursive, removeFile, withCurrentDirectory)
+import System.Directory (makeAbsolute, removeFile)
 import System.IO (hSetEncoding, utf8)
-import System.Process.Typed (proc, runProcess_)
+import System.Process.Typed (runProcess_)
 
 main :: IO ()
 main = do
