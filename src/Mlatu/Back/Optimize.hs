@@ -52,6 +52,9 @@ rewriteCall name args = case (name, rewrite <$> args) of
   ("not", [EAtom "false"]) -> EAtom "true"
   ("hd", [ECons x _]) -> x
   ("tl", [ECons _ xs]) -> xs
+  ("succ", [EInt n]) -> EInt (n + 1)
+  ("pred", [EInt n]) -> EInt (if n == 0 then 0 else n - 1)
+  ("sub", [EInt a, EInt b]) -> EInt (if a < b then 0 else a - b)
   (name, args) -> ECallFun name args
 
 rewriteSet :: Pattern -> Expr -> Expr
@@ -93,13 +96,15 @@ rewriteOp left op right = case (rewrite left, op, rewrite right) of
   (EInt i1, "+", EInt i2) -> EInt (i1 + i2)
   (EInt i1, "-", EInt i2) -> EInt (i1 - i2)
   (EInt i1, "*", EInt i2) -> EInt (i1 * i2)
-  (EInt i1, "/", EInt i2) -> EInt (i1 `div` i2)
-  (EAtom first, "and", EAtom second)
-    | first == "true" && second == "true" -> EAtom "true"
-    | otherwise -> EAtom "false"
-  (EAtom first, "or", EAtom second)
-    | first == "true" || second == "true" -> EAtom "true"
-    | otherwise -> EAtom "false"
+  (EInt i1, "/", EInt i2) -> EInt (if i2 == 0 then 0 else i1 `div` i2)
+  (EInt i1, ">", EInt i2) -> if i1 > i2 then EAtom "True" else EAtom "False"
+  (EInt i1, "<", EInt i2) -> if i1 < i2 then EAtom "True" else EAtom "False"
+  (EInt i1, ">=", EInt i2) -> if i1 >= i2 then EAtom "True" else EAtom "False"
+  (EInt i1, "=<", EInt i2) -> if i1 <= i2 then EAtom "True" else EAtom "False"
+  (EInt i1, "=:=", EInt i2) -> if i1 == i2 then EAtom "True" else EAtom "False"
+  (EInt i1, "=/=", EInt i2) -> if i1 /= i2 then EAtom "True" else EAtom "False"
+  (EAtom first, "and", x) -> if first == "true" then x else EAtom "false"
+  (EAtom first, "or", x) -> if first == "false" then x else EAtom "true"
   (EAtom first, "xor", EAtom second)
     | (first == "true") /= (second == "true") -> EAtom "true"
     | otherwise -> EAtom "false"
@@ -109,7 +114,13 @@ rewriteTuple :: [Expr] -> Expr
 rewriteTuple = ETuple . fmap rewrite
 
 rewriteIf :: [(Expr, Expr)] -> Expr
-rewriteIf = EIf . fmap (rewrite *** rewrite)
+rewriteIf xs = case (rewrite *** rewrite) <$> xs of 
+  ((EAtom "true",expr):_) -> expr 
+  (_:(EAtom "true",expr):_) -> expr 
+  (_:_:(EAtom "true",expr):_) -> expr 
+  (_:_:_:(EAtom "true",expr):_) -> expr 
+  (_:_:_:_:(EAtom "true",expr):_) -> expr 
+  xs -> EIf xs
 
 replaceVar :: (VarIdent, Expr) -> Expr -> Expr
 replaceVar (name, val) expr = case expr of

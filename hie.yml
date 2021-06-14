@@ -1,6 +1,0 @@
-cradle:
-  stack:
-    - path: "./src"
-      component: "Mlatu:lib"
-    - path: "./app"
-      component: "Mlatu:exe:mlatu"

@@ -86,3 +86,12 @@ executables:
       - optparse-applicative
       - typed-process
       - mlatu
+
+tests:
+  test:
+    main: Main.hs
+    source-dirs: test
+    dependencies:
+      - QuickCheck
+      - mlatu
+      - directory

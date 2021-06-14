@@ -69,4 +69,8 @@ jobs:
       - name: Build
         # Retry it three times to workaround compiler segfaults in windows
         run: cabal build --enable-tests || cabal build --enable-tests || cabal build --enable-tests
+      
+      - name: Test
+        if: ${{ matrix.test }}
+        run: cabal test all
 

@@ -187,8 +187,8 @@ inDone :: Text -> Codegen (Maybe WordEntry)
 inDone bs = Map.lookup bs <$> getDone
 
 word :: Qualified -> [Type] -> Maybe (Codegen Expr) -> Codegen Expr
-word (Qualified _ "eq") _ after = binaryBool "==" "=/=" after
-word (Qualified _ "neq") _ after = binaryBool "=/=" "==" after
+word (Qualified _ "eq") _ after = binaryBool "=:=" "=/=" after
+word (Qualified _ "neq") _ after = binaryBool "=/=" "=:=" after
 word (Qualified _ "gt") _ after = binaryBool ">" "=<" after
 word (Qualified _ "ge") _ after = binaryBool ">=" "<" after
 word (Qualified _ "lt") _ after = binaryBool "<" ">=" after
@@ -225,20 +225,13 @@ word (Qualified _ "xor") _ after = do
     (foldr PCons (PVar tail) [PVar first, PVar second])
     (ECons (EOp (EVar second) "xor" (EVar first)) (EVar tail))
     after
-word (Qualified _ "pred") _ after = do
-  head <- newVar
-  tail <- newVar
-  modifyE
-    (PCons (PVar head) (PVar tail))
-    (ECons (EOp (EVar head) "-" (EInt 1)) (EVar tail))
-    after
-word (Qualified _ "-") _ after = do
+word (Qualified _ "implies") _ after = do
   first <- newVar
   second <- newVar
   tail <- newVar
   modifyE
     (foldr PCons (PVar tail) [PVar first, PVar second])
-    (ECons (EOp (EVar second) "-" (EVar first)) (EVar tail))
+    (ECons (EOp (ECallFun "not" [EVar second]) "or" (EVar first)) (EVar tail))
     after
 word (Qualified _ "+") _ after = do
   first <- newVar

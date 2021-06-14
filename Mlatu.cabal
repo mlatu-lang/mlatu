@@ -196,3 +196,69 @@ executable mlatu
     , text
     , typed-process
   default-language: Haskell2010
+
+test-suite test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_mlatu
+  hs-source-dirs:
+      test
+  default-extensions:
+      LambdaCase
+      OverloadedStrings
+      PatternSynonyms
+      EmptyCase
+      PostfixOperators
+      TupleSections
+      ImportQualifiedPost
+      NamedFieldPuns
+      BangPatterns
+      BinaryLiterals
+      HexFloatLiterals
+      NumericUnderscores
+      GADTSyntax
+      RankNTypes
+      TypeApplications
+      PolyKinds
+      StandaloneKindSignatures
+      ExistentialQuantification
+      TypeOperators
+      ConstraintKinds
+      ExplicitForAll
+      KindSignatures
+      NamedWildCards
+      ScopedTypeVariables
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      ConstrainedClassMethods
+      InstanceSigs
+      TypeSynonymInstances
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      StandaloneDeriving
+      EmptyDataDeriving
+      DeriveLift
+      GeneralizedNewtypeDeriving
+      DeriveGeneric
+  ghc-options: -Wall -Wno-name-shadowing
+  build-depends:
+      QuickCheck
+    , base-noprelude
+    , bytestring
+    , containers
+    , directory
+    , file-embed
+    , mlatu
+    , monad-loops
+    , mtl
+    , optics
+    , parsec
+    , prettyprinter
+    , random
+    , relude ==0.7.0.0
+    , text
+  default-language: Haskell2010
