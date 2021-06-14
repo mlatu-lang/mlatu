@@ -1,5 +1,5 @@
 define fib (nat -> nat) {
-  -> x; match (x 2 le) | true { 1 } | false { x pred fib x pred pred fib + }
+  match | zero { 1 } | succ { -> x; match (x) | zero { 1 } | succ { fib x fib + } }
 }
 
 40 fib println

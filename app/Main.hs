@@ -84,7 +84,7 @@ base after prelude relativePaths =
                 Erlang.generate program Nothing >>= \contents ->
                   writeFileText "mlatu.erl" contents
                     >> runProcess_ "erlc -W0 mlatu.erl"
-                    -- >> removeFile "mlatu.erl"
+                    >> removeFile "mlatu.erl"
                     >> after
         )
 

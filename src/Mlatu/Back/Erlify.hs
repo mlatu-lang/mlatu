@@ -160,16 +160,10 @@ termErl x = goTerms (decompose x)
           tail <- newVar
           expr <- modifyE (PCons (PVar ("Local" <> show local)) (PVar tail)) (EVar tail) (termErl body after)
           andMaybe expr (goTerms rest Nothing)
-      (Match _ _ cases (_, Right body) : rest) -> Just $ do
+      (Match _ _ cases (_, Right _) : rest) -> Just $ do
         current <- getRestVar
         cs <- traverse (\c -> caseErl c (goTerms rest after)) cases
-        e <- case termErl body (goTerms rest after) of
-          Just action -> contained $ do
-            new <- incRestVar
-            e <- action
-            pure (Just (PCons (PVar "_") (PVar new), e))
-          Nothing -> pure Nothing
-        pure (ECase (EVar current) (catMaybes (cs ++ [e])))
+        pure (ECase (EVar current) (catMaybes cs))
       (Match _ _ cases (_, Left _) : rest) -> Just $ do
         current <- getRestVar
         cs <- catMaybes <$> traverse (\c -> caseErl c (goTerms rest after)) cases

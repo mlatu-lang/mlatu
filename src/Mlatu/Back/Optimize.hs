@@ -5,6 +5,18 @@ module Mlatu.Back.Optimize (rewrite) where
 import Control.Arrow ((***))
 import Mlatu.Back.AST (Expr (..), Pattern (..), VarIdent, mkAnd, pattern ECallCouple, pattern ECouple, pattern ESetCouple, pattern ESetVar)
 
+rewritePat :: Pattern -> Pattern
+rewritePat (PCons h t) = PCons (rewritePat h) (rewritePat t)
+rewritePat PNil = PNil
+rewritePat (PAtom a) = PAtom a
+rewritePat (PInt i) = PInt i
+rewritePat (PTuple ps) = PTuple (rewritePat <$> ps)
+rewritePat (PVar v) = PVar v
+rewritePat (PWhen pat guard) = case (rewritePat pat, rewrite guard) of
+  (pat, EAtom "True") -> pat
+  (PWhen pat guard1, guard2) -> PWhen pat (rewriteOp guard1 "andalso" guard2)
+  (pat, guard) -> PWhen pat guard
+
 rewrite :: Expr -> Expr
 rewrite = \case
   (ECase scrutinee cases) -> rewriteCase scrutinee cases
@@ -23,28 +35,31 @@ rewrite = \case
   (EIf xs) -> rewriteIf xs
 
 unify :: Expr -> Pattern -> Maybe [Expr]
-unify (ECons h1 t1) (PCons h2 t2) | Just h <- unify h1 h2, Just t <- unify t1 t2 = Just (h <> t)
+unify (ECons h1 t1) (PCons h2 t2) = liftA2 (<>) (unify h1 h2) (unify t1 t2)
 unify (EInt i1) (PInt i2) | i1 == i2 = Just []
 unify (EAtom i1) (PAtom i2) | i1 == i2 = Just []
+unify (ETuple es) (PTuple ps) = asum <$> zipWithM unify es ps
 unify (EVar v1) (PVar v2) | v1 == v2 = Just []
 unify x (PVar v) = Just [ESetVar v x]
 unify _ _ = Nothing
 
 rewriteCase :: Expr -> [(Pattern, Expr)] -> Expr
-rewriteCase scrutinee cases = case (rewrite scrutinee, concatMap re cases) of
-  (scrutinee, (p, e) : _)
-    | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
-  (scrutinee, _ : (p, e) : _)
-    | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
-  (scrutinee, _ : _ : (p, e) : _)
-    | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
-  (scrutinee, _ : _ : _ : (p, e) : _)
-    | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
-  (scrutinee, cases) -> ECase scrutinee cases
-  where
-    re (p, b) = case rewrite b of
-      (EIf guards) -> first (PWhen p) <$> guards
-      b -> [(p, b)]
+rewriteCase scrutinee cases =
+  let final = case (rewrite scrutinee, (rewritePat *** rewrite) <$> cases) of
+        (scrutinee, (p, e) : _) | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
+        (scrutinee, _ : (p, e) : _) | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
+        (scrutinee, _ : _ : (p, e) : _) | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
+        (scrutinee, _ : _ : _ : (p, e) : _) | Just es <- unify scrutinee p -> rewrite (mkAnd (es ++ [e]))
+        (scrutinee, cases) ->
+          ECase scrutinee $
+            asum
+              ( ( \case
+                    (p, EIf guards) -> (first (PWhen p)) <$> guards
+                    (p, b) -> [(p, b)]
+                )
+                  <$> cases
+              )
+   in trace (show (ECase scrutinee cases) <> "\n" <> show final <> "\n\n") final
 
 rewriteCall :: Text -> [Expr] -> Expr
 rewriteCall name args = case (name, rewrite <$> args) of
@@ -66,19 +81,20 @@ rewriteAnd xs = mkAnd (go xs)
     go [] = []
     go (x : xs) = case rewrite x of
       EAnd ys -> go (xs <> ys)
+      ESetVar "_" _ -> go xs
+      ESetVar v e -> case (rewrite e : xs) of
+        (EInt _ : xs) -> go (replaceVar (v, e) <$> xs)
+        (EAtom _ : xs) -> go (replaceVar (v, e) <$> xs)
+        (ETuple _ : xs) -> go (replaceVar (v, e) <$> xs)
+        (EVar _ : xs) -> go (replaceVar (v, e) <$> xs)
+        (EOp {} : xs) -> go (replaceVar (v, e) <$> xs)
+        (ECons h t : xs) -> go (replaceVar (v, e) <$> xs)
+        (_ : ECase (EVar v') cases : xs) | v == v' -> go (ECase e cases : xs)
+        (_ : xs) -> (ESetVar v e) : (go xs)
       ESetCouple (PVar x) (PVar y) expr -> case xs of
         (ESetCouple a b (ECallCouple name (EVar x') (EVar y')) : xs) | x == x' && y == y' -> go (ESetCouple a b (ECallFun name [expr]) : xs)
-        (ECallCouple name (EVar x') (EVar y') : xs) | x == x' && y == y' -> go (ECallFun name [expr] : xs)
         (ECouple (EVar x') (EVar y') : xs) | x == x' && y == y' -> go (expr : xs)
         _ -> (ESetCouple (PVar x) (PVar y) expr) : (go xs)
-      ESetVar v e -> case e of
-        ECons _ _ -> go (replaceVar (v, e) <$> xs)
-        EInt _ -> go (replaceVar (v, e) <$> xs)
-        EAtom _ -> go (replaceVar (v, e) <$> xs)
-        ETuple _ -> go (replaceVar (v, e) <$> xs)
-        EVar _ -> go (replaceVar (v, e) <$> xs)
-        EOp {} -> go (replaceVar (v, e) <$> xs)
-        _ -> (ESetVar v e) : (go xs)
       x -> x : (go xs)
 
 rewriteCons :: Expr -> Expr -> Expr
@@ -86,8 +102,8 @@ rewriteCons h t = ECons (rewrite h) (rewrite t)
 
 rewriteOp :: Expr -> Text -> Expr -> Expr
 rewriteOp left op right = case (rewrite left, op, rewrite right) of
-  (EOp lLeft "+" lRight, "+", right) -> rewrite (EOp lLeft "+" (EOp lRight "+" right))
-  (EOp lLeft "*" lRight, "*", right) -> rewrite (EOp lLeft "*" (EOp lRight "*" right))
+  (EOp lLeft "+" lRight, "+", right) -> rewriteOp lLeft "+" (EOp lRight "+" right)
+  (EOp lLeft "*" lRight, "*", right) -> rewriteOp lLeft "*" (EOp lRight "*" right)
   (x, "+", EInt 0) -> x
   (EInt 0, "+", x) -> x
   (x, "-", EInt 0) -> x
@@ -114,12 +130,12 @@ rewriteTuple :: [Expr] -> Expr
 rewriteTuple = ETuple . fmap rewrite
 
 rewriteIf :: [(Expr, Expr)] -> Expr
-rewriteIf xs = case (rewrite *** rewrite) <$> xs of 
-  ((EAtom "true",expr):_) -> expr 
-  (_:(EAtom "true",expr):_) -> expr 
-  (_:_:(EAtom "true",expr):_) -> expr 
-  (_:_:_:(EAtom "true",expr):_) -> expr 
-  (_:_:_:_:(EAtom "true",expr):_) -> expr 
+rewriteIf xs = case (rewrite *** rewrite) <$> xs of
+  ((EAtom "true", expr) : _) -> expr
+  (_ : (EAtom "true", expr) : _) -> expr
+  (_ : _ : (EAtom "true", expr) : _) -> expr
+  (_ : _ : _ : (EAtom "true", expr) : _) -> expr
+  (_ : _ : _ : _ : (EAtom "true", expr) : _) -> expr
   xs -> EIf xs
 
 replaceVar :: (VarIdent, Expr) -> Expr -> Expr
@@ -140,6 +156,7 @@ replaceVar (name, val) expr = case expr of
     replacePat = \case
       PCons h t -> PCons (replacePat h) (replacePat t)
       PVar n | n == name, Just r <- exprToPat val -> r
+      PVar n | n == name, Nothing <- exprToPat val -> undefined
       PTuple pats -> PTuple (replacePat <$> pats)
       PWhen pat expr -> PWhen (replacePat pat) (replace expr)
       pat -> pat
