@@ -59,7 +59,7 @@ rewriteCase scrutinee cases =
                 )
                   <$> cases
               )
-   in trace (show (ECase scrutinee cases) <> "\n" <> show final <> "\n\n") final
+   in final
 
 rewriteCall :: Text -> [Expr] -> Expr
 rewriteCall name args = case (name, rewrite <$> args) of
