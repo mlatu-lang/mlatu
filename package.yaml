@@ -54,7 +54,9 @@ default-extensions:
   - DeriveGeneric
 
 dependencies:
-  - base-noprelude
+  - name: base
+    mixin:
+      - hiding (Prelude)
   - bytestring
   - containers
   - file-embed

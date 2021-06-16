@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: nightly-2021-02-28
+resolver: lts-18.0
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -37,7 +37,7 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-  - base-noprelude-4.13.0.0@sha256:3cccbfda38e1422ca5cc436d58858ba51ff9114d2ed87915a6569be11e4e5a90,6842
+
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

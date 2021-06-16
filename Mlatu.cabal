@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.0
 
 -- This file has been generated from package.yaml by hpack version 0.34.4.
 --
@@ -113,7 +113,7 @@ library
       DeriveGeneric
   ghc-options: -Wall -Wno-name-shadowing
   build-depends:
-      base-noprelude
+      base
     , bytestring
     , containers
     , file-embed
@@ -125,6 +125,8 @@ library
     , random
     , relude ==0.7.0.0
     , text
+  mixins:
+      base hiding (Prelude)
   default-language: Haskell2010
 
 executable mlatu
@@ -178,7 +180,7 @@ executable mlatu
       DeriveGeneric
   ghc-options: -Wall -Wno-name-shadowing -threaded -O2
   build-depends:
-      base-noprelude
+      base
     , bytestring
     , containers
     , directory
@@ -195,6 +197,8 @@ executable mlatu
     , repline
     , text
     , typed-process
+  mixins:
+      base hiding (Prelude)
   default-language: Haskell2010
 
 test-suite test
@@ -247,7 +251,7 @@ test-suite test
   ghc-options: -Wall -Wno-name-shadowing
   build-depends:
       QuickCheck
-    , base-noprelude
+    , base
     , bytestring
     , containers
     , directory
@@ -261,4 +265,6 @@ test-suite test
     , random
     , relude ==0.7.0.0
     , text
+  mixins:
+      base hiding (Prelude)
   default-language: Haskell2010
