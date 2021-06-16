@@ -88,7 +88,7 @@ rewriteAnd xs = mkAnd (go xs)
         (ETuple _ : xs) -> go (replaceVar (v, e) <$> xs)
         (EVar _ : xs) -> go (replaceVar (v, e) <$> xs)
         (EOp {} : xs) -> go (replaceVar (v, e) <$> xs)
-        (ECons h t : xs) -> go (replaceVar (v, e) <$> xs)
+        (ECons _ _ : xs) -> go (replaceVar (v, e) <$> xs)
         (_ : ECase (EVar v') cases : xs) | v == v' -> go (ECase e cases : xs)
         (_ : xs) -> (ESetVar v e) : (go xs)
       ESetCouple (PVar x) (PVar y) expr -> case xs of
@@ -156,7 +156,6 @@ replaceVar (name, val) expr = case expr of
     replacePat = \case
       PCons h t -> PCons (replacePat h) (replacePat t)
       PVar n | n == name, Just r <- exprToPat val -> r
-      PVar n | n == name, Nothing <- exprToPat val -> undefined
       PTuple pats -> PTuple (replacePat <$> pats)
       PWhen pat expr -> PWhen (replacePat pat) (replace expr)
       pat -> pat

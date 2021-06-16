@@ -10,7 +10,6 @@
 -- Portability : GHC
 module Mlatu
   ( Enter.fragmentFromSource,
-    Prelude (..),
     compile,
     runMlatu,
     tokenize,
@@ -19,7 +18,7 @@ module Mlatu
   )
 where
 
-import Data.FileEmbed (embedDir, embedFile)
+import Data.FileEmbed (embedDir)
 import Mlatu.Base.Name (GeneralName, Qualified)
 import Mlatu.Front.Tokenize (tokenize)
 import Mlatu.Informer (M, runMlatu)
@@ -27,11 +26,8 @@ import Mlatu.Middle.Dictionary (Dictionary)
 import Mlatu.Middle.Dictionary qualified as Dictionary
 import Mlatu.Middle.Enter qualified as Enter
 
-common :: [(FilePath, ByteString)]
-common = $(embedDir "./std/common")
-
-foundation :: (FilePath, ByteString)
-foundation = ("./std/foundation.mlt", $(embedFile "./std/foundation.mlt"))
+prelude :: [(FilePath, ByteString)]
+prelude = $(embedDir "./std")
 
 -- | This is a simple wrapper for the compiler pipeline. It adds a list of
 -- program fragments to the dictionary from a list of source paths. At each
@@ -60,26 +56,19 @@ compile mainPermissions mainName paths mDict = do
   -- dictionary <-
   Enter.fragment parsed (fromMaybe Dictionary.empty mDict)
 
-compileWithPrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> [FilePath] -> M Dictionary
-compileWithPrelude prelude mainPermissions mainName paths = do
-  commonDictionary <- compilePrelude prelude mainPermissions mainName
+compileWithPrelude :: [GeneralName] -> Maybe Qualified -> [FilePath] -> M Dictionary
+compileWithPrelude mainPermissions mainName paths = do
+  commonDictionary <- compilePrelude mainPermissions mainName
   compile mainPermissions mainName paths (Just commonDictionary)
 
-compilePrelude :: Prelude -> [GeneralName] -> Maybe Qualified -> M Dictionary
-compilePrelude prelude mainPermissions mainName = do
+compilePrelude :: [GeneralName] -> Maybe Qualified -> M Dictionary
+compilePrelude mainPermissions mainName = do
   parsed <-
     mconcat
       <$> zipWithM
         (Enter.fragmentFromSource mainPermissions mainName 1)
         preludePaths
         (decodeUtf8 <$> preludeSources)
-  -- dictionary <-
   Enter.fragment parsed Dictionary.empty
   where
-    (preludePaths, preludeSources) = case prelude of
-      Foundation -> ([fst foundation], [snd foundation])
-      Common -> (fst foundation : (fst <$> common), snd foundation : (snd <$> common))
-
-data Prelude
-  = Foundation
-  | Common
+    (preludePaths, preludeSources) = unzip prelude

@@ -133,7 +133,6 @@ executable mlatu
   main-is: Main.hs
   other-modules:
       Arguments
-      Interact
       Report
       Paths_mlatu
   hs-source-dirs:

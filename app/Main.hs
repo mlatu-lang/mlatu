@@ -1,13 +1,12 @@
 module Main where
 
 import Arguments qualified
-import Interact qualified
-import Mlatu (Prelude (..), compileWithPrelude, fragmentFromSource, runMlatu)
+import Mlatu (compileWithPrelude, fragmentFromSource, runMlatu)
 import Mlatu.Back.Print qualified as Erlang
-import Mlatu.Informer (Report, warnCheckpoint)
 import Mlatu.Base.Name (GeneralName (..))
-import Mlatu.Pretty (printFragment)
 import Mlatu.Base.Vocabulary
+import Mlatu.Informer (Report, warnCheckpoint)
+import Mlatu.Pretty (printFragment)
 import Options.Applicative (execParser, header, helper, info)
 import Prettyprinter (defaultLayoutOptions, layoutSmart)
 import Prettyprinter.Render.Text (renderIO)
@@ -22,15 +21,9 @@ main = do
   arguments <- execParser opts
   case arguments of
     Arguments.FormatFiles files -> formatFiles files
-    Arguments.Repl prelude -> do
-      exitCode <- Interact.run prelude
-      case exitCode of
-        0 -> exitSuccess
-        _ -> exitFailure
-    Arguments.CheckFiles prelude files -> checkFiles prelude files
-    Arguments.RunFiles False prelude files -> runFiles prelude files
-    Arguments.RunFiles True prelude files -> benchFiles prelude files
-    Arguments.CompileFiles prelude files -> compileFiles prelude files
+    Arguments.CheckFiles files -> checkFiles files
+    Arguments.RunFiles bench files -> runFiles bench files
+    Arguments.CompileFiles files -> compileFiles files
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -42,57 +35,59 @@ mainPermissions =
     QualifiedName $ Global "otp"
   ]
 
-handleReports :: [Report] -> IO ()
-handleReports reports = do
-  reportAll reports
-  exitFailure
+handleCompilation _ (Nothing, reports) = reportAll reports >> exitFailure
+handleCompilation f (Just dict, reports) = reportAll reports >> f dict
 
 formatFiles :: [FilePath] -> IO ()
-formatFiles paths = for_ paths $ \relativePath -> do
-  path <- makeAbsolute relativePath
-  bs <- readFileBS path
-  let text = decodeUtf8 bs
-  (result, reports) <- runMlatu $ fragmentFromSource mainPermissions Nothing 0 path text
-  reportAll reports
-  case result of
-    Nothing -> exitFailure
-    Just fragment -> do
-      withFile path WriteMode (`renderIO` layoutSmart defaultLayoutOptions (printFragment fragment))
-      putStrLn ("Formatted " <> path <> " successfully")
+formatFiles =
+  traverse_
+    ( \relativePath ->
+        makeAbsolute relativePath
+          >>= \path ->
+            readFileBS path
+              >>= (runMlatu . fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8)
+              >>= handleCompilation
+                ( \fragment ->
+                    ( withFile
+                        path
+                        WriteMode
+                        (`renderIO` layoutSmart defaultLayoutOptions (printFragment fragment))
+                    )
+                      >> exitSuccess
+                )
+    )
 
-checkFiles :: Prelude -> [FilePath] -> IO ()
-checkFiles prelude relativePaths =
+checkFiles :: [FilePath] -> IO ()
+checkFiles relativePaths =
   forM relativePaths makeAbsolute
     >>= ( \paths ->
             runMlatu
               ( do
-                  dict <- compileWithPrelude prelude mainPermissions Nothing paths
+                  dict <- compileWithPrelude mainPermissions Nothing paths
                   warnCheckpoint
                   pure dict
               )
-              >>= reportAll . snd
+              >>= handleCompilation (const exitSuccess)
         )
 
-base :: IO () -> Prelude -> [FilePath] -> IO ()
-base after prelude relativePaths =
+base :: IO () -> [FilePath] -> IO ()
+base after relativePaths =
   forM relativePaths makeAbsolute
-    >>= (runMlatu . compileWithPrelude prelude mainPermissions Nothing)
-    >>= ( \(result, reports) ->
-            reportAll reports >> case result of
-              Nothing -> exitFailure
-              Just program ->
-                Erlang.generate program Nothing >>= \contents ->
-                  writeFileText "mlatu.erl" contents
-                    >> runProcess_ "erlc -W0 mlatu.erl"
-                    >> removeFile "mlatu.erl"
-                    >> after
-        )
+    >>= (runMlatu . compileWithPrelude mainPermissions Nothing)
+    >>= handleCompilation
+      ( \program ->
+          Erlang.generate program Nothing >>= \contents ->
+            writeFileText "mlatu.erl" contents
+              >> runProcess_ "erlc -W0 mlatu.erl"
+              >> removeFile "mlatu.erl"
+              >> after
+      )
 
-runFiles :: Prelude -> [FilePath] -> IO ()
-runFiles = base (runProcess_ "escript mlatu.beam" >> removeFile "mlatu.beam")
+runFiles :: Bool -> [FilePath] -> IO ()
+runFiles bench = base $ runProcess_ (if bench then "time escript mlatu.beam" else "escript mlatu.beam") >> removeFile "mlatu.beam" >> exitSuccess
 
-compileFiles :: Prelude -> [FilePath] -> IO ()
-compileFiles = base (putStrLn "Produced the BEAM bytecode file `mlatu.beam`.\nExecute it by running `escript mlatu.beam`")
+compileFiles :: [FilePath] -> IO ()
+compileFiles = base $ putStrLn "Produced the BEAM bytecode file `mlatu.beam`.\nExecute it by running `escript mlatu.beam`" >> exitSuccess
 
-benchFiles :: Prelude -> [FilePath] -> IO ()
-benchFiles = base (runProcess_ "time escript mlatu.beam" >> removeFile "mlatu.beam")
+benchFiles :: [FilePath] -> IO ()
+benchFiles = base $ runProcess_ "time escript mlatu.beam" >> removeFile "mlatu.beam" >> exitSuccess

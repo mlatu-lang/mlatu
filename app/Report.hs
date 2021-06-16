@@ -3,8 +3,8 @@ module Report
   )
 where
 
-import Mlatu.Informer (Report (..))
 import Mlatu.Base.Origin (beginColumn, beginLine, endColumn, endLine, name)
+import Mlatu.Informer (Report (..))
 import Mlatu.Pretty (printOrigin)
 import Relude.Unsafe qualified as Unsafe
 import System.Directory (makeAbsolute)
