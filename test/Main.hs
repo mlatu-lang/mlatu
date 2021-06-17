@@ -2,7 +2,7 @@
 
 module Main where
 
-import Mlatu (Prelude (..), compileWithPrelude, runMlatu)
+import Mlatu (compileWithPrelude, runMlatu)
 import Mlatu.Back.Print qualified as Erlang
 import System.Directory (removeFile)
 import Test.QuickCheck
@@ -15,7 +15,7 @@ compilationTest :: Text -> (Text -> Property) -> IO Property
 compilationTest source fun =
   do
     writeFileText "test.mlt" source
-    (result, _) <- runMlatu (compileWithPrelude Common [] Nothing ["test.mlt"])
+    (result, _) <- runMlatu (compileWithPrelude [] Nothing ["test.mlt"])
     removeFile "test.mlt"
     case result of
       Nothing -> discard
@@ -36,6 +36,11 @@ prop_succ a = singleConstant (show a <> " succ") $ show (a + 1)
 
 prop_plus :: Natural -> Natural -> Property
 prop_plus a b = singleConstant (show a <> " " <> show b <> " +") $ show (a + b)
+
+prop_sub :: Natural -> Natural -> Property
+prop_sub a b 
+  | a < b = singleConstant (show a <> " " <> show b <> " -") "0"
+  | a >= b = singleConstant (show a <> " " <> show b <> " -") $ show (a - b)
 
 prop_mul :: Natural -> Natural -> Property
 prop_mul a b = singleConstant (show a <> " " <> show b <> " *") $ show (a * b)

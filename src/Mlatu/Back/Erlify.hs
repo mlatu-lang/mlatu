@@ -235,6 +235,14 @@ word (Qualified _ "+") _ after = do
     (foldr PCons (PVar tail) [PVar first, PVar second])
     (ECons (EOp (EVar second) "+" (EVar first)) (EVar tail))
     after
+word (Qualified _ "-") _ after = do
+  first <- newVar
+  second <- newVar
+  tail <- newVar
+  modifyE
+    (foldr PCons (PVar tail) [PVar first, PVar second])
+    (EIf [(EOp (EVar second) "<" (EVar first), ECons (EInt 0) (EVar tail)), (EOp (EVar second) ">=" (EVar first), ECons (EOp (EVar second) "-" (EVar first)) (EVar tail))])
+    after
 word (Qualified _ "*") _ after = do
   first <- newVar
   second <- newVar

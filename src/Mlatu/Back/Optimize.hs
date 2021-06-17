@@ -113,12 +113,12 @@ rewriteOp left op right = case (rewrite left, op, rewrite right) of
   (EInt i1, "-", EInt i2) -> EInt (i1 - i2)
   (EInt i1, "*", EInt i2) -> EInt (i1 * i2)
   (EInt i1, "/", EInt i2) -> EInt (if i2 == 0 then 0 else i1 `div` i2)
-  (EInt i1, ">", EInt i2) -> if i1 > i2 then EAtom "True" else EAtom "False"
-  (EInt i1, "<", EInt i2) -> if i1 < i2 then EAtom "True" else EAtom "False"
-  (EInt i1, ">=", EInt i2) -> if i1 >= i2 then EAtom "True" else EAtom "False"
-  (EInt i1, "=<", EInt i2) -> if i1 <= i2 then EAtom "True" else EAtom "False"
-  (EInt i1, "=:=", EInt i2) -> if i1 == i2 then EAtom "True" else EAtom "False"
-  (EInt i1, "=/=", EInt i2) -> if i1 /= i2 then EAtom "True" else EAtom "False"
+  (EInt i1, ">", EInt i2) -> if i1 > i2 then EAtom "true" else EAtom "false"
+  (EInt i1, "<", EInt i2) -> if i1 < i2 then EAtom "true" else EAtom "false"
+  (EInt i1, ">=", EInt i2) -> if i1 >= i2 then EAtom "true" else EAtom "false"
+  (EInt i1, "=<", EInt i2) -> if i1 <= i2 then EAtom "true" else EAtom "false"
+  (EInt i1, "=:=", EInt i2) -> if i1 == i2 then EAtom "true" else EAtom "false"
+  (EInt i1, "=/=", EInt i2) -> if i1 /= i2 then EAtom "true" else EAtom "false"
   (EAtom first, "and", x) -> if first == "true" then x else EAtom "false"
   (EAtom first, "or", x) -> if first == "false" then x else EAtom "true"
   (EAtom first, "xor", EAtom second)

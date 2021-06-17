@@ -5,7 +5,7 @@ import Mlatu (compileWithPrelude, fragmentFromSource, runMlatu)
 import Mlatu.Back.Print qualified as Erlang
 import Mlatu.Base.Name (GeneralName (..))
 import Mlatu.Base.Vocabulary
-import Mlatu.Informer (Report, warnCheckpoint)
+import Mlatu.Informer (warnCheckpoint)
 import Mlatu.Pretty (printFragment)
 import Options.Applicative (execParser, header, helper, info)
 import Prettyprinter (defaultLayoutOptions, layoutSmart)
