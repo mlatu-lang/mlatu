@@ -10,6 +10,7 @@
 -- Portability : GHC
 module Mlatu
   ( Enter.fragmentFromSource,
+    Enter.fragment,
     compile,
     runMlatu,
     tokenize,

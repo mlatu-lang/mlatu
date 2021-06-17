@@ -11,9 +11,10 @@ data Options
   | FormatFiles ![FilePath]
   | RunFiles !Bool ![FilePath]
   | CompileFiles ![FilePath]
+  | Script !Text
 
 options :: Parser Options
-options = subparser (checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand)
+options = subparser (checkFilesCommand <> formatFilesCommand <> runFilesCommand <> compileFilesCommand <> scriptCommand)
 
 benchFlag :: Parser Bool
 benchFlag = switch (long "bench" <> short 'b' <> help "Benchmark the time taken to run")
@@ -32,3 +33,9 @@ runFilesCommand = command "run" (info (RunFiles <$> benchFlag <*> filesArgument)
 
 compileFilesCommand :: Mod CommandFields Options
 compileFilesCommand = command "build" (info (CompileFiles <$> filesArgument) (progDesc "Builds Mlatu files into an executable"))
+
+textArgument :: Parser Text
+textArgument = argument str (metavar "INPUT")
+
+scriptCommand :: Mod CommandFields Options
+scriptCommand = command "script" (info (Script <$> textArgument) (progDesc "Runs and prints the output of a Mlatu script"))

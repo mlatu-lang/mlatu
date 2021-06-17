@@ -1,7 +1,8 @@
 module Main where
 
 import Arguments qualified
-import Mlatu (compileWithPrelude, fragmentFromSource, runMlatu)
+import Mlatu (compileWithPrelude, fragment, compilePrelude, fragmentFromSource, runMlatu)
+import Mlatu.Middle.Dictionary qualified as Dictionary
 import Mlatu.Back.Print qualified as Erlang
 import Mlatu.Base.Name (GeneralName (..))
 import Mlatu.Base.Vocabulary
@@ -24,6 +25,7 @@ main = do
     Arguments.CheckFiles files -> checkFiles files
     Arguments.RunFiles bench files -> runFiles bench files
     Arguments.CompileFiles files -> compileFiles files
+    Arguments.Script input -> scriptInput input
   where
     opts =
       info (Arguments.options <**> helper) (header "The Mlatu programming language")
@@ -41,20 +43,19 @@ handleCompilation f (Just dict, reports) = reportAll reports >> f dict
 formatFiles :: [FilePath] -> IO ()
 formatFiles =
   traverse_
-    ( \relativePath ->
-        makeAbsolute relativePath
-          >>= \path ->
-            readFileBS path
-              >>= (runMlatu . fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8)
-              >>= handleCompilation
-                ( \fragment ->
-                    ( withFile
-                        path
-                        WriteMode
-                        (`renderIO` layoutSmart defaultLayoutOptions (printFragment fragment))
+    ( makeAbsolute
+        >=> ( \path ->
+                readFileBS path
+                  >>= (runMlatu . fragmentFromSource mainPermissions Nothing 0 path . decodeUtf8)
+                  >>= handleCompilation
+                    ( \fragment ->
+                        withFile
+                          path
+                          WriteMode
+                          (`renderIO` layoutSmart defaultLayoutOptions (printFragment fragment))
+                          >> exitSuccess
                     )
-                      >> exitSuccess
-                )
+            )
     )
 
 checkFiles :: [FilePath] -> IO ()
@@ -91,3 +92,18 @@ compileFiles = base $ putStrLn "Produced the BEAM bytecode file `mlatu.beam`.\nE
 
 benchFiles :: [FilePath] -> IO ()
 benchFiles = base $ runProcess_ "time escript mlatu.beam" >> removeFile "mlatu.beam" >> exitSuccess
+
+scriptInput :: Text -> IO ()
+scriptInput input = do
+  let modifiedInput = input <> " println"
+  result <- runMlatu $ do 
+    commonDictionary <- Mlatu.compilePrelude mainPermissions Nothing
+    parsed <- Mlatu.fragmentFromSource mainPermissions Nothing 1 "input" modifiedInput
+    Mlatu.fragment parsed commonDictionary
+  handleCompilation
+      ( \program ->
+          Erlang.generate program Nothing >>= \contents ->
+            writeFileText "mlatu.erl" contents
+              >> runProcess_ "escript mlatu.erl"
+              >> removeFile "mlatu.erl"
+      ) result
