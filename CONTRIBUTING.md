@@ -4,4 +4,4 @@ You can contribute through GitHub pull requests. If you see an open issue you'd 
 
 You can also contribute through just testing the language out. Feel free to use it for side projects, and open issues for any bugs you find or features you'd like.
 
-Finally, if you'd like to take a more major role in Mlatu development, feel free to contact me through mlatu@brightlysalty.33mail.com. I'm interested in having more developers who can take a more active role in the project.
+Finally, if you'd like to take a more major role in Mlatu development, feel free to contact me through mailto:mlatu@brightlysalty.33mail.com. I'm definitely interested in involving anyone who wants take a more active role in the project.
