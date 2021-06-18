@@ -31,7 +31,7 @@ rewrite = \case
   (EString s) -> EString s
   (EOp left op right) -> rewriteOp left op right
   (ETuple xs) -> rewriteTuple xs
-  (EFun name arity) -> EFun name arity
+  (EFun args body) -> EFun args (rewrite body)
   (EIf xs) -> rewriteIf xs
 
 unify :: Expr -> Pattern -> Maybe [Expr]
@@ -87,6 +87,7 @@ rewriteAnd xs = mkAnd (go xs)
         (EAtom _ : xs) -> go (replaceVar (v, e) <$> xs)
         (ETuple _ : xs) -> go (replaceVar (v, e) <$> xs)
         (EVar _ : xs) -> go (replaceVar (v, e) <$> xs)
+        (ENil : xs) -> go (replaceVar (v, e) <$> xs)
         (EOp {} : xs) -> go (replaceVar (v, e) <$> xs)
         (ECons _ _ : xs) -> go (replaceVar (v, e) <$> xs)
         (_ : ECase (EVar v') cases : xs) | v == v' -> go (ECase e cases : xs)

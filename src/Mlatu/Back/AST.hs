@@ -51,7 +51,7 @@ data Expr
   | EString String
   | EOp Expr OpIdent Expr
   | ETuple [Expr]
-  | EFun FunIdent Int
+  | EFun [VarIdent] Expr
   | EIf [(Expr, Expr)]
   deriving (Ord, Eq, Show)
 

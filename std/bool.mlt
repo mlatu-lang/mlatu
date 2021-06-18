@@ -2,12 +2,12 @@ data bool { false ( -> bool) | true ( -> bool) }
 
 instance cmp (bool, bool -> ord) {
   -> a, b;
-  match (a)
+  a match
   | true {
-    match (b) | true { equal } | false { more }
+    b match | true { equal } | false { more }
   }
   | false {
-    match (b) | true { less } | false { more }
+    b match | true { less } | false { more }
   }
 }
 
@@ -28,11 +28,11 @@ define or (bool, bool -> bool) {
 }
 
 define until (for R. R, (R -> R, bool) -> R) {
-  -> f; match (f call) | false { f until } | true {}
+  -> f; f call match | false { f until } | true {}
 }
 
 define while (for R. R, (R -> R, bool) -> R) {
-  -> f; match (f call) | true { f while } | false {}
+  -> f; f call match | true { f while } | false {}
 }
 
 define xor (bool, bool -> bool) {

@@ -2,12 +2,12 @@ data (b a) either { left (a -> b a either) | right (b -> b a either) }
 
 instance cmp (for a b. b a either, b a either -> ord) {
   -> a, b;
-  match (a)
+  a match 
   | left {
-    match (b) | left { cmp } | right { drop drop less }
+    b match | left { cmp } | right { drop drop less }
   }
   | right {
-    match (b) | left { drop drop more } | right { cmp }
+    b match | left { drop drop more } | right { cmp }
   }
 }
 

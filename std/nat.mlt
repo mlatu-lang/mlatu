@@ -2,21 +2,21 @@ data nat { zero ( -> nat) | succ (nat -> nat) }
 
 instance cmp (nat, nat -> ord) {
   -> a, b;
-  match (a)
+  a match
   | zero {
-    match (b) | zero { equal } | succ { drop less }
+    b match | zero { equal } | succ { drop less }
   }
   | succ {
-    match (b) | zero { drop more } | succ { cmp }
+    b match | zero { drop more } | succ { cmp }
   }
 }
 
 define % (nat, nat -> nat) {
-  -> a, b; match (a b lt) | true { a } | false { b a - b % succ }
+  -> a, b; a b lt match | true { a } | false { b a - b % succ }
 }
 
 define * (nat, nat -> nat) {
-  -> a, b; match (a) | zero { 0 } | succ { b * b + }
+  -> a, b; a match | zero { 0 } | succ { b * b + }
 }
 
 define + (nat, nat -> nat) {
@@ -25,11 +25,11 @@ define + (nat, nat -> nat) {
 
 define - (nat, nat -> nat) {
   -> a, b;
-  match (a) | zero { b } | succ { match (b) | zero { drop a } | succ { - } }
+  a match | zero { b } | succ { b match | zero { drop a } | succ { - } }
 }
 
 define / (nat, nat -> nat) {
-  -> a, b; match (a b lt) | true { 0 } | false { b a - b / succ }
+  -> a, b; a b lt match | true { 0 } | false { b a - b / succ }
 }
 
 define pred (nat -> nat) {

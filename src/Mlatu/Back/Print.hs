@@ -83,7 +83,7 @@ serExpr (EAtom a) = a
 serExpr (EIf xs) =
   " if " <> Text.concat (intersperse " ; " ((\(cond, body) -> serExpr cond <> " -> " <> serExpr body) <$> xs)) <> " end "
 serExpr (EInt i) = show i
-serExpr (EFun name arity) = "fun " <> name <> "/" <> show arity
+serExpr (EFun args body) = "fun (" <>  Text.concat (intersperse " , " args) <> ") -> " <> serExpr body <> " end "
 serExpr (EString s) = "\"" <> fromString s <> "\""
 serExpr (EOp left op right) = "(" <> serExpr left <> " " <> op <> " " <> serExpr right <> ")"
 serExpr (ETuple xs) = "{ " <> Text.concat (intersperse " , " (serExpr <$> xs)) <> " }"

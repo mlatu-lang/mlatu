@@ -336,7 +336,6 @@ printTerm t = fromMaybe emptyDoc (maybePrintTerms (decompose t))
 maybePrintTerms :: [Term a] -> Maybe (Doc b)
 maybePrintTerms = \case
   [] -> Nothing
-  (Group a : Match _ _ cases (_, e) : xs) -> printMatch (Just a) cases (rightToMaybe e) `maySep` maybePrintTerms xs
   (Push _ _ (Quotation (Word _ _ name args)) : Group a : xs) -> (backslash <> printWord name args) `maySep` maybePrintTerms (Group a : xs)
   ( Coercion
       _

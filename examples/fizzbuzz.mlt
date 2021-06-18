@@ -17,7 +17,7 @@ define fizzbuzz (nat -> char list) {
 
 define fizzbuzzes (nat, nat ->  <io>) {
   -> c, m;
-  c fizzbuzz println match (c m lt) | true { c succ m fizzbuzzes } | false {}
+  c fizzbuzz println c m lt match | true { c succ m fizzbuzzes } | false {}
 }
 
 1 100 fizzbuzzes

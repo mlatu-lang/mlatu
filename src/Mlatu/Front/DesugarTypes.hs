@@ -94,7 +94,7 @@ desugarCodataDefinition definition = do
     constructorName =
       Qualified
         (qualifierName (view Codata.name definition))
-        ("mk-" <> unqualifiedName (view Codata.name definition))
+        (unqualifiedName (view Codata.name definition))
     constructor = makeDefinition $ \index ->
       Definition
         { Definition._body =

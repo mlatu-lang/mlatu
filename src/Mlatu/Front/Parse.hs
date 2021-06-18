@@ -658,8 +658,6 @@ lambdaParser = (<?> "parameteriable introduction") $ do
 matchParser :: Parser (Term ())
 matchParser = (<?> "match") $ do
   matchOrigin <- getTokenOrigin <* parserMatch Token.Match
-  scrutineeOrigin <- getTokenOrigin
-  mScrutinee <- Parsec.optionMaybe groupParser <?> "scrutinee"
   (cases, else_) <- do
     cases' <-
       many $
@@ -680,10 +678,7 @@ matchParser = (<?> "match") $ do
         fromMaybe
           (matchOrigin, Left ())
           mElse'
-  let match = Match matchOrigin () cases else_
-  pure $ case mScrutinee of
-    Just scrutinee -> compose scrutineeOrigin () [scrutinee, match]
-    Nothing -> match
+  pure (Match matchOrigin () cases else_)
 
 blockValue :: Parser (Value ())
 blockValue = (<?> "quotation") $ Quotation <$> blockParser

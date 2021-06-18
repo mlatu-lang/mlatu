@@ -8,7 +8,7 @@ instance cmp (char, char -> ord) {
   "cmp" extern
 }
 
-instance show (char list -> char list) {}
+instance show (char list -> char list) { "\"" "\"" surround}
 
 instance show (for a b. b a either -> char list) {
   match | left { show " left" append } | right { show " right" append }
@@ -27,5 +27,12 @@ instance show (nat -> char list) {
 }
 
 instance show (char -> char list) {
-  once
+  once "'" "'" surround 
+}
+
+instance show (nat list -> char list) { show-nat-list "[" "]" surround
+}
+
+define show-nat-list (nat list -> char list) {
+  \show map "," join 
 }

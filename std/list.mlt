@@ -2,13 +2,13 @@ data (t) list { nil ( -> t list) | cons (t, t list -> t list) }
 
 instance cmp (for t. t list, t list -> ord) {
   -> xs, ys;
-  match (xs)
+  xs match
   | cons {
     -> x, x-tail;
-    match (ys)
+    ys match 
     | cons {
       -> y, y-tail;
-      match (x y cmp)
+      x y cmp match
       | equal {
         x-tail y-tail cmp
       }
@@ -24,7 +24,7 @@ instance cmp (for t. t list, t list -> ord) {
     }
   }
   | nil {
-    match (ys) | cons { drop drop less } | nil { equal }
+    ys match | cons { drop drop less } | nil { equal }
   }
 }
 
@@ -33,7 +33,7 @@ define and-all (bool list -> bool) {
 }
 
 define append (for t. t list, t list -> t list) {
-  -> a, b; match (b) | nil { a } | cons { -> h, t; h a cons t append }
+  -> a, b; b match | nil { a } | cons { -> h, t; h a cons t append }
 }
 
 define append3 (for t. t list, t list, t list -> t list) {
@@ -41,7 +41,7 @@ define append3 (for t. t list, t list, t list -> t list) {
 }
 
 define cartesian (for a b. a list, b list -> (b a pair) list) {
-  \mk-pair cartesian-with
+  \pair cartesian-with
 }
 
 define cartesian-with (for a b c. a list, b list, (a, b -> c) -> c list) {
@@ -50,12 +50,12 @@ define cartesian-with (for a b c. a list, b list, (a, b -> c) -> c list) {
 
 define combine (for a b. a list, b list -> (b a pair) list) {
   -> a, b;
-  match (a)
+  a match
   | cons {
     -> x1, x2;
-    match (b)
+    b match
     | cons {
-      -> y1, y2; x1 y1 mk-pair x2 y2 combine cons
+      -> y1, y2; x1 y1 pair x2 y2 combine cons
     }
     | nil {
       nil
@@ -111,7 +111,7 @@ define fold-left (for a b. b list, a, (a, b -> a) -> a) {
 
 define fold-right (for a b. a list, b, (a, b -> b) -> b) {
   -> z, k;
-  match (init-last) | some { unpair z k call k fold-right } | none { z }
+  init-last match | some { unpair z k call k fold-right } | none { z }
 }
 
 define for-all (for t. t list, (t -> bool) -> bool) {
@@ -135,7 +135,7 @@ define hd (for t. t list -> t optional) {
 }
 
 define hd-tl (for t. t list -> ((t list) t pair) optional) {
-  match | nil { none } | cons { mk-pair some }
+  match | nil { none } | cons { pair some }
 }
 
 define init (for t. t list -> (t list) optional) {
@@ -145,7 +145,7 @@ define init (for t. t list -> (t list) optional) {
   }
   | cons {
     -> h, t;
-    match (t init) | some { -> i; h i cons some } | none { h nil cons some }
+    t init match | some { -> i; h i cons some } | none { h nil cons some }
   }
 }
 
@@ -156,19 +156,19 @@ define init-last (for t. t list -> (t (t list) pair) optional) {
   }
   | cons {
     -> h, t;
-    match (t)
+    t match
     | cons {
       -> h1, t1;
-      match (t1 init-last)
+      t1 init-last match
       | some {
-        unpair -> i, l; (h) (h1) nil cons cons i append l mk-pair some
+        unpair -> i, l; (h) (h1) nil cons cons i append l pair some
       }
       | none {
-        (h) nil cons h1 mk-pair some
+        (h) nil cons h1 pair some
       }
     }
     | nil {
-      nil h mk-pair some
+      nil h pair some
     }
   }
 }
@@ -191,7 +191,7 @@ define last (for t. t list -> t optional) {
     none
   }
   | cons {
-    -> h, t; match (t last) | some { some } | none { h some }
+    -> h, t; t last match | some { some } | none { h some }
   }
 }
 
@@ -220,7 +220,7 @@ define map-optionally (for a b. a list, (a -> b optional) -> b list) {
   match
   | cons {
     swap
-    match (f call)
+    f call match
     | some {
       swap f map-optionally cons
     }
@@ -259,12 +259,12 @@ define mem (for t. t, t list -> bool) {
 
 define nth (for t. t list, nat -> t optional) {
   -> l, n;
-  match (l)
+  l match
   | nil {
     none
   }
   | cons {
-    -> x, xs; match (n) | zero { x some } | succ { -> n1; xs n1 nth }
+    -> x, xs; n match | zero { x some } | succ { -> n1; xs n1 nth }
   }
 }
 
@@ -278,7 +278,7 @@ define or-all (bool list -> bool) {
 
 define pad-hd (for t. t list, nat, t -> t list) {
   -> list, min-length, elt;
-  match (list length min-length lt)
+  list length min-length lt match
   | true {
     list elt min-length list length - replicate prepend
   }
@@ -289,7 +289,7 @@ define pad-hd (for t. t list, nat, t -> t list) {
 
 define pad-tl (for t. t list, nat, t -> t list) {
   -> list, min-length, elt;
-  match (list length min-length lt)
+  list length min-length lt match
   | true {
     elt min-length list length - replicate list prepend
   }
@@ -324,13 +324,13 @@ define remove (for t. t list, t -> t list) {
 
 define remove-nth (for t. t list, nat -> t list) {
   -> index;
-  { -> x, i; match (i index eq) | true { nil } | false { (x) nil cons } }
+  { -> x, i; i index eq match | true { nil } | false { x nil cons } }
   map-index concat
 }
 
 define replicate (for t. t, nat -> t list) {
   -> value, count;
-  match (count) | zero { nil } | succ { -> nc; value nc replicate value suffix }
+  count match | zero { nil } | succ { -> nc; value nc replicate value suffix }
 }
 
 define rev (for t. t list -> t list) {
@@ -364,7 +364,7 @@ define tl (for t. t list -> (t list) optional) {
 }
 
 define tl-hd (for t. t list -> (t (t list) pair) optional) {
-  match | nil { none } | cons { swap mk-pair some }
+  match | nil { none } | cons { swap pair some }
 }
 
 define MapIndex.helper (for a b +p. a list, (a, nat -> b <p>), nat -> b list <p>) {

@@ -165,7 +165,7 @@ declareCodata dictionary typ =
                 Entry.TypeEntry
                   (view CodataDefinition.origin typ)
                   (view CodataDefinition.parameters typ)
-                  [ ( "mk-" <> unqualifiedName (view CodataDefinition.name typ),
+                  [ ( unqualifiedName (view CodataDefinition.name typ),
                       asum (view _2 <$> view CodataDefinition.deconstructors typ),
                       Unsafe.head (view _3 <$> view CodataDefinition.deconstructors typ),
                       view CodataDefinition.origin typ

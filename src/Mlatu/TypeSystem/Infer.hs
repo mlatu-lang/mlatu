@@ -281,7 +281,9 @@ inferType dictionary tenvFinal tenv0 term0 = case term0 of
     (typ, tenv3) <- case constructors' of
       -- FIXME: Assumes caseTypes is non-empty.
       [] -> do
-        let firstCase : remainingCases = caseTypes
+        let (firstCase, remainingCases) = case caseTypes of
+              (x : xs) -> (x, xs)
+              _ -> error (show origin)
         tenv' <-
           foldrM
             (\typ tenv -> Unify.typ tenv firstCase typ)

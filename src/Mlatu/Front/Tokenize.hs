@@ -235,7 +235,7 @@ alphanumeric =
         name <-
           (toText .) . (:)
             <$> lower
-            <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.digit])
+            <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.char '\'', Parsec.digit])
         pure $ case name of
           "alias" -> Alias
           "about" -> About
@@ -256,7 +256,7 @@ alphanumeric =
       UpperWord . Unqualified
         <$> ( (toText .) . (:)
                 <$> upper
-                <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.digit])
+                <*> many (Parsec.choice [letter, Parsec.char '-', Parsec.char '\'', Parsec.digit])
             ),
       angleBegin,
       angleEnd,

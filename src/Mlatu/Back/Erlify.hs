@@ -98,18 +98,16 @@ entryErl = do
       case e of
         (Entry.WordEntry _ _ _ _ _ (Just body)) -> do
           resetEverything
-          case termErl
-            body
-            ( Just
-                ( do
-                    rest <- getRestVar
-                    closure <- getClosureVar
-                    pure (ETuple [EVar rest, EVar closure])
-                )
-            ) of
+          case termErl body ( Just lastExpr ) of
             Just action -> Just . MkFun ("m" <> i) <$> action
             Nothing -> pure Nothing
         _ -> pure Nothing
+
+lastExpr :: Codegen Expr
+lastExpr = do
+                    rest <- getRestVar
+                    closure <- getClosureVar
+                    pure (ETuple [EVar rest, EVar closure])
 
 termErl :: Term Type -> Maybe (Codegen Expr) -> Maybe (Codegen Expr)
 termErl x = goTerms (decompose x)
@@ -119,17 +117,18 @@ termErl x = goTerms (decompose x)
       [] -> after
       (Push _ _ (Text x) : Word _ _ (QualifiedName (Global "extern")) _ : rest) ->
         Just (intrinsic x (goTerms rest after))
-      (Push _ _ (Name name) : NewClosure _ _ 0 : rest) -> Just $ do
-        _ <- contained (word name [] Nothing)
-        pushE (ECouple (EFun ("m" <> erlifyQ name) 1) ENil) (goTerms rest after)
       (Push _ _ (Name name) : NewClosure _ _ size : rest) -> Just $ do
-        _ <- contained (word name [] Nothing)
+        (r,c,body) <- contained $ do 
+          r <- incRestVar 
+          c <- incClosureVar
+          body <- word name [] (Just lastExpr)
+          pure (r, c, body)
         elements <- replicateM size newVar
         let names = zipWith (\name num -> name <> show num) elements [(0 :: Int) ..]
         tail <- newVar
         modifyE
           (foldr PCons (PVar tail) (PVar <$> names))
-          (ECons (ETuple [EFun ("m" <> erlifyQ name) 1, foldr ECons ENil (EVar <$> (reverse names))]) (EVar tail))
+          (ECons (ETuple [EFun [r, c] body, foldr ECons ENil (EVar <$> (reverse names))]) (EVar tail))
           (goTerms rest after)
       (Word _ _ (QualifiedName (Qualified _ "zero")) _ : xs) -> Just $ do
         let go :: Int -> [Term a] -> (Int, [Term a])
@@ -263,21 +262,21 @@ word name args after = do
   let mangled = erlifyI $ Instantiated name args
   isInstantiated <- liftA2 (<|>) (inDone mangled) (inTodo mangled)
   case isInstantiated of
-    Just e -> callWord False mangled e after
+    Just e -> callWord False (Instantiated name args) e after
     _ -> do
       dict <- getDict
       case Map.lookup mangled dict of
-        Just e -> callWord True mangled e after
+        Just e -> callWord True (Instantiated name args) e after
         _ -> do
-          let unMangled = erlifyI $ Instantiated name []
+          let unMangled = erlifyQ name
           case Map.lookup unMangled dict of
             Just (Entry.WordEntry a b c d e (Just body)) ->
               liftIO (fst <$> runMlatu (Instantiate.term TypeEnv.empty body args))
                 >>= ( \case
-                        Just body' -> callWord True mangled (Entry.WordEntry a b c d e (Just body')) after
+                        Just body' -> callWord True (Instantiated name args) (Entry.WordEntry a b c d e (Just body')) after
                         Nothing -> error "Could not instantiate generic type"
                     )
-            _ -> error "unknown word"
+            _ -> error $ "unknown word: " <> mangled
 
 andMaybe :: Expr -> Maybe (Codegen Expr) -> Codegen Expr
 andMaybe x = \case
@@ -304,8 +303,8 @@ modifyE p expr after = do
     Nothing -> pure (ECase (EVar current) [(p, ESetVar new expr)])
     Just action -> (\e -> ECase (EVar current) [(p, mkAnd [ESetVar new expr, e])]) <$> action
 
-callWord :: Bool -> Text -> WordEntry -> Maybe (Codegen Expr) -> Codegen Expr
-callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose body of
+callWord :: Bool -> Instantiated -> WordEntry -> Maybe (Codegen Expr) -> Codegen Expr
+callWord b (Instantiated name ts) e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose body of
   [New _ _ (ConstructorIndex 0) 0 NatLike] -> pushE (EInt 0) after
   [New _ _ (ConstructorIndex 1) 1 NatLike] -> do
     head <- newVar
@@ -314,26 +313,26 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose
       (PCons (PVar head) (PVar tail))
       (ECons (EOp (EVar head) "+" (EInt 1)) (EVar tail))
       after
-  [New _ _ (ConstructorIndex 1) 1 ListLike] -> pushE ENil after
+  [New _ _ (ConstructorIndex 0) 0 ListLike] -> pushE ENil after
   [New _ _ (ConstructorIndex 1) 2 ListLike] -> do
     head <- newVar
     tail <- newVar
     rest <- newVar
     modifyE
-      (foldr PCons (PVar rest) [PVar head, PVar tail])
+      (foldr PCons (PVar rest) [PVar tail, PVar head])
       (ECons (ECons (EVar head) (EVar tail)) (EVar rest))
       after
-  [New _ _ _ 0 NonSpecial] -> pushE (EAtom name) after
+  [New _ _ _ 0 NonSpecial] -> pushE (EAtom (erlifyQ name)) after
   [New _ _ _ size NonSpecial] -> do
     elements <- replicateM size newVar
     let names = zipWith (\name num -> name <> show num) elements [(0 :: Int) ..]
     tail <- newVar
     modifyE
       (foldr PCons (PVar tail) (PVar <$> names))
-      (ECons (ETuple (EAtom name : (EVar <$> (reverse names)))) (EVar tail))
+      (ECons (ETuple (EAtom (erlifyQ name) : (EVar <$> (reverse names)))) (EVar tail))
       after
   _ -> do
-    when b $ modifyToDo $ Map.insert name e
+    when b $ modifyToDo $ Map.insert (erlifyI (Instantiated name ts)) e
     rest <- getRestVar
     closure <- getClosureVar
     newRest <- PVar <$> incRestVar
@@ -342,7 +341,7 @@ callWord b name e@(Entry.WordEntry _ _ _ _ _ (Just body)) after = case decompose
       ( ESetCouple
           newRest
           newClosure
-          (ECallCouple ("m" <> name) (EVar rest) (EVar closure))
+          (ECallCouple ("m" <> erlifyI (Instantiated name ts)) (EVar rest) (EVar closure))
       )
       after
 callWord _ _ _ _ = ice "Calling word without body"
@@ -355,7 +354,7 @@ intrinsic text after = case text of
     tail <- newVar
     modifyE
       (PCons (PCouple (PVar name) (PVar closure)) (PVar tail))
-      (ECallCouple name (EVar tail) (EVar closure))
+      (ECallFun name [EVar tail, EVar closure])
       after
   "abort" -> do
     head <- newVar
@@ -557,8 +556,7 @@ caseErl (_, QualifiedName name, caseBody) after = do
           new <- incRestVar
           head <- newVar
           tail <- newVar
-          expr <- pushEs [EVar head, EVar tail] (termErl caseBody after)
-          pure (Just (PCons (PCons (PVar head) (PVar tail)) (PVar new), expr))
+          (\expr -> Just (PCons (PCons (PVar head) (PVar tail)) (PVar new), expr)) <$> pushEs [EVar tail, EVar head] (termErl caseBody after)
         _ -> pure Nothing
     _ -> pure Nothing
 caseErl _ _ = pure Nothing

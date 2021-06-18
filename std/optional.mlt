@@ -2,12 +2,12 @@ data (t) optional { none ( -> t optional) | some (t -> t optional) }
 
 instance cmp (for t. t optional, t optional -> ord) {
   -> a, b;
-  match (a)
+  a match
   | none {
-    match (b) | none { equal } | some { drop less }
+    b match | none { equal } | some { drop less }
   }
   | some {
-    match (b) | none { drop more } | some { cmp }
+    b match | none { drop more } | some { cmp }
   }
 }
 
@@ -29,9 +29,9 @@ define is-some (for t. t optional -> bool) {
 
 define lift-optional-2 (for a b c. a optional, b optional, (a, b -> c) -> c optional) {
   -> mx, my, f;
-  match (mx)
+  mx match
   | some {
-    -> x; match (my) | some -> y { x y f call some } | _  { none }
+    -> x; my match | some -> y { x y f call some } | _  { none }
   }
   | _  {
     none
@@ -39,7 +39,7 @@ define lift-optional-2 (for a b c. a optional, b optional, (a, b -> c) -> c opti
 }
 
 define map-optional (for a b. a optional, (a -> b) -> b optional) {
-  -> opt, f; match (opt) | some -> x { x f call some } | _  { none }
+  -> opt, f; opt match | some -> x { x f call some } | _  { none }
 }
 
 define optional-fun (for R S a. R, a optional, (R, a -> S), (R -> S) -> S) {

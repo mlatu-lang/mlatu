@@ -4,25 +4,33 @@ trait cmp (for t. t, t -> ord)
 data ord { less ( -> ord) | more ( -> ord) | equal ( -> ord) } 
 
 define eq (for t. t, t -> bool) {
-  match (cmp) | equal { true } | _  { false }
+  cmp match | equal { true } | _  { false }
 }
 
 define ge (for t. t, t -> bool) {
-  match (cmp) | less { false } | _  { false }
+  cmp match | less { false } | _  { false }
 }
 
 define gt (for t. t, t -> bool) {
-  match (cmp) | more { true } | _  { false }
+  cmp match | more { true } | _  { false }
 }
 
 define le (for t. t, t -> bool) {
-  match (cmp) | more { false } | _  { true }
+  cmp match | more { false } | _  { true }
 }
 
 define lt (for t. t, t -> bool) {
-  match (cmp) | less { true } | _  { false }
+  cmp match | less { true } | _  { false }
 }
 
 define neq (for t. t, t -> bool) {
-  match (cmp) | equal { false } | _  { true }
+  cmp match | equal { false } | _  { true }
+}
+
+define min (for t. t, t -> t) {
+  -> a, b; a b cmp match | less { a } | _ { b } 
+}
+
+define max (for t. t, t -> t) {
+  -> a, b; a b cmp match | more { a } | _ { b } 
 }
