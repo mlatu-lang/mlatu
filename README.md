@@ -1,14 +1,10 @@
 # The Mlatu Programming Language
 
-[![](https://tokei.rs/b1/github/brightly-salty/mlatu)](https://github.com/XAMPPRocky/tokei)
+[![](https://tokei.rs/b1/github/mlatu-lang/mlatu)](https://github.com/XAMPPRocky/tokei)
 
 Mlatu is a statically-typed purely-functional concatenative high-level programming language on the BEAM VM.
 
-https://brightly-salty.github.io/mlatu/
-
-[What is Mlatu, and why should you use it?](/intro.md)
-
-[How to install Mlatu](/installation.md)
+[Learn You a Mlatu for Great Good!](https://mlatu-lang.github.io/lyam/)
 
 ## Contributing
 
