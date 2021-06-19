@@ -12,19 +12,19 @@ instance cmp (for t. t optional, t optional -> ord) {
 }
 
 define from-optional (for t. t optional, t -> t) {
-  -> default; match | some {} | _  { default }
+  -> default; match | some {} | none { default }
 }
 
 define from-some (for t. t optional, char list -> t <fail>) {
-  -> message; match | some {} | _  { message fail-now }
+  -> message; match | some {} | none  { message fail-now }
 }
 
 define is-none (for t. t optional -> bool) {
-  match | none { true } | _  { false }
+  match | none { true } | some  { drop false }
 }
 
 define is-some (for t. t optional -> bool) {
-  match | some { drop true } | _  { false }
+  match | some { drop true } | none  { false }
 }
 
 define lift-optional-2 (for a b c. a optional, b optional, (a, b -> c) -> c optional) {
