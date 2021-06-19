@@ -315,12 +315,12 @@ callWord b (Instantiated name ts) e@(Entry.WordEntry _ _ _ _ _ (Just body)) afte
       after
   [New _ _ (ConstructorIndex 0) 0 ListLike] -> pushE ENil after
   [New _ _ (ConstructorIndex 1) 2 ListLike] -> do
-    head <- newVar
-    tail <- newVar
+    first <- newVar
+    second <- newVar
     rest <- newVar
     modifyE
-      (foldr PCons (PVar rest) [PVar tail, PVar head])
-      (ECons (ECons (EVar head) (EVar tail)) (EVar rest))
+      (foldr PCons (PVar rest) [PVar first, PVar second])
+      (ECons (ECons (EVar second) (EVar first)) (EVar rest))
       after
   [New _ _ _ 0 NonSpecial] -> pushE (EAtom (erlifyQ name)) after
   [New _ _ _ size NonSpecial] -> do
@@ -556,7 +556,7 @@ caseErl (_, QualifiedName name, caseBody) after = do
           new <- incRestVar
           head <- newVar
           tail <- newVar
-          (\expr -> Just (PCons (PCons (PVar head) (PVar tail)) (PVar new), expr)) <$> pushEs [EVar tail, EVar head] (termErl caseBody after)
+          (\expr -> Just (PCons (PCons (PVar head) (PVar tail)) (PVar new), expr)) <$> pushE (EVar head) (Just (pushE (EVar tail) (termErl caseBody after)))
         _ -> pure Nothing
     _ -> pure Nothing
 caseErl _ _ = pure Nothing

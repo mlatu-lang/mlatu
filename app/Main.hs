@@ -105,6 +105,6 @@ scriptInput input = do
         Erlang.generate program Nothing >>= \contents ->
           writeFileText "mlatu.erl" contents
             >> runProcess_ "escript mlatu.erl"
-            -- >> removeFile "mlatu.erl"
+            >> removeFile "mlatu.erl"
     )
     result
