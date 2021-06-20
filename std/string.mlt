@@ -14,7 +14,7 @@ instance show (for a b. b a either -> char list) {
   match | left { show " left" append } | right { show " right" append }
 }
 
-instance show (for t. t optional -> char list) {
+instance show (for t. t option -> char list) {
   match | some { show " some" append } | none { "none" }
 }
 

@@ -1,6 +1,6 @@
-data (t) optional { none ( -> t optional) | some (t -> t optional) } 
+data (t) option { none ( -> t option) | some (t -> t option) } 
 
-instance cmp (for t. t optional, t optional -> ord) {
+instance cmp (for t. t option, t option -> ord) {
   -> a, b;
   a match
   | none {
@@ -11,23 +11,23 @@ instance cmp (for t. t optional, t optional -> ord) {
   }
 }
 
-define from-optional (for t. t optional, t -> t) {
+define from-option (for t. t option, t -> t) {
   -> default; match | some {} | none { default }
 }
 
-define from-some (for t. t optional, char list -> t <fail>) {
+define from-some (for t. t option, char list -> t <fail>) {
   -> message; match | some {} | none  { message fail-now }
 }
 
-define is-none (for t. t optional -> bool) {
+define is-none (for t. t option -> bool) {
   match | none { true } | some  { drop false }
 }
 
-define is-some (for t. t optional -> bool) {
+define is-some (for t. t option -> bool) {
   match | some { drop true } | none  { false }
 }
 
-define lift-optional-2 (for a b c. a optional, b optional, (a, b -> c) -> c optional) {
+define lift-option-2 (for a b c. a option, b option, (a, b -> c) -> c option) {
   -> mx, my, f;
   mx match
   | some {
@@ -38,10 +38,10 @@ define lift-optional-2 (for a b c. a optional, b optional, (a, b -> c) -> c opti
   }
 }
 
-define map-optional (for a b. a optional, (a -> b) -> b optional) {
+define map-option (for a b. a option, (a -> b) -> b option) {
   -> opt, f; opt match | some -> x { x f call some } | _  { none }
 }
 
-define optional-fun (for R S a. R, a optional, (R, a -> S), (R -> S) -> S) {
+define option-fun (for R S a. R, a option, (R, a -> S), (R -> S) -> S) {
   -> f, g; match | some { f call } | none { g call }
 }

@@ -25,3 +25,8 @@ define writeln (char list, writable ->  <io>) {
     "writeln-stderr" extern
   }
 }
+
+
+permission io (for R S +p. R, (R -> S <io + p>) -> S <p>) {
+  with (+io)
+}

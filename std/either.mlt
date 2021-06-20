@@ -23,11 +23,11 @@ define from-right (for a b. b a either, char list -> b <fail>) {
   -> message; match | right {} | _  { message fail-now }
 }
 
-define get-left (for a b. b a either -> a optional) {
+define get-left (for a b. b a either -> a option) {
   match | left { some } | _  { none }
 }
 
-define get-right (for a b. b a either -> b optional) {
+define get-right (for a b. b a either -> b option) {
   match | right { some } | _  { none }
 }
 

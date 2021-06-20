@@ -11,3 +11,7 @@ define self (-> pid <otp>) {
 define kill (pid -> <otp>) {
     "kill" extern
 }
+
+permission otp (for R S +p. R, (R -> S <otp + p>) -> S <p>) {
+  with (+otp)
+}

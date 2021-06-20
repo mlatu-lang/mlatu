@@ -10,6 +10,10 @@ define bi3 (for a b c d e f. a, b, c, (a, b, c -> d), (a, b, c -> e), (a, b, c -
   -> x, y, z, f, g, h; (x y z f call) (x y z g call) (x y z h call)
 }
 
+define call (for R S. R, (R -> S) -> S) {
+  "call" extern
+}
+
 define compose (for R S T. (R -> S), (S -> T) -> (R -> T)) {
   -> f, g; { f call g call }
 }
@@ -24,6 +28,10 @@ define curry2 (for R S a b +p. a, b, (R, a, b -> S <p>) -> (R -> S <p>)) {
 
 define dip (for R S t. R, t, (R -> S) -> S, t) {
   -> x, f; f call x
+}
+
+define drop (for a. a -> ) {
+  "drop" extern
 }
 
 define drop2 (for a b. a, b -> ) {
@@ -92,6 +100,10 @@ define repeat (for +p. nat, ( ->  <p>) ->  <p>) {
   -> f; match | zero {} | succ { -> nc; f call nc f repeat }
 }
 
+define swap (for a b. a, b -> b, a) {
+  -> x, y; y x
+}
+
 define swapped (for R S a b. (R, a, b -> R) -> (R, b, a -> R)) {
   \swap swap compose
 }
@@ -128,6 +140,19 @@ about fix {
           else:
             (n - 1) rec call * n
         } fix
+    """
+  }
+}
+
+about call {
+  docs {
+    """
+    Applies a closure to the stack.
+
+    This denotes modus ponens: if we have a program state 'R...', a permission
+    '+P', and a closure '(R... -> S... +P)' as evidence that we can convert
+    'R...' to 'S...' given '+P', then we can invoke the closure to produce the
+    new state 'S...'.
     """
   }
 }

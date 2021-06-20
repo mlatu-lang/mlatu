@@ -70,7 +70,7 @@ define concat (for t. (t list) list -> t list) {
   nil \append fold-left
 }
 
-define concat-optionals (for t. (t optional) list -> t list) {
+define concat-options (for t. (t option) list -> t list) {
   nil { match | some { suffix } | _  {} } fold-left
 }
 
@@ -101,7 +101,7 @@ define filter-out (for t. t list, (t -> bool) -> t list) {
   -> f; { f call not } filter-in
 }
 
-define find (for t. t list, (t -> bool) -> t optional) {
+define find (for t. t list, (t -> bool) -> t option) {
   filter-in hd
 }
 
@@ -122,7 +122,7 @@ define for-all2 (for a b. a list, b list, (a, b -> bool) -> bool) {
   -> f; combine { unpair f call } for-all
 }
 
-define get-all (for t. t list, nat list -> (t optional) list) {
+define get-all (for t. t list, nat list -> (t option) list) {
   swap -> list; { list swap nth } map
 }
 
@@ -130,15 +130,15 @@ define glue (for t. t list, t list, t list -> t list) {
   prepend append
 }
 
-define hd (for t. t list -> t optional) {
+define hd (for t. t list -> t option) {
   match | nil { none } | cons { drop some }
 }
 
-define hd-tl (for t. t list -> ((t list) t pair) optional) {
+define hd-tl (for t. t list -> ((t list) t pair) option) {
   match | nil { none } | cons { pair some }
 }
 
-define init (for t. t list -> (t list) optional) {
+define init (for t. t list -> (t list) option) {
   match
   | nil {
     none
@@ -149,7 +149,7 @@ define init (for t. t list -> (t list) optional) {
   }
 }
 
-define init-last (for t. t list -> (t (t list) pair) optional) {
+define init-last (for t. t list -> (t (t list) pair) option) {
   match
   | nil {
     none
@@ -185,7 +185,7 @@ define join (for t. (t list) list, t list -> t list) {
   -> g; nil { g glue } fold-left
 }
 
-define last (for t. t list -> t optional) {
+define last (for t. t list -> t option) {
   match
   | nil {
     none
@@ -215,7 +215,7 @@ define map-index (for a b +p. a list, (a, nat -> b <p>) -> b list <p>) {
   0 MapIndex.helper
 }
 
-define map-optionally (for a b. a list, (a -> b optional) -> b list) {
+define map-optionally (for a b. a list, (a -> b option) -> b list) {
   -> f;
   match
   | cons {
@@ -233,19 +233,19 @@ define map-optionally (for a b. a list, (a -> b optional) -> b list) {
   }
 }
 
-define map-reduce-left (for a b. a list, (a -> b), (b, b -> b) -> b optional) {
+define map-reduce-left (for a b. a list, (a -> b), (b, b -> b) -> b option) {
   -> f; map f reduce-left
 }
 
-define map-reduce-left2 (for a b c. a list, b list, (a, b -> c), (c, c -> c) -> c optional) {
+define map-reduce-left2 (for a b c. a list, b list, (a, b -> c), (c, c -> c) -> c option) {
   -> f; map2 f reduce-left
 }
 
-define map-reduce-right (for a b. a list, (a -> b), (b, b -> b) -> b optional) {
+define map-reduce-right (for a b. a list, (a -> b), (b, b -> b) -> b option) {
   -> f; map f reduce-right
 }
 
-define map-reduce-right2 (for a b c. a list, b list, (a, b -> c), (c, c -> c) -> c optional) {
+define map-reduce-right2 (for a b c. a list, b list, (a, b -> c), (c, c -> c) -> c option) {
   -> f; map2 f reduce-right
 }
 
@@ -257,7 +257,7 @@ define mem (for t. t, t list -> bool) {
   swap -> x; { x eq } exists
 }
 
-define nth (for t. t list, nat -> t optional) {
+define nth (for t. t list, nat -> t option) {
   -> l, n;
   l match
   | nil {
@@ -310,7 +310,7 @@ define prepend (for t. t list, t list -> t list) {
   swap append
 }
 
-define reduce-left (for t. t list, (t, t -> t) -> t optional) {
+define reduce-left (for t. t list, (t, t -> t) -> t option) {
   -> f; tl-hd { unpair f fold-left } map-optional
 }
 
@@ -359,11 +359,11 @@ define surround (for t. t list, t list, t list -> t list) {
   -> x; prepend x append
 }
 
-define tl (for t. t list -> (t list) optional) {
+define tl (for t. t list -> (t list) option) {
   match | nil { none } | cons { swap drop some }
 }
 
-define tl-hd (for t. t list -> (t (t list) pair) optional) {
+define tl-hd (for t. t list -> (t (t list) pair) option) {
   match | nil { none } | cons { swap pair some }
 }
 

@@ -19,3 +19,8 @@ define assert-not (for +p. char list, ( -> bool <p>) ->  <fail + p>) {
 define fail-now (for R S. R, char list -> S <fail>) {
   "abort" extern
 }
+
+
+permission fail (for R S +p. R, (R -> S <fail + p>) -> S <p>) {
+  with (+fail)
+}
