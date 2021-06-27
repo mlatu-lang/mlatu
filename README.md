@@ -2,6 +2,8 @@
 
 [![](https://tokei.rs/b1/github/mlatu-lang/mlatu)](https://github.com/XAMPPRocky/tokei)
 
+![Mlatu logo](/logo.jpg)
+
 Mlatu is a statically-typed purely-functional concatenative high-level programming language on the BEAM VM.
 
 [Learn You a Mlatu for Great Good!](https://mlatu-lang.github.io/lyam/)
