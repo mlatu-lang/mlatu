@@ -6,6 +6,8 @@
 
 Mlatu is a statically-typed purely-functional concatenative high-level programming language on the BEAM VM.
 
+**Note: This branch (`old`) whcih has a Haskell implementation compiling to the BEAM VM with algebraic is working. There is a WIP branch (`new`) which writes Mlatu in Mercury and compiles to C and uses linear types.**
+
 [Learn You a Mlatu for Great Good!](https://mlatu-lang.github.io/lyam/)
 
 ## Contributing
