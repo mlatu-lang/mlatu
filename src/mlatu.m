@@ -43,12 +43,12 @@ write_success(Term, !IO) :- (
     ((  Result = ok(Stream), 
         io.write_string(Stream, Out, !IO), 
         io.close_output(Stream, !IO),
-        io.call_system("clang output.c -o output", _, !IO),
+        io.call_system("clang output.c --optimize -o output", _, !IO),
         io.format("Executable at `./output` (%s)", [s(term_string(Term))], !IO)
     ) ; (
         Result = io.error(Error),
         io.error_message(Error, Message),
-        io.format("IO Error: %s", [s(Message)], !IO)
+        io.format("IO Error: %s\n", [s(Message)], !IO)
     ))
     else io.write_string("Code generation failed for an undetermined reason", !IO) 
 ).

@@ -174,7 +174,7 @@ get_context(String, Context) = pr_ok(Context, String, Context).
 
 identifier(String, Context) = map_p(
   some(satisfy(func(C) = (
-    if is_alnum_or_underscore(C) ; from_int(46, C) ; from_int(43, C)
+    if is_alnum_or_underscore(C) ; (from_int(Int, C), (Int = 43 ; Int = 46 ; Int = 43 ; Int = 45 ; Int = 42))
     then yes 
     else no))), 
   from_char_list, String, Context).
