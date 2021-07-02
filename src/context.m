@@ -2,8 +2,8 @@
 
 :- interface.
 
-:- import_module string. 
 :- import_module char.
+:- import_module string. 
 
 :- type context ---> context(c_file :: string, c_line :: int, c_col :: int).
 :- func context(string) = context. 
@@ -26,8 +26,8 @@
 
 :- implementation. 
 
-:- import_module list. 
 :- import_module int.
+:- import_module list. 
 
 context(Name) = context(Name, 0, 0).
 context(Name, Line) = context(Name, Line, 0).
@@ -41,17 +41,14 @@ builtin_context = context("builtin").
 command_line_context = context("Command line").
 
 context_string(Context) = context_string("", Context).
-context_string(SourcePath, context(File0, Line, _)) = Pretty :- 
-  (if append(SourcePath, File1, File0) then 
-    File = File1 
-  else 
-    File = File0 
-  ),
-  ( if Line = 0 then 
-    Pretty = File
-  else 
-    Pretty = format("%s:%d", [s(File), i(Line)])
-  ).
+context_string(SourcePath, context(File0, Line, _)) = Pretty :- (
+  if append(SourcePath, File1, File0) 
+  then File = File1 
+  else File = File0 
+  ) , ( 
+  if Line = 0 
+  then Pretty = File
+  else Pretty = format("%s:%d", [s(File), i(Line)])).
 
 
 :- pred is_newline(char). 
@@ -66,8 +63,8 @@ is_tab(Char) :- to_int(Char, 9).
 
 after_char(Char, context(File, Line, Col), context(File, NewLine, NewCol)) :- 
   if is_newline(Char) 
-    then NewCol = 0, NewLine = Line + 1
-    else if is_tab(Char)
-      then NewCol = Col + 8 - ((Col - 1) mod 8), Line = NewLine
-      else NewCol = Col + 1, Line = NewLine.
+  then NewCol = 0, NewLine = Line + 1
+  else if is_tab(Char)
+  then NewCol = Col + 8 - ((Col - 1) mod 8), Line = NewLine
+  else NewCol = Col + 1, Line = NewLine.
   

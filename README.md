@@ -9,14 +9,9 @@ Mlatu is a statically-typed purely-functional concatenative high-level programmi
 To build the current version, run 
 ```sh
 $ cd src 
-$ mmc --make mlatu
-Making Mercury/int3s/mlatu.int3
-Making Mercury/ints/mlatu.int
-Making Mercury/cs/mlatu.c
-Making Mercury/os/mlatu.o
-Making mlatu
+$ make
 ```
-which will output a `mlatu` executable file.
+which will output a `src/mlatu` executable file.
 ## Contributing
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
