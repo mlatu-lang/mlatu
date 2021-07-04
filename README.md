@@ -26,4 +26,4 @@ I make announcements, discuss the languaage, and am available to answer question
 
 The source is based with gratitude off of [the source of Kitten](https://github.com/evincarofautumn/kitten) by Jon Purdy.
 
-Mlatu is licensed under the Peace Public License v0.0+ available [here](LICENSE.md). The canonical version is located at https://github.com/brightly-salty/peace-license
+Mlatu is licensed under the CNPLv6, the text of which is available [here](LICENSE).
