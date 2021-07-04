@@ -1,2 +1,2 @@
 all: mlatu.m
-		mmc --make mlatu --grade="none.gc"
+		mmc --make mlatu --grade="none.gc" -O6

@@ -62,8 +62,6 @@
 
 :- func parse_call(string, context) = parse_result(m_term).
 
-:- func parse_def(string, context) = parse_result(m_term).
-
 :- func parse_term(string, context) = parse_result(m_term).
 
 :- func parse_lower_term(string, context) = parse_result(m_term).
@@ -192,20 +190,8 @@ parse_call(String, Context) = label(
     map_p(identifier, func(I) = mt_call(I, Ctxt))), 
   "word", String, Context).
 
-parse_def(String, Context) = then(
-  get_context, 
-  func(Ctxt) = 
-    ignore_left(
-      string("def"), 
-      then(
-        between(some(space), identifier, some(space)), 
-        func(Name) = 
-            map_p(bracketed(between(many(space), parse_term, many(space))), 
-            func(Term) = mt_def(Name, Term, Ctxt)))), String, Context).
-
-parse_lower_term(String, Context) = or(
-  parse_def, 
-  or(parse_int, parse_call), String, Context).
+parse_lower_term(String, Context) = 
+  or(parse_int, parse_call, String, Context).
 
 sep_end_by(Parser, Sep, String, Context) = or(
   sep_end_by1(Parser, Sep), 
