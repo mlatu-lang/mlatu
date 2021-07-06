@@ -13,17 +13,16 @@
 
 :- interface.
 
-:- import_module string.
-
 :- import_module ast.
 
 :- type gs ---> gs(builder :: string).
 
-:- pred codegen(m_term::in, string::out) is semidet.
+:- pred codegen(spec_term::in, string::out) is semidet.
 
 :- implementation.
 
 :- import_module list.
+:- import_module string.
 
 :- pred add_line(string::in, gs::in, gs::out) is det. 
 add_line(String, In, Out) :- Out = (In ^ builder := In ^ builder ++ String ++ "\n").
@@ -49,8 +48,8 @@ alloc_check = join_list("\n", [
 gen_int(Num, In, Out) :- 
   add_lines([
     alloc_check,
-    " used++;",format(
-    " array[used - 1] = %i;", [i(Num)])
+    " used++;",
+    (" array[used - 1] = " ++ string.from_int(Num) ++ ";")
     ], In, Out).
 
 :- pred gen_call(m_name::in, gs::in, gs::out) is det.
@@ -103,11 +102,11 @@ gen_call(Name, In, Out) :- (
   else add_line(" " ++ Name ++ "(&array, used, size);", In, Out)
 ).
 
-:- pred gen_term(m_term::in, gs::in, gs::out) is semidet.
+:- pred gen_term(spec_term::in, gs::in, gs::out) is semidet.
 gen_term(Term, In, Out) :- 
-  (Term = mt_call(Name, _), gen_call(Name, In, Out)) ; 
-  (Term = mt_int(Num, _), gen_int(Num, In, Out)) ; 
-  (Term = mt_compose(Term1, Term2, _), gen_term(Term2, In, Mid), gen_term(Term1, Mid, Out))
+  (Term = mt_call(_, _, Name), gen_call(Name, In, Out)) ; 
+  (Term = mt_int(_, _, Num), gen_int(Num, In, Out)) ; 
+  (Term = mt_compose(_, Term1, Term2), gen_term(Term2, In, Mid), gen_term(Term1, Mid, Out))
 .
 
 :- func before = string.

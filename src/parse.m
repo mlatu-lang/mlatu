@@ -16,7 +16,6 @@
 :- import_module bool.
 :- import_module char.
 :- import_module list.
-:- import_module string.
 
 :- import_module ast.
 :- import_module context.
@@ -33,11 +32,13 @@
 
 :- func satisfy(func(char) = bool, string, context) = parse_result(char).
 
-:- func char(char, string, context) = parse_result(char).
-
 :- func digit(string, context) = parse_result(char).
 
+:- func pure(A, string, context) = parse_result(A).
+
 :- func map_p(parser(A), func(A) = B, string, context) = parse_result(B).
+
+:- func char(char, string, context) = parse_result(char).
 
 :- func or(parser(A), parser(A), string, context) = parse_result(A).
 
@@ -53,37 +54,35 @@
 
 :- func label(parser(A), string, string, context) = parse_result(A).
 
-:- func pure(A, string, context) = parse_result(A).
-
 :- func string(string, string, context) = parse_result( {} ).
 
 :- func between(parser(A), parser(B), parser(C), string, context) = parse_result(B).
 
-:- func bracketed(parser(A), string, context) = parse_result(A).
-
 :- func ignore(parser(A), string, context) = parse_result( {} ).
+
+:- func bracketed(parser(A), string, context) = parse_result(A).
 
 :- func space(string, context) = parse_result( {} ).
 
-:- func identifier(string, context) = parse_result(m_name).
-
 :- func get_context(string, context) = parse_result(context).
 
-:- func parse_int(string, context) = parse_result(m_term).
+:- func identifier(string, context) = parse_result(m_name).
 
-:- func parse_call(string, context) = parse_result(m_term).
+:- func parse_int(string, context) = parse_result(term).
 
-:- func parse_term(string, context) = parse_result(m_term).
+:- func parse_call(string, context) = parse_result(term).
 
-:- func parse_lower_term(string, context) = parse_result(m_term).
+:- func parse_lower_term(string, context) = parse_result(term).
 
 :- func sep_end_by(parser(A), parser(B), string, context) = parse_result(list(A)).
 
 :- func sep_end_by1(parser(A), parser(B), string, context) = parse_result(list(A)).
 
+:- func parse_term(string, context) = parse_result(term).
+
 :- implementation.
 
-:- import_module exception.
+:- import_module string.
 
 map_pr(Old, Mapper) = New :- (
     Old = pr_err(Err), 
@@ -123,11 +122,12 @@ char(Char, String, Context) = label(
   String, Context).
 
 or(Parser1, Parser2, String, Context) = Result :- 
-    FirstResult = Parser1(String, Context),
-    (if (pr_ok(_, _, _) = FirstResult) 
-    then Result = FirstResult 
-    else Result = Parser2(String, Context)
-    ).
+    FirstResult = Parser1(String, Context),((
+    pr_ok(_, _, _) = FirstResult, 
+    Result = FirstResult 
+    ) ; (
+    pr_err(_) = FirstResult, 
+    Result = Parser2(String, Context))).
 
 then(Parser1, Parser2, String, Context) = Result :- 
     FirstResult = Parser1(String, Context), ((
@@ -191,14 +191,14 @@ identifier(String, Context) = map_p(
 parse_int(String, Context) = label(
   then(get_context, (func(Ctxt) = 
     map_p(some(digit), func(Cs) = Result :- 
-    ((to_int(from_char_list(Cs), Num), 
-      Result = mt_int(Num, Ctxt) 
-    ) ; exception.throw("Should never occur"))))), 
+    (if to_int(from_char_list(Cs), Num)  
+    then Result = mt_int(Ctxt, {}, Num) 
+    else Result = mt_int(Ctxt, {}, 0))))), 
   "number", String, Context).
 
 parse_call(String, Context) = label(
   then(get_context, func(Ctxt) = 
-    map_p(identifier, func(I) = mt_call(I, Ctxt))), 
+    map_p(identifier, func(Name) = mt_call(Ctxt, {}, Name))), 
   "word", String, Context).
 
 parse_lower_term(String, Context) = 
@@ -215,9 +215,9 @@ sep_end_by1(Parser, Sep, String, Context) = then(
 parse_term(String, Context) = label(map_p(sep_end_by1(parse_lower_term, some(space)), 
   func(Ts) = foldl(
     func(L, Acc) = Result :- (
-      if mt_call("id", builtin_context) = Acc 
+      if mt_call(builtin_context, {}, "") = Acc 
       then Result = L 
-      else term_context(L, Ctxt), Result = mt_compose(L, Acc, Ctxt)), 
+      else Result = mt_compose({}, L, Acc)), 
     Ts, 
-    mt_call("id", builtin_context)
+    mt_call(builtin_context, {}, "")
   )), "term", String, Context).

@@ -64,12 +64,10 @@ context_string(SourcePath, context(File0, Line, _)) = Pretty :- (
 
 :- pred is_newline(char). 
 :- mode is_newline(in) is semidet.
-:- mode is_newline(out) is semidet.
 is_newline(Char) :- to_int(Char, 10).
 
 :- pred is_tab(char).
 :- mode is_tab(in) is semidet.
-:- mode is_tab(out) is semidet.
 is_tab(Char) :- to_int(Char, 9).
 
 after_char(Char, context(File, Line, Col), context(File, NewLine, NewCol)) :- 

@@ -11,7 +11,7 @@ To build the current version, run
 $ cd src 
 $ make
 ```
-which will output a `src/mlatu` executable file.
+which will output the maximum amount of warnings and errors and output an unoptimized build to `./mlatu`. To install an optimized build to `~/.local/bin/mlatu`, run `make install`. To clean this output, run `make clean`.
 ## Contributing
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
