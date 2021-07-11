@@ -106,7 +106,7 @@ gen_call(Name, In, Out) :- (
 gen_term(Term, In, Out) :- 
   (Term = mt_call(_, _, Name), gen_call(Name, In, Out)) ; 
   (Term = mt_int(_, _, Num), gen_int(Num, In, Out)) ; 
-  (Term = mt_compose(_, Term1, Term2), gen_term(Term2, In, Mid), gen_term(Term1, Mid, Out))
+  (Term = mt_compose(_, Term1, Term2), gen_term(Term1, In, Mid), gen_term(Term2, Mid, Out))
 .
 
 :- func before = string.

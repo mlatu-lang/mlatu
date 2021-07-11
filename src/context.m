@@ -52,14 +52,12 @@ builtin_context = context("builtin").
 command_line_context = context("Command line").
 
 context_string(Context) = context_string("", Context).
-context_string(SourcePath, context(File0, Line, _)) = Pretty :- (
+context_string(SourcePath, context(File0, Line, Col)) = Pretty :- (
   if append(SourcePath, File1, File0) 
   then File = File1 
   else File = File0 
-  ) , ( 
-  if Line = 0 
-  then Pretty = File
-  else Pretty = format("%s:%d", [s(File), i(Line)])).
+  ) ,  
+  Pretty = format("%s (%d:%d)", [s(File), i(Line), i(Col)]).
 
 
 :- pred is_newline(char). 

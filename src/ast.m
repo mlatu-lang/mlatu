@@ -21,7 +21,7 @@
 
 :- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_compose(Info, m_term(Info), m_term(Info)) ; mt_int(context, Info, int). 
 
-:- type m_spec ---> m_spec(from :: uint, to :: uint) ; ms_err(m_name).
+:- type m_spec ---> m_spec(from :: int, to :: int).
 
 :- type term == m_term({}).
 
@@ -40,8 +40,8 @@
 
 :- implementation.
 
+:- import_module int.
 :- import_module list.
-:- import_module uint.
 
 term_string(Term, Result) :- (
   mt_call(_, _, Name) = Term, Result = Name
@@ -67,12 +67,10 @@ term_spec(Term, Spec) :- (
   ) ; (
   mt_int(_, Spec, _) = Term).
 
-:- func replicate(uint, string) = string.
-replicate(Num, String) = Result :- (
-  if Num = 0u
-  then Result = ""
-  else Result = String ++ replicate(Num - 1u, String)).
+:- func replicate(int) = string.
+replicate(Num) = Result :- (
+  if Num = 0 
+  then Result = "" 
+  else Result = "x " ++ replicate(Num - 1)).
 
-spec_string(Spec, String) :-
-  (m_spec(From, To) = Spec, String = "(" ++ replicate(From, "x ") ++ "->" ++ replicate(To, " x") ++ ")") ; 
-  (ms_err(Name) = Spec, String = "ERROR: Unresolved name `" ++ Name ++ "`").
+spec_string(m_spec(From, To), "( " ++ replicate(From) ++ "-> " ++ replicate(To) ++ ")").

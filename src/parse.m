@@ -13,7 +13,6 @@
 
 :- interface.
 
-:- import_module bool.
 :- import_module char.
 :- import_module list.
 
@@ -30,7 +29,8 @@
 
 :- func any(string, context) = parse_result(char).
 
-:- func satisfy(func(char) = bool, string, context) = parse_result(char).
+:- func satisfy(pred(char), string, context) = parse_result(char).
+:- mode satisfy(pred(in) is semidet, in, in) = out is det.
 
 :- func digit(string, context) = parse_result(char).
 
@@ -101,14 +101,14 @@ any(String, OldContext) = Result :-
 satisfy(Tester, String, Context) = Result :-
   any(String, Context) = AnyResult, ((
     pr_ok(Char, _, NewContext) = AnyResult, (
-    if Tester(Char) = yes
+    if Tester(Char) 
     then Result = AnyResult 
     else Result = pr_err(pe_expected(NewContext, "a character satisfying a predicate", from_char_list([Char]))))
   ) ; (
   pr_err(Err) = AnyResult, Result = pr_err(Err))).
 
 digit(String, Context) = label(
-  satisfy(func(C) = (if is_digit(C) then yes else no)), 
+  satisfy(is_digit), 
   "digit", String, Context).
 
 pure(Value, String, Context) = pr_ok(Value, String, Context).
@@ -118,7 +118,7 @@ map_p(Parser, Mapper, String, Context) = MappedResult :-
     MappedResult = map_pr(Result, Mapper).
 
 char(Char, String, Context) = label(
-  satisfy(func(TestChar) = (if TestChar = Char then yes else no)), from_char_list([Char]), 
+  satisfy(pred(TestChar::in) is semidet :- TestChar = Char), from_char_list([Char]), 
   String, Context).
 
 or(Parser1, Parser2, String, Context) = Result :- 
@@ -174,18 +174,18 @@ ignore(Parser, String, Context) = map_p(Parser, func(_) = {}, String, Context).
 bracketed(Middle, String, Context) = 
   between(char('{'), Middle, char('}'), String, Context).
 
+:- pred is_space(char::in) is semidet.
+is_space(C) :- from_int(Int, C), 
+  (Int = 9 ; Int = 10 ; Int = 11 ; Int = 12 ; Int = 13 ; Int = 32).
+
 space(String, Context) = label(
-  ignore(
-    satisfy(func(C) = ( if C = ' ' ; C = '\t'; C = '\n' then yes else no))), 
-  "space", String, Context).
+  ignore(satisfy(is_space)), "space", String, Context).
 
 get_context(String, Context) = pr_ok(Context, String, Context).
 
 identifier(String, Context) = map_p(
-  some(satisfy(func(C) = (
-    if is_alnum_or_underscore(C) ; (from_int(Int, C), (Int = 43 ; Int = 46 ; Int = 43 ; Int = 45 ; Int = 42))
-    then yes 
-    else no))), 
+  some(satisfy(pred(C::in) is semidet :-
+    is_alnum_or_underscore(C) ; (from_int(Int, C), (Int = 42 ; Int = 43 ; Int = 45 ;  Int = 46 ; Int = 47)))), 
   from_char_list, String, Context).
 
 parse_int(String, Context) = label(
@@ -212,12 +212,12 @@ sep_end_by1(Parser, Sep, String, Context) = then(
   ignore_right(Parser, Sep), func(X) = 
   map_p(sep_end_by(Parser, Sep), func(Xs) = [X|Xs]), String, Context).
 
-parse_term(String, Context) = label(map_p(sep_end_by1(parse_lower_term, some(space)), 
+parse_term(String, Context) = label(ignore_left(many(space), map_p(sep_end_by1(parse_lower_term, some(space)), 
   func(Ts) = foldl(
     func(L, Acc) = Result :- (
       if mt_call(builtin_context, {}, "") = Acc 
       then Result = L 
-      else Result = mt_compose({}, L, Acc)), 
+      else Result = mt_compose({}, Acc, L)), 
     Ts, 
     mt_call(builtin_context, {}, "")
-  )), "term", String, Context).
+  ))), "term", " " ++ String ++ " ", Context).
