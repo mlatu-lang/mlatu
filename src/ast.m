@@ -14,13 +14,12 @@
 :- interface.
 
 :- import_module list.
-:- import_module string.
 
 :- import_module context.
 
 :- type m_name == string. 
 
-:- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_compose(Info, m_term(Info), m_term(Info)) ; mt_int(context, Info, int). 
+:- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_compose(Info, m_term(Info), m_term(Info)) ; mt_int(context, Info, int) ; mt_def(context, Info, m_name, m_term(Info)). 
 
 :- type m_spec ---> m_spec(list(m_value), list(m_value)).
 
@@ -30,44 +29,36 @@
 
 :- type spec_term == m_term(m_spec).
 
-:- pred term_string(m_term(Info), string).
-:- mode term_string(in, out) is det.
+:- func term_string(m_term(Info)) = string.
 
-:- pred term_context(m_term(Info)::in, context::out) is det.
+:- func term_context(m_term(Info))  = context.
 
-:- pred term_spec(spec_term, m_spec).
-:- mode term_spec(in, out) is det.
+:- func term_spec(spec_term) = m_spec.
 
-:- pred spec_string(m_spec, string).
-:- mode spec_string(in, out) is det.
+:- func spec_value(m_value) = string.
+
+:- func spec_string(m_spec) = string.
 
 :- implementation.
 
-term_string(Term, Result) :- (
-  mt_call(_, _, Name) = Term, Result = Name
-  ) ; (
-  mt_compose(_, Term1, Term2) = Term, 
-  term_string(Term1, String1),
-  term_string(Term2, String2),
-  Result = String1 ++ " " ++ String2
-  ) ; (
-  mt_int(_, _, Num) = Term, Result = string.format("%i", [i(Num)])).
+:- import_module string.
 
-term_context(Term, Context) :- ((
-  mt_call(Context, _, _) = Term
-  ) ; (
-  mt_compose(_, A, _) = Term, term_context(A, Context)
-  ) ; (
-  mt_int(Context, _, _) = Term)).
+term_string(mt_call(_, _, Name)) = Name. 
+term_string(mt_compose(_, Term1, Term2)) = 
+  term_string(Term1) ++ " " ++ term_string(Term2).
+term_string(mt_int(_, _, Num)) = string.from_int(Num).
+term_string(mt_def(_, _, Name, Inner)) = "def " ++ Name ++ " {" ++ term_string(Inner) ++ "}".
 
-term_spec(Term, Spec) :- (
-  mt_call(_, Spec, _) = Term 
-  ) ; (
-  mt_compose(Spec, _, _) = Term
-  ) ; (
-  mt_int(_, Spec, _) = Term).
+term_context(mt_call(Context, _, _)) = Context. 
+term_context(mt_compose(_, A, _B)) = term_context(A).
+term_context(mt_int(Context, _, _)) = Context.
+term_context(mt_def(Context, _, _, _)) = Context.
 
-:- func spec_value(m_value) = string.
+term_spec(mt_call(_, Spec, _)) = Spec. 
+term_spec(mt_compose(Spec, _, _)) = Spec.
+term_spec(mt_int(_, Spec, _)) = Spec.
+term_spec(mt_def(_, Spec, _, _)) = Spec.
+
 spec_value(mv_int) = "int".
 
-spec_string(m_spec(From, To), "(" ++ join_list(" ", map(spec_value, From)) ++ " -> " ++ join_list(" ", map(spec_value, To)) ++ ")").
+spec_string(m_spec(From, To)) = "(" ++ join_list(" ", map(spec_value, From)) ++ " -> " ++ join_list(" ", map(spec_value, To)) ++ ")".

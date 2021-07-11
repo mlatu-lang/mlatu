@@ -13,11 +13,13 @@
 
 :- interface.
 
+:- import_module map.
+
 :- import_module ast.
 
-:- type gs ---> gs(builder :: string).
+:- type gs ---> gs(builder :: string, names :: map(m_name, spec_term)).
 
-:- pred codegen(spec_term::in, string::out) is semidet.
+:- pred codegen(spec_term::in, string::out) is det.
 
 :- implementation.
 
@@ -99,15 +101,19 @@ gen_call(Name, In, Out) :- (
     " int second = array[used - 1];",
     " used--;",
     " array[used - 1] = first / second;"], In, Out)
-  else add_line(" " ++ Name ++ "(&array, used, size);", In, Out)
+  else map.lookup(In ^ names, Name, Term), gen_term(Term, In, Out)
 ).
 
-:- pred gen_term(spec_term::in, gs::in, gs::out) is semidet.
-gen_term(Term, In, Out) :- 
-  (Term = mt_call(_, _, Name), gen_call(Name, In, Out)) ; 
-  (Term = mt_int(_, _, Num), gen_int(Num, In, Out)) ; 
-  (Term = mt_compose(_, Term1, Term2), gen_term(Term1, In, Mid), gen_term(Term2, Mid, Out))
-.
+:- pred gen_def(m_name::in, spec_term::in, gs::in, gs::out) is det.
+gen_def(Name, Inner, In, Out) :- 
+  Out = In ^ names := map.set(In ^ names, Name, Inner).
+
+:- pred gen_term(spec_term::in, gs::in, gs::out) is det.
+gen_term(mt_call(_, _, Name), In, Out) :- gen_call(Name, In, Out).
+gen_term(mt_int(_, _, Num), In, Out) :- gen_int(Num, In, Out).
+gen_term(mt_compose(_, Term1, Term2), In, Out) :- 
+  gen_term(Term1, In, Mid), gen_term(Term2, Mid, Out).
+gen_term(mt_def(_, _, Name, Inner), In, Out) :- gen_def(Name, Inner, In, Out).
 
 :- func before = string.
 before= join_list("\n", [
@@ -116,7 +122,7 @@ before= join_list("\n", [
   "#define INITIAL 8"]).
 
 codegen(Term, Out) :- 
-  gen_term(Term, gs(""), OutGs), 
+  gen_term(Term, gs("", map.init), OutGs), 
   Out = join_list("\n", [before,
       "int main() {",
       " size_t size = INITIAL;",

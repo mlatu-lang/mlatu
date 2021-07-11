@@ -13,8 +13,12 @@
 
 :- interface.
 
+:- import_module map.
+
 :- import_module ast.
 :- import_module context.
+
+:- type ins ---> ins(names :: map(m_name, m_spec)).
 
 :- type inferred ---> ok(spec_term) ; err(infer_err).
 
@@ -24,13 +28,11 @@
 
 :- implementation.
 
-:- use_module map.
 :- import_module list.
 :- import_module pair.
 
-:- pred infer_int(context, int, inferred).
-:- mode infer_int(in, in, out) is det.
-infer_int(Context, Num, ok(mt_int(Context, m_spec([], [mv_int]), Num))).
+:- pred infer_int(context::in, int::in, ins::in, ins::out, inferred::out) is det.
+infer_int(Context, Num, X, X, ok(mt_int(Context, m_spec([], [mv_int]), Num))).
 
 :- func drop_diff(list(m_value), list(m_value)) = list(m_value). 
 drop_diff(A, B) = Result :- ((
@@ -54,27 +56,33 @@ composed_spec(m_spec(F, M1), m_spec(M2, T), m_spec(F ++ drop_diff(M2, M1), T ++ 
 % 0 1 0 1 -> 0 2 (F, T + M1 - M2)
 % 1 0 1 0 -> 2 0 (F + M2 - M1, T)
 
-:- pred infer_compose(term, term, inferred).
-:- mode infer_compose(in, in, out) is det.
-infer_compose(Term1, Term2, Out) :- 
-  infer_term(Term1, Inferred1), 
-  infer_term(Term2, Inferred2),
-  (if Inferred1 = ok(STerm1), term_spec(STerm1, Spec1)
-  then
-    (if Inferred2 = ok(STerm2), term_spec(STerm2, Spec2)
-    then 
-      composed_spec(Spec1, Spec2, Composed),
-      Out = ok(mt_compose(Composed, STerm1, STerm2))
-    else Out = Inferred2)
-  else Out = Inferred1).
+:- pred infer_compose(term::in, term::in, ins::in, ins::out, inferred::out) is det.
+infer_compose(Term1, Term2, In, Out, Result) :- 
+  infer_term(Term1, In, Mid, Inferred1), 
+  ((
+    Inferred1 = ok(STerm1),
+    infer_term(Term2, Mid, Out, Inferred2),
+    ((
+      Inferred2 = ok(STerm2),
+      composed_spec(term_spec(STerm1), term_spec(STerm2), Composed),
+      Result = ok(mt_compose(Composed, STerm1, STerm2))
+    ) ; (
+      Inferred2 = err(Err),
+      Result = err(Err)
+    ))
+  ) ; ( 
+    Inferred1 = err(Err), 
+    Out = Mid,
+    Result = err(Err)
+  )).
 
 :- func map_from_list(list(pair(K, V))) = map.map(K, V).
 map_from_list(List) = map.optimize(
   map.det_insert_from_assoc_list(map.init, List)
 ).
 
-:- func type_map = map.map(m_name, m_spec). 
-type_map = map_from_list([
+:- func initial_map = map.map(m_name, m_spec). 
+initial_map = map_from_list([
   pair(".", m_spec([mv_int], [])),
   pair("drop", m_spec([mv_int], [])),
   pair("dup", m_spec([mv_int], [mv_int, mv_int])),
@@ -85,27 +93,43 @@ type_map = map_from_list([
   pair("/", m_spec([mv_int, mv_int], [mv_int]))
 ]).
 
-:- pred infer_call(context, m_name, inferred).
-:- mode infer_call(in, in, out) is det.
-infer_call(Context, Name, Out) :- (
-  if map.search(type_map, Name, Spec)
-  then Out = ok(mt_call(Context, Spec, Name))
-  else Out = err(resolve(Name, Context))).
+:- pred infer_call(context::in, m_name::in, ins::in, ins::out, inferred::out) is det.
+infer_call(Context, Name, X, X, Result) :- (
+  if map.search(X ^ names, Name, Spec)
+  then Result = ok(mt_call(Context, Spec, Name))
+  else Result = err(resolve(Name, Context))).
 
-:- pred infer_term(term::in, inferred::out) is det.
-infer_term(In, Out) :- ((
-  In = mt_int(Context, {}, Num), infer_int(Context, Num, Out)
+:- pred infer_def(context::in, m_name::in, term::in, ins::in, ins::out, inferred::out) is det.
+infer_def(Context, Name, Inner, In, Out, Result) :- 
+  infer_term(Inner, In, Mid, Inferred), 
+  ((
+    Inferred = ok(SpecTerm),
+    Out = Mid ^ names := map.set(Mid ^ names, Name, term_spec(SpecTerm)),
+    Result = ok(mt_def(Context, m_spec([], []), Name, SpecTerm))
   ) ; (
-  In = mt_compose({}, Term1, Term2), infer_compose(Term1, Term2, Out)
-  ) ; (
-  In = mt_call(Context, {}, Name), infer_call(Context, Name, Out))).
+    Inferred = err(Err),
+    Out = Mid,
+    Result = err(Err)
+  )).
+
+:- pred infer_term(term::in, ins::in, ins::out, inferred::out) is det.
+infer_term(mt_int(Context, {}, Num), In, Out, Result) :- infer_int(Context, Num, In, Out, Result).
+infer_term(mt_compose({}, Term1, Term2), In, Out, Result) :- 
+  infer_compose(Term1, Term2, In, Out, Result).
+infer_term(mt_call(Context, {}, Name), In, Out, Result) :- infer_call(Context, Name, In, Out, Result).
+infer_term(mt_def(Context, {}, Name, Inner), In, Out, Result) :- 
+  infer_def(Context, Name, Inner, In, Out, Result).
 
 infer_main(In, Out) :- 
-  infer_term(In, Inferred), 
-  (if Inferred = ok(SpecTerm), term_spec(SpecTerm, Spec) 
-  then
+  infer_term(In, ins(initial_map), _, Inferred), 
+  ((
+    Inferred = ok(SpecTerm),
     Expected = m_spec([], []),
+    term_spec(SpecTerm) = Spec,
     (if Spec = Expected
     then Out = ok(SpecTerm)
     else Out = err(unify(Expected, Spec)))
-  else Out = Inferred).
+   ) ; (
+    Inferred = err(Err),
+    Out = err(Err)
+  )).

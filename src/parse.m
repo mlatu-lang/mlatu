@@ -70,6 +70,8 @@
 
 :- func parse_int(string, context) = parse_result(term).
 
+:- func parse_def(string, context) = parse_result(term).
+
 :- func parse_call(string, context) = parse_result(term).
 
 :- func parse_lower_term(string, context) = parse_result(term).
@@ -196,13 +198,20 @@ parse_int(String, Context) = label(
     else Result = mt_int(Ctxt, {}, 0))))), 
   "number", String, Context).
 
+parse_def(String, Context) = label(
+  then(get_context, (func(Ctxt) = 
+    then(ignore_left(string("def "), identifier), func(Name) = 
+      map_p(ignore_left(some(space), bracketed(parse_term)), 
+        func(Term) = mt_def(Ctxt, {}, Name, Term))))),
+  "definition", String, Context).
+
 parse_call(String, Context) = label(
   then(get_context, func(Ctxt) = 
     map_p(identifier, func(Name) = mt_call(Ctxt, {}, Name))), 
   "word", String, Context).
 
 parse_lower_term(String, Context) = 
-  or(parse_int, parse_call, String, Context).
+  or(parse_def, or(parse_int, parse_call), String, Context).
 
 sep_end_by(Parser, Sep, String, Context) = or(
   sep_end_by1(Parser, Sep), 

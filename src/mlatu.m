@@ -109,17 +109,14 @@ go(Term, BuildType, !IO) :- (
 
 :- pred infer_failure(term::in, infer_err::in, io::di, io::uo) is det.
 infer_failure(Term, Err, !IO) :- 
-    term_string(Term, TermString),
     io.stdout_stream(Stdout, !IO),
-    io.format(Stdout, "There was an error while inferring the spec of `%s`.\n", [s(TermString)], !IO),
+    io.format(Stdout, "There was an error while inferring the spec of `%s`.\n", [s(term_string(Term))], !IO),
     ((
         resolve(Name, Context) = Err,
         io.format(Stdout, "%s I'm not sure what name `%s` refers to. Did you misspell it?\n", [s(context_string(Context)), s(Name)], !IO)
     ) ; (
         unify(Expected, Actual) = Err, 
-        spec_string(Expected, ExpectedString),
-        spec_string(Actual, ActualString),
-        io.format(Stdout, "I expected it to have the spec `%s` but it had the spec %s instead.\n", [s(ExpectedString), s(ActualString)], !IO),
+        io.format(Stdout, "I expected it to have the spec `%s` but it had the spec %s instead.\n", [s(spec_string(Expected)), s(spec_string(Actual))], !IO),
         (if Expected = m_spec(X, E), Actual = m_spec(X, A), length(E) + 1 = length(A) 
         then io.write_string(Stdout, "Perhaps you forgot to `drop` or `.` the result?\n", !IO)
         else if Expected = m_spec(E, X), Actual = m_spec(A, X), length(E) + 1 = length(A)
@@ -134,26 +131,23 @@ build(Term, Success, !IO) :-
     io.open_output("output.c", Result, !IO), 
     ((
         Result = ok(Stream),
-        (if codegen(Term, Out)
-        then io.write_string(Stream, Out, !IO), 
-            io.close_output(Stream, !IO),
-            io.call_system("clang output.c -O3 -std=c99 -o output", Exit, !IO), 
-            (if Exit = ok(0) 
-            then
-                io.remove_file("output.c", Res, !IO),
-               ((
-                   Res = io.ok, 
-                   Success = yes
-                ) ; (
-                    Res = io.error(_), 
-                    io.write_string(io.stdout_stream, "Could not delete `output.c`", !IO),
-                    Success = no
-                ))
-            else 
-                io.write_string(io.stdout_stream, "clang did not exit succssfully", !IO),
-                Success = no)
+        codegen(Term, Out),
+        io.write_string(Stream, Out, !IO), 
+        io.close_output(Stream, !IO),
+        io.call_system("clang output.c -O3 -std=c99 -o output", Exit, !IO), 
+        (if Exit = ok(0) 
+        then
+            io.remove_file("output.c", Res, !IO),
+           ((
+               Res = io.ok, 
+               Success = yes
+            ) ; (
+                Res = io.error(_), 
+                io.write_string(io.stdout_stream, "Could not delete `output.c`", !IO),
+                Success = no
+            ))
         else 
-            io.write_string(io.stdout_stream, "Error during code generation", !IO),
+            io.write_string(io.stdout_stream, "clang did not exit succssfully", !IO),
             Success = no)
     ) ; (
         Result = io.error(_), 
