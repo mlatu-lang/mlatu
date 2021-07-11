@@ -13,7 +13,8 @@ release: clean mlatu.m
 		mmc --make mlatu --use-grade-subdirs $(release_args)
 
 install: release
-		cp $(realpath ./mlatu) ~/.local/bin
+		rm ~/.local/bin/mlatu
+		cp $(realpath ./mlatu) ~/.local/bin/
 
 clean: 
 		rm -f ./mlatu *.err *.mh 
