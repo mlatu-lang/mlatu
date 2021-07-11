@@ -120,9 +120,9 @@ infer_failure(Term, Err, !IO) :-
         spec_string(Expected, ExpectedString),
         spec_string(Actual, ActualString),
         io.format(Stdout, "I expected it to have the spec `%s` but it had the spec %s instead.\n", [s(ExpectedString), s(ActualString)], !IO),
-        (if Expected = m_spec(X, E), Actual = m_spec(X, E + 1)
+        (if Expected = m_spec(X, E), Actual = m_spec(X, A), length(E) + 1 = length(A) 
         then io.write_string(Stdout, "Perhaps you forgot to `drop` or `.` the result?\n", !IO)
-        else if Expected = m_spec(E, X), Actual = m_spec(E + 1, X)
+        else if Expected = m_spec(E, X), Actual = m_spec(A, X), length(E) + 1 = length(A)
         then io.write_string(Stdout, "Perhaps you forgot to include your data in the beginning?\n", !IO)
         else io.write_string(Stdout, "The inferred spec differed significantly from the expected spec.\n", !IO)
         )

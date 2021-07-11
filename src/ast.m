@@ -13,6 +13,7 @@
 
 :- interface.
 
+:- import_module list.
 :- import_module string.
 
 :- import_module context.
@@ -21,7 +22,9 @@
 
 :- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_compose(Info, m_term(Info), m_term(Info)) ; mt_int(context, Info, int). 
 
-:- type m_spec ---> m_spec(from :: int, to :: int).
+:- type m_spec ---> m_spec(list(m_value), list(m_value)).
+
+:- type m_value ---> mv_int.
 
 :- type term == m_term({}).
 
@@ -39,9 +42,6 @@
 :- mode spec_string(in, out) is det.
 
 :- implementation.
-
-:- import_module int.
-:- import_module list.
 
 term_string(Term, Result) :- (
   mt_call(_, _, Name) = Term, Result = Name
@@ -67,10 +67,7 @@ term_spec(Term, Spec) :- (
   ) ; (
   mt_int(_, Spec, _) = Term).
 
-:- func replicate(int) = string.
-replicate(Num) = Result :- (
-  if Num = 0 
-  then Result = "" 
-  else Result = "x " ++ replicate(Num - 1)).
+:- func spec_value(m_value) = string.
+spec_value(mv_int) = "int".
 
-spec_string(m_spec(From, To), "( " ++ replicate(From) ++ "-> " ++ replicate(To) ++ ")").
+spec_string(m_spec(From, To), "(" ++ join_list(" ", map(spec_value, From)) ++ " -> " ++ join_list(" ", map(spec_value, To)) ++ ")").

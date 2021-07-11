@@ -25,22 +25,31 @@
 :- implementation.
 
 :- use_module map.
-:- import_module int.
 :- import_module list.
 :- import_module pair.
 
 :- pred infer_int(context, int, inferred).
 :- mode infer_int(in, in, out) is det.
-infer_int(Context, Num, ok(mt_int(Context, m_spec(0, 1), Num))).
+infer_int(Context, Num, ok(mt_int(Context, m_spec([], [mv_int]), Num))).
 
-:- func min_zero(int, int) = int. 
-min_zero(A, B) = Result :-
-  Sub = A - B, 
-  (if Sub < 0 then Result = 0 else Result = Sub).
+:- func drop_diff(list(m_value), list(m_value)) = list(m_value). 
+drop_diff(A, B) = Result :- ((
+    A = [], 
+    Result = []
+  ) ; (
+    A = [mv_int|ATail], 
+    ((
+      B = [mv_int|BTail], 
+      Result = drop_diff(ATail, BTail)
+    ) ; (
+      B = [], 
+      Result = [mv_int|ATail]
+    ))
+  )).
 
 :- pred composed_spec(m_spec, m_spec, m_spec).
 :- mode composed_spec(in, in, out) is det.
-composed_spec(m_spec(F, M1), m_spec(M2, T), m_spec(F + min_zero(M2, M1), T + min_zero(M1, M2))).
+composed_spec(m_spec(F, M1), m_spec(M2, T), m_spec(F ++ drop_diff(M2, M1), T ++ drop_diff(M1, M2))).
 
 % 0 1 0 1 -> 0 2 (F, T + M1 - M2)
 % 1 0 1 0 -> 2 0 (F + M2 - M1, T)
@@ -66,14 +75,14 @@ map_from_list(List) = map.optimize(
 
 :- func type_map = map.map(m_name, m_spec). 
 type_map = map_from_list([
-  pair(".", m_spec(1, 0)),
-  pair("drop", m_spec(1, 0)),
-  pair("dup", m_spec(1, 2)),
-  pair("swap", m_spec(2, 2)),
-  pair("+", m_spec(2, 1)),
-  pair("-", m_spec(2, 1)),
-  pair("*", m_spec(2, 1)),
-  pair("/", m_spec(2, 1))
+  pair(".", m_spec([mv_int], [])),
+  pair("drop", m_spec([mv_int], [])),
+  pair("dup", m_spec([mv_int], [mv_int, mv_int])),
+  pair("swap", m_spec([mv_int, mv_int], [mv_int, mv_int])),
+  pair("+", m_spec([mv_int, mv_int], [mv_int])),
+  pair("-", m_spec([mv_int, mv_int], [mv_int])),
+  pair("*", m_spec([mv_int, mv_int], [mv_int])),
+  pair("/", m_spec([mv_int, mv_int], [mv_int]))
 ]).
 
 :- pred infer_call(context, m_name, inferred).
@@ -95,7 +104,7 @@ infer_main(In, Out) :-
   infer_term(In, Inferred), 
   (if Inferred = ok(SpecTerm), term_spec(SpecTerm, Spec) 
   then
-    Expected = m_spec(0, 0),
+    Expected = m_spec([], []),
     (if Spec = Expected
     then Out = ok(SpecTerm)
     else Out = err(unify(Expected, Spec)))
