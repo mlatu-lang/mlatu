@@ -69,7 +69,7 @@ build_success(!IO) :-
 :- pred handle_parsing(pred(term, io, io), string, io, io).
 :- mode handle_parsing(pred(in, di, uo) is det, in, di, uo) is det.
 handle_parsing(After, Input, !IO) :- 
-    ParseResult = parse_term(Input, command_line_context),
+    parse_term(Input, command_line_context, ParseResult),
     ((
         pr_ok(Term, _, _) = ParseResult, 
         After(Term, !IO)
@@ -126,15 +126,8 @@ handle_building(After, Term, !IO) :-
         io.call_system("clang output.c -O3 -std=c99 -o output", Exit, !IO),
         (if Exit = ok(0) 
         then
-            io.remove_file("output.c", Res, !IO),
-           ((
-               Res = io.ok, 
-               After(!IO)
-            ) ; (
-                Res = io.error(_), 
-                io.write_string(io.stdout_stream, "Could not delete `output.c`", !IO),
-                io.set_exit_status(1, !IO)
-            ))
+            io.remove_file("output.c", _, !IO),
+           After(!IO)
         else 
             io.write_string(io.stdout_stream, "clang did not exit succssfully", !IO),
             io.set_exit_status(1, !IO))
@@ -148,7 +141,9 @@ handle_building(After, Term, !IO) :-
 run(!IO) :- 
     io.call_system("./output", Exit, !IO),
     (if Exit = ok(0) 
-    then io.set_exit_status(0, !IO) 
+    then 
+        io.remove_file("./output", _, !IO), 
+        io.set_exit_status(0, !IO) 
     else io.set_exit_status(1, !IO)).
 
 :- pred bench(io::di, io::uo) is det. 

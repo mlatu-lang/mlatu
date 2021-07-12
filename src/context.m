@@ -22,7 +22,8 @@
 
 :- func nil_context = context. 
 
-:- pred is_nil_context(context::in) is semidet.
+:- pred is_nil_context(context).
+:- mode is_nil_context(in) is semidet.
 
 :- func builtin_context = context. 
 

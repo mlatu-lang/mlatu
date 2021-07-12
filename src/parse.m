@@ -23,85 +23,100 @@
 
 :- type parse_error ---> pe_incomplete ; pe_expected(context, string, string).
 
-:- type parser(A) == (func(string, context) = parse_result(A)).
+:- type parser(A) == (pred(string, context, parse_result(A))).
 
-:- func map_pr(parse_result(A), func(A) = B) = parse_result(B).
+:- pred map_pr(parse_result(A), func(A) = B, parse_result(B)).
+:- mode map_pr(in, in, out) is det.
 
-:- func any(string, context) = parse_result(char).
+:- pred any(string, context, parse_result(char)).
+:- mode any(in, in, out) is det.
 
-:- func satisfy(pred(char), string, context) = parse_result(char).
-:- mode satisfy(pred(in) is semidet, in, in) = out is det.
+:- pred satisfy(pred(char), string, context, parse_result(char)).
+:- mode satisfy(pred(in) is semidet, in, in, out) is det.
 
-:- func digit(string, context) = parse_result(char).
+:- pred digit(string, context, parse_result(char)).
+:- mode digit(in, in, out) is det.
 
-:- func pure(A, string, context) = parse_result(A).
+:- pred pure(A, string, context, parse_result(A)).
+:- mode pure(in, in, in, out) is det.
 
-:- func map_p(parser(A), func(A) = B, string, context) = parse_result(B).
+:- pred map_p(parser(A), func(A) = B, string, context, parse_result(B)).
+:- mode map_p(pred(in, in, out) is det, in, in, in, out) is det.
 
-:- func char(char, string, context) = parse_result(char).
+:- pred char(char, string, context, parse_result(char)).
+:- mode char(in, in, in, out) is det.
 
-:- func or(parser(A), parser(A), string, context) = parse_result(A).
+:- pred or(parser(A), parser(A), string, context, parse_result(A)).
+:- mode or(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func then(parser(A), func(A) = parser(B), string, context) = parse_result(B).
+:- pred ignore_left(parser(A), parser(B), string, context, parse_result(B)).
+:- mode ignore_left(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func ignore_left(parser(A), parser(B), string, context) = parse_result(B).
+:- pred ignore_right(parser(A), parser(B), string, context, parse_result(A)).
+:- mode ignore_right(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func ignore_right(parser(A), parser(B), string, context) = parse_result(A).
+:- pred many(parser(A), string, context, parse_result(list(A))).
+:- mode many(pred(in, in, out) is det, in, in, out) is det.
 
-:- func many(parser(A), string, context) = parse_result(list(A)).
+:- pred some(parser(A), string, context, parse_result(list(A))).
+:- mode some(pred(in, in, out) is det, in, in, out) is det.
 
-:- func some(parser(A), string, context) = parse_result(list(A)).
+:- pred label(parser(A), string, string, context, parse_result(A)).
+:- mode label(pred(in, in, out) is det, in, in, in, out) is det.
 
-:- func label(parser(A), string, string, context) = parse_result(A).
+:- pred between(parser(A), parser(B), parser(C), string, context, parse_result(B)).
+:- mode between(pred(in, in, out) is det, pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func string(string, string, context) = parse_result( {} ).
+:- pred ignore(parser(A), string, context, parse_result( {} )).
+:- mode ignore(pred(in, in, out) is det, in, in, out) is det.
 
-:- func between(parser(A), parser(B), parser(C), string, context) = parse_result(B).
+:- pred bracketed(parser(A), string, context, parse_result(A)).
+:- mode bracketed(pred(in, in, out) is det, in, in, out) is det.
 
-:- func ignore(parser(A), string, context) = parse_result( {} ).
+:- pred space(string, context, parse_result( {} )).
+:- mode space(in, in, out) is det.
 
-:- func bracketed(parser(A), string, context) = parse_result(A).
+:- pred identifier(string, context, parse_result(m_name)).
+:- mode identifier(in, in, out) is det.
 
-:- func space(string, context) = parse_result( {} ).
+:- pred parse_int(string, context, parse_result(term)).
+:- mode parse_int(in, in, out) is det.
 
-:- func get_context(string, context) = parse_result(context).
+:- pred parse_call(string, context, parse_result(term)).
+:- mode parse_call(in, in, out) is det.
 
-:- func identifier(string, context) = parse_result(m_name).
+:- pred parse_lower_term(string, context, parse_result(term)).
+:- mode parse_lower_term(in, in, out) is det.
 
-:- func parse_int(string, context) = parse_result(term).
+:- pred sep_end_by(parser(A), parser(B), string, context, parse_result(list(A))).
+:- mode sep_end_by(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func parse_def(string, context) = parse_result(term).
+:- pred sep_end_by1(parser(A), parser(B), string, context, parse_result(list(A))).
+:- mode sep_end_by1(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- func parse_call(string, context) = parse_result(term).
-
-:- func parse_lower_term(string, context) = parse_result(term).
-
-:- func sep_end_by(parser(A), parser(B), string, context) = parse_result(list(A)).
-
-:- func sep_end_by1(parser(A), parser(B), string, context) = parse_result(list(A)).
-
-:- func parse_term(string, context) = parse_result(term).
+:- pred parse_term(string, context, parse_result(term)).
+:- mode parse_term(in, in, out) is det.
 
 :- implementation.
 
 :- import_module string.
 
-map_pr(Old, Mapper) = New :- (
+map_pr(Old, Mapper, New) :- (
     Old = pr_err(Err), 
     New = pr_err(Err)
   ) ; (
     Old = pr_ok(Result, Rest, Context), 
     New = pr_ok(Mapper(Result), Rest, Context)).
 
-any(String, OldContext) = Result :-
+any(String, OldContext, Result) :-
   if first_char(String, Char, Rest)
   then 
     after_char(Char, OldContext, NewContext), 
     Result = pr_ok(Char, Rest, NewContext)
   else Result = pr_err(pe_incomplete).
 
-satisfy(Tester, String, Context) = Result :-
-  any(String, Context) = AnyResult, ((
+satisfy(Tester, String, Context, Result) :-
+  any(String, Context, AnyResult), ((
     pr_ok(Char, _, NewContext) = AnyResult, (
     if Tester(Char) 
     then Result = AnyResult 
@@ -109,124 +124,135 @@ satisfy(Tester, String, Context) = Result :-
   ) ; (
   pr_err(Err) = AnyResult, Result = pr_err(Err))).
 
-digit(String, Context) = label(
-  satisfy(is_digit), 
-  "digit", String, Context).
+digit(String, Context, Result) :- 
+  label(satisfy(is_digit), "digit", String, Context, Result).
 
-pure(Value, String, Context) = pr_ok(Value, String, Context).
+pure(Value, String, Context, pr_ok(Value, String, Context)).
 
-map_p(Parser, Mapper, String, Context) = MappedResult :- 
-    Parser(String, Context) = Result, 
-    MappedResult = map_pr(Result, Mapper).
+map_p(Parser, Mapper, String, Context, MappedResult) :- 
+    Parser(String, Context, Result), 
+    map_pr(Result, Mapper, MappedResult).
 
-char(Char, String, Context) = label(
+char(Char, String, Context, Result) :- label(
   satisfy(pred(TestChar::in) is semidet :- TestChar = Char), from_char_list([Char]), 
-  String, Context).
+  String, Context, Result).
 
-or(Parser1, Parser2, String, Context) = Result :- 
-    FirstResult = Parser1(String, Context),((
+or(Parser1, Parser2, String, Context, Result) :- 
+    Parser1(String, Context, FirstResult), ((
     pr_ok(_, _, _) = FirstResult, 
     Result = FirstResult 
     ) ; (
     pr_err(_) = FirstResult, 
-    Result = Parser2(String, Context))).
+    Parser2(String, Context, Result))).
 
-then(Parser1, Parser2, String, Context) = Result :- 
-    FirstResult = Parser1(String, Context), ((
-      pr_ok(X, NewString, NewContext) = FirstResult, 
-      Result = Parser2(X)(NewString, NewContext)
-    ) ; (
-      pr_err(Err) = FirstResult, 
-      Result = pr_err(Err) )).
+ignore_left(Parser1, Parser2, String, Context, Result) :- 
+  Parser1(String, Context, FirstResult), 
+  ((
+    FirstResult = pr_ok(_, NewString, NewContext),
+    Parser2(NewString, NewContext, Result)
+  ) ; (
+    FirstResult = pr_err(Err),
+    Result = pr_err(Err)
+  )).
 
-ignore_left(Parser1, Parser2, String, Context) = 
-  then(Parser1, func(_) = Parser2, String, Context).
+ignore_right(Parser1, Parser2, String, Context, Result) :- 
+  Parser1(String, Context, FirstResult),
+   ((
+    FirstResult = pr_ok(R, NewString, NewContext),
+    map_p(Parser2, func(_) = R, NewString, NewContext, Result)
+  ) ; (
+    FirstResult = pr_err(Err),
+    Result = pr_err(Err)
+  )).
 
-ignore_right(Parser1, Parser2, String, Context) = 
-  then(Parser1, 
-    func(Result) = map_p(Parser2, func(_) = Result), String, Context).
+many(Parser, String, Context, Result) :- 
+  or(some(Parser), pure([]), String, Context, Result).
 
-many(Parser, String, Context) = or(some(Parser), pure([]), String, Context).
+some(Parser, String, Context, Result) :-
+  Parser(String, Context, FirstResult),
+   ((
+    FirstResult = pr_ok(X, NewString, NewContext),
+    map_p(many(Parser), func(Xs) = [X|Xs], NewString, NewContext, Result)
+  ) ; (
+    FirstResult = pr_err(Err),
+    Result = pr_err(Err)
+  )).
 
-some(Parser, String, Context) = 
-  then(Parser, 
-  func(X) = map_p(many(Parser), func(Xs) = [X|Xs]), String, Context).
-
-label(Parser, Label, String, Context) = Result :- 
-  FirstResult = Parser(String, Context), (
+label(Parser, Label, String, Context, Result) :- 
+  Parser(String, Context, FirstResult), (
   if pr_err(pe_expected(Context, _, Actual)) = FirstResult
   then Result = pr_err(pe_expected(Context, Label, Actual))
   else Result = FirstResult).
 
-string(Message, String, Context) = ignore(
-  label(
-    foldl(
-      func(Elem, Acc) = then(Acc, func(Xs) = map_p(Elem, func(X) = [X|Xs])), 
-      map(
-        func(C) = (func(S, Ctxt) = char(C, S, Ctxt)), 
-        to_char_list(Message)), 
-      pure([])), 
-    Message), String, Context).
+between(First, Middle, Last, String, Context, Result) :- 
+  ignore_left(First, ignore_right(Middle, Last), String, Context, Result). 
 
-between(First, Middle, Last, String, Context) = 
-  ignore_left(First, ignore_right(Middle, Last), String, Context). 
+ignore(Parser, String, Context, Result) :- map_p(Parser, func(_) = {}, String, Context, Result).
 
-ignore(Parser, String, Context) = map_p(Parser, func(_) = {}, String, Context).
+bracketed(Middle, String, Context, Result) :- 
+  between(char('{'), Middle, char('}'), String, Context, Result).
 
-bracketed(Middle, String, Context) = 
-  between(char('{'), Middle, char('}'), String, Context).
-
-:- pred is_space(char::in) is semidet.
+:- pred is_space(char).
+:- mode is_space(in) is semidet.
 is_space(C) :- from_int(Int, C), 
   (Int = 9 ; Int = 10 ; Int = 11 ; Int = 12 ; Int = 13 ; Int = 32).
 
-space(String, Context) = label(
-  ignore(satisfy(is_space)), "space", String, Context).
+space(String, Context, Result) :- label(
+  ignore(satisfy(is_space)), "space", String, Context, Result).
 
-get_context(String, Context) = pr_ok(Context, String, Context).
-
-identifier(String, Context) = map_p(
+identifier(String, Context, Result) :- map_p(
   some(satisfy(pred(C::in) is semidet :-
     is_alnum_or_underscore(C) ; (from_int(Int, C), (Int = 42 ; Int = 43 ; Int = 45 ;  Int = 46 ; Int = 47)))), 
-  from_char_list, String, Context).
+  from_char_list, String, Context, Result).
 
-parse_int(String, Context) = label(
-  then(get_context, (func(Ctxt) = 
-    map_p(some(digit), func(Cs) = Result :- 
+parse_int(String, Context, Result) :- label(
+  map_p(some(digit), func(Cs) = R :- 
     (if to_int(from_char_list(Cs), Num)  
-    then Result = mt_int(Ctxt, {}, Num) 
-    else Result = mt_int(Ctxt, {}, 0))))), 
-  "number", String, Context).
+    then R = mt_int(Context, {}, Num) 
+    else R = mt_int(Context, {}, 0))), 
+  "number", String, Context, Result).
 
-parse_def(String, Context) = label(
-  then(get_context, (func(Ctxt) = 
-    then(ignore_left(string("def "), identifier), func(Name) = 
-      map_p(ignore_left(some(space), bracketed(parse_term)), 
-        func(Term) = mt_def(Ctxt, {}, Name, Term))))),
-  "definition", String, Context).
+parse_call(String, Context, Result) :- label(
+  (pred(S::in, C::in, R::out) is det :- 
+    identifier(S, C, FR), ((
+      FR = pr_ok(CallName, NewS, NewC), 
+      (if CallName = "def" 
+      then label(between(some(space), identifier, some(space)), "name", NewS, NewC, SR), ((
+          SR = pr_ok(Name, NewNewS, NewNewC),
+          map_p(bracketed(parse_term), func(Term) = mt_def(Context, {}, Name, Term), NewNewS, NewNewC, R)
+        ) ; (
+          SR = pr_err(Err),
+          R = pr_err(Err)
+        ))
+      else R = pr_ok(mt_call(Context, {}, CallName), NewS, NewC))
+    ) ; (
+      FR = pr_err(Err),
+      R = pr_err(Err)
+    ))), "word", String, Context, Result).
 
-parse_call(String, Context) = label(
-  then(get_context, func(Ctxt) = 
-    map_p(identifier, func(Name) = mt_call(Ctxt, {}, Name))), 
-  "word", String, Context).
+parse_lower_term(String, Context, Result) :- 
+  or(parse_int, parse_call, String, Context, Result).
 
-parse_lower_term(String, Context) = 
-  or(parse_def, or(parse_int, parse_call), String, Context).
-
-sep_end_by(Parser, Sep, String, Context) = or(
+sep_end_by(Parser, Sep, String, Context, Result) :- or(
   sep_end_by1(Parser, Sep), 
-  pure([]), String, Context).
+  pure([]), String, Context, Result).
 
-sep_end_by1(Parser, Sep, String, Context) = then(
-  ignore_right(Parser, Sep), func(X) = 
-  map_p(sep_end_by(Parser, Sep), func(Xs) = [X|Xs]), String, Context).
+sep_end_by1(Parser, Sep, String, Context, Result) :- 
+  ignore_right(Parser, Sep, String, Context, FirstResult), 
+  ((
+    pr_ok(X, NewString, NewContext) = FirstResult, 
+    map_p(sep_end_by(Parser, Sep), func(Xs) = [X|Xs], NewString, NewContext, Result)
+  ) ; (
+    pr_err(Err) = FirstResult, 
+    pr_err(Err) = Result
+  )).
 
-parse_term(String, Context) = label(ignore_left(many(space), map_p(sep_end_by1(parse_lower_term, some(space)), 
+parse_term(String, Context, Result) :- label(ignore_left(many(space), map_p(sep_end_by1(parse_lower_term, some(space)), 
   func(Ts) = foldl(
-    func(L, Acc) = Result :- (
+    func(L, Acc) = R :- (
       if mt_call(builtin_context, {}, "") = Acc 
-      then Result = L 
-      else Result = mt_compose({}, Acc, L)), 
+      then R = L 
+      else R = mt_compose({}, Acc, L)), 
     Ts, 
     mt_call(builtin_context, {}, "")
-  ))), "term", " " ++ String ++ " ", Context).
+  ))), "term", " " ++ String ++ " ", Context, Result).
