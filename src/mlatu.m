@@ -17,95 +17,83 @@
 
 :- pred main(io::di, io::uo) is det.
 
-:- type m_build_type ---> mbt_check ; mbt_build ; mbt_run.
-
 :- implementation.
 
-:- import_module bool.
+:- import_module time.
 :- import_module list.
 :- import_module string.
+:- import_module int.
 
 :- import_module ast.
 :- import_module codegen.
 :- import_module context.
 :- import_module infer.
 :- import_module parse.
-:- import_module int.
 
 main(!IO) :-
     command_line_arguments(Args, !IO),
-    (if Args = [Command|[Input|_]], ((Command = "check", BuildType = mbt_check) ; (Command = "build", BuildType = mbt_build) ; (Command = "run", BuildType = mbt_run))
+    handle_args(Args, !IO).
+
+:- pred handle_args(list(string)::in, io::di, io::uo) is det.
+handle_args([Command|[Input|_]], !IO) :- 
+    (if Command = "check" 
     then 
-        ParseResult = parse_term(Input, command_line_context)
-        , ((
-                pr_ok(Term, _, _) = ParseResult, 
-                go(Term, BuildType, !IO)
-            ) ; (
-                pr_err(pe_incomplete) = ParseResult, 
-                io.stdout_stream(Stdout, !IO),
-                io.write_string(Stdout, "Parsing failed, more input was expected\n", !IO)
-            ) ; (
-                pr_err(pe_expected(Context, Expected, Actual)) = ParseResult, 
-                io.stdout_stream(Stdout, !IO),
-                io.format(Stdout, " At %s, I expected %s but I found \"%s\"\n", [s(context_string(Context)), s(Expected), s(Actual)], !IO))
-        )
-    else 
-        io.stdout_stream(Stdout, !IO),
-        io.write_string(Stdout, "Usage: `mlatu <cmd> <program>` where <cmd> is `check`, `build`, or `run`", !IO)).
+        handle_parsing(handle_inference(
+            pred(_::in, In::di, Out::uo) is det :- check_success(In, Out)
+        ), Input, !IO)
+    else if Command = "build" 
+    then 
+        handle_parsing(handle_inference(handle_building(build_success)), Input, !IO)
+    else if Command = "run" 
+    then 
+        handle_parsing(handle_inference(handle_building(run)), Input, !IO)
+    else if Command = "bench" 
+    then 
+        handle_parsing(handle_inference(handle_building(bench)), Input, !IO)
+    else io.write_string(io.stdout_stream, "Unknown command.\n", !IO)).
+handle_args([_|[]], !IO) :- 
+    io.write_string(io.stdout_stream, "Expected a subcommand and then the input\n", !IO).
+handle_args([], !IO) :- 
+    io.write_string(io.stdout_stream, "Expected a subcommand and then the input\n", !IO).
 
-:- pred exit_success(io::di, io::uo) is det.
-exit_success(!IO) :- io.set_exit_status(0, !IO).
+:- pred check_success(io::di, io::uo) is det. 
+check_success(!IO) :-
+    io.write_string(io.stdout_stream, "Everything checks out\n", !IO), 
+    io.set_exit_status(0, !IO).
 
-:- pred exit_failure(io::di, io::uo) is det. 
-exit_failure(!IO) :- io.set_exit_status(1, !IO).
+:- pred build_success(io::di, io::uo) is det. 
+build_success(!IO) :-
+    io.write_string(io.stdout_stream, "Produced an executable named `./output`\n", !IO), 
+    io.set_exit_status(0, !IO).
 
-:- pred go(term::in, m_build_type::in, io::di, io::uo) is det.
-go(Term, BuildType, !IO) :- (
-    BuildType = mbt_check, 
+:- pred handle_parsing(pred(term, io, io), string, io, io).
+:- mode handle_parsing(pred(in, di, uo) is det, in, di, uo) is det.
+handle_parsing(After, Input, !IO) :- 
+    ParseResult = parse_term(Input, command_line_context),
+    ((
+        pr_ok(Term, _, _) = ParseResult, 
+        After(Term, !IO)
+    ) ; (
+        pr_err(pe_incomplete) = ParseResult, 
+        io.write_string(io.stdout_stream, "Parsing failed, more input was expected\n", !IO),
+        io.set_exit_status(1, !IO)
+    ) ; (
+        pr_err(pe_expected(Context, Expected, Actual)) = ParseResult, 
+        io.format(io.stdout_stream, " At %s, I expected %s but I found \"%s\"\n", [s(context_string(Context)), s(Expected), s(Actual)], !IO),
+        io.set_exit_status(1, !IO)
+    )).
+
+:- pred handle_inference(pred(spec_term, io, io), term, io, io).
+:- mode handle_inference(pred(in, di, uo) is det, in, di, uo) is det.
+handle_inference(After, Term, !IO) :- 
     infer_main(Term, Result),
     ((
-        Result = ok(_), 
-        io.stdout_stream(Stdout, !IO),
-        io.write_string(Stdout, "Everything checks out\n", !IO), 
-        exit_success(!IO)
+        Result = ok(SpecTerm), 
+        After(SpecTerm, !IO)
     ) ; (
         Result = err(Err), 
         infer_failure(Term, Err, !IO)
-    ))
-) ; (
-    BuildType = mbt_build, 
-    infer_main(Term, Result),
-    ((  
-        Result = ok(SpecTerm),
-        build(SpecTerm, BuildResult, !IO), 
-        ((
-            BuildResult = yes,
-            io.stdout_stream(Stdout, !IO),
-            io.write_string(Stdout, "Executable was successfully produced (./output)\n", !IO), exit_success(!IO)
-        ) ; (BuildResult = no, exit_failure(!IO)))
-    ) ; (
-        Result = err(Err), 
-        infer_failure(Term, Err, !IO)
-    ))
-) ; (
-    BuildType = mbt_run, 
-    infer_main(Term, Result),
-    ((
-        Result = ok(SpecTerm),
-        build(SpecTerm, BuildResult, !IO),
-        ((
-            BuildResult = yes,
-            io.call_system("./output", Exit, !IO), 
-            (if Exit = ok(0) 
-            then io.remove_file("./output", _, !IO), exit_success(!IO) 
-            else exit_failure(!IO))
-        ) ; (BuildResult = no, exit_failure(!IO)))
-    ) ; (
-        Result = err(Err), 
-        infer_failure(Term, Err, !IO)
-    ))
-).
-  
+    )).
 
 :- pred infer_failure(term::in, infer_err::in, io::di, io::uo) is det.
 infer_failure(Term, Err, !IO) :- 
@@ -124,33 +112,52 @@ infer_failure(Term, Err, !IO) :-
         else io.write_string(Stdout, "The inferred spec differed significantly from the expected spec.\n", !IO)
         )
     )),
-    exit_failure(!IO).
+    io.set_exit_status(1, !IO).
 
-:- pred build(spec_term::in, bool::out, io::di, io::uo) is det.
-build(Term, Success, !IO) :- 
+:- pred handle_building(pred(io, io), spec_term, io, io).
+:- mode handle_building(pred(di, uo) is det, in, di, uo) is det.
+handle_building(After, Term, !IO) :-
     io.open_output("output.c", Result, !IO), 
     ((
         Result = ok(Stream),
         codegen(Term, Out),
         io.write_string(Stream, Out, !IO), 
         io.close_output(Stream, !IO),
-        io.call_system("clang output.c -O3 -std=c99 -o output", Exit, !IO), 
+        io.call_system("clang output.c -O3 -std=c99 -o output", Exit, !IO),
         (if Exit = ok(0) 
         then
             io.remove_file("output.c", Res, !IO),
            ((
                Res = io.ok, 
-               Success = yes
+               After(!IO)
             ) ; (
                 Res = io.error(_), 
                 io.write_string(io.stdout_stream, "Could not delete `output.c`", !IO),
-                Success = no
+                io.set_exit_status(1, !IO)
             ))
         else 
             io.write_string(io.stdout_stream, "clang did not exit succssfully", !IO),
-            Success = no)
+            io.set_exit_status(1, !IO))
     ) ; (
         Result = io.error(_), 
         io.write_string(io.stdout_stream, "Could not open `output.c`", !IO),
-        Success = no
+        io.set_exit_status(1, !IO)
     )).
+
+:- pred run(io::di, io::uo) is det. 
+run(!IO) :- 
+    io.call_system("./output", Exit, !IO),
+    (if Exit = ok(0) 
+    then io.set_exit_status(0, !IO) 
+    else io.set_exit_status(1, !IO)).
+
+:- pred bench(io::di, io::uo) is det. 
+bench(!IO) :- 
+    time.clock(Time1, !IO),
+    io.call_system("./output", Exit, !IO),
+    time.clock(Time2, !IO),
+    (if Exit = ok(0) 
+    then 
+        io.format(io.stdout_stream, "Time taken: %i clock ticks\n(There are %i clock ticks per second)\n", [i(Time2 - Time1), i(time.clocks_per_sec)], !IO),
+        io.set_exit_status(0, !IO) 
+    else io.set_exit_status(1, !IO)).
