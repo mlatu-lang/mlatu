@@ -19,7 +19,9 @@
 
 :- type m_name == string. 
 
-:- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_compose(Info, m_term(Info), m_term(Info)) ; mt_int(context, Info, int) ; mt_def(context, Info, m_name, m_term(Info)). 
+:- type m_term(Info) ---> mt_call(context, Info, m_name) ; mt_int(context, Info, int) ; mt_def(context, Info, m_name, m_terms(Info)). 
+
+:- type m_terms(Info) ---> mts(context, Info, list(m_term(Info))).
 
 :- type m_spec ---> m_spec(list(m_value), list(m_value)).
 
@@ -27,11 +29,21 @@
 
 :- type term == m_term({}).
 
+:- type terms == m_terms({}).
+
 :- type spec_term == m_term(m_spec).
+
+:- type spec_terms == m_terms(m_spec).
+
+:- func terms_string(m_terms(Info)) = string.
 
 :- func term_string(m_term(Info)) = string.
 
-:- func term_context(m_term(Info))  = context.
+:- func terms_context(m_terms(Info)) = context.
+
+:- func term_context(m_term(Info)) = context.
+
+:- func terms_spec(spec_terms) = m_spec.
 
 :- func term_spec(spec_term) = m_spec.
 
@@ -43,19 +55,21 @@
 
 :- import_module string.
 
+terms_string(mts(_, _, List)) = join_list(" ", map(term_string, List)).
+
 term_string(mt_call(_, _, Name)) = Name. 
-term_string(mt_compose(_, Term1, Term2)) = 
-  term_string(Term1) ++ " " ++ term_string(Term2).
 term_string(mt_int(_, _, Num)) = string.from_int(Num).
-term_string(mt_def(_, _, Name, Inner)) = "def " ++ Name ++ " {" ++ term_string(Inner) ++ "}".
+term_string(mt_def(_, _, Name, Inner)) = "def " ++ Name ++ " {" ++ terms_string(Inner) ++ "}".
+
+terms_context(mts(Context, _, _)) = Context.
 
 term_context(mt_call(Context, _, _)) = Context. 
-term_context(mt_compose(_, A, _B)) = term_context(A).
 term_context(mt_int(Context, _, _)) = Context.
 term_context(mt_def(Context, _, _, _)) = Context.
 
+terms_spec(mts(_, Spec, _)) = Spec.
+
 term_spec(mt_call(_, Spec, _)) = Spec. 
-term_spec(mt_compose(Spec, _, _)) = Spec.
 term_spec(mt_int(_, Spec, _)) = Spec.
 term_spec(mt_def(_, Spec, _, _)) = Spec.
 

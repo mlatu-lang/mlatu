@@ -85,8 +85,8 @@
 :- pred parse_call(string, context, parse_result(term)).
 :- mode parse_call(in, in, out) is det.
 
-:- pred parse_lower_term(string, context, parse_result(term)).
-:- mode parse_lower_term(in, in, out) is det.
+:- pred parse_term(string, context, parse_result(term)).
+:- mode parse_term(in, in, out) is det.
 
 :- pred sep_end_by(parser(A), parser(B), string, context, parse_result(list(A))).
 :- mode sep_end_by(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
@@ -94,8 +94,8 @@
 :- pred sep_end_by1(parser(A), parser(B), string, context, parse_result(list(A))).
 :- mode sep_end_by1(pred(in, in, out) is det, pred(in, in, out) is det, in, in, out) is det.
 
-:- pred parse_term(string, context, parse_result(term)).
-:- mode parse_term(in, in, out) is det.
+:- pred parse_terms(string, context, parse_result(terms)).
+:- mode parse_terms(in, in, out) is det.
 
 :- implementation.
 
@@ -219,7 +219,7 @@ parse_call(String, Context, Result) :- label(
       (if CallName = "def" 
       then label(between(some(space), identifier, some(space)), "name", NewS, NewC, SR), ((
           SR = pr_ok(Name, NewNewS, NewNewC),
-          map_p(bracketed(parse_term), func(Term) = mt_def(Context, {}, Name, Term), NewNewS, NewNewC, R)
+          map_p(bracketed(parse_terms), func(Terms) = mt_def(Context, {}, Name, Terms), NewNewS, NewNewC, R)
         ) ; (
           SR = pr_err(Err),
           R = pr_err(Err)
@@ -230,7 +230,7 @@ parse_call(String, Context, Result) :- label(
       R = pr_err(Err)
     ))), "word", String, Context, Result).
 
-parse_lower_term(String, Context, Result) :- 
+parse_term(String, Context, Result) :- 
   or(parse_int, parse_call, String, Context, Result).
 
 sep_end_by(Parser, Sep, String, Context, Result) :- or(
@@ -247,12 +247,6 @@ sep_end_by1(Parser, Sep, String, Context, Result) :-
     pr_err(Err) = Result
   )).
 
-parse_term(String, Context, Result) :- label(ignore_left(many(space), map_p(sep_end_by1(parse_lower_term, some(space)), 
-  func(Ts) = foldl(
-    func(L, Acc) = R :- (
-      if mt_call(builtin_context, {}, "") = Acc 
-      then R = L 
-      else R = mt_compose({}, Acc, L)), 
-    Ts, 
-    mt_call(builtin_context, {}, "")
-  ))), "term", " " ++ String ++ " ", Context, Result).
+parse_terms(String, Context, Result) :- label(ignore_left(some(space), 
+  map_p(sep_end_by1(parse_term, some(space)), func(Ts) = mts(Context, {}, Ts))
+  ), "term", " " ++ String ++ " ", Context, Result).
