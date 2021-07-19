@@ -1,17 +1,12 @@
 # The Mlatu Programming Language
 
-**This is the WIP branch that's working on a Mercury compiler. Use the Haskell version if you want something that works.**
+**This is the WIP branch that's working on a Nim interpreter. Use the Haskell version if you want something that works.**
 
 ![Mlatu logo](/logo.jpg)
 
-Mlatu is a statically-typed purely-functional concatenative high-level programming language that compiles to Assembly.
+Mlatu is a statically-typed purely-functional concatenative high-level programming language that is interpreted and compiled to Nim.
 
-To build the current version, run 
-```sh
-$ cd src 
-$ make
-```
-which will output the maximum amount of warnings and errors and output an unoptimized build to `./mlatu`. To install an optimized build to `~/.local/bin/mlatu`, run `make install`.
+To build, run `nimble build`, which will output a `./mlatu` executable. To run, run `nimble run -- args` where `args` are the command-line arguments to mlatu.
 ## Contributing
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
