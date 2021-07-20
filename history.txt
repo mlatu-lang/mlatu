@@ -1,0 +1,11 @@
+1 2 +
+1 2 swap
+pop
+1 2 swap
+1 2 +
+swap
+pop
+1 2 +
+pop
+1 2 +
+dup swap pop pop

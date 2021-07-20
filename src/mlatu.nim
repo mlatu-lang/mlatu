@@ -9,48 +9,7 @@
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
 
-import os, strutils, parseopt, parser, speccer, interpreter
-
-proc interpret_contents*(contents: string) {.raises: [].} =
-  var parse = newParser()
-  var spec = newSpeccer()
-  var eval = newInterpreter()
-  var all_success = true
-  for word in contents.strip.split:
-    try:
-      let term = parse.parse word.strip
-      spec.check term
-      eval.evaluate term
-    except StackError as e:
-      echo e.message
-      all_success = false
-      break
-  if all_success: eval.display_stack
-
-proc repl() {.raises: [IOError].} =
-  var parse = newParser()
-  var spec = newSpeccer()
-  var eval = newInterpreter()
-  while true:
-    stdout.write "> "
-    stdout.flushFile
-    try:
-      var any_success = false
-      let line = stdin.readLine.strip
-      for word in line.split:
-        try:
-          let term = parse.parse word.strip
-          spec.check term
-          eval.evaluate term
-          any_success = true
-        except StackError as e:
-          echo e.message
-          break
-      if any_success: eval.display_stack
-    except IOError:
-      stdout.write "\n"
-      stdout.flushFile
-      break
+import nimline, parseopt, repl
 
 proc writeHelp() {.raises: [].} =
   echo "Mlatu: the best way forth"
@@ -61,18 +20,14 @@ proc writeHelp() {.raises: [].} =
 proc writeVersion() {.raises: [].} =
   echo "Mlatu 0.1.0"
 
-proc main*() {.raises: [IOError].} =
-  setControlCHook(proc() {.noConv raises: [IOError].} = raise newException(
-      IOError, "Control-C used"))
-
-  var filename: string
+proc main*() {.raises: [].} =
   var should_repl: bool = true
 
   for kind, key, val in getopt():
     case kind
     of cmdArgument:
-      if isValidFilename(key): filename = key
-      else: echo key & " is not a valid file name"
+      writeHelp()
+      should_repl = false
     of cmdLongOption, cmdShortOption:
       case key
       of "help", "h":
@@ -81,17 +36,13 @@ proc main*() {.raises: [IOError].} =
       of "version", "v":
         writeVersion()
         should_repl = false
-      of "stdin":
-        filename = "stdin"
     of cmdEnd: false.assert
 
-  case filename:
-    of "":
-      if should_repl: repl()
-    of "stdin": stdin.readAll.interpret_contents
-    else:
-      echo "Interpreting file " & filename
-      filename.readFile.interpret_contents
-
+  if should_repl:
+    try:
+      var repler = newRepler()
+      repler.loop
+    except LineError as e:
+      echo e.msg
 
 when isMainModule: main()
