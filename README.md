@@ -6,7 +6,10 @@
 
 Mlatu is a statically-typed purely-functional concatenative high-level programming language that is interpreted and compiled to Nim.
 
-To build, run `nimble build`, which will output a `./mlatu` executable. To run, run `nimble run -- args` where `args` are the command-line arguments to mlatu.
+You will need to have `nimble` installed to contribute to Mlatu (other than documentation changes). You can download both `nimble` and `nim` [here](https://nim-lang.org/install.html).
+
+To build, run `nimble build`.
+To build and start the repl, run `nimble run`.
 ## Contributing
 
 Very experimental: contributions welcome, but please don't use this in production. If you wish to contribute see [here](/CONTRIBUTING.md) for more information.
