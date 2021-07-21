@@ -31,11 +31,11 @@ else:
 # Types
 
 type
-  LineError* = ref CatchableError ## A generic nimline error.
   Key* = int ## The ASCII code of a keyboard key.
   KeySeq* = seq[Key] ## A sequence of one or more Keys.
-  KeyCallback* = proc(ed: var LineEditor) {.closure, gcsafe, raises: [
-      LineError].} ## A proc that can be bound to a key or a key sequence to access line editing functionalities.
+  KeyCallback* = proc(ed: var LineEditor) {.closure, gcsafe, raises: [IOError,
+      ValueError], tags: [
+      WriteIOEffect].} ## A proc that can be bound to a key or a key sequence to access line editing functionalities.
   LineEditorMode* = enum ## The *mode* a LineEditor operates in (insert or replace).
     mdInsert
     mdReplace
@@ -49,55 +49,47 @@ type
     queue: Deque[string]
     max: int
   LineEditor* = object ## An object representing a line editor, used to process text typed in the terminal.
-    completionCallback*: proc(ed: LineEditor): seq[string] {.closure, gcsafe,
-        raises: [].}
+    completionCallback*: proc(ed: LineEditor): seq[string]
+      {.closure, gcsafe, raises: [IOError, ValueError], tags: [].}
     history: LineHistory
     line: Line
     mode: LineEditorMode
 
 # Internal Methods
 
-func empty(line: Line): bool {.raises: [].} =
+func empty(line: Line): bool {.raises: [], tags: [].} =
   return line.text.len <= 0
 
-func full(line: Line): bool {.raises: [].} =
+func full(line: Line): bool {.raises: [], tags: [].} =
   return line.position >= line.text.len
 
-func first(line: Line): int {.raises: [LineError].} =
-  if line.empty:
-    raise LineError(msg: "Line is empty!")
-  return 0
-
-func last(line: Line): int {.raises: [LineError].} =
-  if line.empty:
-    raise LineError(msg: "Line is empty!")
-  return line.text.len-1
-
-func fromStart(line: Line): string {.raises: [LineError].} =
+func fromStart(line: Line): string {.raises: [], tags: [].} =
   if line.empty:
     return ""
-  return line.text[line.first..line.position-1]
+  return line.text[0..line.position-1]
 
-func toEnd(line: Line): string {.raises: [LineError].} =
+func toEnd(line: Line): string {.raises: [], tags: [].} =
   if line.empty:
     return ""
-  return line.text[line.position..line.last]
+  return line.text[line.position..line.text.len-1]
 
-proc back*(ed: var LineEditor, n = 1) {.raises: [IOError, ValueError].} =
+proc back*(ed: var LineEditor, n = 1)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Move the cursor back by **n** characters on the current line (unless the beginning of the line is reached).
   if ed.line.position <= 0:
     return
   stdout.cursorBackward(n)
   ed.line.position = ed.line.position - n
 
-proc forward*(ed: var LineEditor, n = 1) {.raises: [IOError, ValueError].} =
+proc forward*(ed: var LineEditor, n = 1)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Move the cursor forward by **n** characters on the current line (unless the beginning of the line is reached).
   if ed.line.full:
     return
   stdout.cursorForward(n)
   ed.line.position += n
 
-func `[]`(q: Deque[string], pos: int): string {.raises: [].} =
+func `[]`(q: Deque[string], pos: int): string {.raises: [], tags: [].} =
   var c = 0
   for e in q.items:
     if c == pos:
@@ -105,7 +97,7 @@ func `[]`(q: Deque[string], pos: int): string {.raises: [].} =
       break
     c.inc
 
-func `[]=`(q: var Deque[string], pos: int, s: string) {.raises: [].} =
+func `[]=`(q: var Deque[string], pos: int, s: string) {.raises: [], tags: [].} =
   var c = 0
   for e in q.mitems:
     if c == pos:
@@ -113,7 +105,7 @@ func `[]=`(q: var Deque[string], pos: int, s: string) {.raises: [].} =
       break
     c.inc
 
-func add(h: var LineHistory, s: string, force = false) {.raises: [].} =
+func add(h: var LineHistory, s: string, force = false) {.raises: [], tags: [].} =
   if s == "" and not force:
     return
   if h.queue.len >= h.max:
@@ -123,13 +115,13 @@ func add(h: var LineHistory, s: string, force = false) {.raises: [].} =
   else:
     h.queue.addLast s
 
-func previous(h: var LineHistory): string {.raises: [].} =
+func previous(h: var LineHistory): string {.raises: [], tags: [].} =
   if h.queue.len == 0 or h.position <= 0:
     return ""
   h.position.dec
   result = h.queue[h.position]
 
-func next(h: var LineHistory): string {.raises: [].} =
+func next(h: var LineHistory): string {.raises: [], tags: [].} =
   if h.queue.len == 0 or h.position >= h.queue.len-1:
     return ""
   h.position.inc
@@ -137,7 +129,8 @@ func next(h: var LineHistory): string {.raises: [].} =
 
 # Public API
 
-proc deletePrevious*(ed: var LineEditor) {.raises: [LineError].} =
+proc deletePrevious*(ed: var LineEditor)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Move the cursor to the left by one character (unless at the beginning of the line) and delete the existing character, if any.
   if ed.line.position <= 0:
     return
@@ -147,17 +140,18 @@ proc deletePrevious*(ed: var LineEditor) {.raises: [LineError].} =
       putchr(32)
       stdout.cursorBackward
       ed.line.position.dec
-      ed.line.text = ed.line.text[0..ed.line.last-1]
+      ed.line.text = ed.line.text[0..ed.line.text.len-2]
     else:
       let rest = ed.line.toEnd & " "
       ed.back
       for i in rest:
         putchr i.ord.cint
-      ed.line.text = ed.line.fromStart & ed.line.text[
-          ed.line.position+1..ed.line.last]
+      ed.line.text =
+        ed.line.fromStart & ed.line.text[ed.line.position+1..ed.line.text.len-2]
       stdout.cursorBackward(rest.len)
 
-proc deleteNext*(ed: var LineEditor) {.raises: [LineError].} =
+proc deleteNext*(ed: var LineEditor)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Move the cursor to the right by one character (unless at the end of the line) and delete the existing character, if any.
   if not ed.line.empty:
     if not ed.line.full:
@@ -167,7 +161,8 @@ proc deleteNext*(ed: var LineEditor) {.raises: [LineError].} =
       stdout.cursorBackward(rest.len)
       ed.line.text = ed.line.fromStart & ed.line.toEnd[1..^1]
 
-proc printChar*(ed: var LineEditor, c: int) {.raises: [LineError].} =
+proc printChar*(ed: var LineEditor, c: int)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Prints the character **c** to the current line. If in the middle of the line, the following characters are shifted right or replaced depending on the editor mode.
   if ed.line.full:
     putchr(c.cint)
@@ -188,7 +183,8 @@ proc printChar*(ed: var LineEditor, c: int) {.raises: [LineError].} =
       ed.line.text[ed.line.position] = c.chr
       ed.line.position += 1
 
-proc changeLine*(ed: var LineEditor, s: string) {.raises: [LineError].} =
+proc changeLine*(ed: var LineEditor, s: string)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Replaces the contents of the current line with the string **s**.
   let text = ed.line.text
   let diff = text.len - s.len
@@ -204,11 +200,13 @@ proc changeLine*(ed: var LineEditor, s: string) {.raises: [LineError].} =
       putchr(32)
     stdout.cursorBackward(diff)
 
-proc addToLineAtPosition(ed: var LineEditor, s: string) {.raises: [LineError].} =
+proc addToLineAtPosition(ed: var LineEditor, s: string)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   for c in s:
     ed.printChar(c.ord.cint)
 
-proc clearLine*(ed: var LineEditor) {.raises: [LineError].} =
+proc clearLine*(ed: var LineEditor)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Clears the contents of the current line and reset the cursor position to the beginning of the line.
   stdout.cursorBackward(ed.line.position+1)
   for i in ed.line.text:
@@ -219,7 +217,8 @@ proc clearLine*(ed: var LineEditor) {.raises: [LineError].} =
   ed.line.position = 0
   ed.line.text = ""
 
-proc goToStart*(ed: var LineEditor) {.raises: [].} =
+proc goToStart*(ed: var LineEditor)
+  {.raises: [], tags: [WriteIOEffect].} =
   ## Move the cursor to the beginning of the line.
   if ed.line.position <= 0:
     return
@@ -229,7 +228,8 @@ proc goToStart*(ed: var LineEditor) {.raises: [].} =
   except:
     discard
 
-proc goToEnd*(ed: var LineEditor) {.raises: [ValueError, IOError].} =
+proc goToEnd*(ed: var LineEditor)
+  {.raises: [ValueError, IOError], tags: [WriteIOEffect].} =
   ## Move the cursor to the end of the line.
   if ed.line.full:
     return
@@ -237,7 +237,8 @@ proc goToEnd*(ed: var LineEditor) {.raises: [ValueError, IOError].} =
   stdout.cursorForward(diff)
   ed.line.position = ed.line.text.len
 
-proc historyInit*(size = 256, file: string = ""): LineHistory {.raises: [LineError].} =
+proc historyInit*(size = 256, file: string = ""): LineHistory
+  {.raises: [IOError], tags: [WriteIOEffect, ReadDirEffect, ReadIOEffect].} =
   ## Creates a new **LineHistory** object with the specified **size** and **file**.
   result.file = file
   result.queue = initDeque[string](size)
@@ -255,14 +256,16 @@ proc historyInit*(size = 256, file: string = ""): LineHistory {.raises: [LineErr
   else:
     result.file.writeFile("")
 
-proc historyAdd*(ed: var LineEditor, force = false) {.raises: [LineError].} =
+proc historyAdd*(ed: var LineEditor, force = false)
+  {.raises: [IOError], tags: [WriteIOEffect].} =
   ## Adds the current editor line to the history. If **force** is set to **true**, the line will be added even if it's blank.
   ed.history.add ed.line.text, force
   if ed.history.file == "":
     return
   ed.history.file.writeFile(toSeq(ed.history.queue.items).join("\n"))
 
-proc historyPrevious*(ed: var LineEditor) {.raises: [LineError].} =
+proc historyPrevious*(ed: var LineEditor)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Replaces the contents of the current line with the previous line stored in the history (if any).
   ## The current line will be added to the history and the hisory will be marked as *tainted*.
   let s = ed.history.previous
@@ -280,20 +283,23 @@ proc historyPrevious*(ed: var LineEditor) {.raises: [LineError].} =
   if s != "":
     ed.changeLine(s)
 
-proc historyNext*(ed: var LineEditor) {.raises: [LineError].} =
+proc historyNext*(ed: var LineEditor)
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
   ## Replaces the contents of the current line with the following line stored in the history (if any).
   let s = ed.history.next
   if s == "":
     return
   ed.changeLine(s)
 
-func historyFlush*(ed: var LineEditor) {.raises: [].} =
+func historyFlush*(ed: var LineEditor)
+  {.raises: [], tags: [WriteIOEffect].} =
   ## If there is at least one entry in the history, it sets the position of the cursor to the last element and sets the **tainted** flag to **false**.
   if ed.history.queue.len > 0:
     ed.history.position = ed.history.queue.len
     ed.history.tainted = false
 
-proc completeLine*(ed: var LineEditor): int {.raises: [LineError].} =
+proc completeLine*(ed: var LineEditor): int
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect, ReadIOEffect].} =
   ## If a **completionCallback** proc has been specified for the current editor, attempts to auto-complete the current line by running **completionProc**
   ## to return a list of possible values. It is possible to cycle through the matches by pressing the same key that triggered this proc.
   ##
@@ -374,7 +380,8 @@ func lineText*(ed: LineEditor): string {.raises: [].} =
   return ed.line.text
 
 proc initEditor*(mode = mdInsert, historySize = 256,
-    historyFile: string = ""): LineEditor {.raises: [LineError].} =
+    historyFile: string = ""): LineEditor
+    {.raises: [IOError], tags: [WriteIOEffect, ReadDirEffect, ReadIOEffect].} =
   ## Creates a **LineEditor** object.
   result.mode = mode
   result.history = historyInit(historySize, historyFile)
@@ -395,101 +402,101 @@ else:
     ESCAPES* = {27} ## Escape characters.
 
 # Key Names
-var KEYNAMES* {.threadvar.}: array[0..31,
+var keynames* {.threadvar.}: array[0..31,
     string] ## The following strings can be used in keymaps instead of the correspinding ASCII codes:
  ##
  ## .. code-block:: nim
- ##    KEYNAMES[1]    =    "ctrl+a"
- ##    KEYNAMES[2]    =    "ctrl+b"
- ##    KEYNAMES[3]    =    "ctrl+c"
- ##    KEYNAMES[4]    =    "ctrl+d"
- ##    KEYNAMES[5]    =    "ctrl+e"
- ##    KEYNAMES[6]    =    "ctrl+f"
- ##    KEYNAMES[7]    =    "ctrl+g"
- ##    KEYNAMES[8]    =    "ctrl+h"
- ##    KEYNAMES[9]    =    "ctrl+i"
- ##    KEYNAMES[9]    =    "tab"
- ##    KEYNAMES[10]   =    "ctrl+j"
- ##    KEYNAMES[11]   =    "ctrl+k"
- ##    KEYNAMES[12]   =    "ctrl+l"
- ##    KEYNAMES[13]   =    "ctrl+m"
- ##    KEYNAMES[14]   =    "ctrl+n"
- ##    KEYNAMES[15]   =    "ctrl+o"
- ##    KEYNAMES[16]   =    "ctrl+p"
- ##    KEYNAMES[17]   =    "ctrl+q"
- ##    KEYNAMES[18]   =    "ctrl+r"
- ##    KEYNAMES[19]   =    "ctrl+s"
- ##    KEYNAMES[20]   =    "ctrl+t"
- ##    KEYNAMES[21]   =    "ctrl+u"
- ##    KEYNAMES[22]   =    "ctrl+v"
- ##    KEYNAMES[23]   =    "ctrl+w"
- ##    KEYNAMES[24]   =    "ctrl+x"
- ##    KEYNAMES[25]   =    "ctrl+y"
- ##    KEYNAMES[26]   =    "ctrl+z"
+ ##    keynames[1]    =    "ctrl+a"
+ ##    keynames[2]    =    "ctrl+b"
+ ##    keynames[3]    =    "ctrl+c"
+ ##    keynames[4]    =    "ctrl+d"
+ ##    keynames[5]    =    "ctrl+e"
+ ##    keynames[6]    =    "ctrl+f"
+ ##    keynames[7]    =    "ctrl+g"
+ ##    keynames[8]    =    "ctrl+h"
+ ##    keynames[9]    =    "ctrl+i"
+ ##    keynames[9]    =    "tab"
+ ##    keynames[10]   =    "ctrl+j"
+ ##    keynames[11]   =    "ctrl+k"
+ ##    keynames[12]   =    "ctrl+l"
+ ##    keynames[13]   =    "ctrl+m"
+ ##    keynames[14]   =    "ctrl+n"
+ ##    keynames[15]   =    "ctrl+o"
+ ##    keynames[16]   =    "ctrl+p"
+ ##    keynames[17]   =    "ctrl+q"
+ ##    keynames[18]   =    "ctrl+r"
+ ##    keynames[19]   =    "ctrl+s"
+ ##    keynames[20]   =    "ctrl+t"
+ ##    keynames[21]   =    "ctrl+u"
+ ##    keynames[22]   =    "ctrl+v"
+ ##    keynames[23]   =    "ctrl+w"
+ ##    keynames[24]   =    "ctrl+x"
+ ##    keynames[25]   =    "ctrl+y"
+ ##    keynames[26]   =    "ctrl+z"
 
-KEYNAMES[1] = "ctrl+a"
-KEYNAMES[2] = "ctrl+b"
-KEYNAMES[3] = "ctrl+c"
-KEYNAMES[4] = "ctrl+d"
-KEYNAMES[5] = "ctrl+e"
-KEYNAMES[6] = "ctrl+f"
-KEYNAMES[7] = "ctrl+g"
-KEYNAMES[8] = "ctrl+h"
-KEYNAMES[9] = "ctrl+i"
-KEYNAMES[9] = "tab"
-KEYNAMES[10] = "ctrl+j"
-KEYNAMES[11] = "ctrl+k"
-KEYNAMES[12] = "ctrl+l"
-KEYNAMES[13] = "ctrl+m"
-KEYNAMES[14] = "ctrl+n"
-KEYNAMES[15] = "ctrl+o"
-KEYNAMES[16] = "ctrl+p"
-KEYNAMES[17] = "ctrl+q"
-KEYNAMES[18] = "ctrl+r"
-KEYNAMES[19] = "ctrl+s"
-KEYNAMES[20] = "ctrl+t"
-KEYNAMES[21] = "ctrl+u"
-KEYNAMES[22] = "ctrl+v"
-KEYNAMES[23] = "ctrl+w"
-KEYNAMES[24] = "ctrl+x"
-KEYNAMES[25] = "ctrl+y"
-KEYNAMES[26] = "ctrl+z"
+keynames[1] = "ctrl+a"
+keynames[2] = "ctrl+b"
+keynames[3] = "ctrl+c"
+keynames[4] = "ctrl+d"
+keynames[5] = "ctrl+e"
+keynames[6] = "ctrl+f"
+keynames[7] = "ctrl+g"
+keynames[8] = "ctrl+h"
+keynames[9] = "ctrl+i"
+keynames[9] = "tab"
+keynames[10] = "ctrl+j"
+keynames[11] = "ctrl+k"
+keynames[12] = "ctrl+l"
+keynames[13] = "ctrl+m"
+keynames[14] = "ctrl+n"
+keynames[15] = "ctrl+o"
+keynames[16] = "ctrl+p"
+keynames[17] = "ctrl+q"
+keynames[18] = "ctrl+r"
+keynames[19] = "ctrl+s"
+keynames[20] = "ctrl+t"
+keynames[21] = "ctrl+u"
+keynames[22] = "ctrl+v"
+keynames[23] = "ctrl+w"
+keynames[24] = "ctrl+x"
+keynames[25] = "ctrl+y"
+keynames[26] = "ctrl+z"
 
 # Key Sequences
-var KEYSEQS* {.threadvar.}: CritBitTree[
-    KeySeq] ## The following key sequences are defined and are used internally by **LineEditor**:
- ##
- ## .. code-block:: nim
- ##    KEYSEQS["up"]         = @[27, 91, 65]      # Windows: @[224, 72]
- ##    KEYSEQS["down"]       = @[27, 91, 66]      # Windows: @[224, 80]
- ##    KEYSEQS["right"]      = @[27, 91, 67]      # Windows: @[224, 77]
- ##    KEYSEQS["left"]       = @[27, 91, 68]      # Windows: @[224, 75]
- ##    KEYSEQS["home"]       = @[27, 91, 72]      # Windows: @[224, 71]
- ##    KEYSEQS["end"]        = @[27, 91, 70]      # Windows: @[224, 79]
- ##    KEYSEQS["insert"]     = @[27, 91, 50, 126] # Windows: @[224, 82]
- ##    KEYSEQS["delete"]     = @[27, 91, 51, 126] # Windows: @[224, 83]
+var keyseqs* {.threadvar.}: CritBitTree[KeySeq]
+  ## The following key sequences are defined and are used internally by **LineEditor**:
+##
+## .. code-block:: nim
+##    keyseqs["up"]         = @[27, 91, 65]      # Windows: @[224, 72]
+##    keyseqs["down"]       = @[27, 91, 66]      # Windows: @[224, 80]
+##    keyseqs["right"]      = @[27, 91, 67]      # Windows: @[224, 77]
+##    keyseqs["left"]       = @[27, 91, 68]      # Windows: @[224, 75]
+##    keyseqs["home"]       = @[27, 91, 72]      # Windows: @[224, 71]
+##    keyseqs["end"]        = @[27, 91, 70]      # Windows: @[224, 79]
+##    keyseqs["insert"]     = @[27, 91, 50, 126] # Windows: @[224, 82]
+##    keyseqs["delete"]     = @[27, 91, 51, 126] # Windows: @[224, 83]
 
 when defined(windows):
-  KEYSEQS["up"] = @[224, 72]
-  KEYSEQS["down"] = @[224, 80]
-  KEYSEQS["right"] = @[224, 77]
-  KEYSEQS["left"] = @[224, 75]
-  KEYSEQS["home"] = @[224, 71]
-  KEYSEQS["end"] = @[224, 79]
-  KEYSEQS["insert"] = @[224, 82]
-  KEYSEQS["delete"] = @[224, 83]
+  keyseqs["up"] = @[224, 72]
+  keyseqs["down"] = @[224, 80]
+  keyseqs["right"] = @[224, 77]
+  keyseqs["left"] = @[224, 75]
+  keyseqs["home"] = @[224, 71]
+  keyseqs["end"] = @[224, 79]
+  keyseqs["insert"] = @[224, 82]
+  keyseqs["delete"] = @[224, 83]
 else:
-  KEYSEQS["up"] = @[27, 91, 65]
-  KEYSEQS["down"] = @[27, 91, 66]
-  KEYSEQS["right"] = @[27, 91, 67]
-  KEYSEQS["left"] = @[27, 91, 68]
-  KEYSEQS["home"] = @[27, 91, 72]
-  KEYSEQS["end"] = @[27, 91, 70]
-  KEYSEQS["insert"] = @[27, 91, 50, 126]
-  KEYSEQS["delete"] = @[27, 91, 51, 126]
+  keyseqs["up"] = @[27, 91, 65]
+  keyseqs["down"] = @[27, 91, 66]
+  keyseqs["right"] = @[27, 91, 67]
+  keyseqs["left"] = @[27, 91, 68]
+  keyseqs["home"] = @[27, 91, 72]
+  keyseqs["end"] = @[27, 91, 70]
+  keyseqs["insert"] = @[27, 91, 50, 126]
+  keyseqs["delete"] = @[27, 91, 51, 126]
 
 # Key Mappings
-var KEYMAP* {.threadvar.}: CritBitTree[KeyCallBack] ## The following key mappings are configured by default:
+var keymap* {.threadvar.}: CritBitTree[KeyCallback] ## The following key mappings are configured by default:
  ##
  ## * backspace: **deletePrevious**
  ## * delete: **deleteNext**
@@ -510,50 +517,52 @@ var KEYMAP* {.threadvar.}: CritBitTree[KeyCallBack] ## The following key mapping
  ## * home: **goToStart**
  ## * end: **goToEnd**
 
-KEYMAP["backspace"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["backspace"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.deletePrevious()
-KEYMAP["delete"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["delete"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.deleteNext()
-KEYMAP["insert"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["insert"] = proc(ed: var LineEditor) {.gcsafe.} =
   if ed.mode == mdInsert:
     ed.mode = mdReplace
   else:
     ed.mode = mdInsert
-KEYMAP["down"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["down"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.historyNext()
-KEYMAP["up"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["up"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.historyPrevious()
-KEYMAP["ctrl+n"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+n"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.historyNext()
-KEYMAP["ctrl+p"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+p"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.historyPrevious()
-KEYMAP["left"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["left"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.back()
-KEYMAP["right"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["right"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.forward()
-KEYMAP["ctrl+b"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+b"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.back()
-KEYMAP["ctrl+f"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+f"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.forward()
-KEYMAP["ctrl+c"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+c"] = proc(ed: var LineEditor) {.gcsafe.} =
   quit(0)
-KEYMAP["ctrl+d"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+d"] = proc(ed: var LineEditor) {.gcsafe.} =
   quit(0)
-KEYMAP["ctrl+u"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+u"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.clearLine()
-KEYMAP["ctrl+a"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+a"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.goToStart()
-KEYMAP["ctrl+e"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["ctrl+e"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.goToEnd()
-KEYMAP["home"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["home"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.goToStart()
-KEYMAP["end"] = proc(ed: var LineEditor) {.gcsafe.} =
+keymap["end"] = proc(ed: var LineEditor) {.gcsafe.} =
   ed.goToEnd()
 
-var keyMapProc {.threadvar.}: proc(ed: var LineEditor) {.gcsafe raises: [LineError].}
+var keyMapProc {.threadvar.}: proc(ed: var LineEditor) {.gcsafe, raises: [
+    IOError, ValueError], tags: [WriteIOEffect].}
 
-proc readLine*(ed: var LineEditor, prompt = "",
-    hidechars = false): string {.gcsafe raises: [LineError].} =
+proc readLine*(ed: var LineEditor, prompt = "", hidechars = false): string
+  {.gcsafe, raises: [IOError, ValueError], tags: [WriteIOEffect,
+      ReadIOEffect].} =
   ## High-level proc to be used instead of **stdin.readLine** to read a line from standard input using the specified **LineEditor** object.
   ##
   ## Note that:
@@ -581,7 +590,7 @@ proc readLine*(ed: var LineEditor, prompt = "",
       ed.historyFlush()
       return ed.line.text
     elif c1 in {8, 127}:
-      KEYMAP["backspace"](ed)
+      keymap["backspace"](ed)
     elif c1 in PRINTABLE:
       if hidechars:
         putchr('*'.ord.cint)
@@ -596,46 +605,46 @@ proc readLine*(ed: var LineEditor, prompt = "",
       s.add(c1)
       let c2 = getchr()
       s.add(c2)
-      if s == KEYSEQS["left"]:
-        KEYMAP["left"](ed)
-      elif s == KEYSEQS["right"]:
-        KEYMAP["right"](ed)
-      elif s == KEYSEQS["up"]:
-        KEYMAP["up"](ed)
-      elif s == KEYSEQS["down"]:
-        KEYMAP["down"](ed)
-      elif s == KEYSEQS["home"]:
-        KEYMAP["home"](ed)
-      elif s == KEYSEQS["end"]:
-        KEYMAP["end"](ed)
-      elif s == KEYSEQS["delete"]:
-        KEYMAP["delete"](ed)
-      elif s == KEYSEQS["insert"]:
-        KEYMAP["insert"](ed)
+      if s == keyseqs["left"]:
+        keymap["left"](ed)
+      elif s == keyseqs["right"]:
+        keymap["right"](ed)
+      elif s == keyseqs["up"]:
+        keymap["up"](ed)
+      elif s == keyseqs["down"]:
+        keymap["down"](ed)
+      elif s == keyseqs["home"]:
+        keymap["home"](ed)
+      elif s == keyseqs["end"]:
+        keymap["end"](ed)
+      elif s == keyseqs["delete"]:
+        keymap["delete"](ed)
+      elif s == keyseqs["insert"]:
+        keymap["insert"](ed)
       elif c2 == 91:
         let c3 = getchr()
         s.add(c3)
-        if s == KEYSEQS["right"]:
-          KEYMAP["right"](ed)
-        elif s == KEYSEQS["left"]:
-          KEYMAP["left"](ed)
-        elif s == KEYSEQS["up"]:
-          KEYMAP["up"](ed)
-        elif s == KEYSEQS["down"]:
-          KEYMAP["down"](ed)
-        elif s == KEYSEQS["home"]:
-          KEYMAP["home"](ed)
-        elif s == KEYSEQS["end"]:
-          KEYMAP["end"](ed)
+        if s == keyseqs["right"]:
+          keymap["right"](ed)
+        elif s == keyseqs["left"]:
+          keymap["left"](ed)
+        elif s == keyseqs["up"]:
+          keymap["up"](ed)
+        elif s == keyseqs["down"]:
+          keymap["down"](ed)
+        elif s == keyseqs["home"]:
+          keymap["home"](ed)
+        elif s == keyseqs["end"]:
+          keymap["end"](ed)
         elif c3 in {50, 51}:
           let c4 = getchr()
           s.add(c4)
           if c4 == 126 and c3 == 50:
-            KEYMAP["insert"](ed)
+            keymap["insert"](ed)
           elif c4 == 126 and c3 == 51:
-            KEYMAP["delete"](ed)
-    elif c1 in CTRL and KEYMAP.hasKey(KEYNAMES[c1]):
-      keyMapProc = KEYMAP[KEYNAMES[c1]]
+            keymap["delete"](ed)
+    elif c1 in CTRL and keymap.hasKey(keynames[c1]):
+      keyMapProc = keymap[keynames[c1]]
       keyMapProc(ed)
     else:
       # Assuming unhandled two-values escape sequence; do nothing.
@@ -646,6 +655,7 @@ proc readLine*(ed: var LineEditor, prompt = "",
         esc = true
         continue
 
-proc password*(ed: var LineEditor, prompt = ""): string {.raises: [LineError].} =
+proc password*(ed: var LineEditor, prompt = ""): string
+  {.raises: [IOError, ValueError], tags: [WriteIOEffect, ReadIOEffect].} =
   ## Convenience method to use instead of **readLine** to hide the characters inputed by the user.
   return ed.readLine(prompt, true)

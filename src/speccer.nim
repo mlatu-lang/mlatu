@@ -28,7 +28,7 @@ type
     current: Stack
     table: Table[string, FunSpec]
 
-func newSpeccer*(): Speccer {.raises: [].} =
+func newSpeccer*(): Speccer {.raises: [], tags: [].} =
   Speccer(
     current: @[],
     table: [
@@ -42,7 +42,7 @@ func newSpeccer*(): Speccer {.raises: [].} =
     ].toTable
   )
 
-func typeError(typ: FunSpec, current: Stack): StackError {.raises: [].} =
+func typeError(typ: FunSpec, current: Stack): StackError {.raises: [], tags: [].} =
   let convert = proc(num: int): string =
     if num == 1:
       return $num & " element"
@@ -53,14 +53,15 @@ func typeError(typ: FunSpec, current: Stack): StackError {.raises: [].} =
     ", but it currently has " & current.len.convert
   )
 
-func check_only(self: Speccer, term: Term): seq[Value] {. discardable raises: [StackError].} =
+func checkOnly(self: Speccer, term: Term): seq[Value] {.discardable raises: [
+    StackError], tags: [].} =
   var before: Stack
   var after: Stack
   match term:
-    Num(_):
+    num(_):
       before = @[]
       after = @[valInt]
-    Call(name):
+    call(name):
       if self.table.hasKey name:
         let inferred = self.table.getOrDefault name
         before = inferred.before
@@ -75,25 +76,25 @@ func check_only(self: Speccer, term: Term): seq[Value] {. discardable raises: [S
   for item in after.items:
     result.add(item)
 
-func check*(self: var Speccer, term: Term) {.raises: [StackError].} =
-  self.current = self.check_only term
+func check*(self: var Speccer, term: Term) {.raises: [StackError], tags: [].} =
+  self.current = self.checkOnly term
 
-func complete_words*(self: Speccer): (proc (terms: seq[Term]): seq[string] {.gcsafe raises: [].}) {.raises: [].} = 
+func completeWords*(self: Speccer): (proc (terms: seq[Term]): seq[string] {.
+    gcsafe, raises: [], tags: [].}) {.raises: [], tags: [].} =
   return proc (terms: seq[Term]): seq[string] =
-    var new_self = self
+    var newSelf = self
     try:
       for term in terms:
-        new_self.check term
+        newSelf.check term
       var buffer: seq[string] = @[]
-      for key in new_self.table.keys:
-        try: 
-          discard check_only(new_self, Call(key))
+      for key in newSelf.table.keys:
+        try:
+          discard checkOnly(newSelf, call(key))
           buffer.add key
         except StackError: discard
       buffer
-    except StackError: 
+    except StackError:
       var buffer: seq[string] = @[]
-      for key in new_self.table.keys:
+      for key in newSelf.table.keys:
         buffer.add key
       buffer
-  

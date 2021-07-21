@@ -9,9 +9,9 @@
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
 
-import nimline, parseopt, repl
+import parseopt, repl, os
 
-proc writeHelp() {.raises: [].} =
+proc writeHelp() {.raises: [], tags: [].} =
   echo "Mlatu: the best way forth"
   echo "The repl and interpreter for the Mlatu programming language"
   echo "Usage:"
@@ -19,32 +19,33 @@ proc writeHelp() {.raises: [].} =
   echo "\t-h, --help     Display this help message"
   echo "\t-v, --version  Print the version"
 
-proc writeVersion() {.raises: [].} =
+proc writeVersion() {.raises: [], tags: [].} =
   echo "Mlatu 0.1.0"
 
-proc main*() {.raises: [].} =
-  var should_repl: bool = true
+proc main*() {.raises: [], tags: [ReadIOEffect, WriteIOEffect,
+    ReadDirEffect].} =
+  var shouldRepl: bool = true
 
   for kind, key, val in getopt():
     case kind
     of cmdArgument:
       writeHelp()
-      should_repl = false
+      shouldRepl = false
     of cmdLongOption, cmdShortOption:
       case key
       of "help", "h":
         writeHelp()
-        should_repl = false
+        shouldRepl = false
       of "version", "v":
         writeVersion()
-        should_repl = false
+        shouldRepl = false
     of cmdEnd: false.assert
 
-  if should_repl:
+  if shouldRepl:
     try:
       var repler = newRepler()
       repler.loop
-    except LineError as e:
+    except CatchableError as e:
       echo e.msg
 
 when isMainModule: main()

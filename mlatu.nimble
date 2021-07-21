@@ -5,9 +5,11 @@ author        = "Caden Haustein"
 description   = "The best way forth"
 license       = "CNPLv6+"
 srcDir        = "src"
-bin           = @["mlatu"]
+namedBin["main"] = "mlatu"
 
 # Dependencies
 
 requires "nim >= 1.4.8"
 requires "patty >= 0.3.4"
+
+--styleCheck:error

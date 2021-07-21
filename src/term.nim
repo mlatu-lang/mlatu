@@ -12,5 +12,5 @@
 import patty
 
 variantp Term:
-  Num(val: int)
-  Call(name: string)
+  num(val: int)
+  call(name: string)

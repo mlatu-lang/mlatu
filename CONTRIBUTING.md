@@ -21,3 +21,4 @@ You will need to have `nimble` installed to contribute to Mlatu (other than docu
 
 To build, run `nimble build`.
 To build and start the repl, run `nimble run`.
+To install mlatu into your $PATH, run `nimble install`.

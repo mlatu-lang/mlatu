@@ -8,7 +8,7 @@
 #
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
-import strutils, sequtils, speccer, interpreter, nimline, term
+import strutils, sequtils, speccer, interpreter, nimline, term, os
 
 type
   Repler* = ref object
@@ -16,28 +16,31 @@ type
     eval: Interpreter
     editor: LineEditor
 
-proc newRepler*(): Repler {.raises: [LineError].} =
+proc newRepler*(): Repler
+  {.raises: [IOError], tags: [WriteIOEffect, ReadIOEffect, ReadDirEffect].} =
   Repler(
     spec: newSpeccer(),
     eval: newInterpreter(),
     editor: initEditor(historyFile = "history.txt")
   )
 
-func parse(word: string): Term {.raises: [].} =
+func parse(word: string): Term {.raises: [], tags: [].} =
   try:
-    result = Num(word.strip.parseInt)
+    result = num(word.strip.parseInt)
   except ValueError:
-    result = Call(word.strip)
+    result = call(word.strip)
 
-proc update_completions(self: var Repler) {.raises: [].} =
-  let fun = complete_words(self.spec)
-  self.editor.completionCallback = 
-    (proc (ed: LineEditor): seq[string] = fun(ed.lineText.strip.split.map parse))
+proc updateCompletions(self: var Repler) {.raises: [], tags: [].} =
+  let fun = completeWords(self.spec)
+  self.editor.completionCallback =
+    (proc (ed: LineEditor): seq[string] {.raises: [], tags: [].} = fun(
+        ed.lineText.strip.split.mapIt(it.parse)))
 
-proc read(self: var Repler): seq[Term] {.raises: [LineError].} =
+proc read(self: var Repler): seq[Term]
+  {.raises: [IOError, ValueError], tags: [ReadIOEffect, WriteIOEffect].} =
   return self.editor.readLine("> ", false).strip.split.map(parse)
 
-proc eval(self: var Repler, terms: seq[Term]): bool {.raises: [].} =
+proc eval(self: var Repler, terms: seq[Term]): bool {.raises: [], tags: [].} =
   result = false
   for term in terms:
     try:
@@ -48,13 +51,13 @@ proc eval(self: var Repler, terms: seq[Term]): bool {.raises: [].} =
       echo e.message
       break
 
-proc print(self: var Repler) {.raises: [].} =
-  self.eval.display_stack
+proc print(self: var Repler) {.raises: [], tags: [].} =
+  self.eval.displayStack
 
-proc loop*(self: var Repler) {.raises: [LineError].} =
+proc loop*(self: var Repler)
+  {.raises: [IOError, ValueError], tags: [ReadIOEffect, WriteIOEffect].} =
   while true:
-    self.update_completions
-    let terms: seq[Term] = self.read
-    let any_success: bool = eval(self, terms)
-    if any_success: 
+    self.updateCompletions
+    let any_success: bool = eval(self, self.read)
+    if any_success:
       self.print

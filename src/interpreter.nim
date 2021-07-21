@@ -15,13 +15,13 @@ type
   Interpreter* = ref object
     stack*: seq[int]
 
-proc newInterpreter*(): Interpreter {.raises: [].} =
+func newInterpreter*(): Interpreter {.raises: [], tags: [].} =
   Interpreter(stack: @[])
 
-proc evaluate*(self: var Interpreter, term: Term) {.raises: [].} =
+func evaluate*(self: var Interpreter, term: Term) {.raises: [], tags: [].} =
   match term:
-    Num(val): self.stack.add val
-    Call(name):
+    num(val): self.stack.add val
+    call(name):
       case name:
         of "+":
           let first = self.stack.pop
@@ -52,7 +52,7 @@ proc evaluate*(self: var Interpreter, term: Term) {.raises: [].} =
         else:
           raise newException(Defect, "Type checking did not cover this case")
 
-proc display_stack*(self: Interpreter) {.raises: [].} =
+proc displayStack*(self: Interpreter) {.raises: [], tags: [].} =
   if self.stack.len != 0:
     var buffer = ""
     for item in self.stack:
