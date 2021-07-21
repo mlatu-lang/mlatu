@@ -9,7 +9,7 @@
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
 
-import tables, term, patty, sequtils
+import tables, term, patty
 
 type
   StackError* = ref object of ValueError
@@ -78,15 +78,22 @@ func check_only(self: Speccer, term: Term): seq[Value] {. discardable raises: [S
 func check*(self: var Speccer, term: Term) {.raises: [StackError].} =
   self.current = self.check_only term
 
-func valid_words*(self: Speccer): seq[string] {.raises: [].} =
-  for key in self.table.keys:
-    result.add key
-
-func type_safe_words*(self: Speccer): seq[string] {.raises: [].} =
-  self.valid_words.filterIt(
-    try: 
-      discard check_only(self, Call(it))
-      true
-    except StackError:
-      false
-    )
+func complete_words*(self: Speccer): (proc (terms: seq[Term]): seq[string] {.gcsafe raises: [].}) {.raises: [].} = 
+  return proc (terms: seq[Term]): seq[string] =
+    var new_self = self
+    try:
+      for term in terms:
+        new_self.check term
+      var buffer: seq[string] = @[]
+      for key in new_self.table.keys:
+        try: 
+          discard check_only(new_self, Call(key))
+          buffer.add key
+        except StackError: discard
+      buffer
+    except StackError: 
+      var buffer: seq[string] = @[]
+      for key in new_self.table.keys:
+        buffer.add key
+      buffer
+  

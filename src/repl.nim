@@ -8,7 +8,7 @@
 #
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
-import strutils, speccer, interpreter, nimline, term
+import strutils, sequtils, speccer, interpreter, nimline, term
 
 type
   Repler* = ref object
@@ -23,22 +23,19 @@ proc newRepler*(): Repler {.raises: [LineError].} =
     editor: initEditor(historyFile = "history.txt")
   )
 
+func parse(word: string): Term {.raises: [].} =
+  try:
+    result = Num(word.strip.parseInt)
+  except ValueError:
+    result = Call(word.strip)
+
 proc update_completions(self: var Repler) {.raises: [].} =
-  let type_safe_words = self.spec.type_safe_words
-  let valid_words = self.spec.valid_words
-  self.editor.completionCallback = proc(ed: LineEditor): seq[
-      string] = 
-      let words = ed.lineText.split(" ")
-      if words.len <= 1: type_safe_words
-      else: valid_words
+  let fun = complete_words(self.spec)
+  self.editor.completionCallback = 
+    (proc (ed: LineEditor): seq[string] = fun(ed.lineText.strip.split.map parse))
 
 proc read(self: var Repler): seq[Term] {.raises: [LineError].} =
-  let line = self.editor.readLine("> ", false).strip
-  for word in line.split:
-    try:
-      result.add Num(word.strip.parseInt)
-    except ValueError:
-      result.add Call(word.strip)
+  return self.editor.readLine("> ", false).strip.split.map(parse)
 
 proc eval(self: var Repler, terms: seq[Term]): bool {.raises: [].} =
   result = false
@@ -56,8 +53,8 @@ proc print(self: var Repler) {.raises: [].} =
 
 proc loop*(self: var Repler) {.raises: [LineError].} =
   while true:
+    self.update_completions
     let terms: seq[Term] = self.read
     let any_success: bool = eval(self, terms)
     if any_success: 
       self.print
-      self.update_completions

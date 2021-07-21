@@ -15,7 +15,9 @@ proc writeHelp() {.raises: [].} =
   echo "Mlatu: the best way forth"
   echo "The repl and interpreter for the Mlatu programming language"
   echo "Usage:"
-  echo "\tmlatu [<filename>]"
+  echo "\tmlatu [options]"
+  echo "\t-h, --help     Display this help message"
+  echo "\t-v, --version  Print the version"
 
 proc writeVersion() {.raises: [].} =
   echo "Mlatu 0.1.0"
