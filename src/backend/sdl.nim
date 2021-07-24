@@ -274,10 +274,10 @@ proc update(term: Terminal): bool {.tags: [TimeEffect, ReadIOEffect, TerminalEff
               var handled = false
               if term.mod_ctrl:
                 case Rune(event.keysym.sym):
-                  of '+':
+                  of '+', '=':
                     term.set_font_size(term.font_size + 1)
                     handled = true
-                  of '-':
+                  of '-', '_':
                     term.set_font_size(max(term.font_size - 1, 1))
                     handled = true
                   of '0':
