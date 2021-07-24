@@ -78,6 +78,13 @@ method process_key*(repl: Repl, key: Key) {.locks: "unknown", tags: [].} =
       repl.selected -= 1
       if repl.selected < 0:
         repl.selected = 0
+    of KeyDelete, KeyBackspace:
+      if repl.inputs[repl.selected].entry.text.len == 0 and repl.selected > 0:
+        repl.inputs.delete(repl.selected)
+        repl.selected -= 1
+      else:
+        repl.inputs[repl.selected].entry.process_key key
+        repl.update_input repl.selected, repl.get_in_state repl.selected
     else:
       repl.inputs[repl.selected].entry.process_key key
       repl.update_input repl.selected, repl.get_in_state repl.selected
