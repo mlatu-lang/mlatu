@@ -8,44 +8,33 @@
 #
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
+import termdiff, window_manager, repl, std/exitprocs, colors
 
-import parseopt, repl, os
+when isMainModule:
+  setup_term(rgb(85, 87, 83), rgb(238, 238, 236)) # default: bright black, bright white
+  add_exit_proc quit_app
+  var cur_screen = make_term_screen()
+  var window_constructors = @[
+    make_window_constructor("REPL", make_repl)
+  ]
+  var app = window_constructors.make_app
+  var root_pane = Pane(kind: PaneWindow, window: app.make_repl)
 
-proc writeHelp() {.raises: [], tags: [].} =
-  echo "Mlatu: the best way forth"
-  echo "The repl and interpreter for the Mlatu programming language"
-  echo "Usage:"
-  echo "\tmlatu [options]"
-  echo "\t-h, --help     Display this help message"
-  echo "\t-v, --version  Print the version"
-
-proc writeVersion() {.raises: [], tags: [].} =
-  echo "Mlatu 0.1.0"
-
-proc main*() {.raises: [], tags: [ReadIOEffect, WriteIOEffect,
-    ReadDirEffect].} =
-  var shouldRepl: bool = true
-
-  for kind, key, val in getopt():
-    case kind
-    of cmdArgument:
-      writeHelp()
-      shouldRepl = false
-    of cmdLongOption, cmdShortOption:
-      case key
-      of "help", "h":
-        writeHelp()
-        shouldRepl = false
-      of "version", "v":
-        writeVersion()
-        shouldRepl = false
-    of cmdEnd: false.assert
-
-  if shouldRepl:
-    try:
-      var repler = newRepler()
-      repler.loop
-    except CatchableError as e:
-      echo e.msg
-
-when isMainModule: main()
+  app.root_pane = root_pane
+  block:
+    var ren = cur_screen.make_term_renderer
+    app.render ren
+    cur_screen.show_all
+  while true:
+    let key = read_key()
+    if key.kind == KeyMouse:
+      app.process_mouse read_mouse()
+    else:
+      if app.process_key key:
+        quit_app()
+        break
+    var screen = make_term_screen()
+    var ren = screen.make_term_renderer
+    app.render ren
+    cur_screen.apply screen
+    cur_screen = screen

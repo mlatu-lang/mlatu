@@ -2,11 +2,13 @@
 
 **This is the WIP branch that's working on a Nim interpreter. Use the Haskell version if you want something that works.**
 
-![Mlatu logo](/logo.jpg)
+![Mlatu logo](/assets/logo.jpg)
 
 Mlatu is a statically-typed purely-functional concatenative high-level programming language that is interpreted and compiled to Nim.
 
 You will need to have `nimble` installed to contribute to Mlatu (other than documentation changes). You can download both `nimble` and `nim` [here](https://nim-lang.org/install.html).
+
+You will also need sdl2 bindings available on your system. Follow [these instructions](https://github.com/nim-lang/sdl2#pre-requisites) to install sdl2 if you don't have it already.
 
 To build, run `nimble build`.
 To build and start the repl, run `nimble run`.
