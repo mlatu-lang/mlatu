@@ -7,3 +7,9 @@
 ( ( rotate ) dip ) = rotated
 ( 1 - ) = pred
 ( 1 + ) = succ
+( ( ( i ) dip i ) cons cons) = cat
+( ( ) cons ) = unit
+( eq not ) = neq
+( 0 neq ) = itob
+( ( 1 ) ( 0 ) if) = btoi
+( dupd pred dup itob rollup ( repeat cat ) cons cons ( ) if ) = repeat
