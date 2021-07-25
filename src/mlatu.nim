@@ -99,7 +99,9 @@ type
   EvalMode = object
     case kind: EvalModeKind:
       of EvalTop: discard
-      of EvalQuot: toks: seq[Tok]
+      of EvalQuot: 
+        toks: seq[Tok]
+        depth: int
 
 func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [EvalError], tags: [].} =
   var mode = EvalMode(kind: EvalTop)
@@ -110,7 +112,7 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
       of EvalTop:
         case tok.kind:
           of TokLeftParen: 
-            mode = EvalMode(kind: EvalQuot, toks: @[])
+            mode = EvalMode(kind: EvalQuot, toks: @[], depth: 0)
           of TokRightParen: raise newException(EvalError, "Expected `(` before `)`")
           of TokEqual: 
             let body = stack.pop_quot
@@ -183,9 +185,12 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
                     raise newException(EvalError, "Unknown word `" & tok.word & "`")
       of EvalQuot: 
         if tok.kind == TokRightParen:
-          stack.push_quot mode.toks
-          mode = EvalMode(kind: EvalTop)
+          if mode.depth > 0: mode.depth.dec
+          else:
+            stack.push_quot mode.toks
+            mode = EvalMode(kind: EvalTop)
         else:
+          if tok.kind == TokLeftParen: mode.depth.inc
           mode.toks.add tok
   if mode.kind == EvalQuot:
     stack.push_quot mode.toks
