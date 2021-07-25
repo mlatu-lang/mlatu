@@ -1,0 +1,9 @@
+( ) = id
+( ( pop ) dip ) = popd
+( ( dup ) dip ) = dupd
+( ( dup ) dip ) = dupd
+( ( rollup ) dip ) = rollupd
+( ( rolldown ) dip ) = rolldownd
+( ( rotate ) dip ) = rotated
+( 1 - ) = pred
+( 1 + ) = succ

@@ -27,7 +27,8 @@ proc make_term_screen*(): owned TermScreen {.tags: [ReadEnvEffect].} =
 func pos*(mouse: Mouse): Index2d =
   Index2d(x: mouse.x, y: mouse.y)
 
-proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect, WriteIOEffect].} =
+proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect,
+    TerminalEffect, WriteIOEffect].} =
   if screen.width != 0 and screen.height != 0:
     var cur_style = screen.data[0]
     cur_style.apply_style
@@ -39,7 +40,8 @@ proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEf
         cur_style = screen[x, y]
     term_refresh()
 
-proc apply*(prev, cur: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect, WriteIOEffect].} =
+proc apply*(prev, cur: TermScreen) {.tags: [TimeEffect, ReadIOEffect,
+    TerminalEffect, WriteIOEffect].} =
   if prev.width == cur.width and prev.data.len == cur.data.len:
     if cur.width != 0 and cur.height != 0:
       var cur_style = cur.data[0]
@@ -136,3 +138,7 @@ func red*(): Color = Color(base: ColorRed, bright: false)
 func bright_blue*(): Color = Color(base: ColorBlue, bright: true)
 
 func blue*(): Color = Color(base: ColorBlue, bright: false)
+
+func bright_magenta*(): Color = Color(base: ColorMagenta, bright: true)
+
+func magenta*(): Color = Color(base: ColorMagenta, bright: false)

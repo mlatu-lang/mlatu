@@ -52,7 +52,8 @@ type
     buffers*: Table[string, Buffer]
 
 method process_key*(window: Window, key: Key) {.
-    base, locks: "unknown", tags: [WriteIOEffect, ReadIOEffect, ReadDirEffect].} = quit "Not implemented: process_key"
+    base, locks: "unknown", tags: [WriteIOEffect, ReadIOEffect,
+        ReadDirEffect].} = quit "Not implemented: process_key"
 
 method process_mouse*(window: Window, mouse: Mouse): bool {.
     base, locks: "unknown", tags: [ReadIOEffect, WriteIOEffect].} = discard
@@ -123,7 +124,7 @@ func update_list(cmd_search: CommandSearch) =
 
   cmd_search.list.items = cmd_search.shown_commands.map_it(it.display.to_runes)
 
-  cmd_search.list.selected = cmd_search.list.selected.clamp(0, 
+  cmd_search.list.selected = cmd_search.list.selected.clamp(0,
       cmd_search.list.items.len - 1)
 
 func make_command_search(app: App, prev_window: Window): Window =
@@ -138,13 +139,15 @@ func make_command_search(app: App, prev_window: Window): Window =
   cmd_search.update_list
   return cmd_search
 
-proc run_command(cmd_search: CommandSearch) {.tags: [ReadDirEffect, WriteIOEffect].} =
+proc run_command(cmd_search: CommandSearch) {.tags: [ReadDirEffect,
+    WriteIOEffect].} =
   let selected = cmd_search.list.selected
   if selected >= 0 and selected < cmd_search.shown_commands.len:
     cmd_search.app.root_pane.open_window cmd_search.prev_window
     cmd_search.shown_commands[selected].cmd()
 
-method process_mouse(cmd_search: CommandSearch, mouse: Mouse): bool {.tags: [ReadDirEffect, WriteIOEffect], locks: "unknown".} =
+method process_mouse(cmd_search: CommandSearch, mouse: Mouse): bool {.tags: [
+    ReadDirEffect, WriteIOEffect], locks: "unknown".} =
   if mouse.x < len("Search:") and mouse.y == 0:
     return true
   else:
@@ -381,7 +384,8 @@ func process_mouse*(pane: Pane, mouse: Mouse, box: Box): (int, int) =
         return (res[0], -1)
       return res
 
-proc process_key*(pane: Pane, key: Key) {.tags: [ReadDirEffect, ReadIOEffect, WriteIOEffect].} =
+proc process_key*(pane: Pane, key: Key) {.tags: [ReadDirEffect, ReadIOEffect,
+    WriteIOEffect].} =
   case pane.kind:
     of PaneWindow:
       pane.window.process_key key
@@ -445,13 +449,15 @@ func list_changed*(app: App): seq[string] =
     if app.buffers[path].changed:
       result.add path
 
-proc process_mouse*(app: App, mouse: Mouse) {.tags: [ReadIOEffect, WriteIOEffect].} =
+proc process_mouse*(app: App, mouse: Mouse) {.tags: [ReadIOEffect,
+    WriteIOEffect].} =
   discard app.root_pane.process_mouse(mouse, Box(
     min: Index2d(x: 0, y: 0),
     max: Index2d(x: terminal_width(), y: terminal_height())
   ))
 
-proc process_key*(app: App, key: Key): bool {.tags: [ReadDirEffect, ReadIOEffect, WriteIOEffect].} =
+proc process_key*(app: App, key: Key): bool {.tags: [ReadDirEffect,
+    ReadIOEffect, WriteIOEffect].} =
   case app.mode:
     of AppModeNewPane:
       case key.kind:

@@ -67,21 +67,22 @@ func fg_color(term: Terminal, color: common.Color): colors.Color =
   if color.base == ColorDefault:
     return term.default_fg
   if color.bright and color.base.ord < term.bright_colors.len:
-      return term.bright_colors[color.base.ord]
+    return term.bright_colors[color.base.ord]
   if (not color.bright) and color.base.ord < term.colors.len:
-      return term.colors[color.base.ord]
+    return term.colors[color.base.ord]
   return term.default_fg
 
 func bg_color(term: Terminal, color: common.Color): colors.Color =
   if color.base == ColorDefault:
     return term.default_bg
   if color.bright and color.base.ord < term.bright_colors.len:
-      return term.bright_colors[color.base.ord]
+    return term.bright_colors[color.base.ord]
   if (not color.bright) and color.base.ord < term.colors.len:
-      return term.colors[color.base.ord]
+    return term.colors[color.base.ord]
   return term.default_bg
 
-proc prerender_rune(term: Terminal, rune: Rune, color: colors.Color) {.tags: [TerminalEffect].} =
+proc prerender_rune(term: Terminal, rune: Rune, color: colors.Color) {.tags: [
+    TerminalEffect].} =
   if not term.runes.has_key(color):
     term.runes[color] = init_table[Rune, Texture]()
 
@@ -104,7 +105,8 @@ proc prerender_rune(term: Terminal, rune: Rune, color: colors.Color) {.tags: [Te
   let tex = term.ren.create_texture_from_surface(surf)
   term.runes[color][rune] = Texture(w: surf.w, h: surf.h, tex: tex)
 
-proc draw_rune(term: Terminal, rune: Rune, color: colors.Color, x, y: int) {.tags: [TerminalEffect].} =
+proc draw_rune(term: Terminal, rune: Rune, color: colors.Color, x,
+    y: int) {.tags: [TerminalEffect].} =
   if (not term.runes.has_key(color)) or (not term.runes[color].has_key(rune)):
     term.prerender_rune(rune, color)
   let tex = term.runes[color][rune]
@@ -134,8 +136,10 @@ func recompute_screen_size(term: Terminal) =
     if term.key_queue.len == 0:
       term.key_queue.add_last(Key(kind: KeyUnknown).add_modifiers(term))
 
-proc set_font_size(term: Terminal, font_size: int) {.tags: [ReadIOEffect, TerminalEffect].} =
-  let font = open_font(cstring(get_app_dir() / "assets" / "font.ttf"), font_size.cint)
+proc set_font_size(term: Terminal, font_size: int) {.tags: [ReadIOEffect,
+    TerminalEffect].} =
+  let font = open_font(cstring(get_app_dir() / "assets" / "font.ttf"),
+      font_size.cint)
   if font == nil:
     return
   term.font = font
@@ -188,7 +192,8 @@ proc redraw(term: Terminal) {.tags: [TimeEffect, TerminalEffect].} =
 
   term.ren.present()
 
-proc update(term: Terminal): bool {.tags: [TimeEffect, ReadIOEffect, TerminalEffect].} =
+proc update(term: Terminal): bool {.tags: [TimeEffect, ReadIOEffect,
+    TerminalEffect].} =
   term.redraw()
 
   var evt = sdl2.default_event
@@ -398,7 +403,8 @@ func write(term: Terminal, chr: char) = term.write(Rune(chr))
 func move_to(term: Terminal, x, y: int) =
   term.cursor.pos = Index2d(x: x, y: y)
 
-proc make_terminal(): Terminal {.tags: [ReadIOEffect, TimeEffect, TerminalEffect].} =
+proc make_terminal(): Terminal {.tags: [ReadIOEffect, TimeEffect,
+    TerminalEffect].} =
   let
     window = create_window("Mlatu", 100, 100, 640, 480, SDL_WINDOW_RESIZABLE or
                                                          SDL_WINDOW_SHOWN)
@@ -417,7 +423,7 @@ proc make_terminal(): Terminal {.tags: [ReadIOEffect, TimeEffect, TerminalEffect
     default_fg: rgb(85, 87, 83), # bright black
     default_bg: rgb(238, 238, 236), # bright white
     # Ubuntu default color scheme
-    colors: @[ 
+    colors: @[
       rgb(46, 52, 54), # black
       rgb(204, 0, 0), # red
       rgb(78, 154, 0), # green
@@ -427,7 +433,7 @@ proc make_terminal(): Terminal {.tags: [ReadIOEffect, TimeEffect, TerminalEffect
       rgb(6, 152, 154), # cyan
       rgb(211, 215, 207) # white
     ],
-    bright_colors: @[ 
+    bright_colors: @[
       rgb(85, 87, 83), # bright black
       rgb(239, 41, 41), # bright red
       rgb(138, 226, 52), # bright green
