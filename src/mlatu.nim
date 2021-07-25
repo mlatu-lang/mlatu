@@ -178,7 +178,23 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
                   stack.push_val a
                   stack.push_val b
                   stack.push_val c
-                else: 
+                of "cat":
+                  let a = stack.pop_quot
+                  let b = stack.pop_quot
+
+                  stack.push_quot(b & a)
+                of "i":
+                  stack.eval(state, stack.pop_quot)
+                of "ifz":
+                  let a = stack.pop_quot
+                  let b = stack.pop_quot
+                  let c = stack.pop_num
+
+                  if c == 0:
+                    stack.push_quot a
+                  else:
+                    stack.push_quot b
+                else:
                   try:
                     stack.eval(state, state[tok.word])
                   except KeyError:
