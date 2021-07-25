@@ -20,7 +20,9 @@ type
     case kind: TokKind
       of TokWord: word: string
       of TokNum: num: int
-      of TokLeftParen, TokRightParen, TokEqual: discard
+      of TokLeftParen, TokRightParen:
+        depth: int
+      of TokEqual: discard
 
   ValueKind = enum ValueNum, ValueQuot
 
@@ -37,17 +39,25 @@ func parse_word(input: string): Tok =
 
 func parse*(input: string): seq[Tok] =
   var acc: string
+  var depth: int 
   for c in input:
     if c in {' ', '\t', '\v', '\c', '\n', '\f', '(', ')', '='}: 
       if acc.len > 0: 
         result.add acc.parse_word
         acc = ""
-      if c == '(': result.add Tok(kind: TokLeftParen)
-      elif c == ')': result.add Tok(kind: TokRightParen)
+      if c == '(': 
+        result.add Tok(kind: TokLeftParen, depth: depth)
+        depth.inc
+      elif c == ')': 
+        depth.dec
+        result.add Tok(kind: TokRightParen, depth: depth)
       elif  c == '=': result.add Tok(kind: TokEqual)
     else:
       acc.add c
   if acc.len > 0: result.add acc.parse_word
+  while depth > 0:
+    depth.dec
+    result.add Tok(kind: TokRightParen, depth: depth)
 
 func new_stack*(): Stack = @[]
 
@@ -112,7 +122,7 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
       of EvalTop:
         case tok.kind:
           of TokLeftParen: 
-            mode = EvalMode(kind: EvalQuot, toks: @[], depth: 0)
+            mode = EvalMode(kind: EvalQuot, toks: @[], depth: tok.depth)
           of TokRightParen: raise newException(EvalError, "Expected `(` before `)`")
           of TokEqual: 
             let body = stack.pop_quot
@@ -200,13 +210,10 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
                   except KeyError:
                     raise newException(EvalError, "Unknown word `" & tok.word & "`")
       of EvalQuot: 
-        if tok.kind == TokRightParen:
-          if mode.depth > 0: mode.depth.dec
-          else:
-            stack.push_quot mode.toks
-            mode = EvalMode(kind: EvalTop)
+        if tok.kind == TokRightParen and tok.depth == mode.depth:
+          stack.push_quot mode.toks
+          mode = EvalMode(kind: EvalTop)
         else:
-          if tok.kind == TokLeftParen: mode.depth.inc
           mode.toks.add tok
   if mode.kind == EvalQuot:
     stack.push_quot mode.toks
