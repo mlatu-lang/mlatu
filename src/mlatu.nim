@@ -65,17 +65,17 @@ func parse*(input: string): seq[Tok] =
   var index: int = 0
   while index < input.len:
     let c = input[index]
-    if c in {' ', '\t', '\v', '\c', '\n', '\f', '(', ')', '='}: 
-      if acc.len > 0: 
+    if c in {' ', '\t', '\v', '\c', '\n', '\f', '(', ')', '='}:
+      if acc.len > 0:
         result.add acc.parse_word(acc_index, index)
         acc = ""
-      if c == '(': 
+      if c == '(':
         result.add Tok(kind: TokLeftParen, depth: depth, start: index, stop: index)
         depth.inc
-      elif c == ')': 
+      elif c == ')':
         depth.dec
         result.add Tok(kind: TokRightParen, depth: depth, start: index, stop: index)
-      elif  c == '=': result.add Tok(kind: TokEqual, start: index, stop: index)
+      elif c == '=': result.add Tok(kind: TokEqual, start: index, stop: index)
     else:
       if acc == "": acc_index = index
       acc.add c
@@ -117,7 +117,7 @@ func pop_quot(stack: var Stack, index: int): seq[Tok] {.raises: [EvalError].} =
   except IndexDefect: discard
   raise EvalError(index: index, message: "expected quotation on the stack")
 
-func pop_bool(stack: var Stack, index: int): bool {.raises: [EvalError].} = 
+func pop_bool(stack: var Stack, index: int): bool {.raises: [EvalError].} =
   try:
     let top = stack.pop
     case top.kind:
@@ -136,7 +136,7 @@ func unparse(value: Value): seq[Tok] {.raises: [].} =
   case value.kind:
     of ValueNum: result.add Tok(kind: TokNum, num: value.num)
     of ValueBool: result.add Tok(kind: TokBool, bool: value.bool)
-    of ValueQuot: 
+    of ValueQuot:
       result.add Tok(kind: TokLeftParen)
       result &= value.toks
       result.add Tok(kind: TokRightParen)
@@ -161,10 +161,11 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [
     case mode.kind:
       of EvalTop:
         case tok.kind:
-          of TokLeftParen: 
+          of TokLeftParen:
             mode = EvalMode(kind: EvalQuot, toks: @[], depth: tok.depth)
-          of TokRightParen: raise EvalError(index: tok.start, message: "Expected `(` before `)`")
-          of TokEqual: 
+          of TokRightParen: raise EvalError(index: tok.start,
+              message: "Expected `(` before `)`")
+          of TokEqual:
             let body = stack.pop_quot tok.start
             try:
               let tok = toks.pop
@@ -179,115 +180,116 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [
           of TokNum: stack.push_num tok.num
           of TokBool: stack.push_bool tok.bool
           of TokWord:
-              case tok.word:
-                of "true":
-                  stack.push_bool true
-                of "false":
-                  stack.push_bool false
-                of "and":
-                  let a = stack.pop_bool tok.start
-                  let b = stack.pop_bool tok.start
-                  stack.push_bool(a and b)
-                of "not":
-                  let a = stack.pop_bool tok.start
-                  stack.push_bool(not a)
-                of "or":
-                  let a = stack.pop_bool tok.start
-                  let b = stack.pop_bool tok.start
-                  stack.push_bool(a or b)
-                of "gt":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_bool(b > a)
-                of "geq":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_bool(b >= a)
-                of "lt":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_bool(b < a)
-                of "leq":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_bool(b <= a)
-                of "eq":
-                  let a = stack.pop_val tok.start
-                  let b = stack.pop_val tok.start
-                  stack.push_bool(a == b)
-                of "+":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_num(b + a)
-                of "-":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_num(b - a)
-                of "*":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_num(b * a)
-                of "/":
-                  let a = stack.pop_num tok.start
-                  let b = stack.pop_num tok.start
-                  stack.push_num(b /% a)
-                of "dup":
-                  let a = stack.pop_val tok.start
-                  stack.push_val a
-                  stack.push_val a
-                of "pop": discard stack.pop_val tok.start
-                of "swap":
-                  let a = stack.pop_val tok.start
-                  let b = stack.pop_val tok.start
-                  stack.push_val a
-                  stack.push_val b
-                of "dip":
-                  let a = stack.pop_quot tok.start
-                  let b = stack.pop_val tok.start
-                  stack.eval state, a
-                  stack.push_val b
-                of "rollup":
-                  let a = stack.pop_val tok.start
-                  let b = stack.pop_val tok.start
-                  let c = stack.pop_val tok.start
-                  stack.push_val a
-                  stack.push_val c
-                  stack.push_val b
-                of "rolldown":
-                  let a = stack.pop_val tok.start
-                  let b = stack.pop_val tok.start
-                  let c = stack.pop_val tok.start
-                  stack.push_val b
-                  stack.push_val a
-                  stack.push_val c
-                of "rotate":
-                  let a = stack.pop_val tok.start
-                  let b = stack.pop_val tok.start
-                  let c = stack.pop_val tok.start
-                  stack.push_val a
-                  stack.push_val b
-                  stack.push_val c
-                of "i":
-                  stack.eval(state, stack.pop_quot tok.start)
-                of "if":
-                  let a = stack.pop_quot tok.start
-                  let b = stack.pop_quot tok.start
-                  let c = stack.pop_bool tok.start
+            case tok.word:
+              of "true":
+                stack.push_bool true
+              of "false":
+                stack.push_bool false
+              of "and":
+                let a = stack.pop_bool tok.start
+                let b = stack.pop_bool tok.start
+                stack.push_bool(a and b)
+              of "not":
+                let a = stack.pop_bool tok.start
+                stack.push_bool(not a)
+              of "or":
+                let a = stack.pop_bool tok.start
+                let b = stack.pop_bool tok.start
+                stack.push_bool(a or b)
+              of "gt":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_bool(b > a)
+              of "geq":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_bool(b >= a)
+              of "lt":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_bool(b < a)
+              of "leq":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_bool(b <= a)
+              of "eq":
+                let a = stack.pop_val tok.start
+                let b = stack.pop_val tok.start
+                stack.push_bool(a == b)
+              of "+":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_num(b + a)
+              of "-":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_num(b - a)
+              of "*":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_num(b * a)
+              of "/":
+                let a = stack.pop_num tok.start
+                let b = stack.pop_num tok.start
+                stack.push_num(b /% a)
+              of "dup":
+                let a = stack.pop_val tok.start
+                stack.push_val a
+                stack.push_val a
+              of "pop": discard stack.pop_val tok.start
+              of "swap":
+                let a = stack.pop_val tok.start
+                let b = stack.pop_val tok.start
+                stack.push_val a
+                stack.push_val b
+              of "dip":
+                let a = stack.pop_quot tok.start
+                let b = stack.pop_val tok.start
+                stack.eval state, a
+                stack.push_val b
+              of "rollup":
+                let a = stack.pop_val tok.start
+                let b = stack.pop_val tok.start
+                let c = stack.pop_val tok.start
+                stack.push_val a
+                stack.push_val c
+                stack.push_val b
+              of "rolldown":
+                let a = stack.pop_val tok.start
+                let b = stack.pop_val tok.start
+                let c = stack.pop_val tok.start
+                stack.push_val b
+                stack.push_val a
+                stack.push_val c
+              of "rotate":
+                let a = stack.pop_val tok.start
+                let b = stack.pop_val tok.start
+                let c = stack.pop_val tok.start
+                stack.push_val a
+                stack.push_val b
+                stack.push_val c
+              of "i":
+                stack.eval(state, stack.pop_quot tok.start)
+              of "if":
+                let a = stack.pop_quot tok.start
+                let b = stack.pop_quot tok.start
+                let c = stack.pop_bool tok.start
 
-                  if c:
-                    stack.eval(state, b)
-                  else:
-                    stack.eval(state, a)
-                of "cons":
-                  let a = stack.pop_quot tok.start
-                  let b = stack.pop_val(tok.start).unparse
-                  stack.push_quot(b & a)
+                if c:
+                  stack.eval(state, b)
                 else:
-                  try:
-                    stack.eval(state, state[tok.word])
-                  except KeyError:
-                    raise EvalError(index: tok.start, message: "Unknown word `" & tok.word & "`")
-      of EvalQuot: 
+                  stack.eval(state, a)
+              of "cons":
+                let a = stack.pop_quot tok.start
+                let b = stack.pop_val(tok.start).unparse
+                stack.push_quot(b & a)
+              else:
+                try:
+                  stack.eval(state, state[tok.word])
+                except KeyError:
+                  raise EvalError(index: tok.start, message: "Unknown word `" &
+                      tok.word & "`")
+      of EvalQuot:
         if tok.kind == TokRightParen and tok.depth == mode.depth:
           stack.push_quot mode.toks
           mode = EvalMode(kind: EvalTop)
