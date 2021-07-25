@@ -63,7 +63,7 @@ type
       of KeyPaste: text*: seq[Rune]
       of KeyFn: fn*: int
       else: discard
-  
+
   TerminalEffect* = object
 
 type TermScreen* = ref object

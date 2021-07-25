@@ -12,11 +12,15 @@
 import strutils, sequtils, tables, algorithm
 
 type
-  EvalError* = object of ValueError
+  EvalError* = ref object of ValueError
+    index*: int
+    message*: string
 
   TokKind = enum TokWord, TokLeftParen, TokRightParen, TokEqual, TokNum, TokBool
 
-  Tok = object 
+  Tok = object
+    start: int
+    stop: int
     case kind: TokKind
       of TokWord: word: string
       of TokNum: num: int
@@ -50,31 +54,36 @@ func `==`(a, b: Value): bool =
     of ValueQuot: return b.kind == ValueQuot and a.toks == b.toks
     of ValueBool: return b.kind == ValueBool and a.bool == b.bool
 
-func parse_word(input: string): Tok =
-  try: Tok(kind: TokNum, num: input.parse_int)
-  except ValueError: Tok(kind: TokWord, word: input)
+func parse_word(input: string, start: int, stop: int): Tok =
+  try: Tok(kind: TokNum, num: input.parse_int, start: start, stop: stop)
+  except ValueError: Tok(kind: TokWord, word: input, start: start, stop: stop)
 
 func parse*(input: string): seq[Tok] =
   var acc: string
-  var depth: int 
-  for c in input:
+  var acc_index: int = 0
+  var depth: int = 0
+  var index: int = 0
+  while index < input.len:
+    let c = input[index]
     if c in {' ', '\t', '\v', '\c', '\n', '\f', '(', ')', '='}: 
       if acc.len > 0: 
-        result.add acc.parse_word
+        result.add acc.parse_word(acc_index, index)
         acc = ""
       if c == '(': 
-        result.add Tok(kind: TokLeftParen, depth: depth)
+        result.add Tok(kind: TokLeftParen, depth: depth, start: index, stop: index)
         depth.inc
       elif c == ')': 
         depth.dec
-        result.add Tok(kind: TokRightParen, depth: depth)
-      elif  c == '=': result.add Tok(kind: TokEqual)
+        result.add Tok(kind: TokRightParen, depth: depth, start: index, stop: index)
+      elif  c == '=': result.add Tok(kind: TokEqual, start: index, stop: index)
     else:
+      if acc == "": acc_index = index
       acc.add c
-  if acc.len > 0: result.add acc.parse_word
+    index.inc
+  if acc.len > 0: result.add acc.parse_word(acc_index, index)
   while depth > 0:
     depth.dec
-    result.add Tok(kind: TokRightParen, depth: depth)
+    result.add Tok(kind: TokRightParen, depth: depth, start: index, stop: index)
 
 func new_stack*(): Stack = @[]
 
@@ -90,38 +99,38 @@ func push_quot(stack: var Stack, toks: seq[Tok]) {.raises: [].} =
 func push_val(stack: var Stack, value: Value) {.raises: [].} =
   stack.add value
 
-func pop_num(stack: var Stack): int {.raises: [EvalError].} =
+func pop_num(stack: var Stack, index: int): int {.raises: [EvalError].} =
   try:
     let top = stack.pop
     case top.kind:
-      of ValueNum: result = top.num
-      else: raise newException(EvalError, "Expected number on the stack")
-  except IndexDefect:
-    raise newException(EvalError, "Expected number on the stack")
+      of ValueNum: return top.num
+      else: discard
+  except IndexDefect: discard
+  raise EvalError(index: index, message: "expected number on the stack")
 
-func pop_quot(stack: var Stack): seq[Tok] {.raises: [EvalError].} =
+func pop_quot(stack: var Stack, index: int): seq[Tok] {.raises: [EvalError].} =
   try:
     let top = stack.pop
     case top.kind:
-      of ValueQuot: result = top.toks
-      else: raise newException(EvalError, "Expected quotation on the stack")
-  except IndexDefect:
-    raise newException(EvalError, "Expected quotation on the stack")
+      of ValueQuot: return top.toks
+      else: discard
+  except IndexDefect: discard
+  raise EvalError(index: index, message: "expected quotation on the stack")
 
-func pop_bool(stack: var Stack): bool {.raises: [EvalError].} = 
+func pop_bool(stack: var Stack, index: int): bool {.raises: [EvalError].} = 
   try:
     let top = stack.pop
     case top.kind:
-      of ValueBool: result = top.bool
-      else: raise newException(EvalError, "Expected boolean on the stack")
-  except IndexDefect:
-    raise newException(EvalError, "Expected boolean on the stack")
+      of ValueBool: return top.bool
+      else: discard
+  except IndexDefect: discard
+  raise EvalError(index: index, message: "expected boolean on the stack")
 
-func pop_val(stack: var Stack): Value {.raises: [EvalError].} =
+func pop_val(stack: var Stack, index: int): Value {.raises: [EvalError].} =
   try:
-    result = stack.pop
-  except IndexDefect:
-    raise newException(EvalError, "Expected value on the stack")
+    return stack.pop
+  except IndexDefect: discard
+  raise EvalError(index: index, message: "expected value on the stack")
 
 func unparse(value: Value): seq[Tok] {.raises: [].} =
   case value.kind:
@@ -139,11 +148,12 @@ type
   EvalMode = object
     case kind: EvalModeKind:
       of EvalTop: discard
-      of EvalQuot: 
+      of EvalQuot:
         toks: seq[Tok]
         depth: int
 
-func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [EvalError], tags: [].} =
+func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [
+    EvalError], tags: [].} =
   var mode = EvalMode(kind: EvalTop)
   var toks = toks.reversed()
   while toks.len > 0:
@@ -153,140 +163,130 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
         case tok.kind:
           of TokLeftParen: 
             mode = EvalMode(kind: EvalQuot, toks: @[], depth: tok.depth)
-          of TokRightParen: raise newException(EvalError, "Expected `(` before `)`")
+          of TokRightParen: raise EvalError(index: tok.start, message: "Expected `(` before `)`")
           of TokEqual: 
-            let body = stack.pop_quot
+            let body = stack.pop_quot tok.start
             try:
               let tok = toks.pop
               case tok.kind:
-                of TokWord: state[tok.word] = body
-                else: raise newException(EvalError, "Expected word name after `=`")
-            except IndexDefect:
-              raise newException(EvalError, "Expected word name after `=`")
+                of TokWord:
+                  state[tok.word] = body
+                  continue
+                else: discard
+            except IndexDefect: discard
+            raise EvalError(index: tok.stop,
+                message: "expected word name after `=`")
           of TokNum: stack.push_num tok.num
           of TokBool: stack.push_bool tok.bool
           of TokWord:
               case tok.word:
                 of "true":
-                  stack.push_bool(true)
+                  stack.push_bool true
                 of "false":
-                  stack.push_bool(false)
+                  stack.push_bool false
                 of "and":
-                  let a = stack.pop_bool
-                  let b = stack.pop_bool
-
+                  let a = stack.pop_bool tok.start
+                  let b = stack.pop_bool tok.start
                   stack.push_bool(a and b)
                 of "not":
-                  let a = stack.pop_bool
-
+                  let a = stack.pop_bool tok.start
                   stack.push_bool(not a)
                 of "or":
-                  let a = stack.pop_bool
-                  let b = stack.pop_bool
-
+                  let a = stack.pop_bool tok.start
+                  let b = stack.pop_bool tok.start
                   stack.push_bool(a or b)
                 of "gt":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
-
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_bool(b > a)
                 of "geq":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
-
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_bool(b >= a)
                 of "lt":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
-
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_bool(b < a)
                 of "leq":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
-
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_bool(b <= a)
                 of "eq":
-                  let a = stack.pop_val
-                  let b = stack.pop_val
-
+                  let a = stack.pop_val tok.start
+                  let b = stack.pop_val tok.start
                   stack.push_bool(a == b)
                 of "+":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_num(b + a)
                 of "-":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_num(b - a)
                 of "*":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_num(b * a)
                 of "/":
-                  let a = stack.pop_num
-                  let b = stack.pop_num
+                  let a = stack.pop_num tok.start
+                  let b = stack.pop_num tok.start
                   stack.push_num(b /% a)
                 of "dup":
-                  let a = stack.pop_val
+                  let a = stack.pop_val tok.start
                   stack.push_val a
                   stack.push_val a
-                of "pop": discard stack.pop_val
+                of "pop": discard stack.pop_val tok.start
                 of "swap":
-                  let a = stack.pop_val
-                  let b = stack.pop_val
+                  let a = stack.pop_val tok.start
+                  let b = stack.pop_val tok.start
                   stack.push_val a
                   stack.push_val b
                 of "dip":
-                  let a = stack.pop_quot
-                  let b = stack.pop_val
+                  let a = stack.pop_quot tok.start
+                  let b = stack.pop_val tok.start
                   stack.eval state, a
                   stack.push_val b
                 of "rollup":
-                  let a = stack.pop_val
-                  let b = stack.pop_val
-                  let c = stack.pop_val
+                  let a = stack.pop_val tok.start
+                  let b = stack.pop_val tok.start
+                  let c = stack.pop_val tok.start
                   stack.push_val a
                   stack.push_val c
                   stack.push_val b
                 of "rolldown":
-                  let a = stack.pop_val
-                  let b = stack.pop_val
-                  let c = stack.pop_val
+                  let a = stack.pop_val tok.start
+                  let b = stack.pop_val tok.start
+                  let c = stack.pop_val tok.start
                   stack.push_val b
                   stack.push_val a
                   stack.push_val c
                 of "rotate":
-                  let a = stack.pop_val
-                  let b = stack.pop_val
-                  let c = stack.pop_val
+                  let a = stack.pop_val tok.start
+                  let b = stack.pop_val tok.start
+                  let c = stack.pop_val tok.start
                   stack.push_val a
                   stack.push_val b
                   stack.push_val c
-                of "cat":
-                  let a = stack.pop_quot
-                  let b = stack.pop_quot
-
-                  stack.push_quot(b & a)
                 of "i":
-                  stack.eval(state, stack.pop_quot)
+                  stack.eval(state, stack.pop_quot tok.start)
                 of "if":
-                  let a = stack.pop_quot
-                  let b = stack.pop_quot
-                  let c = stack.pop_bool
+                  let a = stack.pop_quot tok.start
+                  let b = stack.pop_quot tok.start
+                  let c = stack.pop_bool tok.start
 
                   if c:
                     stack.eval(state, b)
                   else:
                     stack.eval(state, a)
                 of "cons":
-                  let a = stack.pop_quot
-                  let b = stack.pop_val.unparse
+                  let a = stack.pop_quot tok.start
+                  let b = stack.pop_val(tok.start).unparse
                   stack.push_quot(b & a)
                 else:
                   try:
                     stack.eval(state, state[tok.word])
                   except KeyError:
-                    raise newException(EvalError, "Unknown word `" & tok.word & "`")
+                    raise EvalError(index: tok.start, message: "Unknown word `" & tok.word & "`")
       of EvalQuot: 
         if tok.kind == TokRightParen and tok.depth == mode.depth:
           stack.push_quot mode.toks
@@ -295,23 +295,6 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
           mode.toks.add tok
   if mode.kind == EvalQuot:
     stack.push_quot mode.toks
-
-func init_state*(): EvalState {.raises: [], tags: [].} =
-  {
-    "id" : "".parse, 
-    "popd" : "(pop) dip".parse,
-    "dupd" : "(dup) dip".parse,
-    "swapd" : "(swap) dip".parse,
-    "rollupd" : "(rollup) dip".parse,
-    "rolldownd" : "(rolldown) dip".parse,
-    "rotated" : "(rotate) dip".parse,
-    "pred" : "1 -".parse,
-    "succ" : "1 +".parse,
-    "neq" : "eq not".parse,
-    "itob" : "0 neq".parse,
-    "btoi" : "(1) (0) if".parse,
-    "repeat" : "dupd pred dup itob rollup (repeat cat) cons cons () if".parse,
-  }.toTable
 
 func `$`(tok: Tok): string =
   case tok.kind:
@@ -327,3 +310,17 @@ func display_stack*(stack: Stack): string =
   for val in stack:
     acc &= val.unparse
   return acc.map_it($it).join(" ")
+
+proc eval_prelude(): EvalState {.raises: [], tags: [].} =
+  var stack: Stack = @[]
+  let toks = "../prelude.mlt".static_read.parse
+  try:
+    stack.eval result, toks
+    if stack.len > 0:
+      raise newException(Defect, ("Prelude is ill-formed: stack contained items after evaluation (" &
+          stack.display_stack & ")"))
+  except EvalError as e:
+    raise newException(Defect, ("Prelude is ill-formed: evaluation raised exception (" &
+        e.message & ")"))
+
+const PRELUDE* = eval_prelude()

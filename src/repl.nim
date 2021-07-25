@@ -11,10 +11,17 @@
 import strutils, unicode, window_manager, termdiff, utils, ui_utils, mlatu
 
 type
+  OutputKind = enum Ok, Err
+  Output = object
+    case kind: OutputKind:
+      of Ok: stack: string
+      of Err:
+        index: int
+        message: string
+
   Input = object
     entry: Entry
-    output: string
-    err: bool
+    output: Output
     out_state: EvalState
 
   Repl* = ref object of Window
@@ -32,7 +39,7 @@ func make_input(repl: Repl): Input = repl.app.make_input
 func max_input_number_width(repl: Repl): int =
   ($repl.inputs.len).len + 2
 
-method process_mouse*(repl: Repl, mouse: Mouse): bool {.locks: "unknown".}=
+method process_mouse*(repl: Repl, mouse: Mouse): bool {.locks: "unknown".} =
   if mouse.y == 0 and mouse.x < repl.max_input_number_width:
     return true
 
@@ -51,19 +58,19 @@ func get_in_state(repl: Repl, index: int): EvalState {.raises: [], tags: [].} =
   else:
     repl.in_state
 
-func update_input(repl: Repl, index: int, in_state: EvalState) {.raises: [], tags: [].} =
+func update_input(repl: Repl, index: int, in_state: EvalState) {.raises: [],
+    tags: [].} =
   let terms = ($repl.inputs[index].entry.text).parse
   try:
     repl.inputs[index].out_state = in_state
     var stack: Stack = new_stack()
     stack.eval(repl.inputs[index].out_state, terms)
-    repl.inputs[index].output = stack.display_stack
-    repl.inputs[index].err = false
+    repl.inputs[index].output = Output(kind: Ok, stack: stack.display_stack)
     if (index + 1) < repl.inputs.len:
       repl.update_input(index + 1, repl.inputs[index].out_state)
   except EvalError as e:
-    repl.inputs[index].output = e.msg
-    repl.inputs[index].err = true
+    repl.inputs[index].output = Output(kind: Err, index: e.index,
+        message: e.message)
 
 method process_key*(repl: Repl, key: Key) {.locks: "unknown", tags: [].} =
   case key.kind:
@@ -95,16 +102,17 @@ func input_number(repl: Repl, n: int): string =
 
 method render*(repl: Repl, box: Box, ren: var TermRenderer) =
   let title = repeat(' ', repl.max_input_number_width + 1) &
-            unicode.align_left("REPL", box.size.x - repl.max_input_number_width - 1)
+            unicode.align_left("REPL", box.size.x -
+                repl.max_input_number_width - 1)
   ren.move_to(box.min)
-  ren.put(title, reverse=true)
+  ren.put(title, reverse = true)
 
   for y in 0..<(box.size.y - 1):
     ren.move_to(box.min.x, box.min.y + 1 + y)
-    ren.put(repeat(' ', repl.max_input_number_width()), reverse=true)
+    ren.put(repeat(' ', repl.max_input_number_width()), reverse = true)
   for it, input in repl.inputs:
     ren.move_to(box.min.x, box.min.y + it * 3 + 1)
-    ren.put(repl.input_number(it), reverse=true)
+    ren.put(repl.input_number(it), reverse = true)
     ren.move_to(box.min.x + repl.max_input_number_width + 1, box.min.y + it * 3 + 1)
     if it == repl.selected:
       input.entry.render(ren)
@@ -113,12 +121,13 @@ method render*(repl: Repl, box: Box, ren: var TermRenderer) =
 
     ren.move_to(box.min.x + repl.max_input_number_width + 1, box.min.y + it * 3 + 2)
 
-    let fg = 
-      if input.err: red()
-      elif it == repl.selected: bright_blue()
-      else: Color(base: ColorMagenta, bright: true) 
-
-    ren.put input.output, fg
+    case input.output.kind:
+      of Ok:
+        ren.put input.output.stack, (if it == repl.selected: bright_blue() else: magenta())
+      of Err:
+        let text = repeat('-', input.output.index + 1) & "^ " &
+            input.output.message
+        ren.put text, red()
 
 func make_repl*(app: App): Window =
-  return Repl(app: app, inputs: @[app.make_input], in_state: init_state())
+  return Repl(app: app, inputs: @[app.make_input], in_state: PRELUDE)

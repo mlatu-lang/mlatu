@@ -12,7 +12,7 @@ import terminal, common, unicode
 
 export terminal_width, terminal_height, set_style, set_cursor_pos, getch
 
-proc term_write*(chr: char) {.raises: [], tags: [WriteIOEffect].} = 
+proc term_write*(chr: char) {.raises: [], tags: [WriteIOEffect].} =
   stdout.write chr
 
 proc term_write*(rune: Rune) {.raises: [IOError], tags: [WriteIOEffect].} =
@@ -20,7 +20,8 @@ proc term_write*(rune: Rune) {.raises: [IOError], tags: [WriteIOEffect].} =
 
 proc term_refresh*() {.raises: [], tags: [WriteIOEffect].} = stdout.flush_file
 
-proc set_fg*(fg: Color) {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
+proc set_fg*(fg: Color) {.raises: [IOError, ValueError], tags: [
+    WriteIOEffect].} =
   case fg.base:
     of ColorBlack: stdout.set_foreground_color(fgBlack, fg.bright)
     of ColorRed: stdout.set_foreground_color(fgRed, fg.bright)
@@ -32,7 +33,8 @@ proc set_fg*(fg: Color) {.raises: [IOError, ValueError], tags: [WriteIOEffect].}
     of ColorWhite: stdout.set_foreground_color(fgWhite, fg.bright)
     of ColorDefault: stdout.set_foreground_color(fgDefault, fg.bright)
 
-proc set_bg*(bg: Color) {.raises: [IOError, ValueError], tags: [WriteIOEffect].} =
+proc set_bg*(bg: Color) {.raises: [IOError, ValueError], tags: [
+    WriteIOEffect].} =
   case bg.base:
     of ColorBlack: stdout.set_background_color(bgBlack, bg.bright)
     of ColorRed: stdout.set_background_color(bgRed, bg.bright)
@@ -44,10 +46,11 @@ proc set_bg*(bg: Color) {.raises: [IOError, ValueError], tags: [WriteIOEffect].}
     of ColorWhite: stdout.set_background_color(bgWhite, bg.bright)
     of ColorDefault: stdout.set_background_color(bgDefault, bg.bright)
 
-proc apply_style*(a, b: CharCell) {.tags: [WriteIOEffect], raises: [IOError, ValueError].}=
+proc apply_style*(a, b: CharCell) {.tags: [WriteIOEffect], raises: [IOError,
+    ValueError].} =
   if a.fg != b.fg:
     b.fg.set_fg
-  
+
   if a.bg != a.bg:
     b.bg.set_bg
 
@@ -60,7 +63,8 @@ proc apply_style*(a, b: CharCell) {.tags: [WriteIOEffect], raises: [IOError, Val
       b.fg.set_fg
       b.bg.set_bg
 
-proc apply_style*(cell: CharCell) {.tags: [WriteIOEffect], raises: [IOError, ValueError].} =
+proc apply_style*(cell: CharCell) {.tags: [WriteIOEffect], raises: [IOError,
+    ValueError].} =
   reset_attributes()
   cell.fg.set_fg
   cell.bg.set_bg

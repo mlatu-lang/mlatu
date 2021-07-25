@@ -232,15 +232,15 @@ func render*(entry: Entry, ren: var TermRenderer) =
     of CursorInsert:
       ren.put entry.text.substr(0, entry.cursor.pos - 1)
       if entry.cursor.pos < entry.text.len:
-        ren.put entry.text[entry.cursor.pos], reverse=true
+        ren.put entry.text[entry.cursor.pos], reverse = true
         ren.put entry.text.substr(entry.cursor.pos + 1)
       else:
-        ren.put " ", reverse=true
+        ren.put " ", reverse = true
     of CursorSelection:
       let cur = entry.cursor.sort
       ren.put entry.text.substr(0, cur.start - 1)
-      ren.put entry.text.substr(cur.start, cur.stop - 1), reverse=true
-      ren.put entry.text.substr(cur.stop), reverse=true
+      ren.put entry.text.substr(cur.start, cur.stop - 1), reverse = true
+      ren.put entry.text.substr(cur.stop), reverse = true
 
 func make_entry*(copy_buffer: CopyBuffer = nil): owned Entry =
   Entry(text: @[], cursor: Cursor(kind: CursorInsert, pos: 0),
