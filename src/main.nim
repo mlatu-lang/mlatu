@@ -8,10 +8,10 @@
 #
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
-import termdiff, window_manager, repl, std/exitprocs, colors
+import termdiff, window_manager, repl, std/exitprocs
 
 when isMainModule:
-  setup_term(rgb(85, 87, 83), rgb(238, 238, 236)) # default: bright black, bright white
+  setup_term()
   add_exit_proc quit_app
   var cur_screen = make_term_screen()
   var window_constructors = @[

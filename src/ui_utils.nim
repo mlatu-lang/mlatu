@@ -230,17 +230,17 @@ func process_key*(entry: var Entry, key: Key) =
 func render*(entry: Entry, ren: var TermRenderer) =
   case entry.cursor.kind:
     of CursorInsert:
-      ren.put entry.text.substr(0, entry.cursor.pos - 1), bright_black(), bright_white()
+      ren.put entry.text.substr(0, entry.cursor.pos - 1)
       if entry.cursor.pos < entry.text.len:
-        ren.put entry.text[entry.cursor.pos], bright_black(), white(), true
-        ren.put entry.text.substr(entry.cursor.pos + 1), bright_black(), white()
+        ren.put entry.text[entry.cursor.pos], reverse=true
+        ren.put entry.text.substr(entry.cursor.pos + 1)
       else:
-        ren.put " ", bright_black(), white(), true
+        ren.put " ", reverse=true
     of CursorSelection:
       let cur = entry.cursor.sort
-      ren.put entry.text.substr(0, cur.start - 1), bright_black(), white()
-      ren.put entry.text.substr(cur.start, cur.stop - 1), bright_black(), white(), true
-      ren.put entry.text.substr(cur.stop), bright_black(), white(), true
+      ren.put entry.text.substr(0, cur.start - 1)
+      ren.put entry.text.substr(cur.start, cur.stop - 1), reverse=true
+      ren.put entry.text.substr(cur.stop), reverse=true
 
 func make_entry*(copy_buffer: CopyBuffer = nil): owned Entry =
   Entry(text: @[], cursor: Cursor(kind: CursorInsert, pos: 0),
@@ -259,11 +259,11 @@ func render_border*(title: string, sidebar_width: int, box: Box,
   let titlebar = strutils.repeat(' ', sidebar_width + 1) & shown_title &
       strutils.repeat(' ', padding_len.max(0))
   ren.move_to box.min
-  ren.put titlebar, bright_black(), white()
+  ren.put titlebar
 
   for y in 1..<box.size.y:
     ren.move_to box.min.x, (box.min.y + y)
-    ren.put repeat(' ', sidebar_width), bright_black(), white()
+    ren.put repeat(' ', sidebar_width)
 
 type List* = object
   items*: seq[seq[Rune]]

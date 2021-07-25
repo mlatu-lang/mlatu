@@ -81,7 +81,8 @@ method process_key*(repl: Repl, key: Key) {.locks: "unknown", tags: [].} =
     of KeyDelete, KeyBackspace:
       if repl.inputs[repl.selected].entry.text.len == 0 and repl.selected > 0:
         repl.inputs.delete(repl.selected)
-        repl.selected -= 1
+        if repl.selected >= repl.inputs.len:
+          repl.selected -= 1
       else:
         repl.inputs[repl.selected].entry.process_key key
         repl.update_input repl.selected, repl.get_in_state repl.selected
@@ -96,19 +97,19 @@ method render*(repl: Repl, box: Box, ren: var TermRenderer) =
   let title = repeat(' ', repl.max_input_number_width + 1) &
             unicode.align_left("REPL", box.size.x - repl.max_input_number_width - 1)
   ren.move_to(box.min)
-  ren.put title, bright_white(), black()
+  ren.put(title, reverse=true)
 
   for y in 0..<(box.size.y - 1):
     ren.move_to(box.min.x, box.min.y + 1 + y)
-    ren.put repeat(' ', repl.max_input_number_width()), bright_white(), black()
+    ren.put(repeat(' ', repl.max_input_number_width()), reverse=true)
   for it, input in repl.inputs:
     ren.move_to(box.min.x, box.min.y + it * 3 + 1)
-    ren.put repl.input_number(it), bright_white(), black()
+    ren.put(repl.input_number(it), reverse=true)
     ren.move_to(box.min.x + repl.max_input_number_width + 1, box.min.y + it * 3 + 1)
     if it == repl.selected:
       input.entry.render(ren)
     else:
-      ren.put input.entry.text, bright_black(), bright_white()
+      ren.put input.entry.text
 
     ren.move_to(box.min.x + repl.max_input_number_width + 1, box.min.y + it * 3 + 2)
 

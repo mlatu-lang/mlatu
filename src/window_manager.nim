@@ -173,7 +173,7 @@ method render(cmd_search: CommandSearch, box: Box, ren: var TermRenderer) =
   let sidebar_width = len("Search:")
   render_border("Command Search", sidebar_width, box, ren)
   ren.move_to(box.min + Index2d(y: 1))
-  ren.put "Search:", bright_black(), white()
+  ren.put "Search:"
   ren.move_to(box.min + Index2d(x: sidebar_width + 1, y: 1))
   cmd_search.entry.render ren
   cmd_search.list.render Box(min: box.min + Index2d(x: sidebar_width + 1, y: 2),
@@ -527,5 +527,5 @@ proc process_key*(app: App, key: Key): bool {.tags: [ReadDirEffect, ReadIOEffect
 proc render*(app: App, ren: var TermRenderer) {.tags: [].} =
   app.root_pane.render ren
 
-proc quit_app*() {.noconv, tags: [].} =
+proc quit_app*() {.noconv, tags: [WriteIOEffect].} =
   reset_term()

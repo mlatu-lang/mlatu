@@ -8,11 +8,11 @@ Mlatu is a statically-typed purely-functional concatenative high-level programmi
 
 You will need to have `nimble` installed to contribute to Mlatu (other than documentation changes). You can download both `nimble` and `nim` [here](https://nim-lang.org/install.html).
 
-You will also need sdl2 bindings available on your system. Follow [these instructions](https://github.com/nim-lang/sdl2#pre-requisites) to install sdl2 if you don't have it already.
+You will also need sdl2 bindings available on your system if you want to use the GUI. Follow [these instructions](https://github.com/nim-lang/sdl2#pre-requisites) to install sdl2 if you don't have it already.
 
-To build, run `nimble build`.
-To build and start the repl, run `nimble run`.
-To install mlatu into your $PATH, run `nimble install`.
+To build with the SDL backend, run `nimble build`. To build with the terminal backend, run `nimble -d:TermBackend build`.
+To build and start the GUI repl, run `nimble run`. To build and start the TUI repl, run `nimble -d:TermBackend build`.
+To install the GUI mlatu into your $PATH, run `nimble install`. To install the TUI mlatu into your $PATH, run `nimble -d:TermBackend install`.
 
 ## Contributing
 

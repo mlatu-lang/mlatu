@@ -398,7 +398,7 @@ func write(term: Terminal, chr: char) = term.write(Rune(chr))
 func move_to(term: Terminal, x, y: int) =
   term.cursor.pos = Index2d(x: x, y: y)
 
-proc make_terminal(default_fg: colors.Color, default_bg: colors.Color): Terminal {.tags: [ReadIOEffect, TimeEffect, TerminalEffect].} =
+proc make_terminal(): Terminal {.tags: [ReadIOEffect, TimeEffect, TerminalEffect].} =
   let
     window = create_window("Mlatu", 100, 100, 640, 480, SDL_WINDOW_RESIZABLE or
                                                          SDL_WINDOW_SHOWN)
@@ -414,8 +414,8 @@ proc make_terminal(default_fg: colors.Color, default_bg: colors.Color): Terminal
     font: font,
     font_size: 12,
     screen: make_term_screen(80, 25),
-    default_fg: default_fg,
-    default_bg: default_bg,
+    default_fg: rgb(85, 87, 83), # bright black
+    default_bg: rgb(238, 238, 236), # bright white
     # Ubuntu default color scheme
     colors: @[ 
       rgb(46, 52, 54), # black
@@ -457,10 +457,10 @@ proc make_terminal(default_fg: colors.Color, default_bg: colors.Color): Terminal
 # Interface
 var terminal: Terminal
 
-proc setup_term*(default_fg, default_bg: colors.Color) =
+proc setup_term*() =
   sdl2.init(INIT_EVERYTHING)
   ttf_init()
-  terminal = make_terminal(default_fg, default_bg)
+  terminal = make_terminal()
 
 proc set_cursor_pos*(x, y: int) = terminal.move_to(x, y)
 proc term_write*(rune: Rune) = terminal.write(rune)

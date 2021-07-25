@@ -8,7 +8,12 @@
 #
 # The Mlatu programming language comes with ABSOLUTELY NO WARRANTY, to the 
 # extent permitted by applicable law.  See the CNPL for details.
-import utils, backend/common, backend/sdl, unicode
+import utils, backend/common, unicode, os
+
+when defined(TermBackend):
+  import backend/term
+else:
+  import backend/sdl
 
 export TermScreen, make_term_screen, height, `[]`
 export setup_term, reset_term, read_key, read_mouse, terminal_width, terminal_height
@@ -16,13 +21,13 @@ export setup_term, reset_term, read_key, read_mouse, terminal_width, terminal_he
 export Color, BaseColor
 export Key, KeyKind, Mouse, MouseKind, `$`
 
-proc make_term_screen*(): owned TermScreen {.tags: [].} =
+proc make_term_screen*(): owned TermScreen {.tags: [ReadEnvEffect].} =
   make_term_screen(terminal_width(), terminal_height())
 
 func pos*(mouse: Mouse): Index2d =
   Index2d(x: mouse.x, y: mouse.y)
 
-proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect].} =
+proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect, WriteIOEffect].} =
   if screen.width != 0 and screen.height != 0:
     var cur_style = screen.data[0]
     cur_style.apply_style
@@ -34,7 +39,7 @@ proc show_all*(screen: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEf
         cur_style = screen[x, y]
     term_refresh()
 
-proc apply*(prev, cur: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect].} =
+proc apply*(prev, cur: TermScreen) {.tags: [TimeEffect, ReadIOEffect, TerminalEffect, WriteIOEffect].} =
   if prev.width == cur.width and prev.data.len == cur.data.len:
     if cur.width != 0 and cur.height != 0:
       var cur_style = cur.data[0]
