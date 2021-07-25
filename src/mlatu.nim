@@ -14,24 +14,41 @@ import strutils, sequtils, tables, algorithm
 type
   EvalError* = object of ValueError
 
-  TokKind = enum TokWord, TokLeftParen, TokRightParen, TokEqual, TokNum
+  TokKind = enum TokWord, TokLeftParen, TokRightParen, TokEqual, TokNum, TokBool
 
   Tok = object 
     case kind: TokKind
       of TokWord: word: string
       of TokNum: num: int
+      of TokBool: bool: bool
       of TokLeftParen, TokRightParen:
         depth: int
       of TokEqual: discard
 
-  ValueKind = enum ValueNum, ValueQuot
+  ValueKind = enum ValueNum, ValueBool, ValueQuot
 
   Value = object
     case kind: ValueKind:
       of ValueNum: num: int
+      of ValueBool: bool: bool
       of ValueQuot: toks: seq[Tok]
 
   Stack* = seq[Value]
+
+func `==`(a, b: Tok): bool =
+  case a.kind:
+    of TokWord: return b.kind == TokWord and a.word == b.word
+    of TokNum: return b.kind == TokNum and a.num == b.num
+    of TokBool: return b.kind == TokBool and a.bool == b.bool
+    of TokLeftParen: return b.kind == TokLeftParen
+    of TokRightParen: return b.kind == TokRightParen
+    of TokEqual: return b.kind == TokEqual
+
+func `==`(a, b: Value): bool =
+  case a.kind:
+    of ValueNum: return b.kind == ValueNum and a.num == b.num
+    of ValueQuot: return b.kind == ValueQuot and a.toks == b.toks
+    of ValueBool: return b.kind == ValueBool and a.bool == b.bool
 
 func parse_word(input: string): Tok =
   try: Tok(kind: TokNum, num: input.parse_int)
@@ -64,6 +81,9 @@ func new_stack*(): Stack = @[]
 func push_num(stack: var Stack, value: int) {.raises: [].} =
   stack.add Value(kind: ValueNum, num: value)
 
+func push_bool(stack: var Stack, value: bool) {.raises: [].} =
+  stack.add Value(kind: ValueBool, bool: value)
+
 func push_quot(stack: var Stack, toks: seq[Tok]) {.raises: [].} =
   stack.add Value(kind: ValueQuot, toks: toks)
 
@@ -75,7 +95,7 @@ func pop_num(stack: var Stack): int {.raises: [EvalError].} =
     let top = stack.pop
     case top.kind:
       of ValueNum: result = top.num
-      of ValueQuot: raise newException(EvalError, "Expected number on the stack")
+      else: raise newException(EvalError, "Expected number on the stack")
   except IndexDefect:
     raise newException(EvalError, "Expected number on the stack")
 
@@ -83,10 +103,19 @@ func pop_quot(stack: var Stack): seq[Tok] {.raises: [EvalError].} =
   try:
     let top = stack.pop
     case top.kind:
-      of ValueNum: raise newException(EvalError, "Expected quotation on the stack")
       of ValueQuot: result = top.toks
+      else: raise newException(EvalError, "Expected quotation on the stack")
   except IndexDefect:
     raise newException(EvalError, "Expected quotation on the stack")
+
+func pop_bool(stack: var Stack): bool {.raises: [EvalError].} = 
+  try:
+    let top = stack.pop
+    case top.kind:
+      of ValueBool: result = top.bool
+      else: raise newException(EvalError, "Expected boolean on the stack")
+  except IndexDefect:
+    raise newException(EvalError, "Expected boolean on the stack")
 
 func pop_val(stack: var Stack): Value {.raises: [EvalError].} =
   try:
@@ -97,6 +126,7 @@ func pop_val(stack: var Stack): Value {.raises: [EvalError].} =
 func unparse(value: Value): seq[Tok] {.raises: [].} =
   case value.kind:
     of ValueNum: result.add Tok(kind: TokNum, num: value.num)
+    of ValueBool: result.add Tok(kind: TokBool, bool: value.bool)
     of ValueQuot: 
       result.add Tok(kind: TokLeftParen)
       result &= value.toks
@@ -134,8 +164,52 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
             except IndexDefect:
               raise newException(EvalError, "Expected word name after `=`")
           of TokNum: stack.push_num tok.num
+          of TokBool: stack.push_bool tok.bool
           of TokWord:
               case tok.word:
+                of "true":
+                  stack.push_bool(true)
+                of "false":
+                  stack.push_bool(false)
+                of "and":
+                  let a = stack.pop_bool
+                  let b = stack.pop_bool
+
+                  stack.push_bool(a and b)
+                of "not":
+                  let a = stack.pop_bool
+
+                  stack.push_bool(not a)
+                of "or":
+                  let a = stack.pop_bool
+                  let b = stack.pop_bool
+
+                  stack.push_bool(a or b)
+                of "gt":
+                  let a = stack.pop_num
+                  let b = stack.pop_num
+
+                  stack.push_bool(b > a)
+                of "geq":
+                  let a = stack.pop_num
+                  let b = stack.pop_num
+
+                  stack.push_bool(b >= a)
+                of "lt":
+                  let a = stack.pop_num
+                  let b = stack.pop_num
+
+                  stack.push_bool(b < a)
+                of "leq":
+                  let a = stack.pop_num
+                  let b = stack.pop_num
+
+                  stack.push_bool(b <= a)
+                of "eq":
+                  let a = stack.pop_val
+                  let b = stack.pop_val
+
+                  stack.push_bool(a == b)
                 of "+":
                   let a = stack.pop_num
                   let b = stack.pop_num
@@ -195,15 +269,19 @@ func eval*(stack: var Stack, state: var EvalState, toks: seq[Tok]) {.raises: [Ev
                   stack.push_quot(b & a)
                 of "i":
                   stack.eval(state, stack.pop_quot)
-                of "ifz":
+                of "if":
                   let a = stack.pop_quot
                   let b = stack.pop_quot
-                  let c = stack.pop_num
+                  let c = stack.pop_bool
 
-                  if c == 0:
-                    stack.push_quot a
+                  if c:
+                    stack.eval(state, b)
                   else:
-                    stack.push_quot b
+                    stack.eval(state, a)
+                of "cons":
+                  let a = stack.pop_quot
+                  let b = stack.pop_val.unparse
+                  stack.push_quot(b & a)
                 else:
                   try:
                     stack.eval(state, state[tok.word])
@@ -228,13 +306,18 @@ func init_state*(): EvalState {.raises: [], tags: [].} =
     "rolldownd" : "(rolldown) dip".parse,
     "rotated" : "(rotate) dip".parse,
     "pred" : "1 -".parse,
-    "succ" : "1 +".parse
+    "succ" : "1 +".parse,
+    "neq" : "eq not".parse,
+    "itob" : "0 neq".parse,
+    "btoi" : "(1) (0) if".parse,
+    "repeat" : "dupd pred dup itob rollup (repeat cat) cons cons () if".parse,
   }.toTable
 
 func `$`(tok: Tok): string =
   case tok.kind:
     of TokWord: tok.word
     of TokNum: $tok.num
+    of TokBool: $tok.bool
     of TokEqual: "="
     of TokLeftParen: "("
     of TokRightParen: ")"
