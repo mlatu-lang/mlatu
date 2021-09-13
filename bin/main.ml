@@ -1,20 +1,16 @@
-open! Batteries
-open I18n
+open! BatteriesExceptionless
 
 let prompt = "> "
 let input_files = ref ["bin/prelude.mlt"]
 
 let load_files =
-  let decide name def1 _def2 =
-    print_endline ("Warning: '" ^ name ^ "' is defined twice") ;
-    Some def1 in
   let rec loop defs = function
     | [] -> Ok defs
     | fn :: fns -> (
       match Mlatu_api.Parser.file fn with
-      | Ok defs' -> loop (Map.String.union decide defs defs') fns
+      | Ok defs' -> loop (defs @ defs') fns
       | Error e -> Error e ) in
-  loop Map.String.empty
+  loop []
 
 let checkers =
   let () = Sites.Plugins.Plugins.load_all () in
@@ -31,6 +27,7 @@ let main () =
   print_endline "Loading files..." ;
   match load_files !input_files with
   | Ok defs ->
+      let rules = Mlatu_api.Rewrite.make_rules defs in
       let rec loop () =
         let () =
           IO.write_string stdout prompt ;
@@ -39,8 +36,8 @@ let main () =
         | Ok main ->
             typecheck
               (fun () ->
-                let rewritten = Mlatu_api.Rewrite.rewrite defs main in
-                print_endline ("= " ^ Mlatu_api.Term.display_terms rewritten) ;
+                let main' = Mlatu_api.Rewrite.rewrite rules main in
+                print_endline ("= " ^ Mlatu_api.Term.display_terms main') ;
                 loop () )
               (fun s -> print_endline s ; loop ())
               defs main
@@ -50,16 +47,9 @@ let main () =
 
 let () =
   let anon_fun filename = input_files := filename :: !input_files in
-  let spf x = Printf.sprintf x in
-  let gettext_args, gettext_copyright = I18n.init in
-  let args = Stdlib.Arg.align gettext_args in
   let () =
-    Stdlib.Arg.parse args anon_fun
-      (spf
-         (f_
-            "The mlatu programming language by Caden Haustein\n\n\
-             %s\n\n\
-             Command: mlatu [options]\n\n\
-             Options:" )
-         gettext_copyright ) in
+    Stdlib.Arg.parse [] anon_fun
+      "The mlatu programming language by Caden Haustein\n\n\
+       Command: mlatu [options]\n\n\
+       Options:" in
   main ()

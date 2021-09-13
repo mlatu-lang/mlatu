@@ -1,3 +1,6 @@
-open! Batteries
+open! BatteriesExceptionless
 
-val rewrite : Term.t list Map.String.t -> Term.t list -> Term.t list
+type rules
+
+val make_rules : (Term.t Vect.t * Term.t Vect.t) list -> rules
+val rewrite : rules -> Term.t Vect.t -> Term.t Vect.t

@@ -1,4 +1,4 @@
 (library
  (name mlatu_api)
  (public_name mlatu.api)
- (libraries batteries zarith uutf gettext.base))
+ (libraries batteries zarith uutf))

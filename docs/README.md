@@ -43,20 +43,15 @@ cd mlatu
 Usage
 -----
 
-Running `mlatu` will start up a REPL (Read-Eval-Print-Loop) where toplevel terms can be typed and their respective reductions will be printed out. If any arguments are given, they are interpreted as files containing additional definitions to be loaded.
+Running `mlatu` will start up a REPL (Read-Eval-Print-Loop) where toplevel terms can be typed and their respective reductions will be printed out. If any arguments are given, they are interpreted as files containing additional rewrite-rules to load.
 
 ```console
 $ mlatu
+Loading files...
 > 1 2 +
 = 3 
 > 1 dup 2 pop 3 
 = 1 1 3
-```
-
-```
-fact : (zero?) (pop 1) (dup pred fact *) ifte ;
-
-fib : (zero?) (pop 1) ((1 =) (pop 1) (dup pred fib fib +) ifte) ifte ;
 ```
 
 Known issues and limitations

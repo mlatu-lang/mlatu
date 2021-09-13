@@ -3,21 +3,14 @@
   "version": "0.1.0",
   "description": "Statically-typed concatenative programming language",
   "license": "CNPL",
-  "scripts": {
-    "format": "dune build @fmt --auto-promote"
-  },
-  "esy": {
-    "build": "dune build -p #{self.name}"
-  },
+  "scripts": { "format": "dune build @fmt --auto-promote" },
+  "esy": { "build": "dune build -p #{self.name}" },
   "dependencies": {
-    "@opam/batteries": "3.3.0",
-    "@opam/camomile": "1.0.2",
-    "@opam/dune": "2.9.0",
-    "@opam/dune-site": "2.9.0",
-    "@opam/gettext": "0.4.2",
-    "@opam/gettext-camomile": "0.4.2",
-    "@opam/ocamlformat": "0.19.0",
-    "@opam/uutf": "1.0.2",
+    "@opam/batteries": "^3.3.0",
+    "@opam/dune": "^2.9.1",
+    "@opam/dune-site": "^2.9.1",
+    "@opam/ocamlformat": "^0.19.0",
+    "@opam/uutf": "^1.0.2",
     "@opam/zarith": "1.12",
     "ocaml": "^4.12.0"
   }

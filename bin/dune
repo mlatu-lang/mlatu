@@ -1,13 +1,7 @@
 (executable
  (name main)
  (public_name mlatu)
- (libraries
-  mlatu.api
-  batteries
-  gettext.base
-  gettext-camomile
-  dune-site
-  dune-site.plugins))
+ (libraries mlatu.api batteries dune-site dune-site.plugins))
 
 (generate_sites_module
  (module sites)
