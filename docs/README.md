@@ -6,7 +6,7 @@ mlatu is a purely-functional concatenative programming language.
 ![Lines of code](https://img.shields.io/tokei/lines/github/mlatu-lang/mlatu)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/mlatu-lang/mlatu?include_prereleases)
 ![GitHub last commit](https://img.shields.io/github/last-commit/mlatu-lang/mlatu)
-![Discord](https://img.shields.io/discord/530598289813536771)
+![Discord](https://img.shields.io/discord/889248218460852235)
 
 Table of Contents
 -----------------
@@ -61,7 +61,7 @@ Currently no way of doing I/O (input and output). This is a top priority and wil
 Getting help
 ------------
 
-There are a couply ways to get help if you have questions, thoughts, or issues. The GitHub issue tracker (https://github.com/mlatu-lang/mlatu/issues) is the best place to submit issues or bug reports. If you just have a thought or question, I'm available on the #mlatu channel on https://discord.gg/4Kjt3ZE. 
+There are a couply ways to get help if you have questions, thoughts, or issues. The GitHub issue tracker (https://github.com/mlatu-lang/mlatu/issues) is the best place to submit issues or bug reports. If you just have a thought or question, I have a small Discord server at https://discord.gg/WHdnkktgKr . 
 
 Contributing
 ------------
@@ -71,7 +71,7 @@ See [this guide](/CONTRIBUTING.md) for more specific and detailed development wo
 
 Acknowledgements
 ----------------
-mlatu is inspired by a number of pre-existing concatenative languages, including but not limited to Forth, Joy, Factor, Cat, Kitten, Min, and Popr.
+mlatu is inspired by a number of pre-existing concatenative languages, including but not limited to Forth, Joy, Factor, Cat, Kitten, Min, Om, Enchilada, and Popr.
 
 License
 -------
