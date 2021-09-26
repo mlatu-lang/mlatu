@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+use anyhow::Context;
+
 use crate::ast::{Rule, Term};
 
 const BUILTIN:&[u8] = b"
@@ -47,8 +49,8 @@ pub fn generate_query(terms:&[Term]) -> String {
 /// # Errors
 ///
 /// Returns `Err` if there was an error creating the file or writing to it.
-pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> std::io::Result<()> {
-  let mut file = File::create(path)?;
+pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> anyhow::Result<()> {
+  let mut file = File::create(path).context("Failed to create Prolog file")?;
   for rule in rules {
     let mut pattern = String::from("Rest");
     for elem in &rule.pattern {
@@ -60,8 +62,8 @@ pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> std::io::Result<()> {
       replacement.insert_str(0, &format!("[{}|", transform_term(elem)));
       replacement.push(']');
     }
-    file.write_all(format!("equiv({}, Other) :- equiv({}, Other).\n", pattern, replacement).as_bytes())?;
+    file.write_all(format!("equiv({}, Other) :- equiv({}, Other).\n", pattern, replacement).as_bytes()).context("Failed to write user-defined predicate")?;
   }
-  file.write_all(BUILTIN)?;
+  file.write_all(BUILTIN).context("Failed to write builtin predicates")?;
   Ok(())
 }

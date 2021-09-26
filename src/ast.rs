@@ -4,7 +4,7 @@ use std::sync::Arc;
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug)]
 pub enum Term {
   Word(Arc<String>),
-  Quote(Vec<Term>),
+  Quote(Vec<Self>),
 }
 
 impl Term {
@@ -12,7 +12,7 @@ impl Term {
   pub fn new_word(name:impl Into<String>) -> Self { Self::Word(Arc::new(name.into())) }
 
   #[must_use]
-  pub fn new_quote(terms:Vec<Term>) -> Self { Self::Quote(terms) }
+  pub fn new_quote(terms:Vec<Self>) -> Self { Self::Quote(terms) }
 }
 
 impl fmt::Display for Term {
