@@ -1,3 +1,5 @@
+cargo-features = ["strip"]
+
 [package]
 name = "mlatu"
 version = "0.1.0"
@@ -8,6 +10,7 @@ readme = "docs/README.md"
 keywords = ["cli", "parser", "langdev", "language"]
 categories = ["command-line-utilities", "compilers", "text-editors"]
 license-file = "LICENSE.md"
+include = ["src/**/*", "LICENSE.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,3 +20,6 @@ combine = "4.6.1"
 unic-ucd = "0.9.0"
 
 [features]
+
+[profile.release]
+strip = true

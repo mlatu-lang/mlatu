@@ -7,13 +7,17 @@ use anyhow::Context;
 use crate::ast::{Rule, Term};
 
 const BUILTIN:&[u8] = b"
-equiv(['dup'|[X|Xs]], Other) :- equiv([X|[X|Xs]], Other).
-equiv(['pop'|[_|Xs]], Other) :- equiv(Xs, Other).
-equiv(['i'|[Q|Xs]], Other) :- append(Q, Xs, NewXs), equiv(NewXs, Other).
-equiv(['cons'|[Q|[X|Xs]]], Other) :- equiv([[X|Q]|Xs], Other).
-equiv(['dip'|[Q|[X|Xs]]], Other) :- append(Q, Xs, NewXs), equiv([X|NewXs], Other).
+equiv(['dup',X|Xs], Other) :- equiv([X,X|Xs], Other).
+equiv(['pop',X|Xs], Other) :- equiv(Xs, Other).
+equiv(['i',[]|Xs], Other) :- equiv(Xs, Other).
+equiv(['i',[H|T]|Xs], Other) :- append([H|T], Xs, NewXs), equiv(NewXs, Other).
+equiv(['cons',[],X|Xs], Other) :- equiv([[X]|Xs], Other).
+equiv(['cons',[H|T],X|Xs], Other) :- equiv([[X,H|T]|Xs], Other).
+equiv(['dip',[],X|Xs], Other) :- equiv([X|Xs], Other).
+equiv(['dip',[H|T],X|Xs], Other) :- append([H|T], Xs, NewXs), equiv([X|NewXs], Other).
 equiv([], []).
-equiv([X|Xs], Other) :- equiv(Xs, New), (dif(Xs, New) -> equiv([X|New], Other) ; [X|Xs] = Other).
+equiv([X|Xs], Other) :- equiv(Xs, New), (Xs \\= New -> equiv([X|New], Other) ; Other = [X|Xs]).
+rewrite(List, Other) :- equiv(List, Other), List \\= Other.
 ";
 
 fn transform_term(term:&Term) -> String {
@@ -34,7 +38,7 @@ fn transform_term(term:&Term) -> String {
 }
 
 pub fn generate_query(terms:&[Term]) -> String {
-  let mut s = ("equiv([").to_string();
+  let mut s = ("rewrite([").to_string();
   let mut iter = terms.iter().rev();
   if let Some(first) = iter.next() {
     s.push_str(&transform_term(first));
@@ -52,17 +56,24 @@ pub fn generate_query(terms:&[Term]) -> String {
 pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> anyhow::Result<()> {
   let mut file = File::create(path).context("Failed to create Prolog file")?;
   for rule in rules {
-    let mut pattern = String::from("Rest");
-    for elem in &rule.pattern {
-      pattern.insert_str(0, &format!("[{}|", transform_term(elem)));
-      pattern.push(']');
+    let mut s = "equiv([".to_owned();
+    let mut pattern_iter = rule.pattern.iter().rev();
+    if let Some(first) = pattern_iter.next() {
+      s.push_str(&transform_term(first));
     }
-    let mut replacement = String::from("Rest");
-    for elem in &rule.replacement {
-      replacement.insert_str(0, &format!("[{}|", transform_term(elem)));
-      replacement.push(']');
+    for term in pattern_iter {
+      s.push_str(&format!(", {}", transform_term(term)));
     }
-    file.write_all(format!("equiv({}, Other) :- equiv({}, Other).\n", pattern, replacement).as_bytes()).context("Failed to write user-defined predicate")?;
+    s.push_str("|Rest], Other) :- equiv([");
+    let mut replacement_iter = rule.replacement.iter().rev();
+    if let Some(first) = replacement_iter.next() {
+      s.push_str(&transform_term(first));
+    }
+    for term in replacement_iter {
+      s.push_str(&format!(", {}", transform_term(term)));
+    }
+    s.push_str("|Rest], Other).\n");
+    file.write_all(s.as_bytes()).context("Failed to write user-defined predicate")?;
   }
   file.write_all(BUILTIN).context("Failed to write builtin predicates")?;
   Ok(())
