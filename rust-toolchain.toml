@@ -1,3 +1,3 @@
 [toolchain]
 channel = "nightly-2021-09-27"
-profile = "minimal"
+components = ["rustfmt", "rust-std", "rustc", "cargo", "rust-docs", "clippy"]

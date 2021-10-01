@@ -1,5 +1,6 @@
 use std::fmt;
-use std::sync::Arc;
+
+use async_std::sync::Arc;
 
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug)]
 pub enum Term {
@@ -24,7 +25,7 @@ impl fmt::Display for Term {
         for term in terms {
           write!(f, " {}", term)?;
         }
-        write!(f, ")")?;
+        write!(f, " )")?;
         Ok(())
       },
     }
@@ -47,7 +48,7 @@ impl fmt::Display for Rule {
     for term in &self.pattern {
       write!(f, "{} ", term)?;
     }
-    write!(f, "->")?;
+    write!(f, "=")?;
     for term in &self.replacement {
       write!(f, " {}", term)?;
     }

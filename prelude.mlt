@@ -1,0 +1,1 @@
+q = ( ) cons;swap = q dip;;

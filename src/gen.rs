@@ -1,8 +1,6 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-
-use anyhow::Context;
+use async_std::fs::File;
+use async_std::io::WriteExt;
+use async_std::path::PathBuf;
 
 use crate::ast::{Rule, Term};
 
@@ -53,8 +51,8 @@ pub fn generate_query(terms:&[Term]) -> String {
 /// # Errors
 ///
 /// Returns `Err` if there was an error creating the file or writing to it.
-pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> anyhow::Result<()> {
-  let mut file = File::create(path).context("Failed to create Prolog file")?;
+pub async fn generate(rules:Vec<Rule>, path:PathBuf) -> std::io::Result<()> {
+  let mut file = File::create(path).await?;
   for rule in rules {
     let mut s = "equiv([".to_owned();
     let mut pattern_iter = rule.pattern.iter().rev();
@@ -73,8 +71,8 @@ pub fn generate<P:AsRef<Path>>(rules:Vec<Rule>, path:P) -> anyhow::Result<()> {
       s.push_str(&format!(", {}", transform_term(term)));
     }
     s.push_str("|Rest], Other).\n");
-    file.write_all(s.as_bytes()).context("Failed to write user-defined predicate")?;
+    file.write_all(s.as_bytes()).await?;
   }
-  file.write_all(BUILTIN).context("Failed to write builtin predicates")?;
+  file.write_all(BUILTIN).await?;
   Ok(())
 }

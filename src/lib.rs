@@ -1,3 +1,4 @@
+#![feature(stdio_locked)]
 #![deny(clippy::correctness)]
 #![warn(clippy::suspicious,
         clippy::style,
@@ -5,13 +6,12 @@
         clippy::perf,
         clippy::pedantic,
         clippy::cargo,
-        clippy::nursery)]
-#![warn(clippy::as_conversions,
+        clippy::nursery,
+        clippy::as_conversions,
         clippy::clone_on_ref_ptr,
         clippy::create_dir,
         clippy::decimal_literal_representation,
         clippy::exit,
-        clippy::expect_used,
         clippy::filetype_is_file,
         clippy::float_cmp_const,
         clippy::if_then_some_else_none,
@@ -24,11 +24,14 @@
         clippy::verbose_file_reads)]
 
 mod ast;
+mod editor;
 mod execute;
 mod gen;
 mod parser;
+mod terminal;
 
 pub use ast::{Rule, Term};
+pub use editor::Editor;
 pub use execute::execute;
 pub use gen::generate;
 pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};

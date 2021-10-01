@@ -1,6 +1,5 @@
-use std::process::{Command, Output, Stdio};
-
 use anyhow::Context;
+use async_std::process::{Command, Output, Stdio};
 use combine::parser::byte::byte;
 use combine::parser::repeat::take_until;
 use combine::{eof, many1, satisfy, sep_by, Parser, Stream};
@@ -42,7 +41,7 @@ fn parser<Input>() -> impl Parser<Input, Output=Vec<String>>
 /// # Panics
 ///
 /// Panics if parsing the output of the goal fails.
-pub fn execute(path:&str, terms:&[Term]) -> anyhow::Result<Vec<String>> {
+pub async fn execute(path:&str, terms:&[Term]) -> anyhow::Result<Vec<String>> {
   let query = generate_query(terms);
   let Output { stdout, status: _, stderr: _, } =
     Command::new("swipl").args(["-g", &query, "-t", "halt", path])
@@ -50,6 +49,7 @@ pub fn execute(path:&str, terms:&[Term]) -> anyhow::Result<Vec<String>> {
                          .stdout(Stdio::piped())
                          .stderr(Stdio::piped())
                          .output()
+                         .await
                          .context("Failed to spawn 'swipl' and capture its output")?;
   let mut parser = parser();
   let (result, _) = parser.parse(stdout.as_slice()).context("Failed to parse 'swipl's output")?;
