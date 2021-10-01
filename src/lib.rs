@@ -25,13 +25,10 @@
 
 mod ast;
 // mod editor;
-mod execute;
-mod gen;
 mod parser;
+pub mod prolog;
 // mod terminal;
 
 pub use ast::{pretty_rule, Rule, Term};
 // pub use editor::Editor;
-pub use execute::execute;
-pub use gen::generate;
 pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};

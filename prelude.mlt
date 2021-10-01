@@ -1,2 +1,12 @@
-q = ( ) const;
-swap = q dip;
+concat = c;
+unquote = u;
+quote = q;
+swap = s;
+remove = r;
+dup = d;
+
+prepend = swap quote swap concat;
+p = prepend;
+
+unquote-before = swap quote cat unquote;
+uqb = unquote-before;
