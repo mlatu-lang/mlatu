@@ -69,25 +69,41 @@ impl Editor {
     }
   }
 
+  const fn pattern_half_width(&self, sep_len:u16) -> u16 {
+    let width = self.terminal.width();
+    // Width of pattern box
+    // half of the width, minus first separator
+    // = l/2 - s
+    // where l is the width and s is the separator length
+    width / 2 - sep_len
+  }
+
+  const fn replacement_half_width(&self, sep_len:u16) -> u16 {
+    let width = self.terminal.width();
+    // Width of replacement box
+    // entire width, minus first box, minux all 3 separators
+    // = l - (l/2 - s) - 3s
+    // = l - l/s + s - 3s
+    // = l - l/2 - 2s
+    // where l is the width and s is the separator length
+    width - width / 2 - 2 * sep_len
+  }
+
   fn make_pattern_half(&self, row:u16, s:&mut String) {
-    let width = usize::from(self.terminal.width());
     Terminal::clear_current_line();
-    if let Some(term) = self.rules[self.rule_idx].pattern.get(usize::from(row) - 2) {
-      let p_t = term.to_string();
-      s.push_str(&" ".repeat(width / 4 - p_t.len() / 2 - s.len() - 1));
-      s.push_str(&p_t);
-    }
-    s.push_str(&" ".repeat(width / 2 - s.len()));
+    let term = self.rules[self.rule_idx].pattern
+                                        .get(usize::from(row) - 2)
+                                        .map_or_else(String::new, ToString::to_string);
+    let width = self.pattern_half_width(1);
+    s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
   fn make_replacement_half(&self, row:u16, s:&mut String) {
-    let width = usize::from(self.terminal.width());
-    if let Some(term) = self.rules[self.rule_idx].replacement.get(usize::from(row) - 2) {
-      let r_t = term.to_string();
-      s.push_str(&" ".repeat(3 * width / 4 - r_t.len() / 2 - s.len() - 1));
-      s.push_str(&r_t);
-    }
-    s.push_str(&" ".repeat(width - s.len() - 1));
+    let width = self.replacement_half_width(1);
+    let term = self.rules[self.rule_idx].replacement
+                                        .get(usize::from(row) - 2)
+                                        .map_or_else(String::new, ToString::to_string);
+    s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
   fn go_to_position(&self) {
@@ -100,8 +116,7 @@ impl Editor {
                                   - u16::try_from(p_t.len()).expect("pattern term text is \
                                                                      greater than 2^16 \
                                                                      characters")
-                                    / 2
-                                  - 1,
+                                    / 2,
                                   u16::try_from(*index).expect("pattern terms longer than 2^16 \
                                                                 terms")
                                   + 2);
@@ -141,12 +156,12 @@ impl Editor {
       | _ => format!("{} (rule {}/{})", DEFAULT_STATUS, self.rule_idx, self.rules.len()),
     };
     let width = usize::from(self.terminal.width());
-    let mut s = String::new();
-    s.push_str(&" ".repeat(width / 2 - status.len() / 2));
-    s.push_str(&status);
-    s.push_str(&" ".repeat(width - s.len()));
-    println!("{}\r", s);
-    println!("{}\r", "-".repeat(width));
+    println!("{0: ^1$}\r", status, width);
+    println!("-{0:-^1$}-{2:-^3$}-\r",
+             "| Pattern |",
+             self.pattern_half_width(1).into(),
+             "| Replacement |",
+             self.replacement_half_width(1).into());
   }
 
   fn display(&self) {
