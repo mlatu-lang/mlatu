@@ -206,8 +206,11 @@ impl Editor {
 
   async fn save(&mut self) -> io::Result<()> {
     self.file.seek(std::io::SeekFrom::Start(0)).await?;
+    eprintln!("{:?}", &self.rules);
     for rule in &self.rules {
-      self.file.write_all(rule.to_string().as_bytes()).await?;
+      let mut rule = rule.to_string();
+      rule.push('\n');
+      self.file.write_all(rule.as_bytes()).await?;
     }
     Ok(())
   }
