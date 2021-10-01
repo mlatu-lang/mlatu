@@ -1,38 +1,24 @@
 use async_std::fs::File;
 use async_std::io;
 use async_std::prelude::*;
-use termion::event::Key;
+use async_std::sync::{Arc, Mutex};
 
 use crate::ast::{Rule, Term};
 use crate::parser::parse_terms;
-use crate::terminal::Terminal;
-
-const DEFAULT_STATUS:&str = "Welcome to the mlatu editor";
-
-#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Location {
-  Pattern,
-  Replacement,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum State {
-  InLoc(Location, usize),
-  AtLoc(Location),
-  Editing(String, Box<Self>),
-}
+use crate::view::{State, View};
 
 pub struct Editor {
   file:File,
-  terminal:Terminal,
-  rules:Vec<Rule>,
+  view:View,
+  rules:Vec<Arc<Mutex<Rule>>>,
   rule_idx:usize,
   should_quit:bool,
   state:State,
 }
 
 fn die(e:&std::io::Error) {
-  Terminal::clear_screen();
+  let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
+  let _result = crossterm::terminal::disable_raw_mode();
   panic!("{}", e)
 }
 
@@ -40,295 +26,269 @@ impl Editor {
   /// # Errors
   ///
   /// Will return `Err` if there was an error constructing a terminal
-  pub fn new(file:File, rules:Vec<Rule>) -> io::Result<Self> {
-    let terminal = Terminal::new()?;
+  pub fn new(file:File, original_rules:Vec<Rule>) -> io::Result<Self> {
+    crossterm::terminal::enable_raw_mode()?;
     let should_quit = false;
     let rule_idx = 0;
-    let (rules, state) = if rules.is_empty() {
-      (vec![Rule::new(vec![], vec![])], State::AtLoc(Location::Pattern))
+    let (rules, state) = if original_rules.is_empty() {
+      (vec![Arc::new(Mutex::new(Rule::new(vec![], vec![])))], State::AtLeft)
     } else {
-      (rules, State::InLoc(Location::Pattern, 0))
+      let mut rules = Vec::new();
+      for rule in original_rules {
+        rules.push(Arc::new(Mutex::new(rule)));
+      }
+      (rules, State::InLeft(0))
     };
-    Ok(Self { file, terminal, rules, rule_idx, should_quit, state })
+    let default_status = format!("mlatu editor (rule {}/{})", rule_idx + 1, rules.len());
+    let view = View::new(Arc::clone(&rules[rule_idx]),
+                         ("| Pattern |".to_string(), "| Replacement |".to_string()),
+                         default_status)?;
+    Ok(Self { file, view, rules, rule_idx, should_quit, state })
   }
 
   pub async fn run(&mut self) {
-    if let Err(error) = self.refresh_screen().await {
-      die(&error);
-    }
     loop {
-      if let Err(error) = self.process_keypress().await {
-        die(&error);
-      }
-      if let Err(error) = self.refresh_screen().await {
+      if let Err(error) = self.view.refresh_screen(self.state.clone(), self.should_quit).await {
         die(&error);
       }
       if self.should_quit {
+        let _result = crossterm::terminal::disable_raw_mode();
         break
       }
-    }
-  }
-
-  const fn pattern_half_width(&self, sep_len:u16) -> u16 {
-    let width = self.terminal.width();
-    // Width of pattern box
-    // half of the width, minus first separator
-    // = l/2 - s
-    // where l is the width and s is the separator length
-    width / 2 - sep_len
-  }
-
-  const fn replacement_half_width(&self, sep_len:u16) -> u16 {
-    let width = self.terminal.width();
-    // Width of replacement box
-    // entire width, minus first box, minux all 3 separators
-    // = l - (l/2 - s) - 3s
-    // = l - l/s + s - 3s
-    // = l - l/2 - 2s
-    // where l is the width and s is the separator length
-    width - width / 2 - 2 * sep_len
-  }
-
-  fn make_pattern_half(&self, row:u16, s:&mut String) {
-    Terminal::clear_current_line();
-    let term = self.rules[self.rule_idx].pattern
-                                        .get(usize::from(row) - 2)
-                                        .map_or_else(String::new, ToString::to_string);
-    let width = self.pattern_half_width(1);
-    s.push_str(&format!("{0: ^1$}", term, width.into()));
-  }
-
-  fn make_replacement_half(&self, row:u16, s:&mut String) {
-    let width = self.replacement_half_width(1);
-    let term = self.rules[self.rule_idx].replacement
-                                        .get(usize::from(row) - 2)
-                                        .map_or_else(String::new, ToString::to_string);
-    s.push_str(&format!("{0: ^1$}", term, width.into()));
-  }
-
-  fn go_to_position(&self) {
-    let width = self.terminal.width();
-    match &self.state {
-      | State::InLoc(Location::Pattern, index) => {
-        let term = self.rules[self.rule_idx].pattern.get(*index).expect("bounds check failed");
-        let p_t = term.to_string();
-        Terminal::cursor_position(width / 4
-                                  - u16::try_from(p_t.len()).expect("pattern term text is \
-                                                                     greater than 2^16 \
-                                                                     characters")
-                                    / 2,
-                                  u16::try_from(*index).expect("pattern terms longer than 2^16 \
-                                                                terms")
-                                  + 2);
-      },
-      | State::AtLoc(Location::Pattern) => {
-        Terminal::cursor_position(width / 4 - 1, 2);
-      },
-      | State::InLoc(Location::Replacement, index) => {
-        let term = self.rules[self.rule_idx].replacement.get(*index).expect("bounds check failed");
-        let r_t = term.to_string();
-        Terminal::cursor_position(3 * width / 4
-                                  - (u16::try_from(r_t.len()).expect("replacement term text is \
-                                                                      greater than 2^16 \
-                                                                      characters"))
-                                    / 2
-                                  - 1,
-                                  u16::try_from(*index).expect("replacement terms longer than \
-                                                                2^16 terms")
-                                  + 2);
-      },
-      | State::AtLoc(Location::Replacement) => {
-        Terminal::cursor_position(3 * width / 4 - 1, 2);
-      },
-      | State::Editing(s, _) =>
-        Terminal::cursor_position(width / 2
-                                  + (u16::try_from(s.len()).expect("input field text is greater \
-                                                                    than 2^16 characters")
-                                     + 1)
-                                    / 2,
-                                  0),
-    }
-  }
-
-  fn display_status(&self) {
-    let status = match &self.state {
-      | State::Editing(msg, _) => msg.clone(),
-      | _ => format!("{} (rule {}/{})", DEFAULT_STATUS, self.rule_idx + 1, self.rules.len()),
-    };
-    let width = usize::from(self.terminal.width());
-    println!("{0: ^1$}\r", status, width);
-    println!("-{0:-^1$}-{2:-^3$}-\r",
-             "| Pattern |",
-             self.pattern_half_width(1).into(),
-             "| Replacement |",
-             self.replacement_half_width(1).into());
-  }
-
-  fn display(&self) {
-    self.display_status();
-    let height = self.terminal.height();
-    for row in 2..height - 1 {
-      let mut s = "|".to_owned();
-      self.make_pattern_half(row, &mut s);
-      s.push('|');
-      self.make_replacement_half(row, &mut s);
-      s.push('|');
-      println!("{}\r", s);
-    }
-    let mut s = "|".to_owned();
-    self.make_pattern_half(height, &mut s);
-    s.push('|');
-    self.make_replacement_half(height, &mut s);
-    s.push('|');
-    print!("{}", s);
-  }
-
-  async fn refresh_screen(&self) -> io::Result<()> {
-    Terminal::cursor_hide();
-    Terminal::cursor_position(0, 0);
-    if self.should_quit {
-      Terminal::clear_screen();
-      println!("Goodbye.\r");
-    } else {
-      self.display();
-      self.go_to_position();
-    }
-    Terminal::cursor_show();
-    Terminal::flush().await
-  }
-
-  fn get_loc(&self, loc:Location) -> &Vec<Term> {
-    match loc {
-      | Location::Pattern => &self.rules[self.rule_idx].pattern,
-      | Location::Replacement => &self.rules[self.rule_idx].replacement,
-    }
-  }
-
-  fn get_loc_mut(&mut self, loc:Location) -> &mut Vec<Term> {
-    match loc {
-      | Location::Pattern => &mut self.rules[self.rule_idx].pattern,
-      | Location::Replacement => &mut self.rules[self.rule_idx].replacement,
-    }
-  }
-
-  fn set_position(&mut self, loc:Location, index:usize) {
-    self.state = if self.get_loc(loc).is_empty() {
-      State::AtLoc(loc)
-    } else {
-      State::InLoc(loc, index.min(self.get_loc(loc).len() - 1))
+      if let Err(error) = self.process_keypress().await {
+        die(&error);
+      }
     }
   }
 
   async fn save(&mut self) -> io::Result<()> {
     self.file.seek(std::io::SeekFrom::Start(0)).await?;
     for rule in &self.rules {
-      let mut rule = rule.to_string();
+      let guard = rule.lock_arc().await;
+      let mut rule = format!("{}", guard);
       rule.push('\n');
       self.file.write_all(rule.as_bytes()).await?;
     }
     Ok(())
   }
 
-  fn submit_input(&mut self, s:&str, state:&State) {
+  async fn submit_input(&mut self, s:&str, state:&State) {
     if let Ok(terms) = parse_terms(s) {
+      let mut guard = self.view.lock().await;
+
       match state {
-        | State::AtLoc(loc) => {
-          *self.get_loc_mut(*loc) = terms;
-          self.set_position(*loc, 0);
+        | State::AtLeft => {
+          guard.pattern = terms;
+          self.set_left(0).await;
         },
-        | State::InLoc(loc, index) => {
+        | State::AtRight => {
+          guard.replacement = terms;
+          self.set_right(0).await;
+        },
+        | State::InLeft(index) => {
           let mut index = *index;
-          let mut_terms = self.get_loc_mut(*loc);
           for term in terms {
-            mut_terms.insert(index, term);
+            guard.pattern.insert(index, term);
             index += 1;
           }
-          self.set_position(*loc, index - 1);
+          self.set_left(index - 1).await;
+        },
+        | State::InRight(index) => {
+          let mut index = *index;
+          for term in terms {
+            guard.replacement.insert(index, term);
+            index += 1;
+          }
+          self.set_right(index - 1).await;
         },
         | State::Editing(..) => {},
       }
     }
   }
 
-  async fn process_keypress(&mut self) -> io::Result<()> {
-    let pressed_key = Terminal::read_key()?;
-    match (pressed_key, self.state.clone()) {
-      | (Key::Esc, _) => self.should_quit = true,
-      | (Key::Ctrl('s'), _) => self.save().await?,
-      | (Key::Ctrl('d'), _) => {
-        if self.rules.len() == 1 {
-          self.rules[0].pattern = Vec::new();
-          self.rules[0].replacement = Vec::new();
-        } else {
-          self.rules.remove(self.rule_idx);
-          self.rule_idx = self.rule_idx.min(self.rules.len() - 1);
-        }
-        self.state = State::AtLoc(Location::Pattern);
-      },
-      | (Key::Ctrl(' '), _) => {
-        self.rules.insert(self.rule_idx, Rule::new(vec![], vec![]));
-        self.state = State::AtLoc(Location::Pattern);
-      },
-      | (Key::Backspace | Key::Delete, State::Editing(s, state)) => {
+  async fn set_left_view(&mut self, index:usize) -> io::Result<()> {
+    let rule = &self.rules[self.rule_idx];
+    let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
+    let guard = rule.lock_arc().await;
+    self.state = if guard.pattern.is_empty() {
+      State::AtLeft
+    } else {
+      State::InLeft(index.min(guard.pattern.len() - 1))
+    };
+    self.view = View::new(Arc::clone(rule),
+                          ("| Pattern |".to_string(), "| Replacement |".to_string()),
+                          default_status)?;
+    Ok(())
+  }
+
+  async fn set_right_view(&mut self, index:usize) -> io::Result<()> {
+    let rule = &self.rules[self.rule_idx];
+    let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
+    let guard = rule.lock_arc().await;
+    self.state = if guard.replacement.is_empty() {
+      State::AtRight
+    } else {
+      State::InRight(index.min(guard.replacement.len() - 1))
+    };
+    self.view = View::new(Arc::clone(rule),
+                          ("| Pattern |".to_string(), "| Replacement |".to_string()),
+                          default_status)?;
+    Ok(())
+  }
+
+  async fn process_backspace(&mut self) {
+    match self.state.clone() {
+      | State::Editing(s, state) => {
         let mut s = s;
         s.pop();
         self.state = State::Editing(s, state);
       },
-      | (Key::Char('\n'), State::Editing(s, state)) => self.submit_input(&s, &*state),
-      | (Key::Char(c), State::Editing(s, state)) => {
-        let mut s = s;
-        s.push(c);
-        self.state = State::Editing(s, state);
+      | State::InLeft(index) => {
+        let mut guard = self.view.lock().await;
+        guard.pattern.remove(index);
+        self.set_left(index).await;
       },
-      | (Key::Left, State::AtLoc(Location::Replacement)) => self.set_position(Location::Pattern, 0),
-      | (Key::Left, State::InLoc(Location::Replacement, index)) =>
-        self.set_position(Location::Pattern, index),
-      | (Key::Left, State::AtLoc(Location::Pattern)) if self.rule_idx > 0 => {
+      | State::InRight(index) => {
+        let mut guard = self.view.lock().await;
+        guard.replacement.remove(index);
+        self.set_right(index).await;
+      },
+      | _ => {},
+    }
+  }
+
+  async fn process_left(&mut self) -> io::Result<()> {
+    match self.state {
+      | State::AtRight => self.set_left(0).await,
+      | State::InRight(index) => self.set_left(index).await,
+      | State::AtLeft if self.rule_idx > 0 => {
         self.rule_idx -= 1;
-        self.set_position(Location::Replacement, 0);
+        self.set_right_view(0).await?;
       },
-      | (Key::Left, State::InLoc(Location::Pattern, index)) if self.rule_idx > 0 => {
+      | State::InLeft(index) if self.rule_idx > 0 => {
         self.rule_idx -= 1;
-        self.set_position(Location::Replacement, index);
+        self.set_right_view(index).await?;
       },
-      | (Key::Right, State::AtLoc(Location::Pattern)) =>
-        self.set_position(Location::Replacement, 0),
-      | (Key::Right, State::InLoc(Location::Pattern, index)) =>
-        self.set_position(Location::Replacement, index),
-      | (Key::Right, State::AtLoc(Location::Replacement))
-        if self.rule_idx < (self.rules.len() - 1) =>
-      {
+      | _ => {},
+    };
+    Ok(())
+  }
+
+  async fn process_right(&mut self) -> io::Result<()> {
+    match self.state {
+      | State::AtLeft => self.set_right(0).await,
+      | State::InLeft(index) => self.set_right(index).await,
+      | State::AtRight if self.rule_idx < (self.rules.len() - 1) => {
         self.rule_idx += 1;
-        self.set_position(Location::Pattern, 0);
-      }
-      | (Key::Right, State::InLoc(Location::Replacement, index))
-        if self.rule_idx < (self.rules.len() - 1) =>
-      {
+        self.set_left_view(0).await?;
+      },
+      | State::InRight(index) if self.rule_idx < (self.rules.len() - 1) => {
         self.rule_idx += 1;
-        self.set_position(Location::Pattern, index);
-      }
-      | (Key::Up, State::InLoc(loc, index)) => self.set_position(loc, index.saturating_sub(1)),
-      | (Key::Down, State::InLoc(loc, index)) => self.set_position(loc, index + 1),
-      | (Key::Delete | Key::Backspace, State::InLoc(loc, index)) => {
-        (*self.get_loc_mut(loc)).remove(index);
-        self.set_position(loc, index);
+        self.set_left_view(index).await?;
       },
-      | (Key::Char(' '), state) => self.state = State::Editing(String::new(), Box::new(state)),
-      | (Key::Char('q'), State::InLoc(loc, index)) => {
-        let term = self.get_loc(loc)[index].clone();
-        (*self.get_loc_mut(loc))[index] = Term::new_quote(vec![term]);
-      },
-      | (Key::Char('i'), State::InLoc(loc, index)) => {
-        if let Term::Quote(terms) = self.get_loc(loc)[index].clone() {
-          let mut index = index;
-          let mut_terms = self.get_loc_mut(loc);
-          mut_terms.remove(index);
-          for term in terms {
-            mut_terms.insert(index, term);
-            index += 1;
-          }
-          self.set_position(loc, index.saturating_sub(1));
+      | _ => {},
+    };
+    Ok(())
+  }
+
+  async fn set_left(&mut self, index:usize) {
+    let guard = self.view.lock().await;
+    self.state = if guard.pattern.is_empty() {
+      State::AtLeft
+    } else {
+      State::InLeft(index.min(guard.pattern.len() - 1))
+    }
+  }
+
+  async fn set_right(&mut self, index:usize) {
+    let guard = self.view.lock().await;
+    self.state = if guard.replacement.is_empty() {
+      State::AtRight
+    } else {
+      State::InRight(index.min(guard.replacement.len() - 1))
+    }
+  }
+
+  async fn process_keypress(&mut self) -> io::Result<()> {
+    use crossterm::event::KeyCode::{Backspace, Char, Delete, Down, Enter, Esc, Left, Right, Up};
+    use crossterm::event::KeyModifiers;
+
+    let event = self.view.read_key()?;
+    match (event.code, event.modifiers) {
+      | (Esc, _) => self.should_quit = true,
+      | (Char('s'), KeyModifiers::CONTROL) => self.save().await?,
+      | (Char('d'), KeyModifiers::CONTROL) => {
+        if self.rules.len() == 1 {
+          self.rules[0] = Arc::new(Mutex::new(Rule::new(Vec::new(), Vec::new())));
+        } else {
+          self.rules.remove(self.rule_idx);
+          self.rule_idx = self.rule_idx.min(self.rules.len() - 1);
         }
+        self.set_left_view(0).await?;
+      },
+      | (Char(' '), KeyModifiers::CONTROL) => {
+        self.rules.insert(self.rule_idx, Arc::new(Mutex::new(Rule::new(vec![], vec![]))));
+        self.set_left_view(0).await?;
+      },
+      | (Char(c), _) => match (c, self.state.clone()) {
+        | (c, State::Editing(s, state)) => {
+          let mut s = s;
+          s.push(c);
+          self.state = State::Editing(s, state);
+        },
+        | ('q', State::InLeft(index)) => {
+          let mut guard = self.view.lock().await;
+          guard.pattern[index] = Term::new_quote(vec![guard.pattern[index].clone()]);
+        },
+        | ('q', State::InRight(index)) => {
+          let mut guard = self.view.lock().await;
+          guard.replacement[index] = Term::new_quote(vec![guard.replacement[index].clone()]);
+        },
+        | ('i', State::InLeft(index)) => {
+          let mut guard = self.view.lock().await;
+          if let Term::Quote(terms) = guard.pattern[index].clone() {
+            let mut index = index;
+            guard.pattern.remove(index);
+            for term in terms {
+              guard.pattern.insert(index, term);
+              index += 1;
+            }
+            self.set_left(index.saturating_sub(1)).await;
+          }
+        },
+        | ('i', State::InRight(index)) => {
+          let mut guard = self.view.lock().await;
+          if let Term::Quote(terms) = guard.replacement[index].clone() {
+            let mut index = index;
+            guard.replacement.remove(index);
+            for term in terms {
+              guard.replacement.insert(index, term);
+              index += 1;
+            }
+            self.set_right(index.saturating_sub(1)).await;
+          }
+        },
+        | (' ', _) => self.state = State::Editing(String::new(), Box::new(self.state.clone())),
+
+        | _ => {},
+      },
+      | (Backspace | Delete, _) => self.process_backspace().await,
+      | (Enter, _) => match self.state.clone() {
+        | State::Editing(s, state) => self.submit_input(&s, &*state).await,
+        | _ => {},
+      },
+
+      | (Left, _) => self.process_left().await?,
+      | (Right, _) => self.process_right().await?,
+      | (Up, _) => match self.state {
+        | State::InLeft(index) => self.set_left(index.saturating_sub(1)).await,
+        | State::InRight(index) => self.set_right(index.saturating_sub(1)).await,
+        | _ => {},
+      },
+      | (Down, _) => match self.state {
+        | State::InLeft(index) => self.set_left(index + 1).await,
+        | State::InRight(index) => self.set_right(index + 1).await,
+        | _ => {},
       },
       | _ => {},
     }
