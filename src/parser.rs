@@ -19,7 +19,11 @@ fn is_word_component(c:char) -> bool {
 
 fn is_separator(c:char) -> bool {
   let cat = GeneralCategory::of(c);
-  cat.is_separator()
+  // The separator category doesn't include newlines (or CR), as those are
+  // categorized as control characters, so we have to check ourselves. We
+  // don't include other control characters as those aren't all necessarily
+  // separators.
+  cat.is_separator() || c == '\n' || c == '\r'
 }
 
 fn word_parser<Input>() -> impl Parser<Input, Output=String>
