@@ -206,7 +206,6 @@ impl Editor {
 
   async fn save(&mut self) -> io::Result<()> {
     self.file.seek(std::io::SeekFrom::Start(0)).await?;
-    eprintln!("{:?}", &self.rules);
     for rule in &self.rules {
       let mut rule = rule.to_string();
       rule.push('\n');
