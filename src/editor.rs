@@ -153,7 +153,7 @@ impl Editor {
   fn display_status(&self) {
     let status = match &self.state {
       | State::Editing(msg, _) => msg.clone(),
-      | _ => format!("{} (rule {}/{})", DEFAULT_STATUS, self.rule_idx, self.rules.len()),
+      | _ => format!("{} (rule {}/{})", DEFAULT_STATUS, self.rule_idx + 1, self.rules.len()),
     };
     let width = usize::from(self.terminal.width());
     println!("{0: ^1$}\r", status, width);
