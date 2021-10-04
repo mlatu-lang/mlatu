@@ -1,8 +1,7 @@
-use anyhow::bail;
 use combine::parser::char::char;
 use combine::parser::choice::or;
 use combine::{eof, many1, parser, satisfy, sep_end_by, skip_many, EasyParser, Parser, Stream};
-use unic_ucd::category::GeneralCategory;
+use unic_ucd_category::GeneralCategory;
 
 use crate::ast::{Rule, Term};
 
@@ -74,7 +73,7 @@ fn rule_parser<Input>() -> impl Parser<Input, Output=Rule>
   where Input: Stream<Token=char>, {
   let pattern = terms_parser().skip(equal());
   let replacement = terms_parser().skip(semicolon());
-  pattern.and(replacement).map(|(p, r)| Rule::new(p, r))
+  pattern.and(replacement)
 }
 
 parser! {
@@ -87,43 +86,43 @@ where [Input: Stream<Token = char>] {
 /// # Errors
 ///
 /// Will return `Err` if there was an error parsing the term.
-pub fn parse_term(input:&str) -> anyhow::Result<Term> {
+pub fn parse_term(input:&str) -> Result<Term, String> {
   let mut parser = term_parser().skip(eof());
   match parser.easy_parse(input) {
     | Ok((result, _)) => Ok(result),
-    | Err(e) => bail!("{}", e.map_position(|p| p.translate_position(input))),
+    | Err(e) => Err(format!("{}", e.map_position(|p| p.translate_position(input)))),
   }
 }
 
 /// # Errors
 ///
 /// Will return `Err` if there was an error parsing the terms.
-pub fn parse_terms(input:&str) -> anyhow::Result<Vec<Term>> {
+pub fn parse_terms(input:&str) -> Result<Vec<Term>, String> {
   let mut parser = terms_parser().skip(eof());
   match parser.easy_parse(input) {
     | Ok((result, _)) => Ok(result),
-    | Err(e) => bail!("{}", e.map_position(|p| p.translate_position(input))),
+    | Err(e) => Err(format!("{}", e.map_position(|p| p.translate_position(input)))),
   }
 }
 
 /// # Errors
 ///
 /// Will return `Err` if there was an error parsing the terms.
-pub fn parse_rule(input:&str) -> anyhow::Result<Rule> {
+pub fn parse_rule(input:&str) -> Result<Rule, String> {
   let mut parser = rule_parser().skip(eof());
   match parser.easy_parse(input) {
     | Ok((result, _)) => Ok(result),
-    | Err(e) => bail!("{}", e.map_position(|p| p.translate_position(input))),
+    | Err(e) => Err(format!("{}", e.map_position(|p| p.translate_position(input)))),
   }
 }
 
 /// # Errors
 ///
 /// Will return `Err` if there was an error parsing the terms.
-pub fn parse_rules(input:&str) -> anyhow::Result<Vec<Rule>> {
+pub fn parse_rules(input:&str) -> Result<Vec<Rule>, String> {
   let mut parser = rules_parser().skip(eof());
   match parser.easy_parse(input) {
     | Ok((result, _)) => Ok(result),
-    | Err(e) => bail!("{}", e.map_position(|p| p.translate_position(input))),
+    | Err(e) => Err(format!("{}", e.map_position(|p| p.translate_position(input)))),
   }
 }
