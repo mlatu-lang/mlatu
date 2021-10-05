@@ -42,19 +42,13 @@ fn generate_single<'a>(ctx:&'a Context<'a, ActivatedEngine<'a>>, rule:&'a Rule)
                        -> PrologResult<Clause<'a>> {
   let rest = ctx.new_term_ref();
 
-  let replace = rule.1
-                    .iter()
-                    .rev()
-                    .map(|term| transform_term(ctx, term))
-                    .collect::<Result<Vec<_>, _>>()?;
+  let replace =
+    rule.1.iter().rev().map(|term| transform_term(ctx, term)).collect::<Result<Vec<_>, _>>()?;
   let replace_term = ctx.new_term_ref();
   ctx.unify_list(&replace_term, &*replace, &rest)?;
 
-  let pattern = rule.0
-                    .iter()
-                    .rev()
-                    .map(|term| transform_term(ctx, term))
-                    .collect::<Result<Vec<_>, _>>()?;
+  let pattern =
+    rule.0.iter().rev().map(|term| transform_term(ctx, term)).collect::<Result<Vec<_>, _>>()?;
   let pattern_term = ctx.new_term_ref();
   ctx.unify_list(&pattern_term, &*pattern, &rest)?;
 
