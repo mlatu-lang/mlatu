@@ -32,26 +32,16 @@ impl fmt::Display for Term {
   }
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug)]
-pub struct Rule {
-  pub pattern:Vec<Term>,
-  pub replacement:Vec<Term>,
-}
+pub type Rule = (Vec<Term>, Vec<Term>);
 
-impl Rule {
-  #[must_use]
-  pub fn new(pattern:Vec<Term>, replacement:Vec<Term>) -> Self { Self { pattern, replacement } }
-}
-
-impl fmt::Display for Rule {
-  fn fmt(&self, f:&mut fmt::Formatter<'_>) -> fmt::Result {
-    for term in &self.pattern {
-      write!(f, "{} ", term)?;
-    }
-    write!(f, "=")?;
-    for term in &self.replacement {
-      write!(f, " {}", term)?;
-    }
-    write!(f, ";")
+pub fn pretty_rule(pattern:Vec<Term>, replacement:Vec<Term>, s:&mut String) {
+  for term in pattern {
+    s.push_str(&term.to_string());
+    s.push(' ');
   }
+  s.push('=');
+  for term in replacement {
+    s.push_str(&term.to_string());
+  }
+  s.push(';');
 }

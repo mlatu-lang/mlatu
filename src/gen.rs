@@ -53,9 +53,9 @@ pub fn generate_query(terms:&[Term]) -> String {
 /// Returns `Err` if there was an error creating the file or writing to it.
 pub async fn generate(rules:Vec<Rule>, path:PathBuf) -> std::io::Result<()> {
   let mut file = File::create(path).await?;
-  for rule in rules {
+  for (pattern, replacement) in rules {
     let mut s = "equiv([".to_owned();
-    let mut pattern_iter = rule.pattern.iter().rev();
+    let mut pattern_iter = pattern.iter().rev();
     if let Some(first) = pattern_iter.next() {
       s.push_str(&transform_term(first));
     }
@@ -63,7 +63,7 @@ pub async fn generate(rules:Vec<Rule>, path:PathBuf) -> std::io::Result<()> {
       s.push_str(&format!(", {}", transform_term(term)));
     }
     s.push_str("|Rest], Other) :- equiv([");
-    let mut replacement_iter = rule.replacement.iter().rev();
+    let mut replacement_iter = replacement.iter().rev();
     if let Some(first) = replacement_iter.next() {
       s.push_str(&transform_term(first));
     }
