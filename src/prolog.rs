@@ -9,6 +9,9 @@ static SAVED_STATE:&[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mlatu.pl.sa
 
 #[must_use]
 pub fn init_engine() -> Engine {
+  // To maintain safety, SWIPL must not have been initialized yet.
+  assert!(!is_swipl_initialized(),
+          "SWIPL must not be initialized when getting an engine with a saved state");
   let bytes = SAVED_STATE.as_ptr();
   // SAFETY: This is called *before* `PL_initialise` (called when creating an
   // engine). This data is also valid and the length is correct, as we take the

@@ -1,14 +1,10 @@
 use async_std::fs::OpenOptions;
-use async_std::io;
 use async_std::io::prelude::*;
 use async_std::path::PathBuf;
-use mlatu::{parse_rules, parse_terms, prolog};
+use mlatu::{parse_rules, prolog, Interactive};
 use prolog::codegen;
 use prolog::util::{AssertLocation, ContextExt};
 
-// TODO: actual CLI, better REPL (w/ rustyline)
-// TODO: Bring back structural editing
-// BUG: Ctrl-C forwards to SWIPl
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
   let engine = mlatu::prolog::init_engine();
@@ -19,6 +15,7 @@ async fn main() -> std::io::Result<()> {
   } else {
     PathBuf::from("./prelude.mlt")
   };
+
   let mut file = OpenOptions::new().read(true).write(true).create(true).open(path).await?;
   let mut s = String::new();
   let _ = file.read_to_string(&mut s).await?;
@@ -32,65 +29,12 @@ async fn main() -> std::io::Result<()> {
 
   let module = prolog::Module::new("mlatu");
 
-  let clauses = match codegen::generate(&ctx, &rules) {
-    | Ok(clauses) => clauses,
-    | Err(error) => {
-      eprintln!("Error while compiling rules: {}", error);
-      return Ok(())
-    },
-  };
+  let clauses = codegen::generate(&ctx, &rules).unwrap();
+  clauses.into_iter()
+         .try_for_each(|clause| ctx.assert(&clause.clause, Some(&module), AssertLocation::Last))
+         .unwrap();
 
-  if let Err(error) =
-    clauses.into_iter()
-           .try_for_each(|clause| ctx.assert(&clause.clause, Some(&module), AssertLocation::Last))
-  {
-    eprintln!("Error while compiling rules: {}", error);
-    return Ok(())
-  };
-
-  let stdin = io::stdin();
-  let mut stdout = io::stdout();
-
-  loop {
-    let mut contents = String::new();
-    print!(">>> ");
-    stdout.flush().await?;
-    stdin.read_line(&mut contents).await?;
-
-    if contents.trim() == "exit" || contents.trim() == "quit" || contents.is_empty() {
-      println!("Goodbye!");
-      break Ok(())
-    }
-
-    let terms = match parse_terms(&contents) {
-      | Ok(terms) => terms,
-      | Err(error) => {
-        eprintln!("{}", error);
-        continue
-      },
-    };
-
-    let (list, other) = match codegen::generate_query(&ctx, &terms) {
-      | Ok(q) => q,
-      | Err(error) => {
-        eprintln!("Error while compiling query: {}", error);
-        continue
-      },
-    };
-
-    if let Err(error) = ctx.call_once(prolog::pred!(mlatu: rewrite / 2), [&list, &other]) {
-      eprintln!("Error while executing query: {}", error);
-      continue
-    }
-    // TODO: proper printing
-    let canon = match ctx.canonical(&other) {
-      | Some(s) => s,
-      | None => {
-        eprintln!("Could not format output");
-        continue
-      },
-    };
-
-    println!("==> {}", canon);
-  }
+  let (mut interactive, mut channel) = Interactive::new(rules, ctx)?;
+  interactive.run(channel).await;
+  Ok(())
 }
