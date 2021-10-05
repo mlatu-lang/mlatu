@@ -3,7 +3,8 @@ use async_std::io;
 use async_std::io::prelude::*;
 use async_std::path::PathBuf;
 use mlatu::{parse_rules, parse_terms, prolog};
-use prolog::util::AssertLocation;
+use prolog::codegen;
+use prolog::util::{AssertLocation, ContextExt};
 
 // TODO: actual CLI, better REPL (w/ rustyline)
 // TODO: Bring back structural editing
