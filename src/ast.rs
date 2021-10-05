@@ -34,7 +34,7 @@ impl fmt::Display for Term {
 
 pub type Rule = (Vec<Term>, Vec<Term>);
 
-pub fn pretty_rule(pattern:Vec<Term>, replacement:Vec<Term>, s:&mut String) {
+pub fn pretty_rule(pattern:&[Term], replacement:&[Term], s:&mut String) {
   for term in pattern {
     s.push_str(&term.to_string());
     s.push(' ');

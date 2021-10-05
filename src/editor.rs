@@ -5,6 +5,7 @@ use async_std::sync::{Arc, Mutex};
 
 use crate::ast::{Rule, Term};
 use crate::parser::parse_terms;
+use crate::pretty_rule;
 use crate::view::{State, View};
 
 pub struct Editor {
@@ -31,7 +32,7 @@ impl Editor {
     let should_quit = false;
     let rule_idx = 0;
     let (rules, state) = if original_rules.is_empty() {
-      (vec![Arc::new(Mutex::new(Rule::new(vec![], vec![])))], State::AtLeft)
+      (vec![Arc::new(Mutex::new((vec![], vec![])))], State::AtLeft)
     } else {
       let mut rules = Vec::new();
       for rule in original_rules {
@@ -65,7 +66,8 @@ impl Editor {
     self.file.seek(std::io::SeekFrom::Start(0)).await?;
     for rule in &self.rules {
       let guard = rule.lock_arc().await;
-      let mut rule = format!("{}", guard);
+      let mut rule = String::new();
+      pretty_rule(&*guard.0, &*guard.1, &mut rule);
       rule.push('\n');
       self.file.write_all(rule.as_bytes()).await?;
     }
@@ -78,17 +80,17 @@ impl Editor {
 
       match state {
         | State::AtLeft => {
-          guard.pattern = terms;
+          guard.0 = terms;
           self.set_left(0).await;
         },
         | State::AtRight => {
-          guard.replacement = terms;
+          guard.1 = terms;
           self.set_right(0).await;
         },
         | State::InLeft(index) => {
           let mut index = *index;
           for term in terms {
-            guard.pattern.insert(index, term);
+            guard.0.insert(index, term);
             index += 1;
           }
           self.set_left(index - 1).await;
@@ -96,7 +98,7 @@ impl Editor {
         | State::InRight(index) => {
           let mut index = *index;
           for term in terms {
-            guard.replacement.insert(index, term);
+            guard.1.insert(index, term);
             index += 1;
           }
           self.set_right(index - 1).await;
@@ -110,11 +112,8 @@ impl Editor {
     let rule = &self.rules[self.rule_idx];
     let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
     let guard = rule.lock_arc().await;
-    self.state = if guard.pattern.is_empty() {
-      State::AtLeft
-    } else {
-      State::InLeft(index.min(guard.pattern.len() - 1))
-    };
+    self.state =
+      if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
                           default_status)?;
@@ -125,10 +124,10 @@ impl Editor {
     let rule = &self.rules[self.rule_idx];
     let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
     let guard = rule.lock_arc().await;
-    self.state = if guard.replacement.is_empty() {
+    self.state = if guard.1.is_empty() {
       State::AtRight
     } else {
-      State::InRight(index.min(guard.replacement.len() - 1))
+      State::InRight(index.min(guard.1.len() - 1))
     };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
@@ -145,12 +144,12 @@ impl Editor {
       },
       | State::InLeft(index) => {
         let mut guard = self.view.lock().await;
-        guard.pattern.remove(index);
+        guard.0.remove(index);
         self.set_left(index).await;
       },
       | State::InRight(index) => {
         let mut guard = self.view.lock().await;
-        guard.replacement.remove(index);
+        guard.1.remove(index);
         self.set_right(index).await;
       },
       | _ => {},
@@ -193,20 +192,14 @@ impl Editor {
 
   async fn set_left(&mut self, index:usize) {
     let guard = self.view.lock().await;
-    self.state = if guard.pattern.is_empty() {
-      State::AtLeft
-    } else {
-      State::InLeft(index.min(guard.pattern.len() - 1))
-    }
+    self.state =
+      if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) }
   }
 
   async fn set_right(&mut self, index:usize) {
     let guard = self.view.lock().await;
-    self.state = if guard.replacement.is_empty() {
-      State::AtRight
-    } else {
-      State::InRight(index.min(guard.replacement.len() - 1))
-    }
+    self.state =
+      if guard.1.is_empty() { State::AtRight } else { State::InRight(index.min(guard.1.len() - 1)) }
   }
 
   async fn process_keypress(&mut self) -> io::Result<()> {
@@ -219,7 +212,7 @@ impl Editor {
       | (Char('s'), KeyModifiers::CONTROL) => self.save().await?,
       | (Char('d'), KeyModifiers::CONTROL) => {
         if self.rules.len() == 1 {
-          self.rules[0] = Arc::new(Mutex::new(Rule::new(Vec::new(), Vec::new())));
+          self.rules[0] = Arc::new(Mutex::new((Vec::new(), Vec::new())));
         } else {
           self.rules.remove(self.rule_idx);
           self.rule_idx = self.rule_idx.min(self.rules.len() - 1);
@@ -227,7 +220,7 @@ impl Editor {
         self.set_left_view(0).await?;
       },
       | (Char(' '), KeyModifiers::CONTROL) => {
-        self.rules.insert(self.rule_idx, Arc::new(Mutex::new(Rule::new(vec![], vec![]))));
+        self.rules.insert(self.rule_idx, Arc::new(Mutex::new((vec![], vec![]))));
         self.set_left_view(0).await?;
       },
       | (Char(c), _) => match (c, self.state.clone()) {
@@ -238,19 +231,19 @@ impl Editor {
         },
         | ('q', State::InLeft(index)) => {
           let mut guard = self.view.lock().await;
-          guard.pattern[index] = Term::new_quote(vec![guard.pattern[index].clone()]);
+          guard.0[index] = Term::new_quote(vec![guard.0[index].clone()]);
         },
         | ('q', State::InRight(index)) => {
           let mut guard = self.view.lock().await;
-          guard.replacement[index] = Term::new_quote(vec![guard.replacement[index].clone()]);
+          guard.1[index] = Term::new_quote(vec![guard.1[index].clone()]);
         },
         | ('i', State::InLeft(index)) => {
           let mut guard = self.view.lock().await;
-          if let Term::Quote(terms) = guard.pattern[index].clone() {
+          if let Term::Quote(terms) = guard.0[index].clone() {
             let mut index = index;
-            guard.pattern.remove(index);
+            guard.0.remove(index);
             for term in terms {
-              guard.pattern.insert(index, term);
+              guard.0.insert(index, term);
               index += 1;
             }
             self.set_left(index.saturating_sub(1)).await;
@@ -258,11 +251,11 @@ impl Editor {
         },
         | ('i', State::InRight(index)) => {
           let mut guard = self.view.lock().await;
-          if let Term::Quote(terms) = guard.replacement[index].clone() {
+          if let Term::Quote(terms) = guard.1[index].clone() {
             let mut index = index;
-            guard.replacement.remove(index);
+            guard.1.remove(index);
             for term in terms {
-              guard.replacement.insert(index, term);
+              guard.1.insert(index, term);
               index += 1;
             }
             self.set_right(index.saturating_sub(1)).await;

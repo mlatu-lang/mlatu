@@ -71,8 +71,7 @@ impl View {
 
   async fn make_left_half(&self, row:u16, s:&mut String) {
     let guard = self.lock().await;
-    let term =
-      guard.pattern.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
+    let term = guard.0.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
     let width = self.left_half_width(1);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
@@ -80,8 +79,7 @@ impl View {
   async fn make_right_half(&self, row:u16, s:&mut String) {
     let width = self.right_half_width(1);
     let guard = self.lock().await;
-    let term =
-      guard.replacement.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
+    let term = guard.1.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
@@ -89,7 +87,7 @@ impl View {
     let guard = self.lock().await;
     match state {
       | State::InLeft(index) => {
-        let term = guard.pattern.get(index).expect("bounds check failed");
+        let term = guard.0.get(index).expect("bounds check failed");
         let p_t = term.to_string();
         (self.width / 4
          - u16::try_from(p_t.len()).expect("pattern term text is greater than 2^16 characters") / 2,
@@ -97,7 +95,7 @@ impl View {
       },
       | State::AtLeft => (self.width / 4 - 1, 2),
       | State::InRight(index) => {
-        let term = guard.replacement.get(index).expect("bounds check failed");
+        let term = guard.1.get(index).expect("bounds check failed");
         let r_t = term.to_string();
         (3 * self.width / 4
          - (u16::try_from(r_t.len()).expect("replacement term text is greater than 2^16 \
