@@ -1,10 +1,12 @@
 use std::io;
 use std::io::{stdout, Write};
+use std::sync::Arc;
 
-use async_std::sync::{Arc, Mutex, MutexGuardArc};
-use crossterm::event::{Event, KeyEvent};
+use crossterm::event::{Event, EventStream, KeyEvent};
 use crossterm::terminal::ClearType;
-use crossterm::{cursor, event, queue, terminal, Command};
+use crossterm::{cursor, queue, terminal, Command};
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tokio_stream::StreamExt;
 
 use crate::ast::Rule;
 
@@ -20,13 +22,13 @@ pub enum State {
 pub struct View {
   width:u16,
   height:u16,
-  sides:Arc<Mutex<Rule>>,
+  sides:Arc<RwLock<Rule>>,
   labels:(String, String),
   default_status:String,
 }
 
 impl View {
-  pub fn new(sides:Arc<Mutex<Rule>>, labels:(String, String), default_status:String)
+  pub fn new(sides:Arc<RwLock<Rule>>, labels:(String, String), default_status:String)
              -> io::Result<Self> {
     let (width, height) = terminal::size()?;
     Ok(Self { width, height, sides, labels, default_status })
@@ -38,15 +40,19 @@ impl View {
 
   pub fn flush() -> io::Result<()> { stdout().flush() }
 
-  pub fn read_key(&mut self) -> io::Result<KeyEvent> {
+  pub async fn read_key(&mut self) -> io::Result<KeyEvent> {
+    let mut stream = EventStream::new();
     loop {
-      match event::read()? {
-        | Event::Key(key) => return Ok(key),
-        | Event::Resize(columns, rows) => {
+      match stream.next().await {
+        | Some(Ok(Event::Key(key))) => return Ok(key),
+        | Some(Ok(Event::Resize(columns, rows))) => {
           self.width = columns;
           self.height = rows;
         },
-        | Event::Mouse(_) => {},
+        | Some(Ok(Event::Mouse(_))) => {},
+        | Some(Err(e)) => return Err(e),
+        | None =>
+          return Err(io::Error::new(io::ErrorKind::Other, "unexpected end of terminal input")),
       }
     }
   }
@@ -70,7 +76,7 @@ impl View {
   }
 
   async fn make_left_half(&self, row:u16, s:&mut String) {
-    let guard = self.lock().await;
+    let guard = self.sides.read().await;
     let term = guard.0.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
     let width = self.left_half_width(1);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
@@ -78,30 +84,30 @@ impl View {
 
   async fn make_right_half(&self, row:u16, s:&mut String) {
     let width = self.right_half_width(1);
-    let guard = self.lock().await;
+    let guard = self.sides.read().await;
     let term = guard.1.get(usize::from(row) - 2).map_or_else(String::new, ToString::to_string);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
-  async fn get_target(&self, state:State) -> (u16, u16) {
-    let guard = self.lock().await;
+  async fn get_target(&self, state:&State) -> (u16, u16) {
+    let guard = self.sides.read().await;
     match state {
       | State::InLeft(index) => {
-        let term = guard.0.get(index).expect("bounds check failed");
+        let term = guard.0.get(*index).expect("bounds check failed");
         let p_t = term.to_string();
         (self.width / 4
          - u16::try_from(p_t.len()).expect("pattern term text is greater than 2^16 characters") / 2,
-         u16::try_from(index).expect("pattern terms longer than 2^16 terms") + 2)
+         u16::try_from(*index).expect("pattern terms longer than 2^16 terms") + 2)
       },
       | State::AtLeft => (self.width / 4 - 1, 2),
       | State::InRight(index) => {
-        let term = guard.1.get(index).expect("bounds check failed");
+        let term = guard.1.get(*index).expect("bounds check failed");
         let r_t = term.to_string();
         (3 * self.width / 4
          - (u16::try_from(r_t.len()).expect("replacement term text is greater than 2^16 \
                                              characters"))
            / 2,
-         u16::try_from(index).expect("replacement terms longer than 2^16 terms") + 2)
+         u16::try_from(*index).expect("replacement terms longer than 2^16 terms") + 2)
       },
       | State::AtRight => (3 * self.width / 4 - 1, 2),
       | State::Editing(ref s, _) =>
@@ -146,7 +152,7 @@ impl View {
     Ok(())
   }
 
-  pub async fn refresh_screen(&mut self, state:State, should_quit:bool) -> io::Result<()> {
+  pub async fn refresh_screen(&mut self, state:&State, should_quit:bool) -> io::Result<()> {
     Self::queue(cursor::Hide)?;
     Self::queue(cursor::MoveTo(0, 0))?;
     if should_quit {
@@ -161,5 +167,7 @@ impl View {
     Self::flush()
   }
 
-  pub async fn lock(&self) -> MutexGuardArc<Rule> { self.sides.lock_arc().await }
+  pub async fn read(&'_ self) -> RwLockReadGuard<'_, Rule> { self.sides.read().await }
+
+  pub async fn write(&'_ self) -> RwLockWriteGuard<'_, Rule> { self.sides.write().await }
 }

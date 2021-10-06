@@ -1,7 +1,9 @@
-use async_std::fs::File;
-use async_std::io;
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use tokio::fs::File;
+use tokio::io;
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+use tokio::sync::RwLock;
 
 use crate::ast::{Rule, Term};
 use crate::parser::parse_terms;
@@ -11,7 +13,7 @@ use crate::view::{State, View};
 pub struct Editor {
   file:File,
   view:View,
-  rules:Vec<Arc<Mutex<Rule>>>,
+  rules:Vec<Arc<RwLock<Rule>>>,
   rule_idx:usize,
   should_quit:bool,
   state:State,
@@ -32,11 +34,11 @@ impl Editor {
     let should_quit = false;
     let rule_idx = 0;
     let (rules, state) = if original_rules.is_empty() {
-      (vec![Arc::new(Mutex::new((vec![], vec![])))], State::AtLeft)
+      (vec![Arc::new(RwLock::new((vec![], vec![])))], State::AtLeft)
     } else {
       let mut rules = Vec::new();
       for rule in original_rules {
-        rules.push(Arc::new(Mutex::new(rule)));
+        rules.push(Arc::new(RwLock::new(rule)));
       }
       (rules, State::InLeft(0))
     };
@@ -49,7 +51,7 @@ impl Editor {
 
   pub async fn run(&mut self) {
     loop {
-      if let Err(error) = self.view.refresh_screen(self.state.clone(), self.should_quit).await {
+      if let Err(error) = self.view.refresh_screen(&self.state, self.should_quit).await {
         die(&error);
       }
       if self.should_quit {
@@ -65,7 +67,7 @@ impl Editor {
   async fn save(&mut self) -> io::Result<()> {
     self.file.seek(std::io::SeekFrom::Start(0)).await?;
     for rule in &self.rules {
-      let guard = rule.lock_arc().await;
+      let guard = rule.read().await;
       let mut rule = String::new();
       pretty_rule(&*guard.0, &*guard.1, &mut rule);
       rule.push('\n');
@@ -76,15 +78,17 @@ impl Editor {
 
   async fn submit_input(&mut self, s:&str, state:&State) {
     if let Ok(terms) = parse_terms(s) {
-      let mut guard = self.view.lock().await;
+      let mut guard = self.view.write().await;
 
       match state {
         | State::AtLeft => {
           guard.0 = terms;
+          drop(guard);
           self.set_left(0).await;
         },
         | State::AtRight => {
           guard.1 = terms;
+          drop(guard);
           self.set_right(0).await;
         },
         | State::InLeft(index) => {
@@ -93,6 +97,7 @@ impl Editor {
             guard.0.insert(index, term);
             index += 1;
           }
+          drop(guard);
           self.set_left(index - 1).await;
         },
         | State::InRight(index) => {
@@ -101,6 +106,7 @@ impl Editor {
             guard.1.insert(index, term);
             index += 1;
           }
+          drop(guard);
           self.set_right(index - 1).await;
         },
         | State::Editing(..) => {},
@@ -111,7 +117,7 @@ impl Editor {
   async fn set_left_view(&mut self, index:usize) -> io::Result<()> {
     let rule = &self.rules[self.rule_idx];
     let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
-    let guard = rule.lock_arc().await;
+    let guard = rule.read().await;
     self.state =
       if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
     self.view = View::new(Arc::clone(rule),
@@ -123,7 +129,7 @@ impl Editor {
   async fn set_right_view(&mut self, index:usize) -> io::Result<()> {
     let rule = &self.rules[self.rule_idx];
     let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
-    let guard = rule.lock_arc().await;
+    let guard = rule.read().await;
     self.state = if guard.1.is_empty() {
       State::AtRight
     } else {
@@ -143,13 +149,15 @@ impl Editor {
         self.state = State::Editing(s, state);
       },
       | State::InLeft(index) => {
-        let mut guard = self.view.lock().await;
+        let mut guard = self.view.write().await;
         guard.0.remove(index);
+        drop(guard);
         self.set_left(index).await;
       },
       | State::InRight(index) => {
-        let mut guard = self.view.lock().await;
+        let mut guard = self.view.write().await;
         guard.1.remove(index);
+        drop(guard);
         self.set_right(index).await;
       },
       | _ => {},
@@ -191,13 +199,13 @@ impl Editor {
   }
 
   async fn set_left(&mut self, index:usize) {
-    let guard = self.view.lock().await;
+    let guard = self.view.read().await;
     self.state =
       if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) }
   }
 
   async fn set_right(&mut self, index:usize) {
-    let guard = self.view.lock().await;
+    let guard = self.view.read().await;
     self.state =
       if guard.1.is_empty() { State::AtRight } else { State::InRight(index.min(guard.1.len() - 1)) }
   }
@@ -206,13 +214,13 @@ impl Editor {
     use crossterm::event::KeyCode::{Backspace, Char, Delete, Down, Enter, Esc, Left, Right, Up};
     use crossterm::event::KeyModifiers;
 
-    let event = self.view.read_key()?;
+    let event = self.view.read_key().await?;
     match (event.code, event.modifiers) {
       | (Esc, _) => self.should_quit = true,
       | (Char('s'), KeyModifiers::CONTROL) => self.save().await?,
       | (Char('d'), KeyModifiers::CONTROL) => {
         if self.rules.len() == 1 {
-          self.rules[0] = Arc::new(Mutex::new((Vec::new(), Vec::new())));
+          self.rules[0] = Arc::new(RwLock::new((Vec::new(), Vec::new())));
         } else {
           self.rules.remove(self.rule_idx);
           self.rule_idx = self.rule_idx.min(self.rules.len() - 1);
@@ -220,7 +228,7 @@ impl Editor {
         self.set_left_view(0).await?;
       },
       | (Char(' '), KeyModifiers::CONTROL) => {
-        self.rules.insert(self.rule_idx, Arc::new(Mutex::new((vec![], vec![]))));
+        self.rules.insert(self.rule_idx, Arc::new(RwLock::new((vec![], vec![]))));
         self.set_left_view(0).await?;
       },
       | (Char(c), _) => match (c, self.state.clone()) {
@@ -230,15 +238,15 @@ impl Editor {
           self.state = State::Editing(s, state);
         },
         | ('q', State::InLeft(index)) => {
-          let mut guard = self.view.lock().await;
+          let mut guard = self.view.write().await;
           guard.0[index] = Term::new_quote(vec![guard.0[index].clone()]);
         },
         | ('q', State::InRight(index)) => {
-          let mut guard = self.view.lock().await;
+          let mut guard = self.view.write().await;
           guard.1[index] = Term::new_quote(vec![guard.1[index].clone()]);
         },
         | ('i', State::InLeft(index)) => {
-          let mut guard = self.view.lock().await;
+          let mut guard = self.view.write().await;
           if let Term::Quote(terms) = guard.0[index].clone() {
             let mut index = index;
             guard.0.remove(index);
@@ -246,11 +254,12 @@ impl Editor {
               guard.0.insert(index, term);
               index += 1;
             }
+            drop(guard);
             self.set_left(index.saturating_sub(1)).await;
           }
         },
         | ('i', State::InRight(index)) => {
-          let mut guard = self.view.lock().await;
+          let mut guard = self.view.write().await;
           if let Term::Quote(terms) = guard.1[index].clone() {
             let mut index = index;
             guard.1.remove(index);
@@ -258,6 +267,7 @@ impl Editor {
               guard.1.insert(index, term);
               index += 1;
             }
+            drop(guard);
             self.set_right(index.saturating_sub(1)).await;
           }
         },

@@ -1,15 +1,14 @@
-use async_std::fs::OpenOptions;
-use async_std::io::prelude::*;
-use async_std::path::PathBuf;
+use std::path::PathBuf;
+
+use mlatu::prolog::codegen;
+use mlatu::prolog::util::{AssertLocation, ContextExt};
 use mlatu::{parse_rules, prolog, Interactive};
-use prolog::codegen;
-use prolog::util::{AssertLocation, ContextExt};
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncReadExt;
+use tokio::sync::mpsc::unbounded_channel;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
-  let engine = mlatu::prolog::init_engine();
-  let ctx:prolog::Context<'_, _> = engine.activate().into();
-
   let path = if let Some(filename) = std::env::args().nth(2) {
     PathBuf::from(filename)
   } else {
@@ -27,14 +26,23 @@ async fn main() -> std::io::Result<()> {
     },
   };
 
-  let module = prolog::Module::new("mlatu");
+  let (prolog_tx, mut interactive_rx) = unbounded_channel();
+  let (interactive_tx, prolog_rx) = unbounded_channel();
 
-  let clauses = codegen::generate(&ctx, &rules).unwrap();
-  clauses.into_iter()
-         .try_for_each(|clause| ctx.assert(&clause.clause, Some(&module), AssertLocation::Last))
-         .unwrap();
+  std::thread::spawn(move || {
+    prolog::thread(|ctx, module| {
+                     let clauses = codegen::generate(ctx, &rules).unwrap();
+                     clauses.into_iter()
+                            .try_for_each(|clause| {
+                              ctx.assert(&clause.clause, Some(module), AssertLocation::Last)
+                            })
+                            .unwrap();
+                   },
+                   &prolog_tx,
+                   prolog_rx)
+  });
 
-  let (mut interactive, mut channel) = Interactive::new(rules, ctx)?;
-  interactive.run(channel).await;
+  let mut interactive = Interactive::new(interactive_tx)?;
+  interactive.run(&mut interactive_rx).await;
   Ok(())
 }

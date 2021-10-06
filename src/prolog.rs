@@ -1,12 +1,22 @@
 pub use swipl::fli;
 pub use swipl::prelude::*;
 
+use crate::ast::Term as AstTerm;
+
 pub mod codegen;
 pub mod util;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 pub use util::ContextExt;
 
 static SAVED_STATE:&[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mlatu.pl.save"));
 
+type PrologContext<'a> = Context<'a, ActivatedEngine<'a>>;
+
+/// Initialize the prolog engine.
+///
+/// # Panics
+///
+/// This function will panic if the engine has already been initialized.
 #[must_use]
 pub fn init_engine() -> Engine {
   // To maintain safety, SWIPL must not have been initialized yet.
@@ -22,4 +32,40 @@ pub fn init_engine() -> Engine {
   }
 
   Engine::new()
+}
+
+pub fn thread(start:impl for<'a> FnOnce(&'a PrologContext<'a>, &'a Module),
+              tx:&UnboundedSender<Result<Vec<AstTerm>, String>>,
+              mut rx:UnboundedReceiver<Vec<AstTerm>>) {
+  let engine = init_engine();
+  let ctx:PrologContext<'_> = engine.activate().into();
+
+  let module = Module::new("mlatu");
+
+  start(&ctx, &module);
+
+  while let Some(terms) = rx.blocking_recv() {
+    if terms.is_empty() {
+      tx.send(Ok(vec![])).expect("send result");
+    }
+
+    let (list, other) = match codegen::generate_query(&ctx, &*terms) {
+      | Ok(x) => x,
+      | Err(_) => {
+        tx.send(Err("Error while compiling query.".to_string())).expect("send result");
+        continue
+      },
+    };
+
+    if ctx.call_once(pred![mlatu: rewrite / 2], [&list, &other]).is_err() {
+      tx.send(Err("Error while executing query.".to_string())).expect("send result");
+      continue
+    }
+
+    tx.send(match other.get::<Vec<AstTerm>>() {
+        | Ok(terms) => Ok(terms.into_iter().rev().collect()),
+        | Err(_) => Err("Error while getting result.".to_string()),
+      })
+      .expect("send result");
+  }
 }
