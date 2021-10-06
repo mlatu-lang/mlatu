@@ -24,11 +24,13 @@
         clippy::verbose_file_reads)]
 
 mod ast;
-// mod editor;
+mod editor;
+mod interactive;
 mod parser;
 pub mod prolog;
-// mod terminal;
+mod view;
 
 pub use ast::{pretty_rule, Rule, Term};
-// pub use editor::Editor;
+pub use editor::Editor;
+pub use interactive::Interactive;
 pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};
