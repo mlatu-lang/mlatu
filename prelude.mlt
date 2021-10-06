@@ -8,5 +8,5 @@ dup = d;
 prepend = swap quote swap concat;
 p = prepend;
 
-unquote-before = swap quote cat unquote;
+unquote-before = swap quote concat unquote;
 uqb = unquote-before;

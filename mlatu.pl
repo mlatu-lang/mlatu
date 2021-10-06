@@ -12,6 +12,7 @@ builtin_equiv(['r',_|Xs], Other) :-
     equiv(Xs, Other).
 
 builtin_equiv(['u',Quote|Xs], Other) :-
+    is_list(Quote),
     append(Quote, Xs, NewXs),
     equiv(NewXs, Other).
 
@@ -19,6 +20,7 @@ builtin_equiv(['q',X|Xs], Other) :-
     equiv([[X]|Xs], Other).
 
 builtin_equiv(['c',Quote1,Quote2|Xs], Other) :-
+    is_list(Quote1), is_list(Quote2),
     append(Quote1, Quote2, NewQuote),
     equiv([NewQuote|Xs], Other).
 
