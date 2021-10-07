@@ -1,9 +1,0 @@
-(executable
- (name main)
- (public_name mlatu)
- (libraries mlatu.api batteries dune-site dune-site.plugins))
-
-(generate_sites_module
- (module sites)
- (plugins
-  (mlatu plugins)))

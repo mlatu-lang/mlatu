@@ -1,9 +1,6 @@
-.merlin
-node_modules/
-_build
-_esy
-_release
-*.byte
-*.native
-*.install
-.vscode
+debug/
+target/
+
+**/*.rs.bk
+
+.pdb
