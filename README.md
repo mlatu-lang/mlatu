@@ -1,7 +1,7 @@
 mlatu
 =====
 
-mlatu is a concatenative programming language based off term rewriting as an evalutation model.
+mlatu is a declarative and concatenative programming language. It uses term rewriting as an evalutation model.
 
 ![Lines of code](https://img.shields.io/tokei/lines/github/mlatu-lang/mlatu)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/mlatu-lang/mlatu?include_prereleases)
@@ -25,7 +25,7 @@ Table of Contents
 Introduction
 ------------
 
-mlatu is a concatenative (sometimes known as stack-oriented, although mlatu isn't) programming language. It is purely functional in that it is evaluated via a term-rewriting system and so all expressions are referentially transparent.
+mlatu is a concatenative programming language; you can concatenate two programs and its result will be the concatenation of the programs' individual results. It is declarative: instead of telling the implementation what to *do*, one tells the implementation what *is*. mlatu is evaluated via a term-rewriting system and so all expressions are referentially transparent, evaluating to the same result each time they are written.
 
 Installation
 ------------
