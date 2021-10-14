@@ -42,10 +42,10 @@ impl Interactive {
                          -> Option<Vec<Term>> {
     match rx.try_recv() {
       | Ok(Ok(terms)) => Some(terms),
-      | Ok(Err(_error)) => {
+      | Ok(Err(error)) => {
         // TODO: proper error reporting here, dying is painful
-        // die(&io::Error::new(io::ErrorKind::Other, error));
-        None
+        die(&io::Error::new(io::ErrorKind::Other, error));
+        // None
       },
       | Err(TryRecvError::Empty) => None,
       | Err(TryRecvError::Disconnected) => die(&io::Error::new(io::ErrorKind::Other,

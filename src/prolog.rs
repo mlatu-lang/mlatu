@@ -51,20 +51,20 @@ pub fn thread(start:impl for<'a> FnOnce(&'a PrologContext<'a>, &'a Module),
 
     let (list, other) = match codegen::generate_query(&ctx, &*terms) {
       | Ok(x) => x,
-      | Err(_) => {
-        tx.send(Err("Error while compiling query.".to_string())).expect("send result");
+      | Err(err) => {
+        tx.send(Err(format!("Error while compiling query: {}", err))).expect("send result");
         continue
       },
     };
 
-    if ctx.call_once(pred![mlatu: rewrite / 2], [&list, &other]).is_err() {
-      tx.send(Err("Error while executing query.".to_string())).expect("send result");
+    if let Err(err) = ctx.call_once(pred![mlatu: rewrite / 2], [&list, &other]) {
+      tx.send(Err(format!("Error while executing query: {}", err))).expect("send result");
       continue
     }
 
     tx.send(match other.get::<Vec<AstTerm>>() {
         | Ok(terms) => Ok(terms.into_iter().rev().collect()),
-        | Err(_) => Err("Error while getting result.".to_string()),
+        | Err(err) => Err(format!("Error while getting result: {}", err)),
       })
       .expect("send result");
   }

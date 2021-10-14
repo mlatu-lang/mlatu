@@ -1,17 +1,14 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use tokio::fs::File;
-use tokio::io;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::RwLock;
 
 use crate::ast::{Rule, Term};
 use crate::parser::parse_term;
-use crate::pretty_rule;
 use crate::view::{State, View};
 
 pub struct Editor {
-  file:File,
+  path:PathBuf,
   view:View,
   rules:Vec<Arc<RwLock<Rule>>>,
   rule_idx:usize,
@@ -19,7 +16,7 @@ pub struct Editor {
   state:State,
 }
 
-fn die(e:&std::io::Error) {
+fn die(e:&str) {
   let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
   let _result = crossterm::terminal::disable_raw_mode();
   panic!("{}", e)
@@ -29,8 +26,8 @@ impl Editor {
   /// # Errors
   ///
   /// Will return `Err` if there was an error constructing a terminal
-  pub fn new(file:File, original_rules:Vec<Rule>) -> io::Result<Self> {
-    crossterm::terminal::enable_raw_mode()?;
+  pub fn new(path:PathBuf, original_rules:Vec<Rule>) -> Result<Self, String> {
+    crossterm::terminal::enable_raw_mode().map_err(|e| e.to_string())?;
     let should_quit = false;
     let rule_idx = 0;
     let (rules, state) = if original_rules.is_empty() {
@@ -42,17 +39,17 @@ impl Editor {
       }
       (rules, State::InLeft(0))
     };
-    let default_status = format!("mlatu editor (rule {}/{})", rule_idx + 1, rules.len());
+    let default_status = format!("{} (rule {}/{})", path.to_string_lossy(), rule_idx + 1, rules.len());
     let view = View::new(Arc::clone(&rules[rule_idx]),
                          ("| Pattern |".to_string(), "| Replacement |".to_string()),
-                         default_status)?;
-    Ok(Self { file, view, rules, rule_idx, should_quit, state })
+                         default_status).map_err(|e| e.to_string())?;
+    Ok(Self { path, view, rules, rule_idx, should_quit, state })
   }
 
   pub async fn run(&mut self) {
     loop {
       if let Err(error) = self.view.refresh_screen(&self.state, self.should_quit).await {
-        die(&error);
+        die(&error.to_string());
       }
       if self.should_quit {
         let _result = crossterm::terminal::disable_raw_mode();
@@ -64,33 +61,31 @@ impl Editor {
     }
   }
 
-  async fn save(&mut self) -> io::Result<()> {
-    self.file.seek(std::io::SeekFrom::Start(0)).await?;
+  async fn save(&mut self) -> Result<(), String> {
+    let mut rs = Vec::new();
     for rule in &self.rules {
       let guard = rule.read().await;
-      let mut rule = String::new();
-      pretty_rule(&*guard.0, &*guard.1, &mut rule);
-      rule.push('\n');
-      self.file.write_all(rule.as_bytes()).await?;
+      rs.push(guard.clone());
     }
-    Ok(())
+    let file = std::fs::File::create(self.path.clone()).map_err(|e| e.to_string())?;
+    bincode::serialize_into(file, &rs).map_err(|e| e.to_string())
   }
 
-  async fn set_left_view(&mut self, index:usize) -> io::Result<()> {
+  async fn set_left_view(&mut self, index:usize) -> Result<(), String> {
     let rule = &self.rules[self.rule_idx];
-    let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
+    let default_status = format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
     self.state =
       if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
-                          default_status)?;
+                          default_status).map_err(|e| e.to_string())?;
     Ok(())
   }
 
-  async fn set_right_view(&mut self, index:usize) -> io::Result<()> {
+  async fn set_right_view(&mut self, index:usize) -> Result<(), String> {
     let rule = &self.rules[self.rule_idx];
-    let default_status = format!("mlatu editor (rule {}/{})", self.rule_idx + 1, self.rules.len());
+    let default_status = format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
     self.state = if guard.1.is_empty() {
       State::AtRight
@@ -99,11 +94,11 @@ impl Editor {
     };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
-                          default_status)?;
+                          default_status).map_err(|e| e.to_string())?;
     Ok(())
   }
 
-  async fn process_left(&mut self) -> io::Result<()> {
+  async fn process_left(&mut self) -> Result<(), String> {
     match self.state {
       | State::AtRight => {
         let guard = self.view.read().await;
@@ -130,7 +125,7 @@ impl Editor {
     Ok(())
   }
 
-  async fn process_right(&mut self) -> io::Result<()> {
+  async fn process_right(&mut self) -> Result<(), String> {
     match self.state {
       | State::AtLeft => {
         let guard = self.view.read().await;
@@ -256,11 +251,11 @@ impl Editor {
     };
   }
 
-  async fn process_keypress(&mut self) -> io::Result<()> {
+  async fn process_keypress(&mut self) -> Result<(), String> {
     use crossterm::event::KeyCode::{Backspace, Char, Delete, Down, Esc, Left, Right, Up};
     use crossterm::event::KeyModifiers;
 
-    let event = self.view.read_key().await?;
+    let event = self.view.read_key().await.map_err(|e| e.to_string())?;
     match (event.code, event.modifiers) {
       | (Esc, _) => self.should_quit = true,
       | (Char('w'), KeyModifiers::CONTROL) => self.save().await?,
