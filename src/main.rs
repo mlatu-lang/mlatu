@@ -1,7 +1,5 @@
 use clap::{App, Arg, SubCommand};
-use mlatu::prolog::codegen;
-use mlatu::prolog::util::{AssertLocation, ContextExt};
-use mlatu::{parse_rules, prolog, Editor, Interactive, Rule};
+use mlatu::{erlang, parse_rules, Editor, Interactive, Rule};
 use tokio::fs::{read_to_string, File};
 use tokio::sync::mpsc::unbounded_channel;
 
@@ -48,23 +46,10 @@ async fn main() -> std::io::Result<()> {
         Editor::new(file, rules)?.run().await;
       },
       | _ => {
-        let (prolog_tx, mut interactive_rx) = unbounded_channel();
-        let (interactive_tx, prolog_rx) = unbounded_channel();
-
-        std::thread::spawn(move || {
-          prolog::thread(|ctx, module| {
-                           let clauses = codegen::generate(ctx, &rules).unwrap();
-                           clauses.into_iter()
-                                  .try_for_each(|clause| {
-                                    ctx.assert(&clause.clause, Some(module), AssertLocation::Last)
-                                  })
-                                  .unwrap();
-                         },
-                         &prolog_tx,
-                         prolog_rx)
-        });
-
-        Interactive::new(interactive_tx)?.run(&mut interactive_rx).await;
+        let (interactive_sender, erlang_receiver) = unbounded_channel();
+        let (erlang_sender, interactive_receiver) = unbounded_channel();
+        tokio::spawn(async move { erlang::run(rules, erlang_sender, erlang_receiver).await });
+        Interactive::new()?.run(interactive_sender, interactive_receiver).await;
       },
     },
     | Err(error) => eprintln!("Error while reading rule files: {}", error),
