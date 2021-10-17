@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use crate::ast::serde::serialize_rules;
 use crate::ast::{Rule, Term};
 use crate::parser::parse_term;
 use crate::view::{State, View};
@@ -39,7 +40,8 @@ impl Editor {
       }
       (rules, State::InLeft(0))
     };
-    let default_status = format!("{} (rule {}/{})", path.to_string_lossy(), rule_idx + 1, rules.len());
+    let default_status =
+      format!("{} (rule {}/{})", path.to_string_lossy(), rule_idx + 1, rules.len());
     let view = View::new(Arc::clone(&rules[rule_idx]),
                          ("| Pattern |".to_string(), "| Replacement |".to_string()),
                          default_status).map_err(|e| e.to_string())?;
@@ -67,13 +69,13 @@ impl Editor {
       let guard = rule.read().await;
       rs.push(guard.clone());
     }
-    let file = std::fs::File::create(self.path.clone()).map_err(|e| e.to_string())?;
-    bincode::serialize_into(file, &rs).map_err(|e| e.to_string())
+    std::fs::write(self.path.clone(), &serialize_rules(rs)).map_err(|e| e.to_string())
   }
 
   async fn set_left_view(&mut self, index:usize) -> Result<(), String> {
     let rule = &self.rules[self.rule_idx];
-    let default_status = format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
+    let default_status =
+      format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
     self.state =
       if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
@@ -85,7 +87,8 @@ impl Editor {
 
   async fn set_right_view(&mut self, index:usize) -> Result<(), String> {
     let rule = &self.rules[self.rule_idx];
-    let default_status = format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
+    let default_status =
+      format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
     self.state = if guard.1.is_empty() {
       State::AtRight

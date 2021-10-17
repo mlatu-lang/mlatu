@@ -1,8 +1,6 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug)]
 pub enum Term {
   Word(String),
   Quote(Vec<Self>),
@@ -51,5 +49,84 @@ mod prolog {
         }
       }
     }
+  }
+}
+
+pub mod serde {
+  use nom::bytes::complete::{tag, take};
+  use nom::multi::{count, many0};
+  use nom::sequence::preceded;
+  use nom::{IResult, Parser};
+
+  use super::{Rule, Term};
+
+  fn usize_to_bytes(len:usize) -> Vec<u8> { Vec::from(u32::try_from(len).unwrap().to_be_bytes()) }
+
+  fn serialize_term(term:Term) -> Vec<u8> {
+    match term {
+      | Term::Word(s) => {
+        let mut bytes = vec![0x00];
+        let slice = s.as_bytes();
+        bytes.extend(usize_to_bytes(slice.len()));
+        bytes.extend_from_slice(slice);
+        bytes
+      },
+      | Term::Quote(terms) => {
+        let mut bytes = vec![0x01];
+        bytes.extend(serialize_terms(terms));
+        bytes
+      },
+    }
+  }
+
+  fn serialize_terms(terms:Vec<Term>) -> Vec<u8> {
+    let rest:Vec<u8> = terms.into_iter().flat_map(|term| serialize_term(term)).collect();
+    let mut bytes = usize_to_bytes(rest.len());
+    bytes.extend(rest);
+    bytes
+  }
+
+  fn serialize_rule(rule:Rule) -> Vec<u8> {
+    let mut bytes = serialize_terms(rule.0);
+    bytes.extend(serialize_terms(rule.1));
+    bytes
+  }
+
+  pub fn serialize_rules(rules:Vec<Rule>) -> Vec<u8> {
+    rules.into_iter().flat_map(|rule| serialize_rule(rule)).collect()
+  }
+
+  fn word_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
+    preceded(tag(&[0x00]),
+             take(4usize).map(|bs:&[u8]| u32::from_be_bytes(bs.try_into().unwrap()))
+                         .flat_map(|len| {
+                           take(len).map(|bs:&[u8]| {
+                                      Term::new_word(String::from_utf8(bs.into()).unwrap())
+                                    })
+                         }))(bytes)
+  }
+
+  fn quotation_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
+    preceded(tag(&[0x01]), terms_parser.map(Term::new_quote))(bytes)
+  }
+
+  fn term_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
+    word_parser.or(quotation_parser).parse(bytes)
+  }
+
+  fn terms_parser(bytes:&[u8]) -> IResult<&[u8], Vec<Term>> {
+    take(4usize).map(|bs:&[u8]| u32::from_be_bytes(bs.try_into().unwrap()))
+                .flat_map(|len| count(term_parser, len.try_into().unwrap()))
+                .parse(bytes)
+  }
+
+  fn rule_parser(bytes:&[u8]) -> IResult<&[u8], Rule> {
+    terms_parser.and(terms_parser).parse(bytes)
+  }
+
+  fn rules_parser(bytes:&[u8]) -> IResult<&[u8], Vec<Rule>> { many0(rule_parser).parse(bytes) }
+
+  pub fn deserialize_rules(bytes:&[u8]) -> Result<Vec<Rule>, String> {
+    rules_parser(bytes).map(|res| res.1).map_err(|e| e.to_string())
   }
 }

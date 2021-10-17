@@ -1,11 +1,9 @@
-use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 
-use bincode::deserialize_from;
 use clap::{App, Arg, SubCommand};
 use mlatu::prolog::codegen;
 use mlatu::prolog::util::{AssertLocation, ContextExt};
-use mlatu::{parse_rules, prolog, Editor, Interactive, Rule};
+use mlatu::{deserialize_rules, parse_rules, prolog, Editor, Interactive, Rule};
 use tokio::sync::mpsc::unbounded_channel;
 
 fn load_text_file(filename:&str) -> Result<Vec<Rule>, String> {
@@ -21,10 +19,9 @@ fn load_text_file(filename:&str) -> Result<Vec<Rule>, String> {
   }
 }
 
-fn load_binary_file(filename:&str, create_if_absent: bool) -> Result<Vec<Rule>, String> {
-  let mut options = OpenOptions::new();
-  match options.read(true).append(create_if_absent).create(create_if_absent).open(filename) {
-    | Ok(file) => match deserialize_from::<_, Vec<Rule>>(file) {
+fn load_binary_file(filename:&str) -> Result<Vec<Rule>, String> {
+  match std::fs::read(filename) {
+    | Ok(bytes) => match deserialize_rules(&bytes) {
       | Ok(rules) => Ok(rules),
       | Err(e) => Err(format!("Error while deserializing {}: {}", filename, e)),
     },
@@ -32,11 +29,11 @@ fn load_binary_file(filename:&str, create_if_absent: bool) -> Result<Vec<Rule>, 
   }
 }
 
-fn load_file(filename:&str, create_if_absent: bool) -> Result<Vec<Rule>, String> {
+fn load_file(filename:&str) -> Result<Vec<Rule>, String> {
   let path = Path::new(&filename);
   match path.extension().unwrap().to_str().unwrap() {
     | "mlt" => load_text_file(filename),
-    | "mlb" => load_binary_file(filename, create_if_absent),
+    | "mlb" => load_binary_file(filename),
     | ext => Err(format!("Unrecognized file extension: {}", ext)),
   }
 }
@@ -60,12 +57,12 @@ async fn main() -> Result<(), String> {
   match matches.subcommand() {
     | ("edit", Some(sub_matches)) => {
       let filename = sub_matches.value_of("FILE").unwrap();
-      let rules = load_file(filename, true)?;
+      let rules = load_file(filename)?;
       let mut path = PathBuf::from(filename);
       let _ = path.set_extension("mlb");
       match path.canonicalize() {
-        Ok(path) => Editor::new(path, rules)?.run().await,
-        Err(e) => eprintln!("Path could not be canonicalized"),
+        | Ok(path) => Editor::new(path, rules)?.run().await,
+        | Err(_) => eprintln!("Path could not be canonicalized"),
       }
     },
     | _ => {
@@ -76,7 +73,7 @@ async fn main() -> Result<(), String> {
       if let Some(args) = matches.values_of("FILES") {
         files.extend(args.map(ToOwned::to_owned));
       }
-      match files.into_iter().map(|file| load_file(&file, false)).collect::<Result<Vec<_>, _>>() {
+      match files.into_iter().map(|file| load_file(&file)).collect::<Result<Vec<_>, _>>() {
         | Ok(rules) => {
           let (prolog_tx, mut interactive_rx) = unbounded_channel();
           let (interactive_tx, prolog_rx) = unbounded_channel();
