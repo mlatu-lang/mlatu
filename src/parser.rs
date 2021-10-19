@@ -73,7 +73,7 @@ fn rule_parser<Input>() -> impl Parser<Input, Output=Rule>
   where Input: Stream<Token=char>, {
   let pattern = terms_parser().skip(equal());
   let replacement = terms_parser().skip(semicolon());
-  pattern.and(replacement)
+  pattern.and(replacement).map(|(pat, rep)| Rule { pat, rep })
 }
 
 parser! {
