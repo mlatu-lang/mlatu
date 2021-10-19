@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 
-use crate::ast::Term;
+use crate::ast::{Rule, Term};
 use crate::parser::parse_term;
 use crate::view::{State, View};
 
@@ -30,7 +30,7 @@ impl Interactive {
   pub fn new() -> io::Result<Self> {
     crossterm::terminal::enable_raw_mode()?;
     let should_quit = false;
-    let rule = Arc::new(RwLock::new((vec![], vec![])));
+    let rule = Arc::new(RwLock::new(Rule { pat:vec![], rep:vec![] }));
     let state = State::AtLeft;
     let default_status = "mlatu interface".to_string();
     let view = View::new(Arc::clone(&rule),
@@ -56,7 +56,7 @@ impl Interactive {
         res = receiver.recv() => {
             if let Some(res) = res {
               let mut guard = self.view.write().await;
-              guard.1 = res;
+              guard.rep = res;
             } else {
               die("erlang handler unexpectedly disconnected")
             }
@@ -73,58 +73,61 @@ impl Interactive {
 
   async fn remove(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    guard.0.remove(index);
-    self.state =
-      if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
-    sender.send(guard.0.clone()).expect("send error");
+    guard.pat.remove(index);
+    self.state = if guard.pat.is_empty() {
+      State::AtLeft
+    } else {
+      State::InLeft(index.min(guard.pat.len() - 1))
+    };
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
   async fn quote(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    guard.0[index] = Term::new_quote(vec![guard.0[index].clone()]);
-    sender.send(guard.0.clone()).expect("send error");
+    guard.pat[index] = Term::new_quote(vec![guard.pat[index].clone()]);
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
   async fn swap(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    guard.0.swap(index, index - 1);
-    sender.send(guard.0.clone()).expect("send error");
+    guard.pat.swap(index, index - 1);
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
   async fn dup(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    let term = guard.0[index].clone();
-    guard.0.insert(index, term);
-    sender.send(guard.0.clone()).expect("send error");
+    let term = guard.pat[index].clone();
+    guard.pat.insert(index, term);
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
   async fn concat(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.0[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.0[index].clone() {
+    if let Term::Quote(mut terms) = guard.pat[index - 1].clone() {
+      if let Term::Quote(other_terms) = guard.pat[index].clone() {
         terms.extend(other_terms);
-        guard.0.remove(index);
-        guard.0[index] = Term::new_quote(terms);
-        sender.send(guard.0.clone()).expect("send error");
+        guard.pat.remove(index);
+        guard.pat[index] = Term::new_quote(terms);
+        sender.send(guard.pat.clone()).expect("send terms");
       }
     }
   }
 
   async fn unquote(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(terms) = guard.0[index].clone() {
+    if let Term::Quote(terms) = guard.pat[index].clone() {
       let mut index = index;
-      guard.0.remove(index);
+      guard.pat.remove(index);
       for term in terms {
-        guard.0.insert(index, term);
+        guard.pat.insert(index, term);
         index += 1;
       }
-      self.state = if guard.0.is_empty() {
+      self.state = if guard.pat.is_empty() {
         State::AtLeft
       } else {
-        State::InLeft(index.saturating_sub(1).min(guard.0.len() - 1))
+        State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
       };
-      sender.send(guard.0.clone()).expect("send error");
+      sender.send(guard.pat.clone()).expect("send terms");
     }
   }
 
@@ -140,14 +143,14 @@ impl Interactive {
             let mut guard = self.view.write().await;
             match *state {
               | State::AtLeft => {
-                guard.0 = vec![term];
+                guard.pat = vec![term];
                 self.state = State::InLeft(0);
-                sender.send(guard.0.clone()).expect("send error");
+                sender.send(guard.pat.clone()).expect("send terms");
               },
               | State::InLeft(index) => {
-                guard.0.insert(index + 1, term);
+                guard.pat.insert(index + 1, term);
                 self.state = State::InLeft(index + 1);
-                sender.send(guard.0.clone()).expect("send error");
+                sender.send(guard.pat.clone()).expect("send terms");
               },
               | _ => {},
             }
@@ -180,10 +183,10 @@ impl Interactive {
       | (Up, _) => match self.state {
         | State::InLeft(index) => {
           let guard = self.view.read().await;
-          self.state = if guard.0.is_empty() {
+          self.state = if guard.pat.is_empty() {
             State::AtLeft
           } else {
-            State::InLeft(index.saturating_sub(1).min(guard.0.len() - 1))
+            State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
           };
         },
         | _ => {},
@@ -191,10 +194,10 @@ impl Interactive {
       | (Down, _) => match self.state {
         | State::InLeft(index) => {
           let guard = self.view.read().await;
-          self.state = if guard.0.is_empty() {
+          self.state = if guard.pat.is_empty() {
             State::AtLeft
           } else {
-            State::InLeft((index + 1).min(guard.0.len() - 1))
+            State::InLeft((index + 1).min(guard.pat.len() - 1))
           };
         },
         | _ => {},

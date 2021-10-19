@@ -30,7 +30,7 @@ mod interactive;
 mod parser;
 mod view;
 
-pub use ast::{pretty_rule, Rule, Term};
+pub use ast::{binary, Rule, Term};
 pub use editor::Editor;
 pub use interactive::Interactive;
 pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};
