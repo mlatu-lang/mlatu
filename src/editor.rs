@@ -3,8 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::ast::serde::serialize_rules;
-use crate::ast::{Rule, Term};
+use crate::ast::{binary, Rule, Term};
 use crate::parser::parse_term;
 use crate::view::{State, View};
 
@@ -27,18 +26,18 @@ impl Editor {
   /// # Errors
   ///
   /// Will return `Err` if there was an error constructing a terminal
-  pub fn new(path:PathBuf, original_rules:Vec<Rule>) -> Result<Self, String> {
+  pub fn new(path:PathBuf, original_rules:&[Rule]) -> Result<Self, String> {
     crossterm::terminal::enable_raw_mode().map_err(|e| e.to_string())?;
     let should_quit = false;
     let rule_idx = 0;
     let (rules, state) = if original_rules.is_empty() {
-      (vec![Arc::new(RwLock::new((vec![], vec![])))], State::AtLeft)
+      (vec![Arc::new(RwLock::new(Rule { pat:vec![], rep:vec![] }))], State::AtLeft)
     } else {
       let mut rules = Vec::new();
       for rule in original_rules {
-        rules.push(Arc::new(RwLock::new(rule)));
+        rules.push(Arc::new(RwLock::new(rule.clone())));
       }
-      (rules, State::InLeft(0))
+      (rules, if original_rules[0].pat.is_empty() { State::AtLeft } else { State::InLeft(0) })
     };
     let default_status =
       format!("{} (rule {}/{})", path.to_string_lossy(), rule_idx + 1, rules.len());
@@ -69,7 +68,7 @@ impl Editor {
       let guard = rule.read().await;
       rs.push(guard.clone());
     }
-    std::fs::write(self.path.clone(), &serialize_rules(rs)).map_err(|e| e.to_string())
+    std::fs::write(self.path.clone(), &binary::serialize_rules(rs)).map_err(|e| e.to_string())
   }
 
   async fn set_left_view(&mut self, index:usize) -> Result<(), String> {
@@ -77,8 +76,11 @@ impl Editor {
     let default_status =
       format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
-    self.state =
-      if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
+    self.state = if guard.pat.is_empty() {
+      State::AtLeft
+    } else {
+      State::InLeft(index.min(guard.pat.len() - 1))
+    };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
                           default_status).map_err(|e| e.to_string())?;
@@ -90,10 +92,10 @@ impl Editor {
     let default_status =
       format!("{} (rule {}/{})", self.path.to_string_lossy(), self.rule_idx + 1, self.rules.len());
     let guard = rule.read().await;
-    self.state = if guard.1.is_empty() {
+    self.state = if guard.rep.is_empty() {
       State::AtRight
     } else {
-      State::InRight(index.min(guard.1.len() - 1))
+      State::InRight(index.min(guard.rep.len() - 1))
     };
     self.view = View::new(Arc::clone(rule),
                           ("| Pattern |".to_string(), "| Replacement |".to_string()),
@@ -105,14 +107,14 @@ impl Editor {
     match self.state {
       | State::AtRight => {
         let guard = self.view.read().await;
-        self.state = if guard.0.is_empty() { State::AtLeft } else { State::InLeft(0) };
+        self.state = if guard.pat.is_empty() { State::AtLeft } else { State::InLeft(0) };
       },
       | State::InRight(index) => {
         let guard = self.view.read().await;
-        self.state = if guard.0.is_empty() {
+        self.state = if guard.pat.is_empty() {
           State::AtLeft
         } else {
-          State::InLeft(index.min(guard.0.len() - 1))
+          State::InLeft(index.min(guard.pat.len() - 1))
         }
       },
       | State::AtLeft if self.rule_idx > 0 => {
@@ -132,14 +134,14 @@ impl Editor {
     match self.state {
       | State::AtLeft => {
         let guard = self.view.read().await;
-        self.state = if guard.1.is_empty() { State::AtRight } else { State::InRight(0) };
+        self.state = if guard.rep.is_empty() { State::AtRight } else { State::InRight(0) };
       },
       | State::InLeft(index) => {
         let guard = self.view.read().await;
-        self.state = if guard.1.is_empty() {
+        self.state = if guard.rep.is_empty() {
           State::AtRight
         } else {
-          State::InRight(index.min(guard.1.len() - 1))
+          State::InRight(index.min(guard.rep.len() - 1))
         }
       },
       | State::AtRight if self.rule_idx < (self.rules.len() - 1) => {
@@ -161,19 +163,19 @@ impl Editor {
 
       match *state {
         | State::AtLeft => {
-          guard.0 = vec![term];
+          guard.pat = vec![term];
           self.state = State::InLeft(0);
         },
         | State::AtRight => {
-          guard.1 = vec![term];
+          guard.rep = vec![term];
           self.state = State::InRight(0);
         },
         | State::InLeft(index) => {
-          guard.0.insert(index + 1, term);
+          guard.pat.insert(index + 1, term);
           self.state = State::InLeft(index + 1);
         },
         | State::InRight(index) => {
-          guard.1.insert(index + 1, term);
+          guard.rep.insert(index + 1, term);
           self.state = State::InRight(index + 1);
         },
         | _ => {},
@@ -183,74 +185,77 @@ impl Editor {
 
   async fn concat_left(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.0[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.0[index].clone() {
+    if let Term::Quote(mut terms) = guard.pat[index - 1].clone() {
+      if let Term::Quote(other_terms) = guard.pat[index].clone() {
         terms.extend(other_terms);
-        guard.0.remove(index);
-        guard.0[index] = Term::new_quote(terms);
+        guard.pat.remove(index);
+        guard.pat[index] = Term::new_quote(terms);
       }
     }
   }
 
   async fn concat_right(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.1[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.1[index].clone() {
+    if let Term::Quote(mut terms) = guard.rep[index - 1].clone() {
+      if let Term::Quote(other_terms) = guard.rep[index].clone() {
         terms.extend(other_terms);
-        guard.1.remove(index);
-        guard.1[index] = Term::new_quote(terms);
+        guard.rep.remove(index);
+        guard.rep[index] = Term::new_quote(terms);
       }
     }
   }
 
   async fn unquote_left(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(terms) = guard.0[index].clone() {
+    if let Term::Quote(terms) = guard.pat[index].clone() {
       let mut index = index;
-      guard.0.remove(index);
+      guard.pat.remove(index);
       for term in terms {
-        guard.0.insert(index, term);
+        guard.pat.insert(index, term);
         index += 1;
       }
-      self.state = if guard.0.is_empty() {
+      self.state = if guard.pat.is_empty() {
         State::AtLeft
       } else {
-        State::InLeft(index.saturating_sub(1).min(guard.0.len() - 1))
+        State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
       };
     }
   }
 
   async fn unquote_right(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(terms) = guard.1[index].clone() {
+    if let Term::Quote(terms) = guard.rep[index].clone() {
       let mut index = index;
-      guard.1.remove(index);
+      guard.rep.remove(index);
       for term in terms {
-        guard.1.insert(index, term);
+        guard.rep.insert(index, term);
         index += 1;
       }
-      self.state = if guard.1.is_empty() {
+      self.state = if guard.rep.is_empty() {
         State::AtRight
       } else {
-        State::InRight(index.saturating_sub(1).min(guard.1.len() - 1))
+        State::InRight(index.saturating_sub(1).min(guard.rep.len() - 1))
       };
     }
   }
 
   async fn remove_left(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    guard.0.remove(index);
-    self.state =
-      if guard.0.is_empty() { State::AtLeft } else { State::InLeft(index.min(guard.0.len() - 1)) };
+    guard.pat.remove(index);
+    self.state = if guard.pat.is_empty() {
+      State::AtLeft
+    } else {
+      State::InLeft(index.min(guard.pat.len() - 1))
+    };
   }
 
   async fn remove_right(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    guard.1.remove(index);
-    self.state = if guard.1.is_empty() {
+    guard.rep.remove(index);
+    self.state = if guard.rep.is_empty() {
       State::AtRight
     } else {
-      State::InRight(index.min(guard.1.len() - 1))
+      State::InRight(index.min(guard.rep.len() - 1))
     };
   }
 
@@ -264,7 +269,7 @@ impl Editor {
       | (Char('w'), KeyModifiers::CONTROL) => self.save().await?,
       | (Char('r'), KeyModifiers::CONTROL) => {
         if self.rules.len() == 1 {
-          self.rules[0] = Arc::new(RwLock::new((Vec::new(), Vec::new())));
+          self.rules[0] = Arc::new(RwLock::new(Rule { pat:vec![], rep:vec![] }));
         } else {
           self.rules.remove(self.rule_idx);
           self.rule_idx = self.rule_idx.min(self.rules.len() - 1);
@@ -272,7 +277,7 @@ impl Editor {
         self.set_left_view(0).await?;
       },
       | (Char(' '), KeyModifiers::CONTROL) => {
-        self.rules.insert(self.rule_idx, Arc::new(RwLock::new((vec![], vec![]))));
+        self.rules.insert(self.rule_idx, Arc::new(RwLock::new(Rule { pat:vec![], rep:vec![] })));
         self.set_left_view(0).await?;
       },
       | (Char(c), _) => match (c, self.state.clone()) {
@@ -284,33 +289,33 @@ impl Editor {
         },
         | ('q', State::InLeft(index)) => {
           let mut guard = self.view.write().await;
-          guard.0[index] = Term::new_quote(vec![guard.0[index].clone()]);
+          guard.pat[index] = Term::new_quote(vec![guard.pat[index].clone()]);
         },
         | ('q', State::InRight(index)) => {
           let mut guard = self.view.write().await;
-          guard.1[index] = Term::new_quote(vec![guard.1[index].clone()]);
+          guard.rep[index] = Term::new_quote(vec![guard.rep[index].clone()]);
         },
         | ('r', State::InLeft(index)) => self.remove_left(index).await,
         | ('r', State::InRight(index)) => self.remove_right(index).await,
         | ('d', State::InLeft(index)) => {
           let mut guard = self.view.write().await;
-          let term = guard.0[index].clone();
-          guard.0.insert(index, term);
-          self.state = State::InLeft(index.min(guard.0.len() - 1));
+          let term = guard.pat[index].clone();
+          guard.pat.insert(index, term);
+          self.state = State::InLeft(index.min(guard.pat.len() - 1));
         },
         | ('d', State::InRight(index)) => {
           let mut guard = self.view.write().await;
-          let term = guard.1[index].clone();
-          guard.1.insert(index, term);
-          self.state = State::InRight(index.min(guard.1.len() - 1));
+          let term = guard.rep[index].clone();
+          guard.rep.insert(index, term);
+          self.state = State::InRight(index.min(guard.rep.len() - 1));
         },
         | ('s', State::InLeft(index)) if index > 0 => {
           let mut guard = self.view.write().await;
-          guard.0.swap(index, index - 1);
+          guard.pat.swap(index, index - 1);
         },
         | ('s', State::InRight(index)) if index > 0 => {
           let mut guard = self.view.write().await;
-          guard.1.swap(index, index - 1);
+          guard.rep.swap(index, index - 1);
         },
         | ('c', State::InLeft(index)) if index > 0 => self.concat_left(index).await,
         | ('c', State::InRight(index)) if index > 0 => self.concat_right(index).await,
@@ -338,11 +343,11 @@ impl Editor {
       | (Down, _) => match self.state {
         | State::InLeft(index) => {
           let guard = self.view.read().await;
-          self.state = State::InLeft((index + 1).min(guard.0.len() - 1));
+          self.state = State::InLeft((index + 1).min(guard.pat.len() - 1));
         },
         | State::InRight(index) => {
           let guard = self.view.read().await;
-          self.state = State::InRight((index + 1).min(guard.1.len() - 1));
+          self.state = State::InRight((index + 1).min(guard.rep.len() - 1));
         },
         | _ => {},
       },

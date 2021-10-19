@@ -30,7 +30,11 @@ impl fmt::Display for Term {
   }
 }
 
-pub type Rule = (Vec<Term>, Vec<Term>);
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug)]
+pub struct Rule {
+  pub pat:Vec<Term>,
+  pub rep:Vec<Term>,
+}
 
 mod prolog {
   use super::Term as AstTerm;
@@ -52,81 +56,105 @@ mod prolog {
   }
 }
 
-pub mod serde {
-  use nom::bytes::complete::{tag, take};
-  use nom::multi::{count, many0};
-  use nom::sequence::preceded;
-  use nom::{IResult, Parser};
-
+pub mod binary {
   use super::{Rule, Term};
 
-  fn usize_to_bytes(len:usize) -> Vec<u8> { Vec::from(u32::try_from(len).unwrap().to_be_bytes()) }
+  fn add_length(other:&[u8], buf:&mut Vec<u8>) {
+    let other_len = u32::try_from(other.len()).expect("'other.len()' is greater than u32::MAX");
+    buf.extend_from_slice(&other_len.to_be_bytes());
+    buf.extend_from_slice(other);
+  }
 
-  fn serialize_term(term:Term) -> Vec<u8> {
+  fn serialize_term(term:Term, buf:&mut Vec<u8>) {
     match term {
-      | Term::Word(s) => {
-        let mut bytes = vec![0x00];
-        let slice = s.as_bytes();
-        bytes.extend(usize_to_bytes(slice.len()));
-        bytes.extend_from_slice(slice);
-        bytes
+      | Term::Word(name) => {
+        buf.push(0_u8);
+        add_length(name.as_bytes(), buf);
       },
       | Term::Quote(terms) => {
-        let mut bytes = vec![0x01];
-        bytes.extend(serialize_terms(terms));
-        bytes
+        buf.push(1_u8);
+        let mut terms_bytes = Vec::new();
+        for term in terms {
+          serialize_term(term, &mut terms_bytes);
+        }
+        add_length(&terms_bytes, buf);
       },
     }
   }
 
-  fn serialize_terms(terms:Vec<Term>) -> Vec<u8> {
-    let rest:Vec<u8> = terms.into_iter().flat_map(|term| serialize_term(term)).collect();
-    let mut bytes = usize_to_bytes(rest.len());
-    bytes.extend(rest);
-    bytes
-  }
-
-  fn serialize_rule(rule:Rule) -> Vec<u8> {
-    let mut bytes = serialize_terms(rule.0);
-    bytes.extend(serialize_terms(rule.1));
-    bytes
-  }
-
+  #[must_use]
   pub fn serialize_rules(rules:Vec<Rule>) -> Vec<u8> {
-    rules.into_iter().flat_map(|rule| serialize_rule(rule)).collect()
+    let mut buf = Vec::new();
+    let mut rules_bytes = Vec::new();
+    for rule in rules {
+      let mut pattern_bytes = Vec::new();
+      for term in rule.pat {
+        serialize_term(term, &mut pattern_bytes);
+      }
+      add_length(&pattern_bytes, &mut rules_bytes);
+      let mut replacement_bytes = Vec::new();
+      for term in rule.rep {
+        serialize_term(term, &mut replacement_bytes);
+      }
+      add_length(&replacement_bytes, &mut rules_bytes);
+    }
+    add_length(&rules_bytes, &mut buf);
+    buf
   }
 
-  fn word_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
-    preceded(tag(&[0x00]),
-             take(4usize).map(|bs:&[u8]| u32::from_be_bytes(bs.try_into().unwrap()))
-                         .flat_map(|len| {
-                           take(len).map(|bs:&[u8]| {
-                                      Term::new_word(String::from_utf8(bs.into()).unwrap())
-                                    })
-                         }))(bytes)
+  fn get_length(buf:&mut Vec<u8>) -> Vec<u8> {
+    let slice_len = usize::try_from(u32::from_be_bytes(buf[..4].try_into().expect("'buf' has less than four elements"))).expect("encoded u32 does not fit into usize");
+    let vec = Vec::from(&buf[4..(4 + slice_len)]);
+    *buf = buf[(4 + slice_len)..].to_vec();
+    vec
   }
 
-  fn quotation_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
-    preceded(tag(&[0x01]), terms_parser.map(Term::new_quote))(bytes)
+  fn deserialize_term(buf:&mut Vec<u8>) -> Option<Term> {
+    let first = buf[0];
+    *buf = buf[1..].to_vec();
+    match first {
+      | 0_u8 => {
+        let name_bytes = get_length(buf);
+        String::from_utf8(name_bytes).ok().map(Term::new_word)
+      },
+      | 1_u8 => {
+        let mut terms_bytes = get_length(buf);
+        let mut terms = Vec::new();
+        while !terms_bytes.is_empty() {
+          match deserialize_term(&mut terms_bytes) {
+            | Some(term) => terms.push(term),
+            | None => return None,
+          }
+        }
+        Some(Term::Quote(terms))
+      },
+      | _ => None,
+    }
   }
 
-  fn term_parser(bytes:&[u8]) -> IResult<&[u8], Term> {
-    word_parser.or(quotation_parser).parse(bytes)
-  }
-
-  fn terms_parser(bytes:&[u8]) -> IResult<&[u8], Vec<Term>> {
-    take(4usize).map(|bs:&[u8]| u32::from_be_bytes(bs.try_into().unwrap()))
-                .flat_map(|len| count(term_parser, len.try_into().unwrap()))
-                .parse(bytes)
-  }
-
-  fn rule_parser(bytes:&[u8]) -> IResult<&[u8], Rule> {
-    terms_parser.and(terms_parser).parse(bytes)
-  }
-
-  fn rules_parser(bytes:&[u8]) -> IResult<&[u8], Vec<Rule>> { many0(rule_parser).parse(bytes) }
-
-  pub fn deserialize_rules(bytes:&[u8]) -> Result<Vec<Rule>, String> {
-    rules_parser(bytes).map(|res| res.1).map_err(|e| e.to_string())
+  pub fn deserialize_rules(buf:&mut Vec<u8>) -> Option<Vec<Rule>> {
+    println!("len: {}", buf.len());
+    let mut rules_bytes = get_length(buf);
+    let mut rules = Vec::new();
+    while !rules_bytes.is_empty() {
+      let mut pattern_bytes = get_length(&mut rules_bytes);
+      let mut pat = Vec::new();
+      while !pattern_bytes.is_empty() {
+        match deserialize_term(&mut pattern_bytes) {
+          | Some(term) => pat.push(term),
+          | None => return None,
+        }
+      }
+      let mut replacement_bytes = get_length(&mut rules_bytes);
+      let mut rep = Vec::new();
+      while !replacement_bytes.is_empty() {
+        match deserialize_term(&mut replacement_bytes) {
+          | Some(term) => rep.push(term),
+          | None => return None,
+        }
+      }
+      rules.push(Rule { pat, rep });
+    }
+    Some(rules)
   }
 }

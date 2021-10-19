@@ -1,9 +1,13 @@
+#![feature(with_options)]
+
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use clap::{App, Arg, SubCommand};
 use mlatu::prolog::codegen;
 use mlatu::prolog::util::{AssertLocation, ContextExt};
-use mlatu::{deserialize_rules, parse_rules, prolog, Editor, Interactive, Rule};
+use mlatu::{binary, parse_rules, prolog, Editor, Interactive, Rule};
 use tokio::sync::mpsc::unbounded_channel;
 
 fn load_text_file(filename:&str) -> Result<Vec<Rule>, String> {
@@ -20,12 +24,18 @@ fn load_text_file(filename:&str) -> Result<Vec<Rule>, String> {
 }
 
 fn load_binary_file(filename:&str) -> Result<Vec<Rule>, String> {
-  match std::fs::read(filename) {
-    | Ok(bytes) => match deserialize_rules(&bytes) {
-      | Ok(rules) => Ok(rules),
-      | Err(e) => Err(format!("Error while deserializing {}: {}", filename, e)),
+  match File::with_options().append(true).create(true).read(true).open(filename) {
+    | Ok(mut file) => {
+      let mut buf = Vec::new();
+      match file.read_to_end(&mut buf) {
+        | Ok(_) => match binary::deserialize_rules(&mut buf) {
+          | Some(rules) => Ok(rules),
+          | None => Err(format!("Error while deserializing {}", filename)),
+        },
+        | Err(e) => Err(format!("Error while reading '{}': {}", filename, e)),
+      }
     },
-    | Err(e) => Err(format!("Error while opening '{}'': {}", filename, e)),
+    | Err(e) => Err(format!("Error while opening '{}': {}", filename, e)),
   }
 }
 
@@ -61,7 +71,7 @@ async fn main() -> Result<(), String> {
       let mut path = PathBuf::from(filename);
       let _ = path.set_extension("mlb");
       match path.canonicalize() {
-        | Ok(path) => Editor::new(path, rules)?.run().await,
+        | Ok(path) => Editor::new(path, &rules)?.run().await,
         | Err(_) => eprintln!("Path could not be canonicalized"),
       }
     },

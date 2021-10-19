@@ -30,8 +30,7 @@ mod parser;
 pub mod prolog;
 mod view;
 
-pub use ast::serde::{deserialize_rules, serialize_rules};
-pub use ast::{Rule, Term};
+pub use ast::{binary, Rule, Term};
 pub use editor::Editor;
 pub use interactive::Interactive;
 pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};
