@@ -10,56 +10,59 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use crate::ast::{Rule, Term};
 
 pub const BEFORE:&str = "-module(mlatu). -export([interact/1]). 
-spawn_rewrite(List, IfOk, IfNone) -> Self = self(), spawn(fun() -> inner_rewrite(List, Self) end), \
-                         receive {ok, NewRest} -> IfOk(NewRest); {none} -> IfNone() end.
-no_rewrite(Pid) -> Pid ! {none}.
-rewrite_to(Pid, New) -> Pid ! {ok, New}.
-inner_rewrite(List, Parent) -> case List of ";
+driver([], Prefix) -> Prefix;
+driver([Head|Tail], Prefix) ->
+  case find_redex([Head|Tail]) of  
+    {redex_found, New} -> driver(lists:reverse(Prefix, New), []); 
+    {redex_not_found} -> driver(Tail, [Head|Prefix])
+end.
+find_redex(List) -> case List of \n";
 
 pub const AFTER:&str = "
-  [] -> no_rewrite(Parent);
-  [{word, u}, {quote, List} | Rest] -> rewrite_to(Parent, List ++ Rest);
-  [{word, q}, A | Rest] -> rewrite_to(Parent, [{quote, [A]} | Rest]);
-  [{word, c}, {quote, List1}, {quote, List2} | Rest] -> rewrite_to(Parent, [{quote, List1 ++  \
-                        List2} | Rest]);
-  [{word, d}, A | Rest] -> rewrite_to(Parent, [A, A | Rest]);
-  [{word, r}, _ | Rest] -> rewrite_to(Parent, Rest);
-  [{word, s}, A, B | Rest] -> rewrite_to(Parent, [B, A | Rest]);
-  [First | Rest] -> spawn_rewrite(Rest, fun(NewRest) -> spawn(fun() -> inner_rewrite([First | \
-                        NewRest], Parent) end) end, fun() -> no_rewrite(Parent) end)
-    end.
+  [{word, 'u'}, {quote, List} | Rest] -> {redex_found, List ++ Rest};
+  [{word, 'q'}, A | Rest] -> {redex_found, [{quote, [A]} | Rest]};
+  [{word, 'c'}, {quote, List1}, {quote, List2} | Rest] -> {redex_found, [{quote, List1 ++ List2} | \
+                        Rest]};
+  [{word, 'd'}, A | Rest] -> {redex_found, [A, A | Rest]};
+  [{word, 'r'}, _ | Rest] -> {redex_found, Rest};
+  [{word, 's'}, A, B | Rest] -> {redex_found, [B, A | Rest]};
+  _ -> {redex_not_found}
+end.
 print_term({word, Atom}) -> atom_to_list(Atom);
 print_term({quote, List}) -> \"(\" ++ print_terms(List) ++ \")\".
-print_terms(MTerms) -> string:trim(lists:foldl(fun(Term, S) -> print_term(Term) ++ \" \" ++ S end, \
-                        \"\", MTerms)). 
-interact(Original) ->
-    spawn_rewrite(Original, fun(New) -> print_terms(New) end, fun() -> print_terms(Original) end).
-";
+print_terms([]) -> \" \";
+print_terms([Term|List]) -> print_term(Term) ++ \" \" ++ print_terms(List). 
+interact(List) -> print_terms(driver(List, [])).";
 
 fn translate_term(term:Term) -> String {
   match term {
     | Term::Word(s) => format!("{{word, '{}'}}", s),
-    | Term::Quote(terms) => format!("{{quote, {}}}", translate_terms(terms, "")),
+    | Term::Quote(terms) => format!("{{quote, {}}}", translate_terms(terms, "[]")),
   }
 }
 
 fn translate_terms(terms:Vec<Term>, end:&str) -> String {
-  let mut s = "[".to_owned();
-  let mut iter = terms.into_iter().rev();
-  if let Some(term) = iter.next() {
-    s.push_str(&translate_term(term));
+  if terms.is_empty() {
+    end.to_string()
+  } else {
+    let mut s = "[".to_owned();
+    let mut iter = terms.into_iter().rev();
+    if let Some(term) = iter.next() {
+      s.push_str(&translate_term(term));
+    }
+    for term in iter {
+      s.push(',');
+      s.push_str(&translate_term(term.clone()));
+    }
+    s.push('|');
+    s.push_str(end);
+    s.push(']');
+    s
   }
-  for term in iter {
-    s.push(',');
-    s.push_str(&translate_term(term.clone()));
-  }
-  s.push_str(end);
-  s.push(']');
-  s
 }
 
 fn parser<'a>() -> impl Parser<&'a str, Output=Vec<Term>> {
-  char::string("[]").map(|_| vec![]).or(repeat::skip_until(char::char('"')).with(between(char::char('"'), char::char('"'), repeat::take_until(char::char('"')).flat_map(|s: String| crate::parser::terms_parser::<&str>().parse(s.as_ref()).map(|t| t.0)))))
+  repeat::skip_until(char::char('"')).with(between(char::char('"'), char::char('"'), repeat::take_until(char::char('"')).flat_map(|s: String| crate::parser::terms_parser::<&str>().parse(s.as_ref()).map(|t| t.0))))
 }
 
 /// # Panics
@@ -70,10 +73,10 @@ pub async fn run(rules:Vec<Rule>, sender:UnboundedSender<Vec<Term>>,
                  mut receiver:UnboundedReceiver<Vec<Term>>) {
   let mut string = BEFORE.to_string();
   for rule in rules {
-    string.push_str(&translate_terms(rule.pat, "|Rest"));
-    string.push_str(" -> rewrite_to(Parent, ");
-    string.push_str(&translate_terms(rule.rep, "|Rest"));
-    string.push_str(");");
+    string.push_str(&translate_terms(rule.pat, "Rest"));
+    string.push_str(" -> {redex_found,");
+    string.push_str(&translate_terms(rule.rep, "Rest"));
+    string.push_str("};\n");
   }
   string.push_str(AFTER);
   fs::write("./mlatu.erl", string).await.expect("could not write to file");
@@ -87,12 +90,14 @@ pub async fn run(rules:Vec<Rule>, sender:UnboundedSender<Vec<Term>>,
     assert_eq!(reader.next_line().await.expect("erlang process aborted unexpectedly"),
                Some("1> {ok,mlatu}".to_string()));
     while let Some(before) = receiver.recv().await {
-      let term = translate_terms(before, "");
+      let term = translate_terms(before, "[]");
       stdin.write_all(format!("mlatu:interact({}).\n", term).as_bytes())
            .await
            .expect("could not write to stdin");
       if let Ok(Some(line)) = reader.next_line().await {
-        let result = parser().parse(&line).expect("parsing failed");
+        let result =
+          parser().parse(&line)
+                  .unwrap_or_else(|e| panic!("parsing failed: {} (line was \"{}\")", e, line));
         sender.send(result.0).expect("send error");
       }
     }
