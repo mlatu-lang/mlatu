@@ -8,7 +8,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: windows-latest
+          - os: ubuntu-latest
             target: x86_64-pc-windows-gnu
             archive-format: zip
           - os: ubuntu-latest
@@ -17,8 +17,8 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             archive-format: zip
-    name: Release for ${{ matrix.os }}
-    runs-on: ubuntu-latest
+    name: Release for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@master
       - uses: actions/cache@v2
@@ -30,7 +30,7 @@ jobs:
           key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: brew install michaeleisel/zld/zld
         if: matrix.os == 'macos-latest'
-      - name: Compile and release for ${{ matrix.target }}
+      - name: Compile and release
         uses: rust-build/rust-build.action@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
