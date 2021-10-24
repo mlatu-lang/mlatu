@@ -1,6 +1,8 @@
+use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crossterm::queue;
 use tokio::sync::RwLock;
 
 use crate::ast::{binary, Rule, Term};
@@ -17,8 +19,9 @@ pub struct Editor {
 }
 
 fn die(e:&str) {
-  let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
-  let _result = crossterm::terminal::disable_raw_mode();
+  std::mem::drop(queue!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All)));
+  std::mem::drop(crossterm::terminal::disable_raw_mode());
+  std::mem::drop(stdout().flush());
   panic!("{}", e)
 }
 

@@ -8,7 +8,7 @@ Pull requests are very welcome. For major changes, please open an issue first to
 
 ## Setup
 
-To create a local copy of mlatu with all necessary dependencies, you will need to install Rust and Swi-Prolog. To install Rust, follow the instructions at <https://rustup.rs>. To install Swi-Prolog, you can find a download at <https://www.swi-prolog.org/Download.html>.
+To create a local copy of mlatu with all necessary dependencies, you will need to install Rust and Erlang. To install Rust, follow the instructions at <https://rustup.rs>. To install Erlang, you can find a download at <https://www.erlang.org/downloads>.
 
 To contribute to mlatu, it's easiest to install the GitHub CLI tool (instructions are at <https://github.com/cli/cli#installation>). After installation, authenticate yourself by running `gh auth login`. Then, fork and download a local copy of the repository by running `gh repo fork mlatu-lang/mlatu`.
 

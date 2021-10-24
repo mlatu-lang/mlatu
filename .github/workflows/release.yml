@@ -14,10 +14,13 @@ jobs:
             archive: zip
           - target: x86_64-unknown-linux-musl
             archive: tar.gz tar.xz
-          - target: x86_64-apple-darwin
-            archive: zip
+          #- target: x86_64-apple-darwin
+          #  archive: zip
     steps:
       - uses: actions/checkout@master
+      - uses: gleam-lang/setup-erlang@v1.1.3
+        with:
+          otp-version: "24.1"
       - name: Compile and release
         uses: rust-build/rust-build.action@latest
         env:

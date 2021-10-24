@@ -1,6 +1,8 @@
 use std::io;
+use std::io::stdout;
 use std::sync::Arc;
 
+use crossterm::execute;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 
@@ -18,8 +20,9 @@ pub struct Interactive {
 }
 
 fn die(e:&str) -> ! {
-  let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
-  let _result = crossterm::terminal::disable_raw_mode();
+  std::mem::drop(execute!(stdout(),
+                          crossterm::terminal::Clear(crossterm::terminal::ClearType::All)));
+  std::mem::drop(crossterm::terminal::disable_raw_mode());
   panic!("{}", e)
 }
 
