@@ -26,10 +26,15 @@ fn load_binary_file(filename:&str) -> Result<Vec<Rule>, String> {
     | Ok(mut file) => {
       let mut buf = Vec::new();
       match file.read_to_end(&mut buf) {
-        | Ok(_) => match binary::deserialize_rules(&mut buf) {
-          | Some(rules) => Ok(rules),
-          | None => Err(format!("Error while deserializing {}", filename)),
-        },
+        | Ok(_) =>
+          if buf.is_empty() {
+            Ok(vec![])
+          } else {
+            match binary::deserialize_rules(&mut buf) {
+              | Some(rules) => Ok(rules),
+              | None => Err(format!("Error while deserializing {}", filename)),
+            }
+          },
         | Err(e) => Err(format!("Error while reading '{}': {}", filename, e)),
       }
     },
