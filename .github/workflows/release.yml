@@ -4,26 +4,34 @@ on:
 
 jobs:
   release:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
-          - target: x86_64-pc-windows-gnu
-            archive: zip
-          - target: x86_64-unknown-linux-musl
-            archive: tar.gz tar.xz
-          #- target: x86_64-apple-darwin
-          #  archive: zip
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            archive-format: zip
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive-format: tar.gz tar.xz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive-format: zip
+    name: Release for ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: gleam-lang/setup-erlang@v1.1.3
+      - uses: actions/cache@v2
         with:
-          otp-version: "24.1"
-      - name: Compile and release
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Compile and release for ${{ matrix.target }}
         uses: rust-build/rust-build.action@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUSTTARGET: ${{ matrix.target }}
-          ARCHIVE_TYPES: ${{ matrix.archive }}
+          ARCHIVE_TYPES: ${{ matrix.archive-format }}
+          EXTA_FILES: 'LICENSE.md README.md'
