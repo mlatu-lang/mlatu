@@ -25,9 +25,9 @@
 
 mod ast;
 mod editor;
+pub mod erlang;
 mod interactive;
 mod parser;
-pub mod prolog;
 mod view;
 
 pub use ast::{binary, Rule, Term};

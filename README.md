@@ -1,7 +1,7 @@
 mlatu
 =====
 
-mlatu is a concatenative programming language based off term rewriting as an evalutation model.
+mlatu is a declarative concatenative programming language based off term rewriting as an evalutation model.
 
 ![Lines of code](https://img.shields.io/tokei/lines/github/mlatu-lang/mlatu)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/mlatu-lang/mlatu?include_prereleases)
@@ -25,12 +25,12 @@ Table of Contents
 Introduction
 ------------
 
-mlatu is a concatenative (sometimes known as stack-oriented, although mlatu isn't) programming language. It is purely functional in that it is evaluated via a term-rewriting system and so all expressions are referentially transparent.
+mlatu is a declarative concatenative (sometimes known as stack-oriented, although mlatu isn't) programming language. It is purely functional in that it is evaluated via a term-rewriting system and so all expressions are referentially transparent.
 
 Installation
 ------------
 
-First, you need to have Rust and Swi-Prolog (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Swi-Prolog, you can find a download at <https://www.swi-prolog.org/Download.html>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
+First, you need to have Rust and Erlang (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Erlaang, you can find a download at <https://www.erlang.org/downloads>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
 
 ```bash
 git clone https://github.com/mlatu-lang/mlatu 

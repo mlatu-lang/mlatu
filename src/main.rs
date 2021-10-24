@@ -5,9 +5,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use clap::{App, Arg, SubCommand};
-use mlatu::prolog::codegen;
-use mlatu::prolog::util::{AssertLocation, ContextExt};
-use mlatu::{binary, parse_rules, prolog, Editor, Interactive, Rule};
+use mlatu::{binary, erlang, parse_rules, Editor, Interactive, Rule};
 use tokio::sync::mpsc::unbounded_channel;
 
 fn load_text_file(filename:&str) -> Result<Vec<Rule>, String> {
@@ -85,26 +83,15 @@ async fn main() -> Result<(), String> {
       }
       match files.into_iter().map(|file| load_file(&file)).collect::<Result<Vec<_>, _>>() {
         | Ok(rules) => {
-          let (prolog_tx, mut interactive_rx) = unbounded_channel();
-          let (interactive_tx, prolog_rx) = unbounded_channel();
-
-          std::thread::spawn(move || {
-            prolog::thread(|ctx, module| {
-                             let rules = rules.into_iter().flatten().collect::<Vec<_>>();
-                             let clauses = codegen::generate(ctx, &rules).unwrap();
-                             clauses.into_iter()
-                                    .try_for_each(|clause| {
-                                      ctx.assert(&clause.clause, Some(module), AssertLocation::Last)
-                                    })
-                                    .unwrap();
-                           },
-                           &prolog_tx,
-                           prolog_rx)
-          });
-
-          Interactive::new(interactive_tx).map_err(|e| e.to_string())?
-                                          .run(&mut interactive_rx)
-                                          .await;
+          let rules:Vec<_> = rules.into_iter().flatten().collect();
+          let (interactive_sender, erlang_receiver) = unbounded_channel();
+          let (erlang_sender, interactive_receiver) = unbounded_channel();
+          tokio::spawn(async move { erlang::run(rules, erlang_sender, erlang_receiver).await });
+          match Interactive::new() {
+            | Ok(mut interactive) =>
+              interactive.run(interactive_sender, interactive_receiver).await,
+            | Err(error) => eprintln!("{}", error),
+          }
         },
         | Err(error) => eprintln!("{}", error),
       }

@@ -63,7 +63,7 @@ fn term_parser<Input>() -> impl Parser<Input, Output=Term>
 }
 
 parser! {
-fn terms_parser[Input]()(Input) -> Vec<Term>
+pub fn terms_parser[Input]()(Input) -> Vec<Term>
 where [Input: Stream<Token = char>] {
     separator_parser().with(sep_end_by::<Vec<_>, _, _, _>(term_parser(), separator_parser()))
 }

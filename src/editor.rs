@@ -1,6 +1,8 @@
+use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crossterm::queue;
 use tokio::sync::RwLock;
 
 use crate::ast::{binary, Rule, Term};
@@ -17,8 +19,9 @@ pub struct Editor {
 }
 
 fn die(e:&str) {
-  let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
-  let _result = crossterm::terminal::disable_raw_mode();
+  std::mem::drop(queue!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All)));
+  std::mem::drop(crossterm::terminal::disable_raw_mode());
+  std::mem::drop(stdout().flush());
   panic!("{}", e)
 }
 
@@ -171,12 +174,12 @@ impl Editor {
           self.state = State::InRight(0);
         },
         | State::InLeft(index) => {
-          guard.pat.insert(index + 1, term);
-          self.state = State::InLeft(index + 1);
+          guard.pat.insert(index, term);
+          self.state = State::InLeft(index);
         },
         | State::InRight(index) => {
-          guard.rep.insert(index + 1, term);
-          self.state = State::InRight(index + 1);
+          guard.rep.insert(index, term);
+          self.state = State::InRight(index);
         },
         | _ => {},
       }
@@ -185,8 +188,8 @@ impl Editor {
 
   async fn concat_left(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.pat[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.pat[index].clone() {
+    if let Term::Quote(mut terms) = guard.pat[index].clone() {
+      if let Some(Term::Quote(other_terms)) = guard.pat.get(index + 1).cloned() {
         terms.extend(other_terms);
         guard.pat.remove(index);
         guard.pat[index] = Term::new_quote(terms);
@@ -196,8 +199,8 @@ impl Editor {
 
   async fn concat_right(&mut self, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.rep[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.rep[index].clone() {
+    if let Term::Quote(mut terms) = guard.rep[index].clone() {
+      if let Some(Term::Quote(other_terms)) = guard.rep.get(index + 1).cloned() {
         terms.extend(other_terms);
         guard.rep.remove(index);
         guard.rep[index] = Term::new_quote(terms);
@@ -208,16 +211,16 @@ impl Editor {
   async fn unquote_left(&mut self, index:usize) {
     let mut guard = self.view.write().await;
     if let Term::Quote(terms) = guard.pat[index].clone() {
-      let mut index = index;
       guard.pat.remove(index);
+      let mut i = index;
       for term in terms {
-        guard.pat.insert(index, term);
-        index += 1;
+        guard.pat.insert(i, term);
+        i += 1;
       }
       self.state = if guard.pat.is_empty() {
         State::AtLeft
       } else {
-        State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
+        State::InLeft(index.min(guard.pat.len() - 1))
       };
     }
   }
@@ -225,16 +228,16 @@ impl Editor {
   async fn unquote_right(&mut self, index:usize) {
     let mut guard = self.view.write().await;
     if let Term::Quote(terms) = guard.rep[index].clone() {
-      let mut index = index;
       guard.rep.remove(index);
+      let mut i = index;
       for term in terms {
-        guard.rep.insert(index, term);
-        index += 1;
+        guard.rep.insert(i, term);
+        i += 1;
       }
       self.state = if guard.rep.is_empty() {
         State::AtRight
       } else {
-        State::InRight(index.saturating_sub(1).min(guard.rep.len() - 1))
+        State::InRight(index.min(guard.rep.len() - 1))
       };
     }
   }
@@ -309,16 +312,20 @@ impl Editor {
           guard.rep.insert(index, term);
           self.state = State::InRight(index.min(guard.rep.len() - 1));
         },
-        | ('s', State::InLeft(index)) if index > 0 => {
+        | ('s', State::InLeft(index)) => {
           let mut guard = self.view.write().await;
-          guard.pat.swap(index, index - 1);
+          if guard.pat.len() > index + 1 {
+            guard.pat.swap(index, index + 1);
+          }
         },
-        | ('s', State::InRight(index)) if index > 0 => {
+        | ('s', State::InRight(index)) => {
           let mut guard = self.view.write().await;
-          guard.rep.swap(index, index - 1);
+          if guard.pat.len() > index + 1 {
+            guard.rep.swap(index, index + 1);
+          }
         },
-        | ('c', State::InLeft(index)) if index > 0 => self.concat_left(index).await,
-        | ('c', State::InRight(index)) if index > 0 => self.concat_right(index).await,
+        | ('c', State::InLeft(index)) => self.concat_left(index).await,
+        | ('c', State::InRight(index)) => self.concat_right(index).await,
         | ('u', State::InLeft(index)) => self.unquote_left(index).await,
         | ('u', State::InRight(index)) => self.unquote_right(index).await,
         | (' ', _) => self.state = State::Editing(String::new(), Box::new(self.state.clone())),

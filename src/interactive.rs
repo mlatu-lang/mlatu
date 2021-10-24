@@ -1,7 +1,8 @@
 use std::io;
+use std::io::stdout;
 use std::sync::Arc;
 
-use tokio::sync::mpsc::error::TryRecvError;
+use crossterm::execute;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 
@@ -9,16 +10,19 @@ use crate::ast::{Rule, Term};
 use crate::parser::parse_term;
 use crate::view::{State, View};
 
+type Sender = UnboundedSender<Vec<Term>>;
+type Receiver = UnboundedReceiver<Vec<Term>>;
+
 pub struct Interactive {
   view:View,
   should_quit:bool,
   state:State,
-  tx:UnboundedSender<Vec<Term>>,
 }
 
-fn die(e:&io::Error) -> ! {
-  let _result = crossterm::terminal::Clear(crossterm::terminal::ClearType::All);
-  let _result = crossterm::terminal::disable_raw_mode();
+fn die(e:&str) -> ! {
+  std::mem::drop(execute!(stdout(),
+                          crossterm::terminal::Clear(crossterm::terminal::ClearType::All)));
+  std::mem::drop(crossterm::terminal::disable_raw_mode());
   panic!("{}", e)
 }
 
@@ -26,7 +30,7 @@ impl Interactive {
   /// # Errors
   ///
   /// Will return `Err` if there was an error constructing a terminal
-  pub fn new(tx:UnboundedSender<Vec<Term>>) -> io::Result<Self> {
+  pub fn new() -> io::Result<Self> {
     crossterm::terminal::enable_raw_mode()?;
     let should_quit = false;
     let rule = Arc::new(RwLock::new(Rule { pat:vec![], rep:vec![] }));
@@ -35,57 +39,42 @@ impl Interactive {
     let view = View::new(Arc::clone(&rule),
                          ("| Input |".to_string(), "| Output |".to_string()),
                          default_status)?;
-    Ok(Self { view, should_quit, state, tx })
-  }
-
-  async fn handle_prolog(rx:&mut UnboundedReceiver<Result<Vec<Term>, String>>)
-                         -> Option<Vec<Term>> {
-    match rx.try_recv() {
-      | Ok(Ok(terms)) => Some(terms),
-      | Ok(Err(error)) => {
-        // TODO: proper error reporting here, dying is painful
-        die(&io::Error::new(io::ErrorKind::Other, error));
-        // None
-      },
-      | Err(TryRecvError::Empty) => None,
-      | Err(TryRecvError::Disconnected) => die(&io::Error::new(io::ErrorKind::Other,
-                                                               "prolog handler thread \
-                                                                unexpectedly disconnected")),
-    }
+    Ok(Self { view, should_quit, state })
   }
 
   /// # Panics
   ///
   /// Panics if there was an error displaying to the screen, an error processing
   /// keypresses, or an error handling the Prolog interface.
-  pub async fn run(&mut self, rx:&mut UnboundedReceiver<Result<Vec<Term>, String>>) {
+  pub async fn run(&mut self, sender:Sender, mut receiver:Receiver) {
     loop {
-      Self::handle_prolog(rx).await;
       if let Err(error) = self.view.refresh_screen(&self.state, self.should_quit).await {
-        die(&error);
+        die(&error.to_string());
       }
       if self.should_quit {
         let _result = crossterm::terminal::disable_raw_mode();
         break
       }
-
       tokio::select! {
-        res = self.process_keypress() => {
+        res = receiver.recv() => {
+            if let Some(res) = res {
+              let mut guard = self.view.write().await;
+              guard.rep = res;
+            } else {
+              die("erlang handler unexpectedly disconnected")
+            }
+        }
+        res = self.process_keypress(sender.clone()) => {
+          // is taken
           if let Err(error) = res {
-            die(&error);
+            die(&error.to_string());
           }
         }
-        res = Self::handle_prolog(rx) => {
-          if let Some(terms) = res {
-            let mut guard = self.view.write().await;
-            guard.rep = terms;
-          }
-        }
-      };
+      }
     }
   }
 
-  async fn remove(&mut self, index:usize) {
+  async fn remove(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
     guard.pat.remove(index);
     self.state = if guard.pat.is_empty() {
@@ -93,59 +82,61 @@ impl Interactive {
     } else {
       State::InLeft(index.min(guard.pat.len() - 1))
     };
-    self.tx.send(guard.pat.clone()).expect("send terms");
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
-  async fn quote(&mut self, index:usize) {
+  async fn quote(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
     guard.pat[index] = Term::new_quote(vec![guard.pat[index].clone()]);
-    self.tx.send(guard.pat.clone()).expect("send terms");
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
-  async fn swap(&mut self, index:usize) {
+  async fn swap(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    guard.pat.swap(index, index - 1);
-    self.tx.send(guard.pat.clone()).expect("send terms");
+    if guard.pat.len() > index + 1 {
+      guard.pat.swap(index, index + 1);
+      sender.send(guard.pat.clone()).expect("send terms");
+    }
   }
 
-  async fn dup(&mut self, index:usize) {
+  async fn dup(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
     let term = guard.pat[index].clone();
     guard.pat.insert(index, term);
-    self.tx.send(guard.pat.clone()).expect("send terms");
+    sender.send(guard.pat.clone()).expect("send terms");
   }
 
-  async fn concat(&mut self, index:usize) {
+  async fn concat(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.pat[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.pat[index].clone() {
-        terms.extend(other_terms);
+    if let Term::Quote(mut terms) = guard.pat[index].clone() {
+      if let Some(Term::Quote(other_terms)) = guard.pat.get(index + 1) {
+        terms.extend(other_terms.clone());
         guard.pat.remove(index);
         guard.pat[index] = Term::new_quote(terms);
-        self.tx.send(guard.pat.clone()).expect("send terms");
+        sender.send(guard.pat.clone()).expect("send terms");
       }
     }
   }
 
-  async fn unquote(&mut self, index:usize) {
+  async fn unquote(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
     if let Term::Quote(terms) = guard.pat[index].clone() {
-      let mut index = index;
       guard.pat.remove(index);
+      let mut i = index;
       for term in terms {
-        guard.pat.insert(index, term);
-        index += 1;
+        guard.pat.insert(i, term);
+        i += 1;
       }
       self.state = if guard.pat.is_empty() {
         State::AtLeft
       } else {
-        State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
+        State::InLeft(index.min(guard.pat.len() - 1))
       };
-      self.tx.send(guard.pat.clone()).expect("send terms");
+      sender.send(guard.pat.clone()).expect("send terms");
     }
   }
 
-  async fn process_keypress(&mut self) -> io::Result<()> {
+  async fn process_keypress(&mut self, sender:Sender) -> io::Result<()> {
     use crossterm::event::KeyCode::{Backspace, Char, Delete, Down, Esc, Up};
 
     let event = self.view.read_key().await?;
@@ -159,12 +150,12 @@ impl Interactive {
               | State::AtLeft => {
                 guard.pat = vec![term];
                 self.state = State::InLeft(0);
-                self.tx.send(guard.pat.clone()).expect("send terms");
+                sender.send(guard.pat.clone()).expect("send terms");
               },
               | State::InLeft(index) => {
-                guard.pat.insert(index + 1, term);
-                self.state = State::InLeft(index + 1);
-                self.tx.send(guard.pat.clone()).expect("send terms");
+                guard.pat.insert(index, term);
+                self.state = State::InLeft(index);
+                sender.send(guard.pat.clone()).expect("send terms");
               },
               | _ => {},
             }
@@ -174,12 +165,12 @@ impl Interactive {
           s.push(c);
           self.state = State::Editing(s, state);
         },
-        | ('r', State::InLeft(index)) => self.remove(index).await,
-        | ('q', State::InLeft(index)) => self.quote(index).await,
-        | ('s', State::InLeft(index)) if index > 0 => self.swap(index).await,
-        | ('d', State::InLeft(index)) => self.dup(index).await,
-        | ('c', State::InLeft(index)) if index > 0 => self.concat(index).await,
-        | ('u', State::InLeft(index)) => self.unquote(index).await,
+        | ('r', State::InLeft(index)) => self.remove(sender, index).await,
+        | ('q', State::InLeft(index)) => self.quote(sender, index).await,
+        | ('s', State::InLeft(index)) => self.swap(sender, index).await,
+        | ('d', State::InLeft(index)) => self.dup(sender, index).await,
+        | ('c', State::InLeft(index)) => self.concat(sender, index).await,
+        | ('u', State::InLeft(index)) => self.unquote(sender, index).await,
         | (' ', State::InLeft(index)) =>
           self.state = State::Editing(String::new(), Box::new(State::InLeft(index))),
         | (' ', State::AtLeft) =>

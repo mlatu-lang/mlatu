@@ -36,26 +36,6 @@ pub struct Rule {
   pub rep:Vec<Term>,
 }
 
-mod prolog {
-  use super::Term as AstTerm;
-  use crate::prolog::{attempt_opt, term_getable, PrologError, Term, TermGetable};
-
-  term_getable! {
-    (AstTerm, term) => {
-      match term.get::<Vec<Self>>() {
-        Ok(terms) => {
-          let quote = terms.into_iter().rev().collect();
-          Some(Self::new_quote(quote))
-        },
-        Err(PrologError::Exception) => None,
-        Err(PrologError::Failure) => {
-          attempt_opt(term.get_atom_name(|x| x.map(Self::new_word))).unwrap_or(None).flatten()
-        }
-      }
-    }
-  }
-}
-
 pub mod binary {
   use super::{Rule, Term};
 
