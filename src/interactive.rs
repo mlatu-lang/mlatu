@@ -90,8 +90,10 @@ impl Interactive {
 
   async fn swap(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    guard.pat.swap(index, index - 1);
-    sender.send(guard.pat.clone()).expect("send terms");
+    if guard.pat.len() > index + 1 {
+      guard.pat.swap(index, index + 1);
+      sender.send(guard.pat.clone()).expect("send terms");
+    }
   }
 
   async fn dup(&mut self, sender:Sender, index:usize) {
@@ -103,9 +105,9 @@ impl Interactive {
 
   async fn concat(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    if let Term::Quote(mut terms) = guard.pat[index - 1].clone() {
-      if let Term::Quote(other_terms) = guard.pat[index].clone() {
-        terms.extend(other_terms);
+    if let Term::Quote(mut terms) = guard.pat[index].clone() {
+      if let Some(Term::Quote(other_terms)) = guard.pat.get(index + 1) {
+        terms.extend(other_terms.clone());
         guard.pat.remove(index);
         guard.pat[index] = Term::new_quote(terms);
         sender.send(guard.pat.clone()).expect("send terms");
@@ -116,16 +118,16 @@ impl Interactive {
   async fn unquote(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
     if let Term::Quote(terms) = guard.pat[index].clone() {
-      let mut index = index;
       guard.pat.remove(index);
+      let mut i = index;
       for term in terms {
-        guard.pat.insert(index, term);
-        index += 1;
+        guard.pat.insert(i, term);
+        i += 1;
       }
       self.state = if guard.pat.is_empty() {
         State::AtLeft
       } else {
-        State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
+        State::InLeft(index.min(guard.pat.len() - 1))
       };
       sender.send(guard.pat.clone()).expect("send terms");
     }
@@ -148,8 +150,8 @@ impl Interactive {
                 sender.send(guard.pat.clone()).expect("send terms");
               },
               | State::InLeft(index) => {
-                guard.pat.insert(index + 1, term);
-                self.state = State::InLeft(index + 1);
+                guard.pat.insert(index, term);
+                self.state = State::InLeft(index);
                 sender.send(guard.pat.clone()).expect("send terms");
               },
               | _ => {},
@@ -162,9 +164,9 @@ impl Interactive {
         },
         | ('r', State::InLeft(index)) => self.remove(sender, index).await,
         | ('q', State::InLeft(index)) => self.quote(sender, index).await,
-        | ('s', State::InLeft(index)) if index > 0 => self.swap(sender, index).await,
+        | ('s', State::InLeft(index)) => self.swap(sender, index).await,
         | ('d', State::InLeft(index)) => self.dup(sender, index).await,
-        | ('c', State::InLeft(index)) if index > 0 => self.concat(sender, index).await,
+        | ('c', State::InLeft(index)) => self.concat(sender, index).await,
         | ('u', State::InLeft(index)) => self.unquote(sender, index).await,
         | (' ', State::InLeft(index)) =>
           self.state = State::Editing(String::new(), Box::new(State::InLeft(index))),
