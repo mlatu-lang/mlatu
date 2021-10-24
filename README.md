@@ -30,7 +30,7 @@ mlatu is a concatenative programming language; you can concatenate two programs 
 Installation
 ------------
 
-First, you need to have Rust and Swi-Prolog (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Swi-Prolog, you can find a download at <https://www.swi-prolog.org/Download.html>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
+First, you need to have Rust and Erlang (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Erlaang, you can find a download at <https://www.erlang.org/downloads>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
 
 ```bash
 git clone https://github.com/mlatu-lang/mlatu 
