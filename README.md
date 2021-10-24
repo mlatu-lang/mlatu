@@ -35,7 +35,7 @@ First, you need to have Rust and Erlang (and Clang on Windows) installed on your
 ```bash
 git clone https://github.com/mlatu-lang/mlatu 
 cd mlatu 
-cargo install . --path
+cargo install --path .
 ```
 
 Usage
