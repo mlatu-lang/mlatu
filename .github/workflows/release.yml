@@ -28,6 +28,8 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: brew install michaeleisel/zld/zld
+        if: matrix.os == 'macos-latest'
       - name: Compile and release for ${{ matrix.target }}
         uses: rust-build/rust-build.action@latest
         env:
