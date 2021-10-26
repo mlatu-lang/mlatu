@@ -9,8 +9,8 @@ repository = "https://github.com/mlatu-lang/mlatu"
 readme = "docs/README.md"
 keywords = ["cli", "parser", "langdev", "language"]
 categories = ["command-line-utilities", "compilers", "text-editors"]
-license-file = "LICENSE.md"
-include = ["src/**/*", "LICENSE.md"]
+license-file = "https://mlatu-lang.github.io/license/"
+include = ["src/**/*", "README.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

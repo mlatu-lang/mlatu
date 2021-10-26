@@ -5,7 +5,6 @@
         clippy::complexity,
         clippy::perf,
         clippy::pedantic,
-        clippy::cargo,
         clippy::nursery,
         clippy::as_conversions,
         clippy::clone_on_ref_ptr,

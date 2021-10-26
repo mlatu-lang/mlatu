@@ -72,4 +72,4 @@ mlatu is inspired by a number of pre-existing concatenative and term-rewriting l
 License
 -------
 
-mlatu is licensed under the Cooperative Software License. For the terms of this license, see [the local copy](/LICENSE.md) or [the formatted web version](https://lynnesbian.space/csl/formatted).
+mlatu, like all mlatu-lang projects, is licensed under https://mlatu-lang.github.io/license/
