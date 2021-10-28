@@ -21,3 +21,5 @@ Now, make any changes you wish to include in the PR. Make sure to run `cargo fmt
 Once you are satisfied with your changes, create a pull request by running `gh pr create`. This will prompt you for the title and the body of the pull request. Please make the title short and descriptive of the changes you've made. The description can be longer and should note any issues this pull request should close, any remaining issues, and anything the mlatu-lang team should know. This will output a URL where you can view the changes you've made and any comments made on that pull request.
 
 Once the pull request is created, one of the mlatu-lang team members will come take a look at your changes and approve or request changes. If the pull request is approved, it will be merged into `main`. That's success! If there are changes requested, we'd ask that you do your best to fix them (asking clarifying questions or for help if you need it is great), and then we will review again.
+
+If you are a new contributor, we ask that you would read over the `AUTHORS` file and add your own name and email to the file, in the same pull request.
