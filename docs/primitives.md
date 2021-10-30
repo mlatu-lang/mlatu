@@ -15,10 +15,10 @@ There are six primitives of mlatu which have various effects on the terms below 
 
 ```
 -------| Input |--------------| Output |-------
-|          x           |          x           |
-|        remove        |          z           |
-|          y           |                      |
-|          z           |                      |
+|          x           |                      |
+|        remove        |                      |
+|          y           |          x           |
+|          z           |          z           |
 ```
 
 ### Duplicating a term
@@ -39,10 +39,10 @@ There are six primitives of mlatu which have various effects on the terms below 
 
 ```
 -------| Input |--------------| Output |-------
-|          x           |          x           |
-|         swap         |          z           |
-|          y           |          y           |
-|          z           |                      |
+|          x           |                      |
+|         swap         |          x           |
+|          y           |          z           |
+|          z           |          y           |
 ```
 
 ### Quoting a term
@@ -51,10 +51,10 @@ There are six primitives of mlatu which have various effects on the terms below 
 
 ```
 -------| Input |--------------| Output |-------
-|          x           |          x           |
-|        quote         |        ( y )         |
-|          y           |          z           |
-|          z           |                      |
+|          x           |                      |
+|        quote         |          x           |
+|          y           |        ( y )         |
+|          z           |          z           |
 ```
 
 ### Unquoting a quotation
@@ -63,10 +63,10 @@ There are six primitives of mlatu which have various effects on the terms below 
 
 ```
 -------| Input |--------------| Output |-------
-|          x           |          x           |
-|       unquote        |          y           |
-|        ( y )         |          z           |
-|          z           |                      |
+|          x           |                      |
+|       unquote        |          x           |
+|        ( y )         |          y           |
+|          z           |          z           |
 ```
 
 ### Concatenating quotations
@@ -75,10 +75,10 @@ There are six primitives of mlatu which have various effects on the terms below 
 
 ```
 -------| Input |--------------| Output |-------
-|          x           |          x           |
-|        concat        |       ( y z )        |
-|        ( y )         |                      |
-|        ( z )         |                      |
+|          x           |                      |
+|        concat        |                      |
+|        ( y )         |          x           |
+|        ( z )         |       ( y z )        |
 ```
 
 [Onward, to the mlatu structured editor!](editor.md)

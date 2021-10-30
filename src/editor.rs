@@ -312,18 +312,16 @@ impl Editor {
           guard.rep.insert(index, term);
           self.state = State::InRight(index.min(guard.rep.len() - 1));
         },
-        | ('s', State::InLeft(index)) => {
-          let mut guard = self.view.write().await;
-          if guard.pat.len() > index + 1 {
-            guard.pat.swap(index, index + 1);
-          }
-        },
-        | ('s', State::InRight(index)) => {
-          let mut guard = self.view.write().await;
-          if guard.pat.len() > index + 1 {
-            guard.rep.swap(index, index + 1);
-          }
-        },
+        | ('s', State::InLeft(index)) =>
+          if index > 0 {
+            let mut guard = self.view.write().await;
+            guard.pat.swap(index, index - 1);
+          },
+        | ('s', State::InRight(index)) =>
+          if index > 0 {
+            let mut guard = self.view.write().await;
+            guard.rep.swap(index, index - 1);
+          },
         | ('c', State::InLeft(index)) => self.concat_left(index).await,
         | ('c', State::InRight(index)) => self.concat_right(index).await,
         | ('u', State::InLeft(index)) => self.unquote_left(index).await,
@@ -342,12 +340,12 @@ impl Editor {
       },
       | (Left, _) => self.process_left().await?,
       | (Right, _) => self.process_right().await?,
-      | (Up, _) => match self.state {
+      | (Down, _) => match self.state {
         | State::InLeft(index) => self.state = State::InLeft(index.saturating_sub(1)),
         | State::InRight(index) => self.state = State::InRight(index.saturating_sub(1)),
         | _ => {},
       },
-      | (Down, _) => match self.state {
+      | (Up, _) => match self.state {
         | State::InLeft(index) => {
           let guard = self.view.read().await;
           self.state = State::InLeft((index + 1).min(guard.pat.len() - 1));

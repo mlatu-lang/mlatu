@@ -93,8 +93,8 @@ impl Interactive {
 
   async fn swap(&mut self, sender:Sender, index:usize) {
     let mut guard = self.view.write().await;
-    if guard.pat.len() > index + 1 {
-      guard.pat.swap(index, index + 1);
+    if index > 0 {
+      guard.pat.swap(index, index - 1);
       sender.send(guard.pat.clone()).expect("send terms");
     }
   }
@@ -191,7 +191,7 @@ impl Interactive {
           self.state = if guard.pat.is_empty() {
             State::AtLeft
           } else {
-            State::InLeft(index.saturating_sub(1).min(guard.pat.len() - 1))
+            State::InLeft((index + 1).min(guard.pat.len() - 1))
           };
         },
         | _ => {},
@@ -202,7 +202,7 @@ impl Interactive {
           self.state = if guard.pat.is_empty() {
             State::AtLeft
           } else {
-            State::InLeft((index + 1).min(guard.pat.len() - 1))
+            State::InLeft((index.saturating_sub(1)).min(guard.pat.len() - 1))
           };
         },
         | _ => {},
