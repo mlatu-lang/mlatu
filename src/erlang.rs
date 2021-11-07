@@ -10,65 +10,45 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::ast::{Rule, Term};
 
-pub const BEFORE:&str = "-module(mlatu). -export([interact/1]). 
-driver(Prefix, Suffix) -> case Prefix of ";
+pub const BEFORE:&str = "-module(mlatu). -export([rewrite/1]).
+myappend({cons, X, Xs}, Rest) -> {cons, X, myappend(Xs, Rest)};
+myappend(nil, Rest) -> Rest.
+";
 
 pub const AFTER:&str = "
-  [{word, 'u'}, {quotation, A} | Rest] ->  
-   [RHead|RTail] = lists:reverse(A ++ Rest) ++ Suffix, 
-   driver([RHead], RTail);
-  [{word, 'q'}, A | Rest] -> 
-   [RHead|RTail] = lists:reverse([{quotation, [A]} | Rest]) ++ Suffix, 
-   driver([RHead], RTail);
-  [{word, 'c'}, {quotation, List1}, {quotation, List2} | Rest] -> 
-   [RHead|RTail] = lists:reverse([{quotation, List1 ++ List2} | Rest]) ++ Suffix, 
-   driver([RHead], RTail);
-  [{word, 'd'}, A | Rest] -> 
-   [RHead|RTail] = lists:reverse([A, A | Rest]) ++ Suffix, 
-   driver([RHead], RTail);
-  [{word, 'r'}, _ | Rest] -> case lists:reverse(Rest) ++ Suffix of 
-   [RHead|RTail] -> driver([RHead], RTail);
-   [] -> print_terms([])
-  end;
-  [{word, 's'}, A, B | Rest] -> 
-    [RHead|RTail] = lists:reverse([B, A | Rest]) ++ Suffix,
-    driver([RHead], RTail);
-  _ -> case Suffix of 
-    [SHead|STail] -> driver([SHead|Prefix], STail);
-    [] -> print_terms(Prefix)
-  end
-end.
+match({cons,{word,'u'}, {cons,{quotation, A}, Rest}},Reset) ->  
+   rewrite(Reset(myappend(A,Rest)));
+match({cons, {word, 'q'}, {cons, A, Rest}},Reset) -> 
+   rewrite(Reset({cons,{quotation, [A]}, Rest}));
+match({cons, {word, 'c'}, {cons, {quotation, List1}, {cons, {quotation, List2}, Rest}}}, Reset) \
+  -> rewrite(Reset({cons, {quotation, myappend(List1, List2)}, Rest}));
+match({cons,{word, 'd'}, {cons, A, Rest}}, Reset) -> 
+   rewrite(Reset({cons, A, {cons, A, Rest}}));
+match({cons,{word, 'r'}, {cons, _, Rest}}, Reset) -> 
+  rewrite(Reset(Rest));
+match({cons,{word, 's'}, {cons, A, {cons, B, Rest}}}, Reset) -> 
+  rewrite(Reset({cons, B, {cons, A, Rest}}));
+match({cons, Head, Rest}, Reset) -> match(Rest, fun(X) -> Reset({cons, Head, X}) end);
+match(nil, Reset) -> print_terms(Reset(nil)).
 print_term({word, Atom}) -> atom_to_list(Atom);
 print_term({quotation, List}) -> \"(\" ++ print_terms(List) ++ \")\".
-print_terms([]) -> \" \";
-print_terms([Term|List]) -> print_term(Term) ++ \" \" ++ print_terms(List). 
-interact(List) -> driver([], List).";
+print_terms(nil) -> \" \";
+print_terms({cons,Term,List}) -> print_term(Term) ++ \" \" ++ print_terms(List). 
+rewrite(List) -> match(List, fun(X) -> X end).";
 
 fn translate_term(term:Term) -> String {
   match term {
     | Term::Word(s) => format!("{{word, '{}'}}", s),
-    | Term::Quote(terms) => format!("{{quotation, {}}}", translate_terms(terms, "[]")),
+    | Term::Quote(terms) => format!("{{quotation, {}}}", translate_terms(terms, "nil")),
   }
 }
 
-fn translate_terms(terms:Vec<Term>, end:&str) -> String {
-  if terms.is_empty() {
-    end.to_string()
-  } else {
-    let mut s = "[".to_owned();
-    let mut iter = terms.into_iter().rev();
-    if let Some(term) = iter.next() {
-      s.push_str(&translate_term(term));
-    }
-    for term in iter {
-      s.push(',');
-      s.push_str(&translate_term(term.clone()));
-    }
-    s.push('|');
-    s.push_str(end);
-    s.push(']');
-    s
+fn translate_terms(terms:Vec<Term>, nil:&str) -> String {
+  let mut s = String::from(nil);
+  for term in terms.into_iter().rev() {
+    s = format!("{{cons, {}, {}}}", translate_term(term), s);
   }
+  s
 }
 
 fn parser<'a>() -> impl Parser<&'a str, Output=Vec<Term>> {
@@ -84,11 +64,9 @@ pub async fn run(rules:Vec<Rule>, sender:UnboundedSender<Vec<Term>>,
   // write rules to file
   let mut string = BEFORE.to_string();
   for rule in rules {
-    string.push_str(&translate_terms(rule.pat, "Rest"));
-    string.push_str(" -> case lists:reverse(");
-    string.push_str(&translate_terms(rule.rep, "Rest"));
-    string.push_str(") ++ Suffix of \n   [RHead|RTail] -> driver([RHead], RTail);\n   [] -> \
-                     print_terms([])\n  end;\n");
+    string.push_str(&format!("match({},Reset) -> rewrite(Reset({}));\n",
+                             translate_terms(rule.pat, "Rest"),
+                             &translate_terms(rule.rep, "Rest")));
   }
   string.push_str(AFTER);
   fs::write("./mlatu.erl", string).await.expect("could not write to file");
@@ -112,8 +90,8 @@ pub async fn run(rules:Vec<Rule>, sender:UnboundedSender<Vec<Term>>,
       if let Some(after) = map.get(&before).cloned() {
         sender.send(after).expect("send error");
       } else {
-        let term = translate_terms(before.clone().into_iter().rev().collect(), "[]");
-        stdin.write_all(format!("mlatu:interact({}).\n", term).as_bytes())
+        let term = translate_terms(before.clone().into_iter().rev().collect(), "nil");
+        stdin.write_all(format!("mlatu:rewrite({}).\n", term).as_bytes())
              .await
              .expect("could not write to stdin");
         if let Ok(Some(line)) = reader.next_line().await {
