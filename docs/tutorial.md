@@ -29,7 +29,7 @@ you probably have realized that mlatu is RPN. here is the full evaluation order:
 
 you can also define rules yourself:
 ```
-a b = c;
+a b = c.
 ```
 is a rule that matches on `a b`, and will rewrite it to `c`.
 user-defined rules may not match on quotes.  
