@@ -21,15 +21,11 @@
         clippy::rc_mutex,
         clippy::unwrap_used,
         clippy::verbose_file_reads)]
+#![allow(clippy::future_not_send)]
 
-mod ast;
 mod editor;
-pub mod erlang;
 mod interactive;
-mod parser;
 mod view;
 
-pub use ast::{binary, Rule, Term};
 pub use editor::Editor;
 pub use interactive::Interactive;
-pub use parser::{parse_rule, parse_rules, parse_term, parse_terms};

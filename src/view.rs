@@ -5,10 +5,9 @@ use std::sync::Arc;
 use crossterm::event::{Event, EventStream, KeyEvent};
 use crossterm::terminal::ClearType;
 use crossterm::{cursor, queue, terminal, Command};
+use mlatu_lib::{Rule, Term};
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio_stream::StreamExt;
-
-use crate::ast::Rule;
 
 #[derive(Clone)]
 pub enum State {
@@ -75,43 +74,42 @@ impl View {
     self.width - self.width / 2 - 2 * sep_len
   }
 
-  async fn make_left_half(&self, row:u16, s:&mut String) {
+  async fn make_left_half<F:Fn(&Term) -> String+Copy>(&self, f:F, row:u16, s:&mut String) {
     let guard = self.sides.read().await;
-    let term = guard.pat
-                    .get(usize::from(self.height - row).saturating_sub(1))
-                    .map_or_else(String::new, ToString::to_string);
+    let term =
+      guard.redex.get(usize::from(self.height - row).saturating_sub(1)).map_or_else(String::new, f);
     let width = self.left_half_width(1);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
-  async fn make_right_half(&self, row:u16, s:&mut String) {
+  async fn make_right_half<F:Fn(&Term) -> String+Copy>(&self, f:F, row:u16, s:&mut String) {
     let width = self.right_half_width(1);
     let guard = self.sides.read().await;
-    let term = guard.rep
+    let term = guard.reduction
                     .get(usize::from(self.height - row).saturating_sub(1))
-                    .map_or_else(String::new, ToString::to_string);
+                    .map_or_else(String::new, f);
     s.push_str(&format!("{0: ^1$}", term, width.into()));
   }
 
-  async fn get_target(&self, state:&State) -> (u16, u16) {
+  async fn get_target<F:Fn(&Term) -> String+Copy>(&self, f:F, state:&State) -> (u16, u16) {
     let guard = self.sides.read().await;
     match state {
       | State::InLeft(index) => {
-        let term = guard.pat.get(*index).expect("bounds check failed");
-        let p_t = term.to_string();
+        let term = guard.redex.get(*index).expect("bounds check failed");
+        let p_t = f(term);
         (self.width / 4
-         - (u16::try_from(p_t.len()).expect("pattern term text is greater than 2^16 characters") - 1) / 2,
-         (self.height - u16::try_from(*index).expect("pattern terms longer than 2^16 terms")).saturating_sub(1))
+         - (u16::try_from(p_t.len()).expect("redex term text is greater than 2^16 characters") - 1) / 2,
+         (self.height - u16::try_from(*index).expect("redex terms longer than 2^16 terms")).saturating_sub(1))
       },
       | State::AtLeft => (self.width / 4 - 1, self.height),
       | State::InRight(index) => {
-        let term = guard.rep.get(*index).expect("bounds check failed");
-        let r_t = term.to_string();
+        let term = guard.reduction.get(*index).expect("bounds check failed");
+        let r_t = f(term);
         (3 * self.width / 4
-         - (u16::try_from(r_t.len()).expect("replacement term text is greater than 2^16 \
+         - (u16::try_from(r_t.len()).expect("reduction term text is greater than 2^16 \
                                              characters") - 1)
            / 2 - 1,
-         (self.height - u16::try_from(*index).expect("replacement terms longer than 2^16 terms")).saturating_sub(1))
+         (self.height - u16::try_from(*index).expect("reduction terms longer than 2^16 terms")).saturating_sub(1))
       },
       | State::AtRight => (3 * self.width / 4 - 1, self.height),
       | State::Editing(ref s, _) =>
@@ -136,35 +134,37 @@ impl View {
            self.right_half_width(1).into());
   }
 
-  async fn display(&mut self, state:State) -> io::Result<()> {
+  async fn display<F:Fn(&Term) -> String+Copy>(&mut self, f:F, state:State) -> io::Result<()> {
     self.display_status(&state);
     for row in 2..self.height - 1 {
       let mut s = "|".to_owned();
       Self::queue(terminal::Clear(ClearType::CurrentLine))?;
-      self.make_left_half(row, &mut s).await;
+      self.make_left_half(f, row, &mut s).await;
       s.push('|');
-      self.make_right_half(row, &mut s).await;
+      self.make_right_half(f, row, &mut s).await;
       s.push('|');
       println!("{}\r", s);
     }
     let mut s = "|".to_owned();
-    self.make_left_half(self.height, &mut s).await;
+    self.make_left_half(f, self.height, &mut s).await;
     s.push('|');
-    self.make_right_half(self.height, &mut s).await;
+    self.make_right_half(f, self.height, &mut s).await;
     s.push('|');
     print!("{}", s);
     Ok(())
   }
 
-  pub async fn refresh_screen(&mut self, state:&State, should_quit:bool) -> io::Result<()> {
+  pub async fn refresh_screen<F:Fn(&Term) -> String+Copy>(&mut self, f:F, state:&State,
+                                                          should_quit:bool)
+                                                          -> io::Result<()> {
     Self::queue(cursor::Hide)?;
     Self::queue(cursor::MoveTo(0, 0))?;
     if should_quit {
       Self::clear_screen()?;
       println!("Goodbye.\r");
     } else {
-      self.display(state.clone()).await?;
-      let (x, y) = self.get_target(state).await;
+      self.display(f, state.clone()).await?;
+      let (x, y) = self.get_target(f, state).await;
       Self::queue(cursor::MoveTo(x, y))?;
     }
     Self::queue(cursor::Show)?;
