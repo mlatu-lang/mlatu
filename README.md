@@ -25,12 +25,12 @@ Table of Contents
 Introduction
 ------------
 
-mlatu is a concatenative programming language; you can concatenate two programs and its result will be the concatenation of the programs' individual results. It is declarative: instead of telling the implementation what to *do*, one tells the implementation what *is*. mlatu is evaluated via a term-rewriting system and so all expressions are referentially transparent, evaluating to the same result each time they are written.
+mlatu is a concatenative programming language; you can concatenate two programs and the result will be the concatenation of the programs' individual results. It is declarative: instead of telling the implementation what to *do*, one tells the implementation what *is*. mlatu is evaluated via a term-rewriting system and so all expressions are referentially transparent, evaluating to the same result each time they are written.
 
 Installation
 ------------
 
-First, you need to have Rust and Erlang (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Erlaang, you can find a download at <https://www.erlang.org/downloads>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
+First, you need to have Rust and Erlang (and Clang on Windows) installed on your system and in your `PATH`. To install Rust, follow the instructions at <https://rustup.rs>. To install Erlang, you can find a download at <https://www.erlang.org/downloads>. To install Clang on Windows, you can find a download link at <https://github.com/llvm/llvm-project/releases/tag/llvmorg-12.0.1> (make sure you set `LIBCLANG_PATH` environment variable to the `bin` directory of that download).
 
 ```bash
 git clone https://github.com/mlatu-lang/mlatu 
@@ -55,7 +55,7 @@ Another issue is the lack of true patterns and a type system. Several solutions 
 Getting help
 ------------
 
-There are a couply ways to get help if you have questions, thoughts, or issues. The GitHub issue tracker (<https://github.com/mlatu-lang/mlatu/issues>) is the best place to submit issues or bug reports. If you have a thought, suggestion, question, or just want to chat about mlatu, there is a small Discord server at <https://discord.gg/WHdnkktgKr>.
+There are a couple ways to get help if you have questions, thoughts, or issues. The GitHub issue tracker (<https://github.com/mlatu-lang/mlatu/issues>) is the best place to submit issues or bug reports. If you have a thought, suggestion, question, or just want to chat about mlatu, there is a small Discord server at <https://discord.gg/WHdnkktgKr>.
 
 Contributing
 ------------
